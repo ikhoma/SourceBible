@@ -1,0 +1,43 @@
+# ── Generated database ────────────────────────────────────────
+sourcebible.db
+sourcebible.db-wal
+sourcebible.db-shm
+
+# Bundled DB in Resources — generated, not source-controlled (149 MB)
+SourceBible/Resources/sourcebible.db
+
+# ── Datasets (large / licensed — download manually, see docs/BUILD.md) ──
+data/
+scripts/.cache/
+
+# ── macOS ─────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+
+# ── Xcode ─────────────────────────────────────────────────────
+xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+DerivedData/
+*.hmap
+*.ipa
+*.xcarchive
+.build/
+
+# Shared schemes are committed; user-specific data is not
+SourceBible.xcodeproj/xcuserdata/
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# ── Misc ──────────────────────────────────────────────────────
+*.log
+*.bak
+.env

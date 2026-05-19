@@ -1,0 +1,100 @@
+// StrongsModels.swift
+// SourceBible
+//
+// Моделі лексичного шару: Strong's лексикон, конкорданс, коментарі.
+// Відокремлено від BibleModels.swift (core reading) для чіткого розділення доменів.
+
+import Foundation
+
+// MARK: - Strong's Lexicon
+
+struct StrongsEntry: Identifiable {
+    let id: String
+    let originalWord: String
+    let transliteration: String // academic xlit (openscriptures): rēʾšiyṯ
+    let xlitSimple: String      // simplified xlit (STEPBible): reshit  ← primary display
+    let pronunciation: String
+    let partOfSpeech: String
+    let shortDefinition: String
+    let semanticRange: [String]
+    let fullDefinition: String  // BDB / Abbott-Smith (STEPBible)
+    var concordance: [ConcordanceEntry]
+}
+
+// MARK: - Concordance
+
+struct ConcordanceEntry: Identifiable {
+    let id: String
+    let reference: String
+    let text: String           // stripped, display-ready
+    let rawText: String        // raw KJV markup, used for keyword highlighting
+    let bookId: String
+    let chapter: Int
+    let verse: Int
+
+    /// True when the preferred translation had no text for this verse and the fallback was used.
+    let isFallback: Bool
+
+    /// Convenience init — omits rawText and isFallback (used in sample/preview data).
+    init(id: String, reference: String, text: String, rawText: String = "",
+         isFallback: Bool = false, bookId: String, chapter: Int, verse: Int) {
+        self.id         = id
+        self.reference  = reference
+        self.text       = text
+        self.rawText    = rawText
+        self.isFallback = isFallback
+        self.bookId     = bookId
+        self.chapter    = chapter
+        self.verse      = verse
+    }
+}
+
+// MARK: - Commentary
+
+struct Theologian: Identifiable {
+    let id: String
+    let name: String
+    let era: String
+    let style: String
+    let imageName: String
+}
+
+struct Commentary: Identifiable {
+    let id: String
+    let theologian: Theologian
+    let verseId: String
+    let text: String
+}
+
+extension Theologian {
+    static let calvin   = Theologian(id: "calvin",   name: "Жан Кальвін",      era: "XVI ст.",   style: "Текст і богослов'я",   imageName: "calvin")
+    static let henry    = Theologian(id: "henry",    name: "Меттью Генрі",     era: "XVIII ст.", style: "Серце і застосування", imageName: "henry")
+    static let spurgeon = Theologian(id: "spurgeon", name: "Чарльз Сперджен", era: "XIX ст.",   style: "Проповідь і образи",   imageName: "spurgeon")
+    static let owen     = Theologian(id: "owen",     name: "Джон Оуен",        era: "XVII ст.",  style: "Догматика і душа",     imageName: "owen")
+    static let all = [calvin, henry, spurgeon, owen]
+}
+
+// MARK: - Sample / Preview Data
+// Доступні тільки в DEBUG builds.
+
+#if DEBUG
+extension StrongsEntry {
+    static let sample = StrongsEntry(
+        id: "H835",
+        originalWord: "אֶשֶׁר",
+        transliteration: "ʾešer",
+        xlitSimple: "esher",
+        pronunciation: "'e-šer",
+        partOfSpeech: "noun",
+        shortDefinition: "happy, blessed",
+        semanticRange: ["happy", "blessed", "happiness", "prosperity"],
+        fullDefinition: "BDB: אֶשֶׁר noun masculine happiness, blessedness. Used chiefly in the formula אַשְׁרֵי (the blessedness of...), opening wisdom psalms and beatitudes. Denotes not a subjective feeling but an objective state of flourishing recognized by the community.",
+        concordance: [
+            ConcordanceEntry(id: "PSA|1|1",  reference: "Псалом 1:1",  text: "Блаженний муж, що не ходить...",        bookId: "PSA", chapter: 1,  verse: 1),
+            ConcordanceEntry(id: "PSA|2|12", reference: "Псалом 2:12", text: "Блаженні всі, що надіються на нього.",   bookId: "PSA", chapter: 2,  verse: 12),
+            ConcordanceEntry(id: "PSA|32|1", reference: "Псалом 32:1", text: "Блаженний, кому прощено провину...",     bookId: "PSA", chapter: 32, verse: 1),
+            ConcordanceEntry(id: "PSA|41|1", reference: "Псалом 41:1", text: "Блаженний, хто думає про бідного...",    bookId: "PSA", chapter: 41, verse: 1),
+        ]
+    )
+}
+#endif
