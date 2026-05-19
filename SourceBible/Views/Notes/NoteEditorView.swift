@@ -1,0 +1,253 @@
+// NoteEditorView.swift
+// SourceBible
+
+import SwiftUI
+
+struct NoteEditorView: View {
+
+    @EnvironmentObject private var notesVM: NotesViewModel
+    @EnvironmentObject private var router:  AppNavigationRouter
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var noteWithBlocks: NoteWithBlocks
+    @State private var textBody: String
+
+    init(noteWithBlocks: NoteWithBlocks) {
+        _noteWithBlocks = State(initialValue: noteWithBlocks)
+        let body = noteWithBlocks.blocks
+            .first(where: { $0.type == .text })
+            .flatMap { try? JSONDecoder().decode(TextBlockContent.self,
+                                                 from: Data($0.content.utf8)) }
+            .map(\.body) ?? ""
+        _textBody = State(initialValue: body)
+    }
+
+    var body: some View {
+        // No NavigationStack — UINavigationController inside a sheet interferes
+        // with the UITextView responder chain and can suppress keyboard on iOS 16+.
+        VStack(spacing: 0) {
+
+            // Manual navigation bar
+            HStack {
+                Button("action.cancel") { dismiss() }
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(navigationTitle)
+                    .font(.headline)
+                Spacer()
+                Button("note.editor.save") { saveAndDismiss() }
+                    .bold()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+
+            Divider()
+
+            // Verse context card(s) — tap to jump to that verse in the Reader
+            ForEach(verseBlocks, id: \.id) { block in
+                if let content = decodeVerseBlock(block) {
+                    VerseContextCard(verseId: content.verseId, text: content.text)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                        .onTapGesture {
+                            dismiss()
+                            router.requestNavigation(to: content.verseId)
+                        }
+                }
+            }
+
+            // UIKit-backed text editor
+            NoteTextEditor(text: $textBody)
+                .padding(.horizontal, 12)
+                .padding(.top, verseBlocks.isEmpty ? 16 : 4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var verseBlocks: [NoteBlock] {
+        noteWithBlocks.blocks.filter { $0.type == .verse }
+    }
+
+    private var navigationTitle: String {
+        if let block = verseBlocks.first,
+           let content = decodeVerseBlock(block) {
+            return verseRef(from: content.verseId)
+        }
+        return String(localized: "action.note")
+    }
+
+    private func decodeVerseBlock(_ block: NoteBlock) -> VerseBlockContent? {
+        try? JSONDecoder().decode(VerseBlockContent.self,
+                                  from: Data(block.content.utf8))
+    }
+
+    private func verseRef(from verseId: String) -> String {
+        let parts = verseId.split(separator: "|")
+        guard parts.count == 3 else { return verseId }
+        let short = BibleBookNames.short(for: String(parts[0]))
+        return "\(short) \(parts[1]):\(parts[2])"
+    }
+
+    private func saveAndDismiss() {
+        var updatedBlocks = noteWithBlocks.blocks
+        if let idx = updatedBlocks.firstIndex(where: { $0.type == .text }) {
+            let encoded = (try? JSONEncoder().encode(TextBlockContent(body: textBody)))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "{\"body\":\"\"}"
+            updatedBlocks[idx].content   = encoded
+            updatedBlocks[idx].updatedAt = Date()
+        }
+        var note = noteWithBlocks.note
+        note.updatedAt = Date()
+        note.isDirty   = true
+        notesVM.save(note: note,
+                     blocks: updatedBlocks,
+                     verseIds: noteWithBlocks.verseIds)
+        dismiss()
+    }
+}
+
+// MARK: - UIKit text editor
+// SwiftUI @FocusState is unreliable in nested sheets (sheet-on-sheet).
+// UIViewControllerRepresentable is used so we can call becomeFirstResponder()
+// inside viewDidAppear(_:), which fires after the sheet animation completes —
+// the only reliable UIKit lifecycle hook for this purpose.
+// (A fixed DispatchQueue delay was the previous approach but proved fragile
+//  across iOS 16/17/18 where sheet animation timing changed.)
+
+private struct NoteTextEditor: UIViewControllerRepresentable {
+    @Binding var text: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+
+    func makeUIViewController(context: Context) -> NoteEditorHostController {
+        let vc = NoteEditorHostController()
+        vc.coordinator  = context.coordinator
+        vc.initialText  = text
+        return vc
+    }
+
+    func updateUIViewController(_ vc: NoteEditorHostController, context: Context) {
+        guard !context.coordinator.isEditing else { return }
+        if let tv = vc.textView,
+           tv.textColor == .label && tv.text != text {
+            tv.text = text
+        }
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        @Binding var text: String
+        var isEditing = false
+
+        init(text: Binding<String>) { _text = text }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            isEditing = true
+            if textView.textColor == .tertiaryLabel {
+                textView.text      = ""
+                textView.textColor = .label
+            }
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            isEditing = false
+            if textView.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                textView.text      = String(localized: "notes.editor.placeholder")
+                textView.textColor = .tertiaryLabel
+            }
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            text = textView.textColor == .tertiaryLabel ? "" : textView.text
+        }
+    }
+}
+
+// MARK: - Host controller for NoteTextEditor
+
+private final class NoteEditorHostController: UIViewController {
+    weak var textView: UITextView?
+    // Typed as the protocol rather than the private Coordinator nested type,
+    // so NoteEditorHostController can be private without a visibility conflict.
+    var coordinator: (any UITextViewDelegate)?
+    var initialText: String = ""
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .clear
+
+        let tv = UITextView()
+        tv.font            = .preferredFont(forTextStyle: .body)
+        tv.backgroundColor = .clear
+        tv.textColor       = .label
+        tv.delegate        = coordinator
+        tv.translatesAutoresizingMaskIntoConstraints = false
+
+        if initialText.isEmpty {
+            tv.text      = String(localized: "notes.editor.placeholder")
+            tv.textColor = .tertiaryLabel
+        } else {
+            tv.text = initialText
+        }
+
+        view.addSubview(tv)
+        NSLayoutConstraint.activate([
+            tv.topAnchor.constraint(equalTo: view.topAnchor),
+            tv.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tv.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tv.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        self.textView = tv
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // viewDidAppear fires after the sheet animation completes —
+        // this is the correct and reliable moment to claim first responder.
+        textView?.becomeFirstResponder()
+    }
+}
+
+// MARK: - Verse Context Card
+
+private struct VerseContextCard: View {
+    let verseId: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Rectangle()
+                .fill(Color.accentColor)
+                .frame(width: 3)
+                .cornerRadius(2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(refLabel).font(.caption).foregroundStyle(.secondary)
+                Text(text).font(.callout).foregroundStyle(.primary)
+            }
+        }
+        .padding(12)
+        .background(Color(UIColor.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var refLabel: String {
+        let parts = verseId.split(separator: "|")
+        guard parts.count == 3 else { return verseId }
+        let short = BibleBookNames.short(for: String(parts[0]))
+        return "\(short) \(parts[1]):\(parts[2])"
+    }
+}
+
+#Preview {
+    NoteEditorView(noteWithBlocks: NoteWithBlocks(
+        note: Note(id: "1", userId: "u", folderId: nil,
+                   createdAt: .now, updatedAt: .now, deletedAt: nil, isDirty: false),
+        blocks: [],
+        verseIds: []
+    ))
+    .environmentObject(NotesViewModel(store: InMemoryUserDataStore(),
+                                      authService: LocalAuthService.shared))
+    .environmentObject(AppNavigationRouter())
+}

@@ -9,85 +9,9 @@ import SQLite3
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-// MARK: - Ukrainian book metadata
-
-private struct BookMeta {
-    let name: String
-    let short: String
-    let testament: Testament
-}
-
-// Full Ukrainian book names keyed by OSIS ID
-private let bookMeta: [String: BookMeta] = [
-    "GEN": BookMeta(name: "Буття",              short: "Бут",  testament: .old),
-    "EXO": BookMeta(name: "Вихід",              short: "Вих",  testament: .old),
-    "LEV": BookMeta(name: "Левит",              short: "Лев",  testament: .old),
-    "NUM": BookMeta(name: "Числа",              short: "Чис",  testament: .old),
-    "DEU": BookMeta(name: "Второзаконня",       short: "Втор", testament: .old),
-    "JOS": BookMeta(name: "Ісуса Навина",       short: "Нав",  testament: .old),
-    "JDG": BookMeta(name: "Суддів",             short: "Суд",  testament: .old),
-    "RUT": BookMeta(name: "Рут",                short: "Рут",  testament: .old),
-    "1SA": BookMeta(name: "1-а Самуїлова",      short: "1Сам", testament: .old),
-    "2SA": BookMeta(name: "2-а Самуїлова",      short: "2Сам", testament: .old),
-    "1KI": BookMeta(name: "1-а Царів",          short: "1Цар", testament: .old),
-    "2KI": BookMeta(name: "2-а Царів",          short: "2Цар", testament: .old),
-    "1CH": BookMeta(name: "1-а Хронік",         short: "1Хр",  testament: .old),
-    "2CH": BookMeta(name: "2-а Хронік",         short: "2Хр",  testament: .old),
-    "EZR": BookMeta(name: "Ездра",              short: "Езд",  testament: .old),
-    "NEH": BookMeta(name: "Неємія",             short: "Неєм", testament: .old),
-    "EST": BookMeta(name: "Естер",              short: "Ест",  testament: .old),
-    "JOB": BookMeta(name: "Йов",                short: "Йов",  testament: .old),
-    "PSA": BookMeta(name: "Псалми",             short: "Пс",   testament: .old),
-    "PRO": BookMeta(name: "Приповісті",         short: "Пр",   testament: .old),
-    "ECC": BookMeta(name: "Екклезіяст",         short: "Еккл", testament: .old),
-    "SNG": BookMeta(name: "Пісня пісень",       short: "Піс",  testament: .old),
-    "ISA": BookMeta(name: "Ісая",               short: "Іс",   testament: .old),
-    "JER": BookMeta(name: "Єремія",             short: "Єр",   testament: .old),
-    "LAM": BookMeta(name: "Плач Єремії",        short: "Плач", testament: .old),
-    "EZK": BookMeta(name: "Єзекіїль",           short: "Єз",   testament: .old),
-    "DAN": BookMeta(name: "Даниїл",             short: "Дан",  testament: .old),
-    "HOS": BookMeta(name: "Осія",               short: "Ос",   testament: .old),
-    "JOL": BookMeta(name: "Йоїл",               short: "Йоїл", testament: .old),
-    "AMO": BookMeta(name: "Амос",               short: "Ам",   testament: .old),
-    "OBA": BookMeta(name: "Авдій",              short: "Авд",  testament: .old),
-    "JON": BookMeta(name: "Йона",               short: "Йон",  testament: .old),
-    "MIC": BookMeta(name: "Михей",              short: "Мих",  testament: .old),
-    "NAM": BookMeta(name: "Наум",               short: "Наум", testament: .old),
-    "HAB": BookMeta(name: "Авакум",             short: "Авак", testament: .old),
-    "ZEP": BookMeta(name: "Софонія",            short: "Соф",  testament: .old),
-    "HAG": BookMeta(name: "Огій",               short: "Ог",   testament: .old),
-    "ZEC": BookMeta(name: "Захарія",            short: "Зах",  testament: .old),
-    "MAL": BookMeta(name: "Малахія",            short: "Мал",  testament: .old),
-    "MAT": BookMeta(name: "Матвія",             short: "Мт",   testament: .new),
-    "MRK": BookMeta(name: "Марка",              short: "Мр",   testament: .new),
-    "LUK": BookMeta(name: "Луки",               short: "Лк",   testament: .new),
-    "JHN": BookMeta(name: "Івана",              short: "Ів",   testament: .new),
-    "ACT": BookMeta(name: "Дії",                short: "Дії",  testament: .new),
-    "ROM": BookMeta(name: "Римлян",             short: "Рим",  testament: .new),
-    "1CO": BookMeta(name: "1-а Коринтян",       short: "1Кор", testament: .new),
-    "2CO": BookMeta(name: "2-а Коринтян",       short: "2Кор", testament: .new),
-    "GAL": BookMeta(name: "Галатян",            short: "Гал",  testament: .new),
-    "EPH": BookMeta(name: "Ефесян",             short: "Еф",   testament: .new),
-    "PHP": BookMeta(name: "Филип'ян",           short: "Флп",  testament: .new),
-    "COL": BookMeta(name: "Колосян",            short: "Кол",  testament: .new),
-    "1TH": BookMeta(name: "1-а Солунян",        short: "1Сол", testament: .new),
-    "2TH": BookMeta(name: "2-а Солунян",        short: "2Сол", testament: .new),
-    "1TI": BookMeta(name: "1-а Тимофія",        short: "1Тим", testament: .new),
-    "2TI": BookMeta(name: "2-а Тимофія",        short: "2Тим", testament: .new),
-    "TIT": BookMeta(name: "Тита",               short: "Тит",  testament: .new),
-    "PHM": BookMeta(name: "Филимона",           short: "Флм",  testament: .new),
-    "HEB": BookMeta(name: "Євреїв",             short: "Євр",  testament: .new),
-    "JAS": BookMeta(name: "Якова",              short: "Як",   testament: .new),
-    "1PE": BookMeta(name: "1-а Петра",          short: "1Пет", testament: .new),
-    "2PE": BookMeta(name: "2-а Петра",          short: "2Пет", testament: .new),
-    "1JN": BookMeta(name: "1-а Івана",          short: "1Ів",  testament: .new),
-    "2JN": BookMeta(name: "2-а Івана",          short: "2Ів",  testament: .new),
-    "3JN": BookMeta(name: "3-я Івана",          short: "3Ів",  testament: .new),
-    "JUD": BookMeta(name: "Юди",                short: "Юд",   testament: .new),
-    "REV": BookMeta(name: "Об'явлення",         short: "Одкр", testament: .new),
-]
-
 // MARK: - DatabaseService
+// Book names and short abbreviations are provided by BibleBookNames (locale-aware).
+// DatabaseService no longer maintains its own bookMeta dictionary.
 
 final class DatabaseService: @unchecked Sendable {
 
@@ -97,7 +21,9 @@ final class DatabaseService: @unchecked Sendable {
     /// Change this constant if the fallback policy should change globally.
     static let defaultFallbackTranslation = "KJV"
 
-    private var db: OpaquePointer?
+    // nonisolated(unsafe): OpaquePointer не є Sendable, але db доступна лише
+    // з одного потоку (singleton + deinit). Swift 6 вимагає явного маркування.
+    nonisolated(unsafe) private var db: OpaquePointer?
 
     private init() {
         #if DEBUG
@@ -141,10 +67,16 @@ final class DatabaseService: @unchecked Sendable {
         query(sql) { stmt in
             let id       = string(stmt, 0)
             let chapters = Int(sqlite3_column_int(stmt, 2))
-            if let meta = bookMeta[id] {
-                books.append(BibleBook(id: id, name: meta.name, nameShort: meta.short,
-                                       testament: meta.testament, chapterCount: chapters))
-            }
+            // Locale-aware names from BibleBookNames (single source of truth).
+            // Changing the app language and re-loading books produces correct names
+            // automatically — the root .id(appLanguage) re-render triggers a full reload.
+            books.append(BibleBook(
+                id:          id,
+                name:        BibleBookNames.full(for: id),
+                nameShort:   BibleBookNames.short(for: id),
+                testament:   BibleBookNames.testament(for: id),
+                chapterCount: chapters
+            ))
         }
         return books
     }
@@ -358,43 +290,10 @@ final class DatabaseService: @unchecked Sendable {
 
     // MARK: - Bible Text Markup Cleaner
 
-    /// Strips inline Bible markup from raw verse text.
-    ///
-    /// Rules:
-    ///   <S>NUMBER</S>  — Strong's refs    → removed entirely
-    ///   <n>text</n>    — translator notes → content kept in (parentheses)
-    ///   <i>…</i>       — italics          → tags stripped, text kept
-    ///   <br/> <pb/>    — breaks           → replaced with space
-    ///   all other tags                    → tags stripped, content kept
+    /// Thin wrapper kept for call-site backward compatibility.
+    /// Canonical logic lives in String+BibleMarkup.swift → String.strippingBibleMarkup().
     static func stripBibleMarkup(_ raw: String) -> String {
-        var s = raw
-
-        // 1. Strong's: <S>digits</S> → remove entirely (tag + number)
-        s = s.replacingOccurrences(of: #"<S>\d+</S>"#,
-                                   with: "",
-                                   options: .regularExpression)
-
-        // 2. Footnotes: <n>content</n> → (content)
-        s = s.replacingOccurrences(of: #"<n>(.*?)</n>"#,
-                                   with: "($1)",
-                                   options: .regularExpression)
-
-        // 3. Void elements: <br/> <pb/> → space
-        s = s.replacingOccurrences(of: #"<(br|pb)\s*/>"#,
-                                   with: " ",
-                                   options: [.regularExpression, .caseInsensitive])
-
-        // 4. All remaining tags → strip, keep content
-        s = s.replacingOccurrences(of: #"<[^>]+>"#,
-                                   with: "",
-                                   options: .regularExpression)
-
-        // 5. Collapse multiple spaces
-        s = s.replacingOccurrences(of: #" {2,}"#,
-                                   with: " ",
-                                   options: .regularExpression)
-
-        return s.trimmingCharacters(in: .whitespaces)
+        raw.strippingBibleMarkup()
     }
 
     // MARK: - Concordance (all verses for a Strong's number)
@@ -421,21 +320,34 @@ final class DatabaseService: @unchecked Sendable {
             return String(strongsId.dropLast())
         }()
 
-        // Two LEFT JOINs: preferred translation first, fallback second.
-        // COALESCE picks preferred when available; is_fallback flags when fallback was used.
+        // Three LEFT JOINs: verse_map reverse-lookup (macula→trans) for each translation,
+        // then verse join using the translated verse number.
+        // This fixes versification mismatches (e.g. Psalm headings counted as verse 1 in MT
+        // but not in KJV/RST), preventing wrong verses from appearing in concordance.
+        // COALESCE on vm.trans_verse falls back to w.verse for chapters with identity mapping
+        // (verse_map only stores non-identity rows).
         let sql = """
             SELECT DISTINCT
                 w.book_id, w.chapter, w.verse,
+                COALESCE(vm.trans_verse,    w.verse) AS display_verse,
                 COALESCE(v.text, v_fb.text) AS resolved_text,
                 CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback
             FROM word w
+            LEFT JOIN verse_map vm    ON vm.translation   = ?
+                                     AND vm.book_id       = w.book_id
+                                     AND vm.chapter       = w.chapter
+                                     AND vm.macula_verse  = w.verse
+            LEFT JOIN verse_map vm_fb ON vm_fb.translation   = ?
+                                     AND vm_fb.book_id      = w.book_id
+                                     AND vm_fb.chapter      = w.chapter
+                                     AND vm_fb.macula_verse = w.verse
             LEFT JOIN verse v    ON v.book_id    = w.book_id
                                 AND v.chapter    = w.chapter
-                                AND v.verse      = w.verse
+                                AND v.verse      = COALESCE(vm.trans_verse, w.verse)
                                 AND v.translation = ?
             LEFT JOIN verse v_fb ON v_fb.book_id = w.book_id
                                 AND v_fb.chapter = w.chapter
-                                AND v_fb.verse   = w.verse
+                                AND v_fb.verse   = COALESCE(vm_fb.trans_verse, w.verse)
                                 AND v_fb.translation = ?
             WHERE (w.strongs_id = ?
                OR (w.strongs_id GLOB ? || '[a-z]'
@@ -443,19 +355,24 @@ final class DatabaseService: @unchecked Sendable {
             ORDER BY w.book_id, w.chapter, w.verse
             LIMIT ?
             """
-        query(sql, bindings: [translation, fallbackTranslation, base, base, base, limit]) { stmt in
-            let bookId     = string(stmt, 0)
-            let chapter    = Int(sqlite3_column_int(stmt, 1))
-            let verse      = Int(sqlite3_column_int(stmt, 2))
-            let rawText    = optString(stmt, 3) ?? ""
-            let text       = DatabaseService.stripBibleMarkup(rawText)
-            let isFallback = sqlite3_column_int(stmt, 4) != 0
-            let short      = bookMeta[bookId]?.short ?? bookId
-            let ref        = "\(short) \(chapter):\(verse)"
-            let id         = "\(bookId)|\(chapter)|\(verse)"
+        query(sql, bindings: [translation, fallbackTranslation,
+                              translation, fallbackTranslation,
+                              base, base, base, limit]) { stmt in
+            let bookId      = string(stmt, 0)
+            let chapter     = Int(sqlite3_column_int(stmt, 1))
+            // col 2 = w.verse (Macula) — not used for display
+            let displayVerse = Int(sqlite3_column_int(stmt, 3))
+            let rawText     = optString(stmt, 4) ?? ""
+            let text        = DatabaseService.stripBibleMarkup(rawText)
+            let isFallback  = sqlite3_column_int(stmt, 5) != 0
+            // Skip entries where neither translation has verse text.
+            guard !text.isEmpty else { return }
+            let short = BibleBookNames.short(for: bookId)
+            let ref   = "\(short) \(chapter):\(displayVerse)"
+            let id    = "\(bookId)|\(chapter)|\(displayVerse)"
             entries.append(ConcordanceEntry(id: id, reference: ref, text: text, rawText: rawText,
                                             isFallback: isFallback,
-                                            bookId: bookId, chapter: chapter, verse: verse))
+                                            bookId: bookId, chapter: chapter, verse: displayVerse))
         }
         return entries
     }
@@ -514,7 +431,7 @@ final class DatabaseService: @unchecked Sendable {
             let toVerse    = Int(sqlite3_column_int(stmt, 2))
             let text       = DatabaseService.stripBibleMarkup(optString(stmt, 4) ?? "")
             let isFallback = sqlite3_column_int(stmt, 5) != 0
-            let short      = bookMeta[toBook]?.short ?? toBook
+            let short      = BibleBookNames.short(for: toBook)
             let ref        = "\(short) \(toChapter):\(toVerse)"
             let id         = "\(toBook)|\(toChapter)|\(toVerse)"
             refs.append(CrossReference(id: id, targetReference: ref, targetText: text,
@@ -522,6 +439,80 @@ final class DatabaseService: @unchecked Sendable {
                                        isFallback: isFallback))
         }
         return refs
+    }
+
+    // MARK: - Search
+
+    /// Full-text search across verse translations using the FTS5 `verse_fts` index.
+    ///
+    /// The query is wrapped in quotes and a `*` suffix so it works as a phrase-prefix match:
+    ///   "love" → MATCH '"love"*'  finds "love", "loved", "lovely" etc.
+    ///   "God is" → MATCH '"God is"*' finds exact phrase prefix.
+    ///
+    /// Results are ranked by FTS5 BM25 relevance. The snippet() function marks
+    /// matched tokens with ❮…❯ so the UI can highlight them.
+    func searchByText(query rawQuery: String, translation: String, limit: Int = 150) -> [SearchResult] {
+        guard isAvailable else { return [] }
+        let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return [] }
+
+        var results: [SearchResult] = []
+        let ftsExpr = makeFTSQuery(trimmed)
+
+        // snippet(verse_fts, col=0, open, close, ellipsis, numTokens=12)
+        let sql = """
+            SELECT v.book_id, v.chapter, v.verse,
+                   snippet(verse_fts, 0, '❮', '❯', '…', 12) AS snip
+            FROM verse_fts
+            JOIN verse v ON v.rowid = verse_fts.rowid
+            WHERE verse_fts MATCH ?
+              AND v.translation = ?
+            ORDER BY rank
+            LIMIT ?
+            """
+        query(sql, bindings: [ftsExpr, translation, limit]) { stmt in
+            let bookId  = string(stmt, 0)
+            let chapter = Int(sqlite3_column_int(stmt, 1))
+            let verse   = Int(sqlite3_column_int(stmt, 2))
+            // FTS5 snippet() returns raw verse text including <S>N</S> markup.
+            // Strip markup before storing — ❮…❯ highlight markers use non-ASCII
+            // angle brackets (U+276E/U+276F) so strippingBibleMarkup() leaves them intact.
+            let snip    = string(stmt, 3).strippingBibleMarkup()
+            results.append(SearchResult(
+                id: "\(bookId)|\(chapter)|\(verse)",
+                reference: makeRef(bookId, chapter, verse),
+                snippet: snip
+            ))
+        }
+        return results
+    }
+
+    // MARK: Autocomplete suggestions
+
+    /// Words from `search_terms` matching a lowercase prefix (≥2 chars), ordered by frequency.
+    /// Uses GLOB for index-friendly prefix scan. Terms stored lowercase → caller must lowercase input.
+    func suggestTerms(prefix: String, limit: Int = 8) -> [String] {
+        guard isAvailable, prefix.count >= 2 else { return [] }
+        var terms: [String] = []
+        query("SELECT term FROM search_terms WHERE term GLOB ? ORDER BY freq DESC LIMIT ?",
+              bindings: [prefix.lowercased() + "*", limit]) { stmt in
+            terms.append(string(stmt, 0))
+        }
+        return terms
+    }
+
+    // MARK: Private search helpers
+
+    /// Builds a safe FTS5 MATCH expression with prefix matching.
+    /// Phrase (multi-word) and single-word inputs both handled; quotes are escaped.
+    private func makeFTSQuery(_ raw: String) -> String {
+        let escaped = raw.replacingOccurrences(of: "\"", with: "\"\"")
+        return "\"\(escaped)\"*"
+    }
+
+    /// Short reference string — "Бут 1:1" — via BibleBookNames (locale-aware, single source of truth).
+    private func makeRef(_ bookId: String, _ chapter: Int, _ verse: Int) -> String {
+        "\(BibleBookNames.short(for: bookId)) \(chapter):\(verse)"
     }
 }
 

@@ -25,7 +25,8 @@ extension NSAttributedString.Key {
 struct VerseTextView: UIViewRepresentable {
 
     let parsed: ParsedVerse
-    let isHighlighted: Bool
+    /// rawValue of HighlightColor, or nil if not highlighted.
+    var highlightColor: String? = nil
     /// Сегмент що зараз виділений (word mode). nil — виділення знято.
     var selectedSegment: VerseSegment? = nil
     var onVerseTap: () -> Void
@@ -61,17 +62,31 @@ struct VerseTextView: UIViewRepresentable {
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
-        tv.attributedText = buildAttributedString()
+        let coord = context.coordinator
+
+        // Rebuild attributed string only when the text content or highlight changes.
+        // selectedSegment changes are handled cheaply via applySelection() below.
+        let contentChanged = coord.parsed.verseId != parsed.verseId
+                          || coord.highlightColor  != highlightColor
+        if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
+            coord.baseAttributedString = buildBaseAttributedString()
+        }
+
+        // Apply (or clear) selection highlight on top of the cached base string.
+        tv.attributedText = applySelection(to: coord.baseAttributedString)
         tv.invalidateIntrinsicContentSize()
-        context.coordinator.parsed        = parsed
-        context.coordinator.isHighlighted = isHighlighted
-        context.coordinator.onVerseTap    = onVerseTap
-        context.coordinator.onWordTap     = onWordTap
+
+        coord.parsed         = parsed
+        coord.highlightColor = highlightColor
+        coord.onVerseTap     = onVerseTap
+        coord.onWordTap      = onWordTap
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(parsed: parsed, isHighlighted: isHighlighted,
-                    onVerseTap: onVerseTap, onWordTap: onWordTap)
+        let coord = Coordinator(parsed: parsed, highlightColor: highlightColor,
+                                onVerseTap: onVerseTap, onWordTap: onWordTap)
+        coord.baseAttributedString = buildBaseAttributedString()
+        return coord
     }
 
     // MARK: sizeThatFits
@@ -82,23 +97,20 @@ struct VerseTextView: UIViewRepresentable {
         return CGSize(width: width, height: size.height)
     }
 
-    // MARK: NSAttributedString builder
+    // MARK: NSAttributedString builders
 
-    func buildAttributedString() -> NSAttributedString {
+    /// Builds the base attributed string (text + styles + highlight color).
+    /// Does NOT include the selection blue background — that is applied separately
+    /// in applySelection() so we can cheaply update just the selection without
+    /// rebuilding the whole string.
+    func buildBaseAttributedString() -> NSAttributedString {
         let result   = NSMutableAttributedString()
         let baseFont = UIFont.preferredFont(forTextStyle: .body)
 
-        // Знаходимо індекс виділеного сегмента один раз
-        let selectedIndex: Int? = selectedSegment.flatMap { seg in
-            parsed.segments.firstIndex { $0.text == seg.text && $0.strongs == seg.strongs }
-        }
-
         for (index, seg) in parsed.segments.enumerated() {
 
-            // Paragraph break — невидимий
             if seg.isParagraphBreak { continue }
 
-            // Line break
             if seg.isLineBreak {
                 result.append(NSAttributedString(string: "\n", attributes: [
                     .font: baseFont,
@@ -107,7 +119,6 @@ struct VerseTextView: UIViewRepresentable {
                 continue
             }
 
-            // Footnote anchor — superscript "†"
             if let anchorId = seg.footnoteAnchorId, seg.text.isEmpty {
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font:            UIFont.preferredFont(forTextStyle: .caption2),
@@ -122,33 +133,41 @@ struct VerseTextView: UIViewRepresentable {
 
             guard !seg.text.isEmpty else { continue }
 
-            var attrs: [NSAttributedString.Key: Any] = [
-                .font:             resolveFont(baseFont, styles: seg.styles),
-                .foregroundColor:  resolveColor(seg.styles),
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font:              resolveFont(baseFont, styles: seg.styles),
+                .foregroundColor:   resolveColor(seg.styles),
                 .verseSegmentIndex: index
             ]
-
-            // Blue background for selected word (no handles — just highlight)
-            if let selIdx = selectedIndex, index == selIdx {
-                attrs[.backgroundColor] = UIColor.systemBlue.withAlphaComponent(0.2)
-            }
-
             result.append(NSAttributedString(string: seg.text, attributes: attrs))
         }
 
-        // Green highlight for bookmarked verse
-        if isHighlighted && result.length > 0 {
-            // Only add green where there's no word selection highlight
-            result.enumerateAttribute(.backgroundColor,
-                                      in: NSRange(location: 0, length: result.length)) { value, range, _ in
-                if value == nil {
-                    result.addAttribute(.backgroundColor,
-                                        value: UIColor.systemGreen.withAlphaComponent(0.12),
-                                        range: range)
-                }
-            }
+        // Verse-level highlight background (does not include selection — that's added later)
+        if let rawColor = highlightColor, result.length > 0 {
+            let uiColor = HighlightColor.from(rawColor).uiColor.withAlphaComponent(0.22)
+            result.addAttribute(.backgroundColor, value: uiColor,
+                                range: NSRange(location: 0, length: result.length))
         }
 
+        return result
+    }
+
+    /// Copies the base string and adds the blue selection background for the active segment.
+    /// Returns the base string unchanged when nothing is selected.
+    func applySelection(to base: NSAttributedString) -> NSAttributedString {
+        let selectedIndex: Int? = selectedSegment.flatMap { seg in
+            parsed.segments.firstIndex { $0.text == seg.text && $0.strongs == seg.strongs }
+        }
+        guard let selIdx = selectedIndex, base.length > 0 else { return base }
+
+        let result = NSMutableAttributedString(attributedString: base)
+        result.enumerateAttribute(.verseSegmentIndex,
+                                   in: NSRange(location: 0, length: result.length)) { value, range, _ in
+            if let idx = value as? Int, idx == selIdx {
+                result.addAttribute(.backgroundColor,
+                                    value: UIColor.systemBlue.withAlphaComponent(0.2),
+                                    range: range)
+            }
+        }
         return result
     }
 
@@ -172,18 +191,20 @@ struct VerseTextView: UIViewRepresentable {
 
     final class Coordinator: NSObject {
 
-        var parsed:        ParsedVerse
-        var isHighlighted: Bool
-        var onVerseTap:    () -> Void
-        var onWordTap:     (VerseSegment) -> Void
+        var parsed:               ParsedVerse
+        var highlightColor:       String?
+        var onVerseTap:           () -> Void
+        var onWordTap:            (VerseSegment) -> Void
+        /// Cached base string (text + styles + highlight). Rebuilt only when content changes.
+        var baseAttributedString: NSAttributedString = NSAttributedString()
 
-        init(parsed: ParsedVerse, isHighlighted: Bool,
+        init(parsed: ParsedVerse, highlightColor: String?,
              onVerseTap: @escaping () -> Void,
              onWordTap:  @escaping (VerseSegment) -> Void) {
-            self.parsed        = parsed
-            self.isHighlighted = isHighlighted
-            self.onVerseTap    = onVerseTap
-            self.onWordTap     = onWordTap
+            self.parsed         = parsed
+            self.highlightColor = highlightColor
+            self.onVerseTap     = onVerseTap
+            self.onWordTap      = onWordTap
         }
 
         @objc func handleTap(_ gr: UITapGestureRecognizer) {
@@ -234,7 +255,7 @@ struct VerseTextView: UIViewRepresentable {
                     if let parsed = verse.parsed {
                         VerseTextView(
                             parsed: parsed,
-                            isHighlighted: verse.isHighlighted,
+                            highlightColor: verse.highlightColor,
                             onVerseTap: {},
                             onWordTap: { seg in print("Word tap: \(seg.text) → \(seg.strongs)") }
                         )

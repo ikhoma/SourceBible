@@ -46,12 +46,13 @@ struct VerseTabView: View {
 
 enum VersePill: CaseIterable {
     case crossRefs, translations, original, commentaries
-    var label: String {
+    // LocalizedStringKey so Text(p.label) responds to .environment(\.locale)
+    var label: LocalizedStringKey {
         switch self {
-        case .crossRefs:    return "Перехресні"
-        case .translations: return "Переклади"
-        case .original:     return "Оригінал"
-        case .commentaries: return "Коментарі"
+        case .crossRefs:    return "verse.pill.cross_refs"
+        case .translations: return "verse.pill.translations"
+        case .original:     return "verse.pill.original"
+        case .commentaries: return "verse.pill.commentaries"
         }
     }
 }
@@ -61,21 +62,42 @@ enum VersePill: CaseIterable {
 // Internal (not private) so WordTabContent can reuse it.
 
 struct PillSection<Content: View>: View {
-    let title: String
+    // Stored as AnyView so we can support both LocalizedStringKey (static keys)
+    // and String (pre-formatted runtime strings like "Used 5 times") without a
+    // localization lookup for the latter.
+    private let headerView: AnyView
     @ViewBuilder let content: () -> Content
+
+    /// Use for static localized section titles passed as string literals.
+    init(title: LocalizedStringKey, @ViewBuilder content: @escaping () -> Content) {
+        self.headerView = AnyView(sectionHeader(title))
+        self.content = content
+    }
+
+    /// Use for dynamically-composed strings that are already localized
+    /// (e.g. built with String(format:…)). Uses Text(verbatim:) to skip lookup.
+    /// NOTE: Use `verbatimTitle:` label explicitly so string literals always resolve to
+    /// the LocalizedStringKey overload above (Swift prefers String for bare literals).
+    init(verbatimTitle title: String, @ViewBuilder content: @escaping () -> Content) {
+        self.headerView = AnyView(
+            Text(verbatim: title)
+                .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
+        )
+        self.content = content
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title)
+            headerView
             content()
         }
     }
 }
 
 // MARK: - Shared section header
-// Internal — used by PillSection, WordMeaningView, WordUsageView.
+// Internal — used by PillSection init(title: LocalizedStringKey).
 
-func sectionHeader(_ text: String) -> some View {
+func sectionHeader(_ text: LocalizedStringKey) -> some View {
     Text(text)
         .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
 }
@@ -86,9 +108,9 @@ struct CrossRefsView: View {
     let refs: [CrossReference]
 
     var body: some View {
-        PillSection(title: "Перехресні посилання") {
+        PillSection(title: "verse.section.cross_refs") {
             if refs.isEmpty {
-                Text("Немає перехресних посилань для цього вірша")
+                Text("verse.cross_refs.empty")
                     .font(.callout).foregroundStyle(.secondary)
                     .padding(.top, 4)
             } else {
@@ -97,7 +119,7 @@ struct CrossRefsView: View {
                         Text(ref.targetReference)
                             .font(.caption).fontWeight(.semibold).foregroundStyle(.blue)
                         if ref.targetText.isEmpty {
-                            Text("Текст недоступний")
+                            Text("verse.text_unavailable")
                                 .font(.callout).foregroundStyle(.tertiary).italic()
                         } else {
                             Text(ref.targetText)
@@ -118,9 +140,9 @@ struct TranslationsView: View {
     let parallels: [VerseTranslation]
 
     var body: some View {
-        PillSection(title: "Переклади") {
+        PillSection(title: "verse.section.translations") {
             if parallels.isEmpty {
-                Text("Немає доступних перекладів")
+                Text("verse.translations.empty")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
                 ForEach(parallels) { vt in
@@ -150,9 +172,9 @@ struct OriginalWordsView: View {
     }
 
     var body: some View {
-        PillSection(title: "Оригінальні слова") {
+        PillSection(title: "verse.section.original") {
             if words.isEmpty {
-                Text("Дані оригінальної мови недоступні")
+                Text("verse.original.empty")
                     .font(.callout).foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
@@ -178,9 +200,10 @@ struct OriginalWordsView: View {
 struct CommentariesView: View {
     let verseId: String
     @State private var selectedTheologian: Theologian? = nil
+    @Environment(\.locale) private var locale
 
     var body: some View {
-        PillSection(title: "Коментарі") {
+        PillSection(title: "verse.section.commentaries") {
             ForEach(Theologian.all) { t in
                 Button {
                     selectedTheologian = t
@@ -192,8 +215,10 @@ struct CommentariesView: View {
                             .frame(width: 44, height: 44)
                             .clipShape(Circle())
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(t.name).font(.callout).fontWeight(.medium).foregroundStyle(.primary)
-                            Text("\(t.era) · \(t.style)").font(.caption).foregroundStyle(.secondary)
+                            Text(LocalizedStringKey(t.nameKey))
+                                .font(.callout).fontWeight(.medium).foregroundStyle(.primary)
+                            (Text(LocalizedStringKey(t.eraKey)) + Text(" · ") + Text(LocalizedStringKey(t.styleKey)))
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
@@ -227,17 +252,18 @@ struct CommentaryDetailView: View {
                         .frame(width: 52, height: 52)
                         .clipShape(Circle())
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(theologian.name).font(.headline)
-                        Text("\(theologian.era) · \(theologian.style)").font(.caption).foregroundStyle(.secondary)
+                        Text(LocalizedStringKey(theologian.nameKey)).font(.headline)
+                        (Text(LocalizedStringKey(theologian.eraKey)) + Text(" · ") + Text(LocalizedStringKey(theologian.styleKey)))
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Divider()
-                Text("Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен).")
+                Text("verse.commentary.placeholder")
                     .font(.body).lineSpacing(6).foregroundStyle(.secondary)
             }
             .padding(20)
         }
-        .navigationTitle(theologian.name)
+        .navigationTitle(LocalizedStringKey(theologian.nameKey))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

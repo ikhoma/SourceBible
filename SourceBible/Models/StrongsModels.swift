@@ -53,9 +53,13 @@ struct ConcordanceEntry: Identifiable {
 
 struct Theologian: Identifiable {
     let id: String
-    let name: String
-    let era: String
-    let style: String
+    /// Localization key — e.g. "theologian.calvin.name".
+    /// Views use Text(LocalizedStringKey(nameKey)) so SwiftUI's environment locale
+    /// always picks the right language, bypassing String(localized:) which in
+    /// Swift 6 / iOS 26 may not go through the LocalizedBundle swizzle.
+    let nameKey:  String
+    let eraKey:   String
+    let styleKey: String
     let imageName: String
 }
 
@@ -67,11 +71,35 @@ struct Commentary: Identifiable {
 }
 
 extension Theologian {
-    static let calvin   = Theologian(id: "calvin",   name: "Жан Кальвін",      era: "XVI ст.",   style: "Текст і богослов'я",   imageName: "calvin")
-    static let henry    = Theologian(id: "henry",    name: "Меттью Генрі",     era: "XVIII ст.", style: "Серце і застосування", imageName: "henry")
-    static let spurgeon = Theologian(id: "spurgeon", name: "Чарльз Сперджен", era: "XIX ст.",   style: "Проповідь і образи",   imageName: "spurgeon")
-    static let owen     = Theologian(id: "owen",     name: "Джон Оуен",        era: "XVII ст.",  style: "Догматика і душа",     imageName: "owen")
-    static let all = [calvin, henry, spurgeon, owen]
+    static let calvin = Theologian(
+        id: "calvin",
+        nameKey:  "theologian.calvin.name",
+        eraKey:   "theologian.calvin.era",
+        styleKey: "theologian.calvin.style",
+        imageName: "calvin"
+    )
+    static let henry = Theologian(
+        id: "henry",
+        nameKey:  "theologian.henry.name",
+        eraKey:   "theologian.henry.era",
+        styleKey: "theologian.henry.style",
+        imageName: "henry"
+    )
+    static let spurgeon = Theologian(
+        id: "spurgeon",
+        nameKey:  "theologian.spurgeon.name",
+        eraKey:   "theologian.spurgeon.era",
+        styleKey: "theologian.spurgeon.style",
+        imageName: "spurgeon"
+    )
+    static let owen = Theologian(
+        id: "owen",
+        nameKey:  "theologian.owen.name",
+        eraKey:   "theologian.owen.era",
+        styleKey: "theologian.owen.style",
+        imageName: "owen"
+    )
+    static let all: [Theologian] = [calvin, henry, spurgeon, owen]
 }
 
 // MARK: - Sample / Preview Data

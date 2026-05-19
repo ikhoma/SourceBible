@@ -41,3 +41,10 @@ build/
 *.log
 *.bak
 .env
+
+# ── FUSE / sparse-file artifacts ──────────────────────────────
+# Created during APFS sparse-file operations (e.g. DB copy via FUSE).
+.fuse_hidden*
+
+# ── Local workflow scripts ─────────────────────────────────────
+commit_all.sh

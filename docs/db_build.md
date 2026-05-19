@@ -32,7 +32,7 @@ Cross-references завантажуються автоматично з OpenBibl
 ## Збірка
 
 ```bash
-cd /Users/ivan.khoma/Projects/SourceBible
+cd ~/Projects/SourceBible
 python3 scripts/build_db.py
 ```
 
@@ -53,6 +53,18 @@ Finalizing...
 ✓ Done: sourcebible.db  (~149 MB)
 ```
 
+> ⚠️ **`build_db.py` не будує `verse_map`** — обов'язково виконати наступний крок.
+
+### Крок 2: verse_map (обов'язково після build_db.py)
+
+`verse_map` — окремий скрипт, **не вбудований** у `scripts/build_db.py`. Без нього "Оригінал" показує слова не того вірша у 459 розділах (Псалми, RST SNG/ZEC/ROM 16).
+
+```bash
+python3 build_verse_map.py sourcebible.db
+```
+
+Очікуваний вивід: `✓ Done: 7292 rows across 459 chapters`
+
 ## Копіювання в Xcode
 
 ```bash
@@ -61,10 +73,11 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 
 Потім у Xcode: **Product → Clean Build Folder** (Shift+Cmd+K), потім Run.
 
-Або одразу повний цикл:
+Або одразу повний цикл (всі три кроки):
 ```bash
-cd /Users/ivan.khoma/Projects/SourceBible \
+cd ~/Projects/SourceBible \
   && python3 scripts/build_db.py \
+  && python3 build_verse_map.py sourcebible.db \
   && cp sourcebible.db SourceBible/Resources/sourcebible.db \
   && echo "✓ DB built and copied to Resources"
 ```
@@ -185,9 +198,57 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 
 ---
 
+### ❌ `verse_map` відсутня → "Оригінал" показує слова не того вірша
+
+**Причина:** У Біблії різні традиції нумерації. Псалми в MT (Macula) мають заголовок як вірш 1 — KJV і RST його пропускають. Результат: KJV вірш 1 Псалма 3 → код завантажує Macula вірш 1 (заголовок), а не текст.
+
+**Масштаб:** 459 розділів зі зсувом (з ~1 189), 7 292 non-identity mappings. Найбільше — Псалми (62 розділи), також RST SNG, ZEC, ROM 16.
+
+**Рішення:** Таблиця `verse_map` з pre-computed маппінгом. Будується алгоритмом Strong's overlap greedy alignment.
+
+**Якщо `verse_map` відсутня в DB (наприклад після часткового відновлення):**
+```bash
+cd ~/Projects/SourceBible
+python3 build_verse_map.py   # standalone скрипт, не чіпає інші таблиці
+```
+Очікуваний результат: `✓ Done: 7292 rows across 459 chapters`
+
+**Якщо збираєш DB з нуля через `scripts/build_db.py`:** `verse_map` **не будується автоматично** — після `build_db.py` обов'язково запусти `python3 build_verse_map.py sourcebible.db` (div. розділ "Збірка" вище).
+
+**Перевірка в UI:** відкрий Псалом 3, вірш 1 у RST або KJV → вкладка "Оригінал" має показувати слова першого текстового вірша (не заголовку).
+
+**Swift реалізація** — три рівні пошуку в `ReaderViewModel.findBestMaculaVerse()`:
+1. O(1) lookup у `verse_map` (точний маппінг)
+2. Identity перевірка через Strong's overlap (≥2 збіги)
+3. Heuristic fallback ±2 вірші по Strong's overlap
+
+---
+
 ### ❌ OpenBible cross-references не завантажуються
 
 Скрипт продовжує без них (WARN, не ERROR). Cross-refs кешуються у `scripts/.cache/openbible_xref.zip` — якщо файл є, завантаження пропускається. Можна завантажити вручну і покласти туди.
+
+---
+
+## Схема `verse_map` table
+
+```sql
+CREATE TABLE verse_map (
+    translation  TEXT    NOT NULL,  -- ID перекладу ('KJV', 'RST', 'ASV', ...)
+    book_id      TEXT    NOT NULL,  -- 'PSA', 'ROM', 'SNG', 'ZEC'
+    chapter      INTEGER NOT NULL,
+    trans_verse  INTEGER NOT NULL,  -- номер вірша у перекладі
+    macula_verse INTEGER NOT NULL,  -- відповідний вірш у Macula (word table, MT нумерація)
+    PRIMARY KEY (translation, book_id, chapter, trans_verse)
+);
+
+CREATE INDEX idx_verse_map ON verse_map(translation, book_id, chapter);
+```
+
+**Ключові принципи:**
+- Зберігаємо **тільки non-identity** рядки (`trans_verse != macula_verse`). Відсутній рядок = identity mapping (вірш однаковий в обох схемах).
+- Таблиця завжди мапить → MT (Macula). Зворотний напрямок (MT → переклад) потребує окремого рядка або reverse lookup.
+- Будується один раз при зміні перекладів. Standalone скрипт: `build_verse_map.py` у корені проекту.
 
 ---
 
@@ -258,4 +319,10 @@ import_translations
 import_footnotes
 import_cross_references
 finalize
+
+# ── Окремий крок після build_db.py ──
+build_verse_map.py      ← НЕ вбудований у build_db.py! Запускати вручну:
+                           python3 build_verse_map.py sourcebible.db
+                           Strong's overlap alignment; 7 292 non-identity rows
+                           Псалми (62 розд.), RST SNG/ZEC/ROM — найбільше зсувів
 ```

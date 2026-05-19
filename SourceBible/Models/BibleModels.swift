@@ -16,6 +16,15 @@ struct BibleBook: Identifiable, Hashable {
 enum Testament: String, CaseIterable {
     case old = "Старий Заповіт"
     case new = "Новий Заповіт"
+
+    /// Localized display name. Use this in UI — do NOT use rawValue for display.
+    /// rawValues are stored in the DB and must not change.
+    var localizedName: String {
+        switch self {
+        case .old: return String(localized: "testament.old")
+        case .new: return String(localized: "testament.new")
+        }
+    }
 }
 
 struct BibleChapter: Identifiable {
@@ -32,18 +41,20 @@ struct BibleVerse: Identifiable {
     let number: Int
     let text: String        // plain text без тегів (для пошуку/індексу)
     var words: [BibleWord]
-    var isHighlighted: Bool = false
+    /// rawValue of HighlightColor, or nil if not highlighted.
+    /// Stored as a String to avoid a circular import; resolve via HighlightColor.from(_:).
+    var highlightColor: String? = nil
     var parsed: ParsedVerse? = nil  // nil тільки для sample data без парсингу
 }
 
 // Manual Hashable — exclude `parsed` and `words` (expensive, not needed for equality)
 extension BibleVerse: Hashable {
     static func == (lhs: BibleVerse, rhs: BibleVerse) -> Bool {
-        lhs.id == rhs.id && lhs.isHighlighted == rhs.isHighlighted
+        lhs.id == rhs.id && lhs.highlightColor == rhs.highlightColor
     }
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        hasher.combine(isHighlighted)
+        hasher.combine(highlightColor)
     }
 }
 
@@ -234,7 +245,7 @@ extension BibleVerse {
             id: "PSA|1|3", bookId: "PSA", chapter: 1, number: 3,
             text: "І буде він, як дерево, посаджене над потоками вод, що дає плід свій у свій час, і листя якого не в'яне, — і все, що він чинить, щаститиме.",
             words: [],
-            isHighlighted: true
+            highlightColor: "yellow"
         ),
         BibleVerse(
             id: "PSA|1|4", bookId: "PSA", chapter: 1, number: 4,

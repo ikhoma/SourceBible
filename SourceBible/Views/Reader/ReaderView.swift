@@ -5,17 +5,28 @@ import SwiftUI
 
 struct ReaderView: View {
 
-    @EnvironmentObject var vm: ReaderViewModel
+    @EnvironmentObject var vm:          ReaderViewModel
+    @EnvironmentObject var notesVM:     NotesViewModel
+    @EnvironmentObject var bookmarksVM: BookmarksViewModel
+    @EnvironmentObject var router:      AppNavigationRouter
+
+    // Drives re-evaluation of Text(vm.chapterTitle) when locale changes.
+    // chapterTitle calls BibleBookNames.short(for:) which reads UserDefaults at call
+    // time — correct value is available immediately, but SwiftUI only re-evaluates
+    // body when one of its observed dependencies changes. Without this, the toolbar
+    // book-name button keeps the previous locale's abbreviation until the user taps it.
+    @Environment(\.locale) private var locale
 
     var body: some View {
         NavigationStack {
             ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
                 if vm.isLoading {
-                    ProgressView("Завантаження...")
+                    ProgressView(LocalizedStringKey("reader.loading"))
                 } else if let error = vm.errorMessage {
                     VStack(spacing: 12) {
                         Text(error).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Button("Спробувати знову") { vm.loadChapter() }.buttonStyle(.bordered)
+                        Button("reader.retry") { vm.loadChapter() }.buttonStyle(.bordered)
                     }.padding()
                 } else {
                     ScrollViewReader { proxy in
@@ -84,6 +95,9 @@ struct ReaderView: View {
                     if #available(iOS 18.0, *) {
                         VerseBottomSheetView(verse: verse)
                             .environmentObject(vm)
+                            .environmentObject(notesVM)
+                            .environmentObject(bookmarksVM)
+                            .environmentObject(router)
                             .presentationDetents([.medium, .large])
                             .presentationDragIndicator(.visible)
                             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
@@ -91,6 +105,9 @@ struct ReaderView: View {
                     } else {
                         VerseBottomSheetView(verse: verse)
                             .environmentObject(vm)
+                            .environmentObject(notesVM)
+                            .environmentObject(bookmarksVM)
+                            .environmentObject(router)
                             .presentationDetents([.medium, .large])
                             .presentationDragIndicator(.visible)
                             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
@@ -124,7 +141,7 @@ struct VerseRowView: View {
                 if let parsed = verse.parsed {
                     VerseTextView(
                         parsed: parsed,
-                        isHighlighted: verse.isHighlighted,
+                        highlightColor: verse.highlightColor,
                         selectedSegment: selectedSegment,
                         onVerseTap: onVerseTap,
                         onWordTap: onWordTap
@@ -139,7 +156,9 @@ struct VerseRowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 10)
                         .padding(.trailing, 12)
-                        .background(verse.isHighlighted ? Color.green.opacity(0.12) : Color.clear)
+                        .background(verse.highlightColor.map {
+                            HighlightColor.from($0).color.opacity(0.22)
+                        } ?? Color.clear)
                         .contentShape(Rectangle())
                         .onTapGesture(perform: onVerseTap)
                 }
@@ -152,7 +171,7 @@ struct VerseRowView: View {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12).fill(Color.blue)
                             ConcentricRectangle()
-                                .fill(Color(UIColor.systemBackground))
+                                .fill(Color(UIColor.systemGroupedBackground))
                                 .padding(.leading, 2)
                             ConcentricRectangle()
                                 .fill(Color.blue.opacity(0.06))
@@ -161,11 +180,11 @@ struct VerseRowView: View {
                         .containerShape(RoundedRectangle(cornerRadius: 12))
                     } else {
                         // iOS 17–25: три шари вручну
-                        // 1) синій (акцент-смужка) → 2) білий (ховає синій) → 3) синій тінт
+                        // 1) синій (акцент-смужка) → 2) grouped bg (ховає синій) → 3) синій тінт
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12).fill(Color.blue)
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(UIColor.systemBackground))
+                                .fill(Color(UIColor.systemGroupedBackground))
                                 .padding(.leading, 2)
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.blue.opacity(0.06))
@@ -193,7 +212,7 @@ struct TranslationPickerView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(t.name).font(.body)
-                        Text(t.language == "uk" ? "Українська" : "English").font(.caption).foregroundStyle(.secondary)
+                        Text(t.language == "uk" ? "lang.ukrainian" : "lang.english").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     if vm.currentTranslation.id == t.id {
@@ -203,11 +222,11 @@ struct TranslationPickerView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { vm.selectTranslation(t); dismiss() }
             }
-            .navigationTitle("Переклад")
+            .navigationTitle("reader.translation_picker.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Закрити") { dismiss() }
+                    Button("action.close") { dismiss() }
                 }
             }
         }
@@ -215,6 +234,12 @@ struct TranslationPickerView: View {
 }
 
 #Preview {
-    ReaderView().environmentObject(ReaderViewModel())
+    @MainActor in
+    let store = InMemoryUserDataStore()
+    let auth  = LocalAuthService.shared
+    ReaderView()
+        .environmentObject(ReaderViewModel(store: store))
+        .environmentObject(NotesViewModel(store: store, authService: auth))
+        .environmentObject(BookmarksViewModel(store: store, authService: auth))
 }
 

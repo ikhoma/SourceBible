@@ -7,6 +7,7 @@ struct BookChapterPickerView: View {
 
     @EnvironmentObject var vm: ReaderViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(\.locale) private var locale
 
     @State private var step: Step = .book
     @State private var selectedBook: BibleBook? = nil
@@ -26,7 +27,7 @@ struct BookChapterPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(step == .chapter ? "Назад" : "Закрити") {
+                    Button(step == .chapter ? "action.back" : "action.close") {
                         if step == .chapter { step = .book } else { dismiss() }
                     }
                 }
@@ -36,22 +37,26 @@ struct BookChapterPickerView: View {
 
     private var bookList: some View {
         List {
-            Section(Testament.old.rawValue) {
+            Section(Testament.old.localizedName) {
                 ForEach(filtered(.old)) { book in bookRow(book) }
             }
-            Section(Testament.new.rawValue) {
+            Section(Testament.new.localizedName) {
                 ForEach(filtered(.new)) { book in bookRow(book) }
             }
         }
-        .searchable(text: $searchText, prompt: "Пошук книги")
-        .navigationTitle("Книга")
+        .searchable(text: $searchText, prompt: Text("picker.search_book"))
+        .navigationTitle("picker.title_book")
     }
 
     private func bookRow(_ book: BibleBook) -> some View {
-        HStack {
-            Text(book.name)
+        // Use BibleBookNames.full() at display time (reads UserDefaults) rather than
+        // the cached book.name, so names update immediately after a language switch.
+        let displayName = BibleBookNames.full(for: book.id)
+        return HStack {
+            Text(displayName)
             Spacer()
-            Text("\(book.chapterCount) гл.").font(.caption).foregroundStyle(.secondary)
+            Text(String(format: String(localized: "picker.chapters_count"), book.chapterCount))
+                .font(.caption).foregroundStyle(.secondary)
             if vm.currentBook.id == book.id {
                 Image(systemName: "checkmark").font(.caption).foregroundStyle(.blue)
             }
@@ -62,7 +67,11 @@ struct BookChapterPickerView: View {
 
     private func filtered(_ testament: Testament) -> [BibleBook] {
         let books = vm.allBooks.filter { $0.testament == testament }
-        return searchText.isEmpty ? books : books.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        guard !searchText.isEmpty else { return books }
+        // Search against the live localized name so Ukrainian search works.
+        return books.filter {
+            BibleBookNames.full(for: $0.id).localizedCaseInsensitiveContains(searchText)
+        }
     }
 
     private func chapterGrid(for book: BibleBook) -> some View {
@@ -85,10 +94,10 @@ struct BookChapterPickerView: View {
             }
             .padding(16)
         }
-        .navigationTitle(book.name)
+        .navigationTitle(BibleBookNames.full(for: book.id))
     }
 }
 
 #Preview {
-    BookChapterPickerView().environmentObject(ReaderViewModel())
+    BookChapterPickerView().environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
 }

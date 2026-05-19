@@ -11,11 +11,27 @@ struct VerseBottomSheetView: View {
     /// Kept only as a fallback for Xcode Previews.
     /// At runtime the view always reads vm.selectedVerse so navigation updates propagate correctly.
     private let fallbackVerse: BibleVerse
-    @EnvironmentObject var vm: ReaderViewModel
+    @EnvironmentObject var vm:          ReaderViewModel
+    @EnvironmentObject var notesVM:     NotesViewModel
+    @EnvironmentObject var bookmarksVM: BookmarksViewModel
+    @EnvironmentObject var router:      AppNavigationRouter
 
     /// Lifted here so the selected pill survives switching to/from word mode.
     @State private var versePill: VersePill = .crossRefs
     @State private var wordSubTab: WordSubTab = .meaning
+    /// Controls which note editor sheet is open on top of this bottom sheet.
+    @State private var activeEditor: ActiveEditor? = nil
+    /// Shows the highlight color picker confirmation dialog.
+    @State private var showColorPicker: Bool = false
+
+    private enum ActiveEditor: Identifiable {
+        case note(NoteWithBlocks)
+        var id: String {
+            switch self {
+            case .note(let n): return "note-\(n.note.id)"
+            }
+        }
+    }
 
     init(verse: BibleVerse) {
         self.fallbackVerse = verse
@@ -38,6 +54,8 @@ struct VerseBottomSheetView: View {
                     WordTabView(subTab: wordSubTab).environmentObject(vm)
                 }
             }
+            // Changing id recreates the ScrollView → scroll position always resets to top
+            .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
@@ -47,6 +65,20 @@ struct VerseBottomSheetView: View {
             .background(Color(UIColor.systemBackground))
         }
         .background(Color(UIColor.systemBackground))
+        // Single editor sheet slot — avoids "only one sheet" warning
+        .sheet(item: $activeEditor) { editor in
+            switch editor {
+            case .note(let note):
+                NoteEditorView(noteWithBlocks: note)
+                    .environmentObject(notesVM)
+                    .environmentObject(router)
+                    .presentationDetents([.large])
+                    .onDisappear {
+                        notesVM.isEditorPresented = false
+                        notesVM.refresh()
+                    }
+            }
+        }
     }
 
     // MARK: - Header
@@ -55,10 +87,14 @@ struct VerseBottomSheetView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 if vm.bottomSheetMode == .word {
-                    let wordText = vm.selectedWordDisplayText ?? "Слово"
-                    Text(wordText).font(.title2).bold()
+                    // selectedWordDisplayText is a resolved String (from DB); falls back to localized key
+                    if let wordText = vm.selectedWordDisplayText {
+                        Text(wordText).font(.title2).bold()
+                    } else {
+                        Text("sheet.mode.word").font(.title2).bold()
+                    }
                 } else {
-                    Text("\(vm.currentBook.nameShort) \(verse.chapter):\(verse.number)")
+                    Text("\(BibleBookNames.short(for: vm.currentBook.id)) \(verse.chapter):\(verse.number)")
                         .font(.title2).bold()
                 }
             }
@@ -113,8 +149,8 @@ struct VerseBottomSheetView: View {
 
     private var modeTabs: some View {
         Picker("", selection: $vm.bottomSheetMode) {
-            Text("Вірш").tag(BottomSheetMode.verse)
-            Text("Слово").tag(BottomSheetMode.word)
+            Text("sheet.mode.verse").tag(BottomSheetMode.verse)
+            Text("sheet.mode.word").tag(BottomSheetMode.word)
         }
         .pickerStyle(.segmented)
         .padding(.horizontal, 20).padding(.vertical, 8)
@@ -148,7 +184,7 @@ struct VerseBottomSheetView: View {
         .padding(.top, 10).padding(.bottom, 12)
     }
 
-    private func pillBtn(_ label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+    private func pillBtn(_ label: LocalizedStringKey, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.footnote)
@@ -163,19 +199,42 @@ struct VerseBottomSheetView: View {
 
     private var actionBar: some View {
         HStack(spacing: 0) {
-            actionBtn(icon: "highlighter", label: "Відмітити",
-                      isActive: vm.isCurrentVerseHighlighted, color: .green) {
-                vm.toggleHighlight(for: verse)
+            actionBtn(icon: "highlighter", label: "action.highlight",
+                      isActive: vm.isCurrentVerseHighlighted,
+                      color: vm.currentVerseHighlightColor?.color ?? .yellow) {
+                showColorPicker = true
+            }
+            .confirmationDialog(Text("action.highlight_color_title"),
+                                isPresented: $showColorPicker, titleVisibility: .visible) {
+                ForEach(HighlightColor.allCases, id: \.self) { hColor in
+                    Button(hColor.label) {
+                        vm.setHighlightColor(hColor, for: verse)
+                    }
+                }
+                if vm.isCurrentVerseHighlighted {
+                    Button("action.remove_highlight", role: .destructive) {
+                        vm.removeHighlight(for: verse)
+                    }
+                }
+                Button("action.cancel", role: .cancel) {}
             }
             Divider().frame(height: 32)
-            actionBtn(icon: "note.text", label: "Нотатка", isActive: false, color: .blue) {}
+            actionBtn(icon: "note.text", label: "action.note", isActive: false, color: .blue) {
+                let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
+                activeEditor = .note(note)
+            }
             Divider().frame(height: 32)
-            actionBtn(icon: "square.and.arrow.up", label: "Поділитись", isActive: false, color: .blue) {}
+            actionBtn(icon: "bookmark", label: "action.bookmark",
+                      isActive: bookmarksVM.isBookmarked(verseId: verse.id), color: .blue) {
+                bookmarksVM.toggleBookmark(verseId: verse.id)
+            }
+            Divider().frame(height: 32)
+            actionBtn(icon: "square.and.arrow.up", label: "action.share", isActive: false, color: .blue) {}
         }
         .padding(.horizontal, 8).padding(.vertical, 10)
     }
 
-    private func actionBtn(icon: String, label: String, isActive: Bool, color: Color, action: @escaping () -> Void) -> some View {
+    private func actionBtn(icon: String, label: LocalizedStringKey, isActive: Bool, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon).font(.system(size: 20))
@@ -189,6 +248,12 @@ struct VerseBottomSheetView: View {
 }
 
 #Preview {
+    @MainActor in
+    let store = InMemoryUserDataStore()
+    let auth  = LocalAuthService.shared
     VerseBottomSheetView(verse: BibleVerse.sampleVerses[0])
-        .environmentObject(ReaderViewModel())
+        .environmentObject(ReaderViewModel(store: store))
+        .environmentObject(NotesViewModel(store: store, authService: auth))
+        .environmentObject(BookmarksViewModel(store: store, authService: auth))
+        .environmentObject(AppNavigationRouter())
 }

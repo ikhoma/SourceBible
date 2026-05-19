@@ -27,8 +27,8 @@ struct WordTabView: View {
                 }
             } else {
                 Text(vm.selectedWord != nil || vm.selectedSegment != nil
-                     ? "Дані мови недоступні для цього слова"
-                     : "Натисніть на слово для вивчення")
+                     ? LocalizedStringKey(MorphKey.emptyNoData)
+                     : LocalizedStringKey(MorphKey.emptyTapHint))
                     .font(.callout).foregroundStyle(.secondary).padding(20)
             }
         }
@@ -40,7 +40,14 @@ struct WordTabView: View {
 
 enum WordSubTab: CaseIterable {
     case meaning, usage
-    var label: String { self == .meaning ? "Значення" : "Вживання" }
+    // Return the raw localization key so SwiftUI resolves it through Bundle.main
+    // (swizzled to LocalizedBundle), matching the VersePill.label pattern.
+    // Do NOT pre-resolve with String(localized:) — that bypasses the swizzle.
+    var label: LocalizedStringKey {
+        self == .meaning
+            ? LocalizedStringKey(MorphKey.tabMeaning)
+            : LocalizedStringKey(MorphKey.tabUsage)
+    }
 }
 
 // MARK: - Lexicon Parser
@@ -145,6 +152,8 @@ struct WordMeaningView: View {
     let entry: StrongsEntry
     @EnvironmentObject var vm: ReaderViewModel
 
+    private let t: TranslationProvider = BundleTranslationProvider()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerSection
@@ -204,14 +213,14 @@ struct WordMeaningView: View {
         let parts = word.id.split(separator: "|")
         let ch    = parts.count > 1 ? String(parts[1]) : ""
         let v     = parts.count > 2 ? String(parts[2]) : ""
-        let ref   = "\(vm.currentBook.nameShort) \(ch):\(v)"
+        let ref   = "\(BibleBookNames.short(for: vm.currentBook.id)) \(ch):\(v)"
 
-        var rows: [(String, String, Bool)] = [("Слово", word.text, true)]
+        var rows: [(String, String, Bool)] = [(t.string(for: MorphKey.rowWord), word.text, true)]
         if let xlit = word.xlit, !xlit.isEmpty {
-            rows.append(("Транслітерація", xlit, false))
+            rows.append((t.string(for: MorphKey.rowTransliteration), xlit, false))
         }
         return VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("Форма у \(ref)")
+            sectionLabel(t.string(for: MorphKey.sectionFormInContext, ref))
             InfoGroup(rows: rows)
         }
     }
@@ -220,23 +229,23 @@ struct WordMeaningView: View {
 
     private func morphologyRows(word: BibleWord, decoded: FullMorphology) -> [(String, String, Bool)] {
         var rows: [(String, String, Bool)] = []
-        if !decoded.partOfSpeech.isEmpty    { rows.append(("Частина мови",      decoded.partOfSpeech,    false)) }
-        if !decoded.stem.isEmpty            { rows.append(("Основа (Біньян)",   decoded.stem,            false)) }
-        if !decoded.aspect.isEmpty          { rows.append(("Час / Вид",         decoded.aspect,          false)) }
-        if !decoded.grammaticalForm.isEmpty { rows.append(("Граматична форма",  decoded.grammaticalForm, false)) }
+        if !decoded.partOfSpeech.isEmpty    { rows.append((t.string(for: MorphKey.rowPartOfSpeech),    decoded.partOfSpeech,    false)) }
+        if !decoded.stem.isEmpty            { rows.append((t.string(for: MorphKey.rowStem),            decoded.stem,            false)) }
+        if !decoded.aspect.isEmpty          { rows.append((t.string(for: MorphKey.rowAspect),          decoded.aspect,          false)) }
+        if !decoded.grammaticalForm.isEmpty { rows.append((t.string(for: MorphKey.rowGrammaticalForm), decoded.grammaticalForm, false)) }
         if let role = word.syntaxRole, let label = syntaxRoleLabel(role) {
-            rows.append(("Синтаксична роль", label, false))
+            rows.append((t.string(for: MorphKey.rowSyntaxRole), label, false))
         }
         return rows
     }
 
     @ViewBuilder
     private func morphologySection(word: BibleWord, morph: String) -> some View {
-        if let decoded = MorphologyDecoder.decodeFull(morph) {
+        if let decoded = MorphologyDecoder.decodeFull(morph, using: t) {
             let rows = morphologyRows(word: word, decoded: decoded)
             if !rows.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    sectionLabel("Морфологія")
+                    sectionLabel(t.string(for: MorphKey.sectionMorphology))
                     InfoGroup(rows: rows)
                 }
             }
@@ -250,7 +259,7 @@ struct WordMeaningView: View {
         let sections = LexiconParser.parse(entry.fullDefinition)
         if !sections.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                sectionLabel("Лексичне значення")
+                sectionLabel(t.string(for: MorphKey.sectionLexical))
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(sections) { sec in
                         VStack(alignment: .leading, spacing: 0) {
@@ -293,10 +302,10 @@ struct WordMeaningView: View {
 
     private func greekSection(_ word: BibleWord) -> some View {
         var rows: [(String, String, Bool)] = []
-        if let g = word.greek, !g.isEmpty     { rows.append(("Слово", g, false)) }
-        if let gs = word.greekStrong, !gs.isEmpty { rows.append(("Strong's", gs, false)) }
+        if let g = word.greek, !g.isEmpty      { rows.append((t.string(for: MorphKey.rowWord),    g,  false)) }
+        if let gs = word.greekStrong, !gs.isEmpty { rows.append((t.string(for: MorphKey.rowStrongs), gs, false)) }
         return VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("Грецький еквівалент (LXX)")
+            sectionLabel(t.string(for: MorphKey.sectionGreekEquiv))
             InfoGroup(rows: rows)
         }
     }
@@ -313,12 +322,12 @@ struct WordMeaningView: View {
 
     private func syntaxRoleLabel(_ role: String) -> String? {
         switch role {
-        case "v":   return "Присудок"
-        case "p":   return "Присудок (іменний)"
-        case "s":   return "Підмет"
-        case "o":   return "Додаток"
-        case "c":   return "Обставина"
-        case "adv": return "Прислівник"
+        case "v":   return t.string(for: MorphKey.syntaxPredicate)
+        case "p":   return t.string(for: MorphKey.syntaxPredicateNominal)
+        case "s":   return t.string(for: MorphKey.syntaxSubject)
+        case "o":   return t.string(for: MorphKey.syntaxObject)
+        case "c":   return t.string(for: MorphKey.syntaxCircumstance)
+        case "adv": return t.string(for: MorphKey.syntaxAdverb)
         default:    return nil
         }
     }
@@ -360,7 +369,8 @@ private struct InfoGroup: View {
 struct WordUsageView: View {
     let entry: StrongsEntry
     var body: some View {
-        PillSection(title: "\(entry.concordance.count) входжень у Біблії") {
+        let countLabel = String(format: NSLocalizedString(MorphKey.usageCount, comment: ""), entry.concordance.count)
+        return PillSection(verbatimTitle: countLabel) {
             ForEach(entry.concordance) { ref in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(ref.reference).font(.caption).fontWeight(.semibold).foregroundStyle(.blue)
@@ -369,7 +379,7 @@ struct WordUsageView: View {
                 }
                 .padding(.bottom, 8)
                 .contentShape(Rectangle())
-                .onTapGesture {}
+                // TODO: navigate reader to this verse (router.pendingVerseId = ref.id)
                 Divider()
             }
         }
@@ -380,8 +390,13 @@ struct WordUsageView: View {
 // MARK: - KJV Keyword Highlighting
 
 /// Builds an AttributedString from a raw KJV verse (with `<S>N</S>` markup), highlighting
-/// every text segment whose Strong's tag matches the numeric base of `strongsId`.
+/// every text segment whose Strong's tag(s) include the numeric base of `strongsId`.
 /// Falls back to plain `fallback` text when `raw` is empty (sample/preview data).
+///
+/// Handles consecutive Strong's tags (`word<S>H1</S><S>H2</S>`): all numbers after
+/// the same text segment are collected into one set before deciding whether to highlight.
+/// Previously, if the match was the 2nd or 3rd consecutive tag, segRaw was empty and the
+/// word was never highlighted.
 private func highlightedVerseText(raw: String, fallback: String, strongsId: String) -> AttributedString {
     guard !raw.isEmpty else { return AttributedString(fallback) }
 
@@ -394,62 +409,88 @@ private func highlightedVerseText(raw: String, fallback: String, strongsId: Stri
     }
     let matches = tagPattern.matches(in: raw, range: NSRange(raw.startIndex..., in: raw))
 
-    var result = AttributedString()
+    // Build a flat list of (textSegment, strongsNumber) pairs, then group by segment:
+    // consecutive tags with an empty text gap all belong to the preceding non-empty segment.
+    struct TaggedSegment {
+        var text: String        // cleaned display text
+        var numbers: Set<String>
+    }
+    var segments: [TaggedSegment] = []
     var cursor = raw.startIndex
 
     for match in matches {
-        guard let tagRange = Range(match.range,      in: raw),
+        guard let tagRange = Range(match.range,       in: raw),
               let numRange = Range(match.range(at: 1), in: raw) else { continue }
 
-        let segRaw   = String(raw[cursor..<tagRange.lowerBound])
-        let segClean = stripKJVSegment(segRaw)
-        let numBase  = String(raw[numRange].prefix(while: { $0.isNumber }))
+        let segRaw  = String(raw[cursor..<tagRange.lowerBound])
+        let segText = stripKJVSegment(segRaw)
+        let num     = String(raw[numRange].prefix(while: { $0.isNumber }))
+        cursor = tagRange.upperBound
 
-        if numBase == baseNum, !segClean.trimmingCharacters(in: .whitespaces).isEmpty {
-            var attr = AttributedString(segClean)
+        if segText.trimmingCharacters(in: .whitespaces).isEmpty {
+            // Empty gap between consecutive tags → associate this number with the
+            // previous segment (same surface word, multiple lexemes).
+            if !segments.isEmpty {
+                segments[segments.count - 1].numbers.insert(num)
+            }
+            // Edge case: consecutive tags at very start with no preceding text — skip.
+        } else {
+            segments.append(TaggedSegment(text: segText, numbers: [num]))
+        }
+    }
+
+    // Trailing text after the last tag (no associated Strong's number).
+    if cursor < raw.endIndex {
+        let trailing = stripKJVSegment(String(raw[cursor...]))
+        if !trailing.isEmpty {
+            segments.append(TaggedSegment(text: trailing, numbers: []))
+        }
+    }
+
+    // Render: highlight any segment whose number set contains our target.
+    var result = AttributedString()
+    for seg in segments {
+        if seg.numbers.contains(baseNum) {
+            var attr = AttributedString(seg.text)
             attr.backgroundColor = Color.blue.opacity(0.06)
             result += attr
         } else {
-            result += AttributedString(segClean)
+            result += AttributedString(seg.text)
         }
-        cursor = tagRange.upperBound
     }
 
-    if cursor < raw.endIndex {
-        result += AttributedString(stripKJVSegment(String(raw[cursor...])))
-    }
-
-    return result
+    return result.characters.isEmpty ? AttributedString(fallback) : result
 }
 
 /// Strips all non-Strong's markup from a KJV text segment.
+/// Delegates to String.strippingBibleMarkup() (String+BibleMarkup.swift) —
+/// the single canonical implementation shared across the codebase.
 private func stripKJVSegment(_ s: String) -> String {
-    var r = s
-    r = r.replacingOccurrences(of: #"<n>(.*?)</n>"#,      with: "($1)", options: .regularExpression)
-    r = r.replacingOccurrences(of: #"<(br|pb)\s*/>"#,     with: " ",    options: [.regularExpression, .caseInsensitive])
-    r = r.replacingOccurrences(of: #"<[^>]+>"#,           with: "",     options: .regularExpression)
-    r = r.replacingOccurrences(of: #" {2,}"#,             with: " ",    options: .regularExpression)
-    return r
+    s.strippingBibleMarkup()
 }
 
 // MARK: - Morphology Decoder
 
 /// Decodes Macula Hebrew (OSHB) and Greek (SBLGNT) morphology codes into readable labels.
+/// All string output goes through TranslationProvider — zero hardcoded language strings here.
 ///
 /// Hebrew codes in the DB have NO language prefix: "Ncmpa", "Vqp3ms", "Td", "R", "C"
 /// Greek codes use dashes: "N-NSM", "V-PAI-3S", "CONJ", "ADV"
 struct FullMorphology {
     var partOfSpeech: String = ""
-    var stem: String = ""         // e.g. "Qal — basic active"
-    var aspect: String = ""       // e.g. "Perfect (qatal)"
-    var grammaticalForm: String = "" // e.g. "3rd masculine singular"
+    var stem: String = ""
+    var aspect: String = ""
+    var grammaticalForm: String = ""
 }
 
 enum MorphologyDecoder {
 
     // MARK: Full decode (for WordMeaningView detail)
 
-    static func decodeFull(_ code: String) -> FullMorphology? {
+    static func decodeFull(
+        _ code: String,
+        using t: TranslationProvider = BundleTranslationProvider()
+    ) -> FullMorphology? {
         guard !code.isEmpty else { return nil }
         let ch = Array(code)
         guard let first = ch.first else { return nil }
@@ -457,197 +498,201 @@ enum MorphologyDecoder {
 
         switch first {
         case "V":
-            m.partOfSpeech = "Дієслово"
-            if ch.count > 1 { m.stem   = hebrewStem(ch[1]) }
-            if ch.count > 2 { m.aspect = hebrewAspect(ch[2]) }
+            m.partOfSpeech = t.string(for: MorphKey.posVerb)
+            if ch.count > 1 { m.stem   = hebrewStem(ch[1], t: t) }
+            if ch.count > 2 { m.aspect = hebrewAspect(ch[2], t: t) }
             if ch.count > 5 {
-                let p = personLabel(ch[3])
-                let g = genderLabel(ch[4])
-                let n = numberLabel(ch[5])
+                let p = personLabel(ch[3], t: t)
+                let g = genderLabel(ch[4], t: t)
+                let n = numberLabel(ch[5], t: t)
                 m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
             }
         case "N":
-            m.partOfSpeech = "Іменник"
+            m.partOfSpeech = t.string(for: MorphKey.posNoun)
             if ch.count > 4 {
-                let g = genderLabel(ch[2])
-                let n = numberLabel(ch[3])
-                let s = stateLabel(ch[4])
+                let g = genderLabel(ch[2], t: t)
+                let n = numberLabel(ch[3], t: t)
+                let s = stateLabel(ch[4], t: t)
                 m.grammaticalForm = [g, n, s].filter { !$0.isEmpty }.joined(separator: " ")
             }
         case "A":
-            m.partOfSpeech = "Прикметник"
+            m.partOfSpeech = t.string(for: MorphKey.posAdjective)
             if ch.count > 4 {
-                let g = genderLabel(ch[2])
-                let n = numberLabel(ch[3])
+                let g = genderLabel(ch[2], t: t)
+                let n = numberLabel(ch[3], t: t)
                 m.grammaticalForm = [g, n].filter { !$0.isEmpty }.joined(separator: " ")
             }
         case "T":
-            m.partOfSpeech = ch.count > 1 ? particleLabel(ch[1]) : "Частка"
-        case "R": m.partOfSpeech = "Прийменник"
-        case "C": m.partOfSpeech = "Сполучник"
-        case "P": m.partOfSpeech = "Займенник"
-        case "D": m.partOfSpeech = "Прислівник"
-        case "I": m.partOfSpeech = "Вигук"
+            m.partOfSpeech = ch.count > 1 ? particleLabel(ch[1], t: t) : t.string(for: MorphKey.posParticle)
+        case "R": m.partOfSpeech = t.string(for: MorphKey.posPreposition)
+        case "C": m.partOfSpeech = t.string(for: MorphKey.posConjunction)
+        case "P": m.partOfSpeech = t.string(for: MorphKey.posPronoun)
+        case "D": m.partOfSpeech = t.string(for: MorphKey.posAdverb)
+        case "I": m.partOfSpeech = t.string(for: MorphKey.posInterjection)
         case "S":
-            // Pronominal suffix: Sp<person><gender><number>  e.g. Sp3fs, Sp2ms
-            m.partOfSpeech = ch.count > 1 ? suffixLabel(ch[1]) : "Займенниковий суфікс"
+            m.partOfSpeech = ch.count > 1 ? suffixLabel(ch[1], t: t) : t.string(for: MorphKey.posPronSuffix)
             if ch.count > 4 {
-                let p = personLabel(ch[2])
-                let g = genderLabel(ch[3])
-                let n = numberLabel(ch[4])
+                let p = personLabel(ch[2], t: t)
+                let g = genderLabel(ch[3], t: t)
+                let n = numberLabel(ch[4], t: t)
                 m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
             }
-        default:  return nil
+        default: return nil
         }
         return m
     }
 
-    private static func suffixLabel(_ c: Character) -> String {
+    private static func suffixLabel(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "p": return "Займенниковий суфікс"
-        case "d": return "Прямий об'єкт суфікс"
-        default:  return "Суфікс"
+        case "p": return t.string(for: MorphKey.posPronSuffix)
+        case "d": return t.string(for: MorphKey.posDirObjSuffix)
+        default:  return t.string(for: MorphKey.posSuffix)
         }
     }
 
-    private static func hebrewStem(_ c: Character) -> String {
+    private static func hebrewStem(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "q": return "Qal — проста активна"
-        case "N": return "Niphal — пасивна/рефлексивна"
-        case "p": return "Piel — інтенсивна активна"
-        case "P": return "Pual — інтенсивна пасивна"
-        case "h": return "Hiphil — каузативна активна"
-        case "H": return "Hophal — каузативна пасивна"
-        case "t": return "Hithpael — рефлексивна"
-        case "D": return "Poel"
+        case "q": return t.string(for: MorphKey.stemQal)
+        case "N": return t.string(for: MorphKey.stemNiphal)
+        case "p": return t.string(for: MorphKey.stemPiel)
+        case "P": return t.string(for: MorphKey.stemPual)
+        case "h": return t.string(for: MorphKey.stemHiphil)
+        case "H": return t.string(for: MorphKey.stemHophal)
+        case "t": return t.string(for: MorphKey.stemHithpael)
+        case "D": return t.string(for: MorphKey.stemPoel)
         default:  return String(c)
         }
     }
 
-    private static func hebrewAspect(_ c: Character) -> String {
+    private static func hebrewAspect(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "p": return "Досконалий (qatal)"
-        case "i": return "Недосконалий (yiqtol)"
-        case "w": return "Wayyiqtol (послідовний)"
-        case "j": return "Юссив"
-        case "c": return "Когортатив"
-        case "v": return "Імператив"
-        case "r": return "Дієприкметник (активний)"
-        case "s": return "Дієприкметник (пасивний)"
-        case "a": return "Інфінітив абсолютний"
-        case "A": return "Інфінітив конструктус"
+        case "p": return t.string(for: MorphKey.aspectPerfect)
+        case "i": return t.string(for: MorphKey.aspectImperfect)
+        case "w": return t.string(for: MorphKey.aspectWayyiqtol)
+        case "j": return t.string(for: MorphKey.aspectJussive)
+        case "c": return t.string(for: MorphKey.aspectCohortative)
+        case "v": return t.string(for: MorphKey.aspectImperative)
+        case "r": return t.string(for: MorphKey.aspectParticipleActive)
+        case "s": return t.string(for: MorphKey.aspectParticiplePassive)
+        case "a": return t.string(for: MorphKey.aspectInfAbsolute)
+        case "A": return t.string(for: MorphKey.aspectInfConstruct)
         default:  return ""
         }
     }
 
-    private static func particleLabel(_ c: Character) -> String {
+    private static func particleLabel(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "d": return "Означений артикль"
-        case "r": return "Відносний займенник"
-        case "n": return "Заперечна частка"
-        case "i": return "Питальна частка"
-        default:  return "Частка"
+        case "d": return t.string(for: MorphKey.posArticle)
+        case "r": return t.string(for: MorphKey.posRelPronoun)
+        case "n": return t.string(for: MorphKey.posNegParticle)
+        case "i": return t.string(for: MorphKey.posInterrogative)
+        default:  return t.string(for: MorphKey.posParticle)
         }
     }
 
-    private static func personLabel(_ c: Character) -> String {
+    private static func personLabel(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "1": return "1-а особа"
-        case "2": return "2-а особа"
-        case "3": return "3-я особа"
+        case "1": return t.string(for: MorphKey.person1)
+        case "2": return t.string(for: MorphKey.person2)
+        case "3": return t.string(for: MorphKey.person3)
         default:  return ""
         }
     }
 
-    private static func genderLabel(_ c: Character) -> String {
+    private static func genderLabel(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "m": return "чол. р."
-        case "f": return "жін. р."
-        case "c", "b": return "заг. р."
+        case "m": return t.string(for: MorphKey.genderMasculine)
+        case "f": return t.string(for: MorphKey.genderFeminine)
+        case "c", "b": return t.string(for: MorphKey.genderCommon)
         default:  return ""
         }
     }
 
-    private static func numberLabel(_ c: Character) -> String {
+    private static func numberLabel(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "s": return "одн."
-        case "p": return "мн."
-        case "d": return "двоїна"
+        case "s": return t.string(for: MorphKey.numberSingular)
+        case "p": return t.string(for: MorphKey.numberPlural)
+        case "d": return t.string(for: MorphKey.numberDual)
         default:  return ""
         }
     }
 
-    private static func stateLabel(_ c: Character) -> String {
+    private static func stateLabel(_ c: Character, t: TranslationProvider) -> String {
         switch c {
-        case "a": return "абсолютний"
-        case "c": return "конструктус"
-        case "d": return "визначений"
+        case "a": return t.string(for: MorphKey.stateAbsolute)
+        case "c": return t.string(for: MorphKey.stateConstruct)
+        case "d": return t.string(for: MorphKey.stateDetermined)
         default:  return ""
         }
     }
 
-    static func decode(_ code: String) -> String? {
+    // MARK: Short decode (for WordCard — Оригінал pill)
+
+    static func decode(
+        _ code: String,
+        using t: TranslationProvider = BundleTranslationProvider()
+    ) -> String? {
         guard !code.isEmpty else { return nil }
-        return code.contains("-") ? decodeGreek(code) : decodeHebrew(code)
+        return code.contains("-") ? decodeGreek(code, t: t) : decodeHebrew(code, t: t)
     }
 
     // MARK: Hebrew (OSHB, no language prefix)
-    private static func decodeHebrew(_ code: String) -> String? {
+    private static func decodeHebrew(_ code: String, t: TranslationProvider) -> String? {
         let chars = Array(code)
         guard let first = chars.first else { return nil }
         var parts: [String] = []
 
         switch first {
         case "N":
-            parts.append("Noun")
+            parts.append(t.string(for: MorphKey.posNoun))
             if chars.count > 3 {
                 switch chars[3] {
-                case "p": parts.append("pl.")
-                case "d": parts.append("dual")
+                case "p": parts.append(t.string(for: MorphKey.numberPlural))
+                case "d": parts.append(t.string(for: MorphKey.numberDual))
                 default: break
                 }
             }
         case "V":
-            parts.append("Verb")
+            parts.append(t.string(for: MorphKey.posVerb))
             if chars.count > 1 {
                 switch chars[1] {
                 case "q": parts.append("Qal")
-                case "n": parts.append("Niphal")
+                case "N": parts.append("Niphal")   // fix: was "n" — OSHB uses uppercase N
                 case "p": parts.append("Piel")
-                case "u": parts.append("Pual")
+                case "P": parts.append("Pual")     // fix: was "u" — OSHB uses uppercase P
                 case "h": parts.append("Hiphil")
-                case "o": parts.append("Hophal")
+                case "H": parts.append("Hophal")   // fix: was "o" — OSHB uses uppercase H
                 case "t": parts.append("Hithp.")
                 default: break
                 }
             }
         case "A":
-            parts.append("Adj.")
+            parts.append(t.string(for: MorphKey.posAdjective))
             if chars.count > 3 {
                 switch chars[3] {
-                case "p": parts.append("pl.")
-                case "d": parts.append("dual")
+                case "p": parts.append(t.string(for: MorphKey.numberPlural))
+                case "d": parts.append(t.string(for: MorphKey.numberDual))
                 default: break
                 }
             }
         case "T":
             if chars.count > 1 {
                 switch chars[1] {
-                case "d": parts.append("Article")
-                case "r": parts.append("Rel. Pron.")
-                case "n": parts.append("Neg.")
-                case "i": parts.append("Interrog.")
-                default:  parts.append("Particle")
+                case "d": parts.append(t.string(for: MorphKey.posArticle))
+                case "r": parts.append(t.string(for: MorphKey.posRelPronoun))
+                case "n": parts.append(t.string(for: MorphKey.posNegParticle))
+                case "i": parts.append(t.string(for: MorphKey.posInterrogative))
+                default:  parts.append(t.string(for: MorphKey.posParticle))
                 }
             } else {
-                parts.append("Particle")
+                parts.append(t.string(for: MorphKey.posParticle))
             }
-        case "R": parts.append("Prep.")
-        case "C": parts.append("Conj.")
-        case "P": parts.append("Pron.")
-        case "D": parts.append("Adv.")
-        case "I": parts.append("Interj.")
-        case "S": parts.append("Займ. суф.")
+        case "R": parts.append(t.string(for: MorphKey.posPreposition))
+        case "C": parts.append(t.string(for: MorphKey.posConjunction))
+        case "P": parts.append(t.string(for: MorphKey.posPronoun))
+        case "D": parts.append(t.string(for: MorphKey.posAdverb))
+        case "I": parts.append(t.string(for: MorphKey.posInterjection))
+        case "S": parts.append(t.string(for: MorphKey.posPronSuffix))
         default: return nil
         }
 
@@ -655,22 +700,22 @@ enum MorphologyDecoder {
     }
 
     // MARK: Greek (SBLGNT, dash-separated)
-    private static func decodeGreek(_ code: String) -> String? {
+    private static func decodeGreek(_ code: String, t: TranslationProvider) -> String? {
         let segs = code.components(separatedBy: "-")
         guard let posStr = segs.first else { return nil }
         var parts: [String] = []
 
         switch posStr.uppercased() {
-        case "N":    parts.append("Noun")
-        case "V":    parts.append("Verb")
-        case "A":    parts.append("Adj.")
-        case "P":    parts.append("Prep.")
-        case "ADV":  parts.append("Adv.")
-        case "CONJ": parts.append("Conj.")
-        case "PRON": parts.append("Pron.")
-        case "ART":  parts.append("Article")
-        case "PART": parts.append("Particle")
-        case "INJ":  parts.append("Interj.")
+        case "N":    parts.append(t.string(for: MorphKey.posNoun))
+        case "V":    parts.append(t.string(for: MorphKey.posVerb))
+        case "A":    parts.append(t.string(for: MorphKey.posAdjective))
+        case "P":    parts.append(t.string(for: MorphKey.posPreposition))
+        case "ADV":  parts.append(t.string(for: MorphKey.posAdverb))
+        case "CONJ": parts.append(t.string(for: MorphKey.posConjunction))
+        case "PRON": parts.append(t.string(for: MorphKey.posPronoun))
+        case "ART":  parts.append(t.string(for: MorphKey.posArticle))
+        case "PART": parts.append(t.string(for: MorphKey.posParticle))
+        case "INJ":  parts.append(t.string(for: MorphKey.posInterjection))
         default:     return nil
         }
 
@@ -678,7 +723,7 @@ enum MorphologyDecoder {
             let cng = Array(segs[1].uppercased())
             if cng.count > 1 {
                 switch cng[1] {
-                case "P": parts.append("pl.")
+                case "P": parts.append(t.string(for: MorphKey.numberPlural))
                 default: break
                 }
             }
@@ -696,6 +741,8 @@ struct WordCard: View {
     let word: BibleWord
     let isSelected: Bool
     let onTap: () -> Void
+
+    private let t: TranslationProvider = BundleTranslationProvider()
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -721,7 +768,7 @@ struct WordCard: View {
                 }
 
                 if let morph = word.morphology,
-                   let label = MorphologyDecoder.decode(morph) {
+                   let label = MorphologyDecoder.decode(morph, using: t) {
                     Text(label)
                         .font(.caption).foregroundStyle(.tertiary)
                 }

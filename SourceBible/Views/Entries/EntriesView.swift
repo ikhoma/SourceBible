@@ -4,54 +4,74 @@
 import SwiftUI
 
 struct EntriesView: View {
+
+    @EnvironmentObject private var notesVM:     NotesViewModel
+    @EnvironmentObject private var bookmarksVM: BookmarksViewModel
+
     @State private var tab: EntriesTab = .notes
+    @Environment(\.locale) private var locale
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 Picker("", selection: $tab) {
-                    Text("Нотатки").tag(EntriesTab.notes)
-                    Text("Закладки").tag(EntriesTab.bookmarks)
+                    Text("entries.tab.notes").tag(EntriesTab.notes)
+                    Text("entries.tab.bookmarks").tag(EntriesTab.bookmarks)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16).padding(.vertical, 12)
-                Divider()
-                if tab == .notes { NotesEmptyView() } else { BookmarksEmptyView() }
+                .background(Color(.systemGroupedBackground))
+
+                if tab == .notes {
+                    NotesListView()
+                        .environmentObject(notesVM)
+                } else {
+                    BookmarksListView()
+                        .environmentObject(bookmarksVM)
+                }
             }
-            .navigationTitle("Ваші записи")
+            .animation(nil, value: tab)
+            .background(Color(.systemGroupedBackground))
+            // .id forces the Picker and list content to reconstruct on locale change.
+            // Picker segment labels (LocalizedStringKey) are cached by UISegmentedControl
+            // and do not re-evaluate automatically when the SwiftUI locale environment changes.
+            .id(locale.identifier)
+            .navigationTitle("entries.title")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
-                        Button("Створити нотатку", systemImage: "note.text.badge.plus") {}
-                        Button("Створити папку",   systemImage: "folder.badge.plus")    {}
-                        Button("Створити закладку", systemImage: "bookmark.fill")        {}
-                        Button("Створити категорію", systemImage: "tag")                 {}
+                        Button("entries.new_note", systemImage: "note.text.badge.plus") {
+                            notesVM.openNewNote()
+                        }
+                        Button("entries.new_folder", systemImage: "folder.badge.plus") {
+                            createFolder()
+                        }
                     } label: { Image(systemName: "plus") }
                 }
             }
         }
     }
+
+    private func createFolder() {
+        let now    = Date()
+        let folder = NoteFolder(
+            id: UUID().uuidString,
+            userId: notesVM.authUserId,
+            name: String(localized: "entries.new_folder"),
+            createdAt: now, updatedAt: now, deletedAt: nil, isDirty: true)
+        notesVM.saveFolder(folder)
+    }
+
 }
 
 enum EntriesTab { case notes, bookmarks }
 
-struct NotesEmptyView: View {
-    var body: some View { emptyState(icon: "note.text", title: "Немає нотаток", subtitle: "Натисніть на вірш у Читачі\nщоб додати нотатку") }
+#Preview {
+    @MainActor in
+    let store = InMemoryUserDataStore()
+    let auth  = LocalAuthService.shared
+    EntriesView()
+        .environmentObject(NotesViewModel(store: store, authService: auth))
+        .environmentObject(BookmarksViewModel(store: store, authService: auth))
+        .environmentObject(AppNavigationRouter())
 }
-
-struct BookmarksEmptyView: View {
-    var body: some View { emptyState(icon: "bookmark", title: "Немає закладок", subtitle: "Додайте вірші до закладок\nдля швидкого доступу") }
-}
-
-private func emptyState(icon: String, title: String, subtitle: String) -> some View {
-    VStack(spacing: 16) {
-        Spacer()
-        Image(systemName: icon).font(.system(size: 48)).foregroundStyle(.quaternary)
-        Text(title).font(.headline).foregroundStyle(.secondary)
-        Text(subtitle).font(.callout).foregroundStyle(.tertiary).multilineTextAlignment(.center)
-        Spacer()
-    }
-}
-
-
-#Preview { EntriesView() }

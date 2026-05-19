@@ -10,7 +10,14 @@ class ReaderViewModel: ObservableObject {
     // MARK: - Published State
 
     // Placeholder until init() Task loads real books from DB.
-    @Published var currentBook: BibleBook = BibleBook(id: "PSA", name: "Псалми", nameShort: "Пс", testament: .old, chapterCount: 150)
+    // Uses BibleBookNames so the placeholder respects the active locale even before DB loads.
+    @Published var currentBook: BibleBook = BibleBook(
+        id: "PSA",
+        name:      BibleBookNames.full(for: "PSA"),
+        nameShort: BibleBookNames.short(for: "PSA"),
+        testament: .old,
+        chapterCount: 150
+    )
     @Published var currentChapter: Int = 1
     @Published var currentTranslation: Translation = .defaultTranslation
 
@@ -44,9 +51,10 @@ class ReaderViewModel: ObservableObject {
     @Published var strongsEntry: StrongsEntry? = nil
     @Published var isLoadingStrongs: Bool = false
 
-    // Highlights
-    private let highlightRepo: HighlightRepositoryProtocol
-    @Published var highlights: Set<String> = []
+    // Highlights (via unified UserDataStore)
+    let store: UserDataStoreProtocol
+    /// verseId → HighlightColor.rawValue for the current chapter + translation.
+    @Published var highlightColors: [String: String] = [:]
 
     // MARK: - Data
 
@@ -58,9 +66,9 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(highlightRepo: HighlightRepositoryProtocol = UserDefaultsHighlightRepository()) {
-        self.highlightRepo = highlightRepo
-        self.highlights    = highlightRepo.loadAll()
+    init(store: UserDataStoreProtocol) {
+        self.store   = store
+        self.highlightColors = store.highlightColors(translation: Translation.defaultTranslation.id)
 
         // Previews: use sample data instantly, no DB access
         #if DEBUG
@@ -88,7 +96,9 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Computed
 
-    var chapterTitle: String { "\(currentBook.nameShort) \(currentChapter)" }
+    // Always resolved via BibleBookNames so language switches take effect immediately
+    // without needing to reload allBooks from the DB.
+    var chapterTitle: String { "\(BibleBookNames.short(for: currentBook.id)) \(currentChapter)" }
 
     var oldTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .old } }
     var newTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .new } }
@@ -121,7 +131,12 @@ class ReaderViewModel: ObservableObject {
 
     var isCurrentVerseHighlighted: Bool {
         guard let v = selectedVerse else { return false }
-        return highlights.contains(v.id)
+        return highlightColors[v.id] != nil
+    }
+
+    var currentVerseHighlightColor: HighlightColor? {
+        guard let v = selectedVerse, let raw = highlightColors[v.id] else { return nil }
+        return HighlightColor(rawValue: raw)
     }
 
     // MARK: - Navigation
@@ -151,6 +166,32 @@ class ReaderViewModel: ObservableObject {
         loadChapter()
     }
 
+    /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
+    /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
+    func navigateToVerse(id verseId: String) {
+        let parts = verseId.split(separator: "|")
+        guard parts.count == 3,
+              let chapter = Int(parts[1]) else { return }
+        let bookId = String(parts[0])
+
+        // Switch book if needed
+        if bookId != currentBook.id {
+            if let book = allBooks.first(where: { $0.id == bookId }) {
+                currentBook = book
+            }
+        }
+        // Switch chapter if needed
+        if chapter != currentChapter {
+            currentChapter = chapter
+            loadChapter()
+        }
+        // Select the target verse and open the bottom sheet
+        if let verse = verses.first(where: { $0.id == verseId }) {
+            selectedVerse = verse
+            isBottomSheetPresented = true
+        }
+    }
+
     func previousChapter() {
         guard currentChapter > 1 else { return }
         currentChapter -= 1
@@ -164,15 +205,15 @@ class ReaderViewModel: ObservableObject {
         errorMessage = nil
         // SQLite reads with in-memory cache take <1ms — no background thread needed.
         // Avoids all Swift 6 actor-isolation issues with Task.detached.
+        highlightColors = store.highlightColors(translation: currentTranslation.id)
         verses = db.loadChapter(bookId: currentBook.id,
                                 chapter: currentChapter,
                                 translation: currentTranslation.id)
             .map { v in
-                highlights.contains(v.id)
-                    ? BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
-                                 number: v.number, text: v.text, words: v.words,
-                                 isHighlighted: true, parsed: v.parsed)
-                    : v
+                BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
+                           number: v.number, text: v.text, words: v.words,
+                           highlightColor: highlightColors[v.id],
+                           parsed: v.parsed)
             }
         isLoading = false
     }
@@ -189,7 +230,7 @@ class ReaderViewModel: ObservableObject {
             let v = verses[idx]
             verses[idx] = BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                                      number: v.number, text: v.text, words: words,
-                                     isHighlighted: v.isHighlighted, parsed: v.parsed)
+                                     highlightColor: v.highlightColor, parsed: v.parsed)
             selectedVerse = verses[idx]
         }
     }
@@ -402,17 +443,53 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Highlights
 
-    func toggleHighlight(for verse: BibleVerse) {
-        highlightRepo.toggle(verse.id)
-        highlights = highlightRepo.loadAll()
-        if let idx = verses.firstIndex(where: { $0.id == verse.id }) {
+    /// Apply or change a highlight color. Always results in an active highlight of the given color.
+    func setHighlightColor(_ color: HighlightColor, for verse: BibleVerse) {
+        if let existing = highlightColors[verse.id] {
+            if existing != color.rawValue {
+                // Change color in-place — avoids fragile double-toggle sequencing
+                store.updateHighlightColor(verseId: verse.id,
+                                           translation: currentTranslation.id,
+                                           color: color.rawValue)
+            }
+            // Same color → already applied, no-op
+        } else {
+            store.toggleHighlight(verseId: verse.id,
+                                  translation: currentTranslation.id,
+                                  color: color.rawValue)
+        }
+        refreshHighlightInList(verseId: verse.id)
+    }
+
+    /// Remove any active highlight from the verse. No-op if not highlighted.
+    func removeHighlight(for verse: BibleVerse) {
+        guard let existing = highlightColors[verse.id] else { return }
+        store.toggleHighlight(verseId: verse.id, translation: currentTranslation.id, color: existing)
+        refreshHighlightInList(verseId: verse.id)
+    }
+
+    /// Legacy convenience — toggles using default yellow color (used by action bar for quick toggle).
+    func toggleHighlight(for verse: BibleVerse, color: HighlightColor = .yellow) {
+        if highlightColors[verse.id] != nil {
+            removeHighlight(for: verse)
+        } else {
+            setHighlightColor(color, for: verse)
+        }
+    }
+
+    private func refreshHighlightInList(verseId: String) {
+        highlightColors = store.highlightColors(translation: currentTranslation.id)
+        if let idx = verses.firstIndex(where: { $0.id == verseId }) {
             let v = verses[idx]
             verses[idx] = BibleVerse(
                 id: v.id, bookId: v.bookId, chapter: v.chapter, number: v.number,
                 text: v.text, words: v.words,
-                isHighlighted: highlightRepo.isHighlighted(v.id),
+                highlightColor: highlightColors[v.id],
                 parsed: v.parsed
             )
+            if selectedVerse?.id == v.id {
+                selectedVerse = verses[idx]
+            }
         }
     }
 }

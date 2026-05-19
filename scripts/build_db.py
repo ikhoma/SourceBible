@@ -1324,6 +1324,93 @@ def _apply_xlit_fallback(cur):
     print(f"  Fallback filled: {updated:,} entries")
 
 
+def build_verse_fts(cur, con):
+    """FTS5 virtual table for full-text search across all verse translations.
+
+    Uses content='verse' so only the inverted index is stored (no text duplication).
+    verse_fts.rowid == verse.rowid → JOIN back to get book_id/chapter/verse/translation.
+
+    Tokenizer: unicode61 with remove_diacritics=2 (strips combining marks before indexing).
+    This means "αβγ" and "αβγ̈" tokenize identically — useful for accented Biblical Greek.
+
+    NOTE: content tables are read-only at runtime; rebuild happens here at build time only.
+    """
+    print("\nBuilding FTS5 verse index...")
+    t0 = time.time()
+
+    cur.executescript("""
+        DROP TABLE IF EXISTS verse_fts;
+
+        CREATE VIRTUAL TABLE verse_fts USING fts5(
+            text,
+            content='verse',
+            content_rowid='rowid',
+            tokenize='unicode61 remove_diacritics 2'
+        );
+
+        -- Populate the shadow tables from the content table.
+        -- 'rebuild' scans the content table and fills all FTS internals.
+        INSERT INTO verse_fts(verse_fts) VALUES('rebuild');
+    """)
+    con.commit()
+
+    cur.execute("SELECT COUNT(*) FROM verse_fts")
+    count = cur.fetchone()[0]
+    print(f"  verse_fts: {count:,} rows ({time.time() - t0:.1f}s)")
+
+
+def build_search_terms(cur, con):
+    """Deduplicated word list for autocomplete suggestions (predictive search).
+
+    Extracts all words from cleaned verse texts across all translations.
+    Stores lowercase terms with occurrence frequency so the iOS app can do fast
+    prefix suggestions:  SELECT term FROM search_terms WHERE term GLOB 'prefix*'
+                         ORDER BY freq DESC LIMIT 8
+
+    Terms are stored lowercase → callers must lowercase their prefix before querying.
+    Minimum word length: 2 chars. Minimum frequency: 2 occurrences (filters noise/typos).
+    """
+    print("\nBuilding search_terms for autocomplete...")
+    t0 = time.time()
+
+    # Strip all MyBible markup tags before tokenizing
+    tag_re  = re.compile(r'<[^>]+>')
+    word_re = re.compile(r"[\wЀ-ӿ']+", re.UNICODE)  # ASCII + Cyrillic + apostrophe
+
+    term_freq: dict[str, int] = {}
+
+    cur.execute("SELECT text FROM verse")
+    for (raw_text,) in cur.fetchall():
+        clean = tag_re.sub(' ', raw_text)
+        for w in word_re.findall(clean):
+            w_lower = w.lower()
+            if len(w_lower) >= 2:
+                term_freq[w_lower] = term_freq.get(w_lower, 0) + 1
+
+    # Keep only terms that appear at least twice (filters single-verse hapax and noise)
+    terms = [(t, f) for t, f in term_freq.items() if f >= 2]
+    terms.sort(key=lambda x: -x[1])   # most frequent first
+
+    cur.executescript("""
+        DROP TABLE IF EXISTS search_terms;
+        CREATE TABLE search_terms (
+            term TEXT PRIMARY KEY,
+            freq INTEGER NOT NULL DEFAULT 1
+        );
+    """)
+
+    cur.executemany(
+        "INSERT OR IGNORE INTO search_terms(term, freq) VALUES (?, ?)",
+        terms
+    )
+    con.commit()
+
+    print(f"  search_terms: {len(terms):,} unique words ({time.time() - t0:.1f}s)")
+
+    # V1.5 placeholder — embeddings will live here
+    # build_verse_vectors(cur, con)
+
+
 def finalize(cur, con):
     print("\nFinalizing...")
     cur.execute("PRAGMA optimize")
@@ -1331,9 +1418,13 @@ def finalize(cur, con):
     # Ensure DB is in DELETE journal mode (not WAL) so it can be bundled as a single file
     cur.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     cur.execute("PRAGMA journal_mode=DELETE")
-    for tbl in ("book","translation","verse","word","strongs","footnote","cross_reference"):
+    for tbl in ("book","translation","verse","word","strongs","footnote",
+                "cross_reference","search_terms"):
         cur.execute(f"SELECT COUNT(*) FROM {tbl}")
         print(f"  {tbl}: {cur.fetchone()[0]:,} rows")
+    # FTS5 shadow tables don't report via COUNT(*) on the virtual table the same way
+    cur.execute("SELECT COUNT(*) FROM verse_fts")
+    print(f"  verse_fts:  {cur.fetchone()[0]:,} rows")
     con.commit()
     mb = OUTPUT_DB.stat().st_size / 1_048_576
     print(f"\n✓ Done: {OUTPUT_DB}  ({mb:.1f} MB)")
@@ -1371,6 +1462,8 @@ def main():
     import_translations(cur);       con.commit()
     import_footnotes(cur);          con.commit()
     import_cross_references(cur);   con.commit()
+    build_verse_fts(cur, con);      con.commit()   # FTS5 index for text search
+    build_search_terms(cur, con);   con.commit()   # autocomplete word list
     finalize(cur, con)
     con.close()
 
