@@ -79,9 +79,17 @@ enum LexiconParser {
     static func parse(_ raw: String) -> [LexiconSection] {
         guard !raw.isEmpty else { return [] }
 
-        let lines = raw
-            .components(separatedBy: "<br>")
+        // Normalize separators: DB stores BDB content with either <br> or \n.
+        // Replace <br> with \n first so we can split uniformly on \n.
+        let normalized = raw.replacingOccurrences(of: "<br>", with: "\n",
+                                                   options: .caseInsensitive)
+
+        let lines = normalized
+            .components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
+            // Filter empties and the leading ": keyword" sense-label lines (STEPBible artefact —
+            // these are short English glosses like ": man" or ": went/go[away]" that precede
+            // the actual numbered BDB entries and don't add meaning for the user).
             .filter { !$0.isEmpty && !$0.hasPrefix(":") }
 
         // Patterns
@@ -116,6 +124,17 @@ enum LexiconParser {
         if !currentDefs.isEmpty {
             sections.append(LexiconSection(stemName: currentStem, definitions: currentDefs))
         }
+
+        // Fallback: if no numbered entries matched (e.g. short gloss like "counsel, advice, purpose"),
+        // present the content as a single flat definition so something always renders.
+        if sections.isEmpty {
+            let flat = lines.joined(separator: "; ")
+            let cleaned = cleanDef(flat)
+            if !cleaned.isEmpty {
+                sections.append(LexiconSection(stemName: "", definitions: [cleaned]))
+            }
+        }
+
         return sections
     }
 }
@@ -152,13 +171,11 @@ struct WordMeaningView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(entry.originalWord)
                         .font(.system(size: 30, weight: .light))
-                    // Priority: (1) Macula contextual xlit (always correct for this word form),
-                    // (2) TBESH lemma xlitSimple, (3) academic transliteration as last resort.
-                    let xlit: String = {
-                        if let ctxXlit = vm.selectedWord?.xlit, !ctxXlit.isEmpty { return ctxXlit }
-                        if !entry.xlitSimple.isEmpty { return entry.xlitSimple }
-                        return entry.transliteration
-                    }()
+                    // Header shows the LEMMA form (entry.originalWord), so use the LEMMA xlit.
+                    // Surface-form xlit (vm.selectedWord?.xlit) is shown in contextSection below.
+                    let xlit: String = !entry.xlitSimple.isEmpty
+                        ? entry.xlitSimple
+                        : entry.transliteration
                     if !xlit.isEmpty {
                         Text(xlit)
                             .font(.system(size: 18, weight: .light))

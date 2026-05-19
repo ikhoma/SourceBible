@@ -913,7 +913,7 @@ def import_stepbible_lexicons(cur):
                 SET
                     xlit_simple     = CASE WHEN ? != '' THEN ?            ELSE xlit_simple     END,
                     transliteration = CASE WHEN transliteration = '' AND ? != '' THEN ? ELSE transliteration END,
-                    long_def        = CASE WHEN long_def = '' AND ? != '' THEN ?        ELSE long_def        END
+                    long_def        = CASE WHEN ? != '' THEN ?                         ELSE long_def        END
                 WHERE id = ?
             """, (
                 xlit_simple, xlit_simple,

@@ -262,44 +262,97 @@ final class DatabaseService: @unchecked Sendable {
             return nil
             #endif
         }
-        var entry: StrongsEntry?
-        // strongs.transliteration now contains TBESH simplified xlit (e.g. "ha.lakh")
-        // populated by migrate_tbesh_to_strongs.py
+
+        // Sub-entry IDs (e.g. H835a, H3887a) share root lexeme data with their base entry
+        // (H835, H3887). If the sub-entry has no long_def, fall back to the base entry's
+        // definition so users always see lexical content.
+        // Base ID = strip trailing lowercase letter(s) from the numeric part.
+        let baseId: String = {
+            var s = id
+            while let last = s.last, last.isLetter && last.isLowercase, s.count > 1 {
+                // Only strip if there's a digit before the trailing letter
+                let beforeLast = s.index(before: s.endIndex)
+                let charBeforeLast = s[s.index(before: beforeLast)]
+                if charBeforeLast.isNumber {
+                    s = String(s.dropLast())
+                } else { break }
+            }
+            return s
+        }()
+
         let sql = """
             SELECT id, original, transliteration,
                    pronunciation, part_of_speech, short_def, long_def
             FROM strongs WHERE id = ?
             """
-        query(sql, bindings: [id]) { stmt in
+
+        func buildEntry(from stmt: OpaquePointer) -> StrongsEntry {
             let sid        = string(stmt, 0)
             let original   = string(stmt, 1)
-            let xlitSimple = string(stmt, 2)   // TBESH simplified xlit (ha.lakh) ← primary display
+            let xlitSimple = string(stmt, 2)
             let pron       = string(stmt, 3)
             let pos        = string(stmt, 4)
             let shortDef   = string(stmt, 5)
             let longDef    = string(stmt, 6)
-
-            // Semantic range: split short_def on semicolons/commas (≤5 items)
             let semanticRange = shortDef
                 .components(separatedBy: CharacterSet(charactersIn: ";,"))
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
                 .prefix(5)
                 .map { String($0) }
-
-            entry = StrongsEntry(
+            return StrongsEntry(
                 id: sid,
                 originalWord: original,
-                transliteration: xlitSimple,   // same source: TBESH
+                transliteration: xlitSimple,
                 xlitSimple: xlitSimple,
                 pronunciation: pron,
                 partOfSpeech: pos,
                 shortDefinition: shortDef,
                 semanticRange: semanticRange,
                 fullDefinition: longDef,
-                concordance: []   // populated separately via loadConcordance()
+                concordance: []
             )
         }
+
+        var entry: StrongsEntry?
+        query(sql, bindings: [id]) { stmt in entry = buildEntry(from: stmt) }
+
+        // If the sub-entry has no long_def, try to fall back to the base entry's definition.
+        // SAFETY CHECK: only fall back when the sub-entry and base entry share the same
+        // first Hebrew/Greek character — i.e. they are true lexical variants of the same root.
+        //
+        // In the extended Strong's numbering some particles/prefixes are assigned IDs in the
+        // same numeric range as unrelated words:
+        //   H1886 = Dothan (city),  H1886a = הַ (definite article) — UNRELATED
+        //   H871  = Atharim (route), H871a  = בְּ (preposition)    — UNRELATED
+        //   H835  = אֶשֶׁר (happiness), H835a = אַשְׁרֵי (blessed)  — related ✓
+        //   H3887 = לוּץ (scorn),  H3887a = לֵצִים (scorners)      — related ✓
+        // Comparing first character reliably distinguishes these cases.
+        if let e = entry, e.fullDefinition.isEmpty, baseId != id {
+            var baseEntry: StrongsEntry?
+            query(sql, bindings: [baseId]) { stmt in baseEntry = buildEntry(from: stmt) }
+            if let b = baseEntry, !b.fullDefinition.isEmpty {
+                // Verify same root: both original words must start with the same character.
+                let subFirst  = e.originalWord.unicodeScalars.first
+                let baseFirst = b.originalWord.unicodeScalars.first
+                let sameRoot  = subFirst != nil && baseFirst != nil && subFirst == baseFirst
+                if sameRoot {
+                    entry = StrongsEntry(
+                        id: e.id,
+                        originalWord: e.originalWord.isEmpty ? b.originalWord : e.originalWord,
+                        transliteration: e.transliteration.isEmpty ? b.transliteration : e.transliteration,
+                        xlitSimple: e.xlitSimple.isEmpty ? b.xlitSimple : e.xlitSimple,
+                        pronunciation: e.pronunciation.isEmpty ? b.pronunciation : e.pronunciation,
+                        partOfSpeech: e.partOfSpeech.isEmpty ? b.partOfSpeech : e.partOfSpeech,
+                        shortDefinition: e.shortDefinition.isEmpty ? b.shortDefinition : e.shortDefinition,
+                        semanticRange: e.semanticRange.isEmpty ? b.semanticRange : e.semanticRange,
+                        fullDefinition: b.fullDefinition,
+                        concordance: []
+                    )
+                }
+            }
+        }
+
         return entry
     }
 
