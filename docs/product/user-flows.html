@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bible App — User Flows</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0e0e10;
+      color: #e8e8e8;
+      padding: 40px 24px 80px;
+    }
+
+    header {
+      max-width: 900px;
+      margin: 0 auto 48px;
+    }
+
+    .app-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .flow-section {
+      max-width: 900px;
+      margin: 0 auto 56px;
+    }
+
+    .flow-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .flow-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .flow-meta h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .flow-meta p {
+      font-size: 13px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .flow-card {
+      background: #141418;
+      border: 1px solid #222228;
+      border-radius: 14px;
+      padding: 28px 24px;
+      overflow-x: auto;
+    }
+
+    .flow-card .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .divider {
+      max-width: 900px;
+      margin: 0 auto 56px;
+      border: none;
+      border-top: 1px solid #1e1e24;
+    }
+
+    .screens-grid {
+      max-width: 900px;
+      margin: 0 auto 56px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .screen-card {
+      background: #141418;
+      border: 1px solid #222228;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .screen-card .icon { font-size: 20px; margin-bottom: 8px; }
+    .screen-card .name { font-size: 13px; font-weight: 600; color: #ddd; }
+    .screen-card .desc { font-size: 11px; color: #555; margin-top: 3px; line-height: 1.4; }
+
+    .new-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      background: #2563eb22;
+      color: #60a5fa;
+      border: 1px solid #2563eb44;
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+
+    .section-label {
+      max-width: 900px;
+      margin: 0 auto 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #444;
+    }
+
+    .group-label {
+      max-width: 900px;
+      margin: 0 auto 24px;
+      padding: 10px 16px;
+      background: #141418;
+      border-left: 3px solid #2563eb;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: #60a5fa;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    a.screen-card {
+      display: block;
+      text-decoration: none;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s, background 0.15s;
+    }
+    a.screen-card:hover {
+      border-color: #3b82f6;
+      background: #1a1e2e;
+      transform: translateY(-2px);
+    }
+    a.screen-card:hover .name { color: #93c5fd; }
+    a.screen-card:hover .icon { filter: drop-shadow(0 0 6px rgba(96,165,250,0.5)); }
+
+    .flow-section { scroll-margin-top: 32px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="app-label">Source Bible · Ukrainian</div>
+  <h1>User Flows</h1>
+  <p class="subtitle">10 flows mapped from live app exploration — including the verse detail bottom sheet discovered via interactive testing.</p>
+</header>
+
+<!-- Screen inventory -->
+<div class="section-label">Screens & Surfaces</div>
+<div class="screens-grid">
+  <a href="#flow-1" class="screen-card"><div class="icon">📖</div><div class="name">Bible Reader</div><div class="desc">Chapter text, numbered verses</div></a>
+  <a href="#flow-2" class="screen-card"><div class="icon">🔤</div><div class="name">Translation Picker</div><div class="desc">Grom dropdown</div></a>
+  <a href="#flow-2" class="screen-card"><div class="icon">📚</div><div class="name">Book / Chapter Picker</div><div class="desc">OT / NT browser</div></a>
+  <a href="#flow-7a" class="screen-card"><div class="icon">🔍</div><div class="name">Search</div><div class="desc">Full-text search</div></a>
+  <a href="#flow-8" class="screen-card"><div class="icon">📂</div><div class="name">Entries</div><div class="desc">Notes + Bookmarks hub</div></a>
+  <a href="#flow-8" class="screen-card"><div class="icon">🔖</div><div class="name">Bookmarks</div><div class="desc">Verses by category + color</div></a>
+  <a href="#flow-9" class="screen-card"><div class="icon">✏️</div><div class="name">Notes</div><div class="desc">Verse-linked notes + folders</div></a>
+  <a href="#flow-10" class="screen-card"><div class="icon">☰</div><div class="name">Menu</div><div class="desc">Settings + other options</div></a>
+  <a href="#flow-3" class="screen-card"><div class="icon">📋</div><div class="name">Verse Bottom Sheet</div><div class="desc">Вірш / Слово tabs + actions <span class="new-badge">NEW</span></div></a>
+  <a href="#flow-6" class="screen-card"><div class="icon">📜</div><div class="name">Commentary Detail</div><div class="desc">Calvin · Henry · Spurgeon <span class="new-badge">NEW</span></div></a>
+  <a href="#flow-4" class="screen-card"><div class="icon">🔬</div><div class="name">Word Study</div><div class="desc">Слово tab, Strong's, concordance <span class="new-badge">NEW</span></div></a>
+</div>
+
+<hr class="divider" />
+
+<!-- GROUP 1: CORE READING -->
+<div class="group-label">Core Reading</div>
+
+<!-- FLOW 1 -->
+<div class="flow-section" id="flow-1">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#1e3a5f;">📖</div>
+    <div class="flow-meta">
+      <h2>1 · Read Scripture</h2>
+      <p>Default landing state — open app and read a chapter</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart LR
+    A([App Open]) --> B[Bible tab\nactive by default]
+    B --> C[Reader shows\nlast-read passage]
+    C --> D{Action?}
+    D -->|Read| E[Scroll through\nverses]
+    D -->|Navigate| F[Tap chapter\npicker]
+    E --> G[Tap a verse]
+    G --> H[Bottom sheet\nopens]
+    E --> I[Reach end\nof chapter]
+    I --> F
+
+    style A fill:#1a3a5c,stroke:#2563eb,color:#93c5fd
+    style H fill:#1a2a40,stroke:#3b82f6,color:#93c5fd
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 2 -->
+<div class="flow-section" id="flow-2">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#2d1f5e;">📚</div>
+    <div class="flow-meta">
+      <h2>2 · Navigate to a Passage</h2>
+      <p>Two entry points — book/chapter picker and translation switcher</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart TD
+    A([Reader screen]) --> B{Entry point}
+    B -->|Tap book/chapter\ndropdown| C[Book & Chapter\nPicker]
+    B -->|Tap translation\ndropdown| T[Translation\nPicker]
+
+    C --> D[Browse OT / NT\nbooks]
+    D --> E[Select book]
+    E --> F[Select chapter]
+    F --> G[Reader loads]
+
+    T --> H[List of translations\nGrom · Огієнко · Турконяк\nKJV · ASV…]
+    H --> I[Select translation]
+    I --> G
+
+    G --> J([Reading view])
+
+    style A fill:#1a1230,stroke:#7c3aed,color:#c4b5fd
+    style J fill:#14271a,stroke:#16a34a,color:#86efac
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- GROUP 2: VERSE DETAIL -->
+<div class="group-label">Verse Detail — Bottom Sheet (discovered via live testing)</div>
+
+<!-- FLOW 3 -->
+<div class="flow-section" id="flow-3">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#1a3040;">📋</div>
+    <div class="flow-meta">
+      <h2>3 · Verse Detail Bottom Sheet <span class="new-badge">NEW</span></h2>
+      <p>Tap any verse → hub for all study tools. Вірш and Слово tabs.</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart TD
+    A([Reading — tap a verse]) --> B[Bottom sheet opens\nПсалом 1:1]
+    B --> C{Choose tab}
+    C -->|Вірш\nVerse| D{Choose view}
+    C -->|Слово\nWord| E[Word Study\nsee Flow 4]
+
+    D -->|Паралельні| F[Cross-reference\npassages list]
+    D -->|Переклади| G[Same verse in\nmultiple translations\nОгієнко · Турконяк\nKJV · ASV]
+    D -->|Оригінал| H[Hebrew/Greek\nword-by-word\nStrong's numbers\n+ grammar]
+    D -->|Коментарі| I[Commentary list\nCalvin · Henry\nSpurgeon]
+
+    F --> J[Tap a parallel → navigate\nto that passage]
+    G --> K[Compare wording\nacross translations]
+    H --> L[Tap a word → Word Study]
+    I --> M[Tap commentator → full text]
+
+    B --> N[Bottom toolbar]
+    N --> O[Відмітити\nHighlight]
+    N --> P[Нотатка\nAdd Note]
+    N --> Q[Поділитись\nShare]
+
+    B --> R[< > arrows\nnav prev/next verse]
+
+    style A fill:#1a3a5c,stroke:#2563eb,color:#93c5fd
+    style B fill:#172030,stroke:#3b82f6,color:#93c5fd
+    style E fill:#1a2a1a,stroke:#16a34a,color:#86efac
+    style O fill:#2a2010,stroke:#d97706,color:#fcd34d
+    style P fill:#1a2a1a,stroke:#16a34a,color:#86efac
+    style Q fill:#1a1a2a,stroke:#7c3aed,color:#c4b5fd
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 4 -->
+<div class="flow-section" id="flow-4">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#0f2a1a;">🔬</div>
+    <div class="flow-meta">
+      <h2>4 · Word Study <span class="new-badge">NEW</span></h2>
+      <p>Слово tab — Strong's lexicon, semantic range, concordance</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart LR
+    A([Bottom sheet open]) --> B[Tap Слово tab]
+    B --> C[First word highlighted\nin verse preview]
+    C --> D[< > arrows\nnavigate word by word]
+    D --> E{Sub-tab}
+    E -->|Значення\nMeaning| F[Strong's number\nSemantic range\nPOS · Transliteration\nPronunciation]
+    E -->|Вживання\nUsage| G[All Bible occurrences\nof this word\nconcordance list]
+    F --> H[Tap Детальніше\nfor full entry]
+    G --> I[Tap occurrence\nnavigate to verse]
+
+    style A fill:#172030,stroke:#3b82f6,color:#93c5fd
+    style F fill:#14271a,stroke:#16a34a,color:#86efac
+    style G fill:#14271a,stroke:#16a34a,color:#86efac
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 5 -->
+<div class="flow-section" id="flow-5">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#2a2010;">✍️</div>
+    <div class="flow-meta">
+      <h2>5 · Highlight a Verse <span class="new-badge">NEW</span></h2>
+      <p>One-tap toggle from the bottom sheet toolbar</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart LR
+    A([Verse bottom sheet open]) --> B{Highlight state?}
+    B -->|Not highlighted| C[Tap Відмітити]
+    B -->|Already highlighted| F[Tap Відмітити]
+    C --> D[Green highlight\napplied to verse]
+    D --> E[Highlight saved\nto verse]
+    F --> G[Highlight removed]
+
+    style A fill:#172030,stroke:#3b82f6,color:#93c5fd
+    style D fill:#14271a,stroke:#16a34a,color:#86efac
+    style G fill:#3a1818,stroke:#dc2626,color:#fca5a5
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 6 -->
+<div class="flow-section" id="flow-6">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#3a2a10;">📜</div>
+    <div class="flow-meta">
+      <h2>6 · Read Commentary <span class="new-badge">NEW</span></h2>
+      <p>Access Calvin, Matthew Henry, or Spurgeon on any verse</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart LR
+    A([Verse bottom sheet]) --> B[Вірш tab]
+    B --> C[Tap Коментарі pill]
+    C --> D[List of commentators\nwith portrait + era + style]
+    D --> E{Select}
+    E -->|Жан Кальвін| F[XVI cent.\nText & Theology]
+    E -->|Меттью Генрі| G[XVIII cent.\nHeart & Application]
+    E -->|Чарльз Сперджен| H[XIX cent.\nSermon & Imagery]
+    F --> I[Full commentary\ntext opens]
+    G --> I
+    H --> I
+
+    style A fill:#172030,stroke:#3b82f6,color:#93c5fd
+    style I fill:#14271a,stroke:#16a34a,color:#86efac
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- GROUP 3: SEARCH & DISCOVERY -->
+<div class="group-label">Search & Discovery</div>
+
+<!-- FLOW 7a -->
+<div class="flow-section" id="flow-7a">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#3a2010;">🔍</div>
+    <div class="flow-meta">
+      <h2>7a · Keyword Search (За словом)</h2>
+      <p>Exact word match — opens as a modal overlay from the header 🔍 icon. Auto-triggers on each keystroke.</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart LR
+    A([Any screen]) --> B[Tap 🔍 icon\nin header]
+    B --> C[Search modal opens\nZa slovom tab active]
+    C --> D[Type word\nauto-search on each keystroke]
+    D --> E{Results?}
+    E -->|Match found| F[Results list\nkeyword highlighted in yellow\nreference shown above verse]
+    E -->|No match| G[Empty state:\nНічого не знайдено]
+    G --> D
+    F --> H[Tap a result]
+    H --> I[Modal closes\nReader scrolls to verse\nverse highlighted blue\nbottom sheet opens automatically]
+
+    style A fill:#1a1230,stroke:#7c3aed,color:#c4b5fd
+    style I fill:#14271a,stroke:#16a34a,color:#86efac
+    style G fill:#3a1818,stroke:#dc2626,color:#fca5a5
+    style F fill:#2a2a10,stroke:#ca8a04,color:#fde68a
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 7b -->
+<div class="flow-section" id="flow-7b">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#1a1f40;">✨</div>
+    <div class="flow-meta">
+      <h2>7b · Smart Search (Розумний пошук) <span class="new-badge">NEW</span></h2>
+      <p>AI-powered semantic search — ask a natural language question about a theme or idea. Also supports voice input.</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart TD
+    A([Any screen]) --> B[Tap 🔍 icon\nin header]
+    B --> C[Search modal opens]
+    C --> D[Tap Розумний пошук tab]
+    D --> E{Input method}
+    E -->|Type| F[Type natural language question\ne.g. Де говориться про успіх?]
+    E -->|Voice| G[Tap 🎤 microphone\nspeak question]
+    G --> F
+    F --> H[Tap → submit button]
+    H --> I[Loading skeleton\nAI processes query]
+    I --> J[AI ВІДПОВІДЬ card\nAI-generated summary\nanswer in blue card]
+    J --> K[ЗНАЙДЕНІ ВІРШІ section\nsemanticaly matched verses listed below]
+    K --> L[Tap a verse → ]
+    L --> M[Modal closes\nReader jumps to verse\nbottom sheet opens]
+
+    style A fill:#1a1230,stroke:#7c3aed,color:#c4b5fd
+    style J fill:#1a2060,stroke:#3b82f6,color:#93c5fd
+    style K fill:#172030,stroke:#2563eb,color:#93c5fd
+    style M fill:#14271a,stroke:#16a34a,color:#86efac
+    style I fill:#1e1e1e,stroke:#444,color:#888
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- GROUP 4: SAVE & SHARE -->
+<div class="group-label">Save & Share</div>
+
+<!-- FLOW 8 -->
+<div class="flow-section" id="flow-8">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#3a2a10;">🔖</div>
+    <div class="flow-meta">
+      <h2>8 · Bookmarks</h2>
+      <p>Via Entries tab — verse-based, organized by categories with color labels</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart TD
+    A([Bottom nav → Entries]) --> B[Bookmarks tab]
+    B --> C[List grouped\nby category]
+    C --> D{Action}
+    D -->|Tap ↗ on card| E[Reader opens\nat that verse]
+    D -->|Tap ✏️ on card| F[Edit bookmark]
+    D -->|Tap + in header| G[Create menu\npopover]
+
+    G --> H[Create bookmark]
+    H --> I[+ Add verses\nselect one or more]
+    I --> J[Category picker]
+    J -->|Existing| K[Select category]
+    J -->|New| L[Create category\nname + color picker\n9 muted colors]
+    L --> K
+    K --> M{Verse selected?}
+    M -->|Yes| N[SAVE active\ntap to save]
+    M -->|No| O[SAVE disabled]
+    N --> C
+
+    style A fill:#1a1230,stroke:#7c3aed,color:#c4b5fd
+    style E fill:#14271a,stroke:#16a34a,color:#86efac
+    style N fill:#14271a,stroke:#16a34a,color:#86efac
+    style O fill:#3a1818,stroke:#dc2626,color:#fca5a5
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 9 -->
+<div class="flow-section" id="flow-9">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#0f3322;">✏️</div>
+    <div class="flow-meta">
+      <h2>9 · Notes</h2>
+      <p>Via Entries tab or bottom sheet — verse-linked, organized in folders</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart TD
+    A([Verse bottom sheet]) -->|Tap Нотатка| B[New note editor\nverse pre-attached]
+    C([Bottom nav → Entries]) -->|Notes tab| D[Notes list\ngrouped by folder]
+
+    D --> E{Action}
+    E -->|Tap ↗ on card| F[Reader opens\nat that verse]
+    E -->|Tap ✏️ on card| G[Edit note]
+    E -->|Tap + in header| H[Create menu\npopover]
+
+    H -->|Create note| I[New note editor]
+    H -->|Create folder| J[Name input → Save\nFolder created]
+
+    B --> K[+ Add verses\noptional]
+    I --> K
+    K --> L[Folder picker\nNo folder default]
+    L -->|Create folder| J
+    L --> M[Write text\nWhat do you think?]
+    B --> M
+    M --> N[SAVE]
+    N --> D
+
+    style A fill:#172030,stroke:#3b82f6,color:#93c5fd
+    style C fill:#1a1230,stroke:#7c3aed,color:#c4b5fd
+    style F fill:#14271a,stroke:#16a34a,color:#86efac
+    style N fill:#14271a,stroke:#16a34a,color:#86efac
+    </div>
+  </div>
+</div>
+
+<!-- FLOW 10 -->
+<div class="flow-section" id="flow-10">
+  <div class="flow-header">
+    <div class="flow-icon" style="background:#1a1a1a;">⚙️</div>
+    <div class="flow-meta">
+      <h2>10 · Settings</h2>
+      <p>Reading preferences — via Menu tab in bottom nav</p>
+    </div>
+  </div>
+  <div class="flow-card">
+    <div class="mermaid">
+flowchart LR
+    A([Any screen]) --> B[Tap Menu\nbottom tab]
+    B --> C[Settings screen]
+    C --> D{Setting}
+    D -->|Font size/style| E[Adjust typography\nlive preview]
+    D -->|Theme| F[Dark / Light\ntoggle]
+    D -->|Default translation| G[Pick preferred\ntranslation]
+    D -->|Language| H[UI language]
+    E --> I[Auto-saved]
+    F --> I
+    G --> I
+    H --> I
+    I --> J([Changes reflected\nacross app])
+
+    style A fill:#1a1230,stroke:#7c3aed,color:#c4b5fd
+    style J fill:#14271a,stroke:#16a34a,color:#86efac
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#1e293b',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#334155',
+      lineColor: '#475569',
+      secondaryColor: '#1e293b',
+      tertiaryColor: '#0f172a',
+      edgeLabelBackground: '#1e293b',
+      titleColor: '#e2e8f0',
+      nodeBorder: '#334155',
+      mainBkg: '#1e293b',
+    },
+    flowchart: {
+      curve: 'basis',
+      padding: 20,
+      nodeSpacing: 50,
+      rankSpacing: 60,
+    }
+  });
+</script>
+</body>
+</html>
