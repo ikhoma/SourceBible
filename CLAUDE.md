@@ -45,6 +45,32 @@ iOS Bible app (SwiftUI, SQLite без ORM). Оригінальні мови (Mac
 
 Ключові таблиці: `word` (Macula слова, MT нумерація), `verse` (тексти перекладів), `strongs` (лексикон), `verse_map` (маппінг нумерації), `cross_reference`, `translation`, `book`.
 
+## 🎯 iOS deployment target — обов'язкове правило
+
+**Мінімальна версія: iOS 18.** `IPHONEOS_DEPLOYMENT_TARGET` буде змінено з `26.4` → `18.0` в окремому спринті після завершення поточних фіч.
+
+**До того часу:** не пиши iOS 26-exclusive API без `#available(iOS 26, *)` guard і iOS 18 fallback.
+
+```swift
+// ✅ Правильно
+if #available(iOS 26, *) {
+    // iOS 26 enhanced experience
+} else {
+    // iOS 18 fallback
+}
+
+// ❌ Неправильно — вільне використання iOS 26-only API без guard
+someIOS26OnlyAPI()
+```
+
+Відомі iOS 26-only речі що вже є в коді без guards (фіксувати в compatibility спринті):
+- `LocalizedBundle` — `Bundle` `@MainActor` є тільки в iOS 26 SDK
+- `TabView` value-based tab selection
+
+Swift 6 strict concurrency — це налаштування компілятора, не залежить від deployment target. Залишається без змін.
+
+---
+
 ## ⚡ Swift 6 / iOS 26 SDK — обов'язкові правила
 
 Проект компілюється з **Swift 6 strict concurrency** під iOS 26 SDK. Ці правила усувають цілі класи помилок.

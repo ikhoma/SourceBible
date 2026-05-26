@@ -76,7 +76,7 @@ Never break the build between steps.
 
 **New file:** `SourceBible/Services/LocalizedBundle.swift`
 
-Strategy: **swizzle `Bundle.main`** via `object_setClass` so that `Text("key")`, `String(localized: "key")`, and `NSLocalizedString` all automatically use the override — zero changes needed at call sites. See ADR-001 for why explicit `bundle: .localized` was rejected.
+Strategy: **swizzle `Bundle.main`** via `object_setClass` so that `Text("key")`, `String(localized: "key")`, and `NSLocalizedString` all automatically use the override — zero changes needed at call sites. See ADR-006 for why explicit `bundle: .localized` was rejected.
 
 ```swift
 import Foundation
@@ -144,7 +144,7 @@ struct SourceBibleApp: App {
                 // .id() forces a full view-tree re-render on language change.
                 // Trade-off: drops all navigation state (scroll, sheets, stack).
                 // Acceptable for a rare Settings action — same behavior as Telegram.
-                // See ADR-001 for alternatives considered.
+                // See ADR-006 for alternatives considered.
                 .id(appLanguage)
                 .onChange(of: appLanguage) { _, lang in
                     LocalizedBundle.activate(language: lang)
@@ -604,9 +604,10 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(String(localized: "settings.section.language", bundle: .localized)) {
+                // No explicit bundle: parameter needed — Bundle.main is swizzled at launch.
+                Section(String(localized: "settings.section.language")) {
                     Picker(
-                        String(localized: "settings.language.title", bundle: .localized),
+                        String(localized: "settings.language.title"),
                         selection: $appLanguage
                     ) {
                         ForEach(supportedLanguages, id: \.code) { lang in
@@ -617,7 +618,7 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
             }
-            .navigationTitle(String(localized: "settings.title", bundle: .localized))
+            .navigationTitle(String(localized: "settings.title"))
         }
     }
 }
@@ -626,8 +627,8 @@ struct SettingsView: View {
 **Wire into `ContentView.swift`** — add Settings tab (or add to existing Меню tab — TBD per OQ5):
 
 ```swift
-// Option A: new Settings tab
-Tab(String(localized: "tab.settings", bundle: .localized),
+// Option A: new Settings tab (bundle: .localized not needed — Bundle.main is swizzled)
+Tab(String(localized: "tab.settings"),
     systemImage: "gearshape.fill",
     value: AppTab.settings) {
     SettingsView()

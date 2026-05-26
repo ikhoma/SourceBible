@@ -1,6 +1,6 @@
-# ADR-002: Розбиття VerseBottomSheetView.swift на окремі файли
+# ADR-010: Розбиття VerseBottomSheetView.swift на окремі файли
 
-**Status:** Proposed  
+**Status:** Accepted — implemented 2026-05  
 **Date:** 2026-05-11  
 **Deciders:** Ivan Khoma
 
@@ -34,7 +34,7 @@ FlowLayout                  — кастомний Layout для chip-рядкі
 ## Decision
 
 **Розбити на 3 файли по логічних групах, не на 4 по компонентах.**  
-Зробити це після реалізації ADR-001 (HighlightRepository + BibleRepository), не замість.
+Зробити це після реалізації ADR-009 (HighlightRepository + BibleRepository), не замість.
 
 ```
 Views/BottomSheet/
@@ -116,7 +116,7 @@ Views/Components/
 
 **3 файли vs не розбивати**: `VerseTabContent.swift` через 2–3 місяці матиме реальний CrossRefs (з API), реальний TranslationsView (з бази), реальний Commentary (з бандлу). Кожен додасть ~150–300 рядків. Краще сформувати структуру поки код ще маленький.
 
-**Коли робити**: після ADR-001. Причина — при підключенні `BibleRepository` у `VerseTabContent` зміняться всі placeholder-и. Розбивати зараз щоб через тиждень знову все рухати — марна трата часу.
+**Коли робити**: після ADR-009. Причина — при підключенні `BibleRepository` у `VerseTabContent` зміняться всі placeholder-и. Розбивати зараз щоб через тиждень знову все рухати — марна трата часу.
 
 ---
 
@@ -159,7 +159,7 @@ Views/
 
 ## Action Items
 
-> ⚠️ Виконати ПІСЛЯ ADR-001 (HighlightRepository + BibleRepository)
+> ⚠️ Виконати ПІСЛЯ ADR-009 (HighlightRepository + BibleRepository)
 
 1. [ ] Створити `Views/BottomSheet/` директорію
 2. [ ] Перенести `WordTabView`, `WordSubTab`, `WordMeaningView`, `WordUsageView` → `WordTabContent.swift`

@@ -1,6 +1,6 @@
-# ADR-003: Notes & Bookmarks Persistence Layer
+# ADR-011: Notes & Bookmarks Persistence Layer
 
-**Status:** Superseded by ADR-004  
+**Status:** Superseded by ADR-012  
 **Date:** 2026-05-19  
 **Deciders:** Ivan Khoma  
 **Features:** F-09 Notes, F-10 Bookmarks

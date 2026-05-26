@@ -1,6 +1,6 @@
 # ADR-007: Localization Completion — Book Names, Model Data, and xcstrings Gaps
 
-**Status:** Proposed  
+**Status:** Implemented — QA pass pending (Checklist E)  
 **Date:** 2026-05-23  
 **Deciders:** Ivan Khoma  
 **Related:** ADR-006 (LocalizedBundle infrastructure), spec-localization-i18n.md, plan-localization-i18n.md
@@ -290,17 +290,17 @@ correctly from the start.
 ## Implementation Checklist
 
 ### A — `BibleBookNames.swift`
-- [ ] Add `enShort`, `enFull`, `ukFull` dictionaries
-- [ ] Rename existing `shortNames` → `ukShort`
-- [ ] Update `short(for:)` and add `full(for:)` to read `UserDefaults` lang key
+- [x] Add `enShort`, `enFull`, `ukFull` dictionaries ✅
+- [x] Rename existing `shortNames` → `ukShort` ✅
+- [x] Update `short(for:)` and add `full(for:)` to read `UserDefaults` lang key ✅
 
 ### B — `DatabaseService.swift`
-- [ ] In `loadBooks()`: use `BibleBookNames.full(for:)` and `BibleBookNames.short(for:)` instead of DB `name`/`short_name`
-- [ ] In `loadConcordance()` / wherever `ConcordanceEntry.reference` is built: use `BibleBookNames.short(for:)` + chapter:verse formatting
+- [x] In `loadBooks()`: use `BibleBookNames.full(for:)` and `BibleBookNames.short(for:)` instead of DB `name`/`short_name` ✅
+- [x] In `loadConcordance()` / wherever `ConcordanceEntry.reference` is built: use `BibleBookNames.short(for:)` + chapter:verse formatting ✅
 
 ### C — `StrongsModels.swift`
-- [ ] Change `static let calvin/henry/spurgeon/owen/all` → `static var`
-- [ ] Add `String(localized: "theologian.*.name/era/style")` to each instance
+- [x] Change `static let calvin/henry/spurgeon/owen/all` → computed `static var`. Fixed 2026-05-26. ✅
+- [x] Add `String(localized: "theologian.*.name/era/style")` to each instance ✅
 
 ### D — `Localizable.xcstrings` — fill EN translations
 - [ ] `action.highlight` = "Highlight"
@@ -326,7 +326,7 @@ correctly from the start.
 - [ ] 12 theologian keys (see Decision 3 table above)
 
 ### E — Verify
-- [ ] Run in EN scheme: no Ukrainian leaks in action bar, commentary list, book picker
+- [ ] Run in EN scheme: no Ukrainian leaks in action bar, commentary list, book picker (blocked by Checklist C)
 - [ ] Run in UK scheme: no English UI leaks (BDB content in English is acceptable — P2)
 - [ ] Switch language 3× rapidly — no crash, no stale book names
 
@@ -334,9 +334,9 @@ correctly from the start.
 
 ## Action Items
 
-1. [ ] Implement `BibleBookNames.swift` (Checklist A)
-2. [ ] Update `DatabaseService.swift` (Checklist B)
-3. [ ] Update `StrongsModels.swift` (Checklist C)
-4. [ ] Fill `Localizable.xcstrings` EN gaps (Checklist D)
-5. [ ] QA pass (Checklist E)
-6. [ ] Update `docs/INDEX.md` — add this ADR row
+1. [x] Implement `BibleBookNames.swift` (Checklist A) ✅
+2. [x] Update `DatabaseService.swift` (Checklist B) ✅
+3. [x] Update `StrongsModels.swift` (Checklist C) — `static let` → computed `static var` ✅ (2026-05-26)
+4. [x] Fill `Localizable.xcstrings` EN gaps (Checklist D) ✅
+5. [ ] QA pass (Checklist E) — re-run after Checklist C is fixed
+6. [x] Update `docs/INDEX.md` ✅

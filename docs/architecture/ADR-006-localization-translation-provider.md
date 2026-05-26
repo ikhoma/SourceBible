@@ -268,12 +268,14 @@ Swizzling is the only approach that makes all localization call sites correct by
 
 ## Action Items
 
-1. [ ] Implement `LocalizedBundle` with `object_setClass` pattern (Step 1 of implementation plan)
-2. [ ] Add `overrideBundle` caching by language code to avoid `Bundle(path:)` on every call
+1. [x] Implement `LocalizedBundle` with `object_setClass` pattern (`Services/Localization/LocalizedBundle.swift` ✅)
+2. [x] Add `overrideBundle` caching by language code (implemented with `_bundleCache` dict ✅)
 3. [ ] Add unit test: all `MorphKey.*` constants resolve to non-key strings in both `en` and `uk`
-4. [ ] Add code comment on `.id(appLanguage)` in `SourceBibleApp` explaining the state-reset trade-off
-5. [ ] Update implementation plan Step 1 to use swizzle approach (replaces "explicit `bundle: .localized`" strategy)
-6. [ ] Create follow-up ADR ticket: "Long-term content delivery strategy for BDB/gloss translations"
+4. [x] Add code comment on `.id(appLanguage)` in `SourceBibleApp` (implemented ✅)
+5. [x] Update implementation plan Step 1 to use swizzle approach (`plan-localization-i18n.md` updated ✅)
+6. [ ] Create follow-up ADR: "Long-term content delivery strategy for BDB/gloss translations"
+
+> **Continued in ADR-007** — localization completion (book names, model data, xcstrings gaps found in QA).
 
 ---
 

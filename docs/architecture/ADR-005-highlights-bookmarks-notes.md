@@ -1,4 +1,4 @@
-# ADR-001: Architecture Review — Highlights, Bookmarks, Notes Update
+# ADR-005: Architecture Review — Highlights, Bookmarks, Notes Update
 
 **Status:** Accepted with amendments  
 **Date:** 2026-05-22  
@@ -199,11 +199,11 @@ GRDB's `DatabaseMigrator` wraps each migration in a transaction — a failed mig
 
 ## Action Items
 
-- [ ] Add `HighlightColor` enum — do not pass raw color strings beyond store layer
-- [ ] Add `Task { @MainActor }` deferral in `ContentView.onChange` for navigation
+- [x] Add `HighlightColor` enum — do not pass raw color strings beyond store layer (`Models/HighlightColor.swift` ✅)
+- [x] Add `Task { @MainActor }` deferral in `ContentView.onChange` for navigation (implemented ✅)
 - [ ] Add `#if DEBUG` assert in `NoteEditorView` to catch missing `router` injection
 - [ ] Add guard in `navigateToVerse(id:)` for malformed verseIds
 - [ ] Add `updateUIView` change-guard in `VerseTextView` coordinator
-- [ ] Check `IPHONEOS_DEPLOYMENT_TARGET` before writing `v2_drop_bookmark_categories`
+- [x] Check `IPHONEOS_DEPLOYMENT_TARGET` before writing `v2_drop_bookmark_categories` — iOS 26.4, `DROP COLUMN` is safe ✅
 - [ ] Remove or deprecate `allHighlightedVerseIds` when `highlightColors()` is added
 - [ ] Decide: immediate-save bookmark with haptic feedback, or minimal confirmation sheet

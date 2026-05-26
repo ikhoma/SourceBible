@@ -1,4 +1,4 @@
-# ADR-004: Unified User Data Layer (GRDB + Block-based Notes + Sync-ready Schema)
+# ADR-012: Unified User Data Layer (GRDB + Block-based Notes + Sync-ready Schema)
 
 **Status:** Amended  
 **Date:** 2026-05-19  
@@ -6,14 +6,14 @@
 **Amended:** 2026-05-20 (rev 3) — DeviceIdentity renamed to PreAuthIdentity (.userId → .stableId); clarified that ViewModels never access PreAuthIdentity directly; column name user_id retained (maps 1:1 to Supabase auth.uid())  
 **Amended:** 2026-05-20 (rev 4) — Architecture review: note_verses vs note_blocks.verse_id dual-purpose documented; NoteWithBlocks + BookmarkWithVerses types defined; GRDB version pinned ~> 6.0; async protocol note added to v2 revisit; highlights confirmed translation-specific (YouVersion behavior)  
 **Deciders:** Ivan Khoma  
-**Supersedes:** ADR-003 (Notes & Bookmarks Persistence — UserDefaults approach)  
+**Supersedes:** ADR-011 (Notes & Bookmarks Persistence — UserDefaults approach)  
 **Features:** F-08 Highlights, F-09 Notes, F-10 Bookmarks, Auth
 
 ---
 
 ## Context
 
-ADR-003 proposed UserDefaults + JSON for Notes and Bookmarks, following the existing `HighlightRepository` pattern. Since then two new constraints emerged:
+ADR-011 proposed UserDefaults + JSON for Notes and Bookmarks, following the existing `HighlightRepository` pattern. Since then two new constraints emerged:
 
 1. **Sync requirement.** The app will eventually sync to Supabase (Postgres + RLS), then migrate to a proprietary backend. Building on UserDefaults today means rewriting the entire persistence layer when sync is added — an expensive, risky migration.
 
@@ -27,13 +27,13 @@ The guiding principle from the architecture document: *build a sync-ready local 
 
 ## Decision
 
-Replace the three-repository approach (ADR-003) with a **unified `UserDataStore`** backed by **GRDB (SQLite, writable)** with a sync-ready schema. Notes use a **block-based content model** from day one. Highlights are migrated from UserDefaults into the same store.
+Replace the three-repository approach (ADR-011) with a **unified `UserDataStore`** backed by **GRDB (SQLite, writable)** with a sync-ready schema. Notes use a **block-based content model** from day one. Highlights are migrated from UserDefaults into the same store.
 
 ---
 
 ## Options Considered
 
-### Option A: UserDefaults + JSON (ADR-003 — rejected)
+### Option A: UserDefaults + JSON (ADR-011 — rejected)
 
 | Dimension | Assessment |
 |---|---|

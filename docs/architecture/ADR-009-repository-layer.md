@@ -1,8 +1,10 @@
-# ADR-001: Введення Repository шару замість прямого доступу до даних у ViewModel
+# ADR-009: Введення Repository шару замість прямого доступу до даних у ViewModel
 
-**Status:** Proposed  
+**Status:** Superseded  
 **Date:** 2026-05-11  
-**Deciders:** Ivan Khoma
+**Deciders:** Ivan Khoma  
+**Superseded by:** ADR-012 (highlights portion); BibleRepository concept abandoned — `DatabaseService` used directly throughout.  
+**Note:** `HighlightRepository` was built then deleted. `BibleRepository`/`MockBibleRepository` were never built. Kept as a record of why this pattern was considered.
 
 ---
 

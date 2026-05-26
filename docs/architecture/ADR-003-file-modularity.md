@@ -1,6 +1,6 @@
 # ADR-003: File Modularity — Splitting Large Files into Focused Modules
 
-**Status:** Proposed  
+**Status:** Accepted — implemented 2026-05  
 **Date:** 2026-05-11  
 **Deciders:** Ivan Khoma  
 **Affects:** All Swift files under `SourceBible/`
@@ -101,7 +101,7 @@ Option C gives 80% of the readability benefit at 5% of the effort. The missing 2
 
 **What we'll need to revisit:**
 - When `CommentariesView` grows significantly, split into `Views/BottomSheet/CommentariesView.swift`
-- If a widget target or test target is added, promote folders to SPM local packages (ADR-004)
+- If a widget target or test target is added, promote folders to SPM local packages (future ADR)
 
 ---
 

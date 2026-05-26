@@ -9,16 +9,16 @@ Load the full document only when the task is relevant to it.
 
 | File | Title | Status | Summary |
 |---|---|---|---|
-| `ADR-003-file-modularity.md` | File Modularity | Proposed | Split large Swift files into focused modules; FlowLayout/CapsuleNavGroupStyle extracted |
-| `ADR-009-repository-layer.md` | Repository Layer | — | Data access abstraction layer architecture |
-| `ADR-010-bottomsheet-file-split.md` | BottomSheet File Split | — | Modular split of bottom sheet components |
-| `ADR-011-notes-bookmarks-persistence.md` | Notes & Bookmarks Persistence | — | Persistence strategy for user annotations |
-| `ADR-012-unified-user-data-layer.md` | Unified User Data Layer | — | Unified architecture for user data storage |
-| `ADR-013-ios-minimum-target.md` | iOS Minimum Target | Proposed | Minimum iOS version decision for SourceBible |
+| `ADR-001-platform-stack.md` | Platform Stack | Accepted (amended 2026-05-26) | SwiftUI native; iOS 18 minimum target (iOS 26 features behind #available); Swift 6 strict concurrency; compatibility sprint deferred |
+| `ADR-003-file-modularity.md` | File Modularity | Accepted | Split large Swift files into focused modules; FlowLayout/CapsuleNavGroupStyle extracted |
 | `ADR-005-highlights-bookmarks-notes.md` | Highlights, Bookmarks, Notes Architecture | Accepted (with amendments) | Cross-tab navigation via AppNavigationRouter; GRDB store; UserDataStoreProtocol |
 | `ADR-006-localization-translation-provider.md` | Localization: TranslationProvider & Language Switch | Accepted | MorphologyDecoder emits MorphKey constants; BundleTranslationProvider for MVP; Bundle.main swizzled via object_setClass for instant switch; upgrade path → DB → Remote |
-| `ADR-007-localization-completion.md` | Localization Completion: Book Names, Model Data, xcstrings Gaps | Proposed | BibleBookNames dual-lang static dict; DatabaseService injects locale names at load; Theologian static var; 25+ missing EN xcstrings keys identified |
+| `ADR-007-localization-completion.md` | Localization Completion: Book Names, Model Data, xcstrings Gaps | Implemented (QA pending) | BibleBookNames dual-lang done; Theologian static var fixed 2026-05-26; QA pass still open |
 | `ADR-008-search-architecture.md` | Search Architecture MVP | Accepted | FTS5 content table + SQL joins for Strong's/lemma/morph; predictive search via search_terms table; vector search deferred to V1.5 (ONNX + sqlite-vec) |
+| `ADR-009-repository-layer.md` | Repository Layer | Superseded | BibleRepository never built; HighlightRepository superseded by ADR-012; DatabaseService used directly |
+| `ADR-010-bottomsheet-file-split.md` | BottomSheet File Split | Accepted | Modular split of bottom sheet components — implemented |
+| `ADR-011-notes-bookmarks-persistence.md` | Notes & Bookmarks Persistence | Superseded by ADR-012 | UserDefaults approach rejected; kept as historical record |
+| `ADR-012-unified-user-data-layer.md` | Unified User Data Layer | Accepted (amended ×4) | GRDB writable DB; sync-ready schema; block-based notes; PreAuthIdentity pattern |
 
 ---
 
@@ -30,6 +30,8 @@ Load the full document only when the task is relevant to it.
 | `spec-localization-i18n.md` | UI Localization & i18n | Draft | EN+UK MVP; MorphologyDecoder abstraction; Settings language picker; BDB translation deferred to P2 |
 | `plan-localization-i18n.md` | Localization — Implementation Plan | Draft | 8-step implementation order; LocalizedBundle swizzle; MorphKey extraction; full string audit |
 | `plan-highlights-bookmarks-notes.md` | Highlights, Bookmarks, Notes — Implementation Plan | Draft | Step-by-step implementation plan for annotation system |
+| `verse_versification_system_design.md` | VersificationService — Design & Spec | Draft | Extract versification logic from ViewModel into VersificationService; consumers: loadWordsForSelectedVerse (done), concordance display (bug), cross-refs |
+| `unified_word_lookup_system_design.md` | Unified Word Lookup — Design & Spec | Draft | Unify Оригінал tap + translation long-press into single flow; BibleWord bridge in tapWord (TODO); isParticleSegment non-clickable particles (TODO) |
 
 ---
 
@@ -47,18 +49,18 @@ Load the full document only when the task is relevant to it.
 | File | Summary |
 |---|---|
 | `db_build.md` | Full SQLite build process, known errors, verse_map details |
-| `unified_word_lookup_system_design.md` | System design for word lookup across Hebrew/Greek |
-| `xlit_subentry_system_design.md` | Transliteration sub-entry handling (H871a, H1886d, etc.) |
-| `verse_offset_system_design.md` | Verse offset/numbering system design |
-| `verse_versification_system_design.md` | Cross-tradition versification mapping system design |
+| `xlit_subentry_system_design.md` | Transliteration sub-entry handling (H871a, H1886d, etc.) — implemented |
+| `verse_offset_system_design.md` | Verse offset/numbering system design — implemented (findBestMaculaVerse, Strong's overlap) |
 
-## Product Docs (`product/`)
+## Product Docs (`BRD/`)
+
+> ⚠️ **These docs reflect the pre-SwiftUI React Native prototype. Rewrite before release to reflect the current SwiftUI + iOS 26 stack.**
 
 | File | Summary |
 |---|---|
 | `01-context.md` | Project context and background |
 | `02-metrics.md` | Success metrics and KPIs |
-| `03-brd.md` | Business Requirements Document |
+| `03-brd.md` | Business Requirements Document (outdated — describes React Native + Expo) |
 | `04-user-flows.md` | User flows (Markdown) |
-| `05-architecture-diagram.md` | High-level architecture diagram |
+| `05-architecture-diagram.md` | High-level architecture diagram (outdated) |
 | `07-potential-team.md` | Team structure and roles |

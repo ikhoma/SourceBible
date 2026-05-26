@@ -185,46 +185,25 @@ func loadWordsForSelectedVerse() {
 }
 ```
 
-### 2. `ExternalLinkBuilder` (не реалізовано)
+### 2. Concordance / Word Usage (не реалізовано — активний баг)
 
-Відкриває вірш у зовнішніх сервісах з правильною нумерацією.
+Concordance (вкладка «Вживання» / Word Usage) запитує таблицю `word`, яка зберігає нумерацію MT. Результати відображаються користувачу як посилання на вірші — але без конвертації нумерація буде неправильною для KJV/RST читача в 459 зачеплених розділах (Псалми та ін.).
 
-```swift
-struct ExternalLinkBuilder {
-    func bibleGatewayURL(for verse: BibleVerse, translation: Translation) -> URL {
-        // Конвертуємо поточний переклад → KJV versification (BibleGateway)
-        let kjvVerse = versificationService.resolve(
-            verse: verse.number, book: verse.bookId, chapter: verse.chapter,
-            from: translation.versification,
-            to: .kjv
-        )
-        return URL(string: "https://www.biblegateway.com/passage/?search=\(verse.bookId)+\(verse.chapter):\(kjvVerse)&version=KJV")!
-    }
-
-    func youVersionURL(for verse: BibleVerse, translation: Translation) -> URL {
-        let kjvVerse = versificationService.resolve(...)
-        // YouVersion також використовує KJV versification
-    }
-}
-```
-
-### 3. `CrossRef Resolver` (не реалізовано)
-
-Нормалізує cross-references між перекладами. Cross-references в DB зберігаються в одній схемі (MT або KJV), але потрібно показувати вірш у поточному перекладі користувача.
+**Симптом:** користувач читає KJV Psalm 3, тапає слово → concordance показує "Ps 3:2" (MT), але в KJV це вірш 3:1.
 
 ```swift
-struct CrossRefResolver {
-    func resolveReference(_ ref: CrossReference,
-                          targetVersification: Versification) -> CrossReference {
-        let targetVerse = versificationService.resolve(
-            verse: ref.verse, book: ref.bookId, chapter: ref.chapter,
-            from: .mt,  // cross-refs зберігаються в MT схемі
-            to: targetVersification
-        )
-        return ref.with(verse: targetVerse)
-    }
-}
+// При рендерингу кожного результату concordance:
+let displayVerse = versificationService.resolve(
+    verse: word.verse,       // MT verse з word таблиці
+    book: word.bookId,
+    chapter: word.chapter,
+    from: .mt,
+    to: currentTranslation.versification   // → конвертуємо у схему читача
+)
+// Показуємо displayVerse, не word.verse
 ```
+
+Виправляється автоматично після реалізації `VersificationService` — потрібно лише додати виклик у місці рендерингу результатів concordance.
 
 ---
 
@@ -237,8 +216,7 @@ struct CrossRefResolver {
 | `ReaderViewModel.findBestMaculaVerse()` | ✅ реалізовано (3 рівні) |
 | `Paratext .vrs` як джерело | ⬜ не реалізовано (зараз Strong's overlap) |
 | `VersificationService` як окремий сервіс | ⬜ логіка вбудована у ViewModel |
-| `ExternalLinkBuilder` | ⬜ не реалізовано |
-| `CrossRef Resolver` | ⬜ не реалізовано |
+| Concordance verse display (MT → translation) | ⬜ активний баг — виправляється через VersificationService |
 | `verse_map_patch.sql` | ⬜ не реалізовано |
 
 ---
@@ -252,7 +230,6 @@ struct CrossRefResolver {
 | `SourceBible/Services/DatabaseService.swift` | `findVerseMap()` метод |
 | `SourceBible/Services/VersificationService.swift` | Сервісний шар (до реалізації) |
 | `SourceBible/ViewModels/ReaderViewModel.swift` | `loadWordsForSelectedVerse()` |
-| `SourceBible/Utils/ExternalLinkBuilder.swift` | URL для зовнішніх сервісів (до реалізації) |
 
 ---
 
@@ -262,4 +239,3 @@ struct CrossRefResolver {
 2. Схема таблиці **bidirectional** (`from_vsn` → `to_vsn`). Один рядок покриває один напрямок. Для зворотного напрямку потрібен окремий рядок або reverse lookup.
 3. `VersificationService` має бути **singleton** або **injected dependency** (не створювати на кожен запит через SQLite overhead).
 4. Strong's overlap fallback в рівні 3 — **пробабілістичний**, не гарантований. Для production краще покладатись на `.vrs` файли.
-5. Зовнішні сервіси (BibleGateway, YouVersion) використовують **KJV versification**, не MT.

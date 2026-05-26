@@ -71,35 +71,38 @@ struct Commentary: Identifiable {
 }
 
 extension Theologian {
-    static let calvin = Theologian(
+    // Must be `var`, not `let`, so that language switching (Bundle.main swizzle + .id re-render)
+    // causes SwiftUI to re-evaluate these computed values and pick up translated name/era/style keys.
+    // `let` constants are captured at struct init time and never update — see ADR-007.
+    static var calvin: Theologian { Theologian(
         id: "calvin",
         nameKey:  "theologian.calvin.name",
         eraKey:   "theologian.calvin.era",
         styleKey: "theologian.calvin.style",
         imageName: "calvin"
-    )
-    static let henry = Theologian(
+    ) }
+    static var henry: Theologian { Theologian(
         id: "henry",
         nameKey:  "theologian.henry.name",
         eraKey:   "theologian.henry.era",
         styleKey: "theologian.henry.style",
         imageName: "henry"
-    )
-    static let spurgeon = Theologian(
+    ) }
+    static var spurgeon: Theologian { Theologian(
         id: "spurgeon",
         nameKey:  "theologian.spurgeon.name",
         eraKey:   "theologian.spurgeon.era",
         styleKey: "theologian.spurgeon.style",
         imageName: "spurgeon"
-    )
-    static let owen = Theologian(
+    ) }
+    static var owen: Theologian { Theologian(
         id: "owen",
         nameKey:  "theologian.owen.name",
         eraKey:   "theologian.owen.era",
         styleKey: "theologian.owen.style",
         imageName: "owen"
-    )
-    static let all: [Theologian] = [calvin, henry, spurgeon, owen]
+    ) }
+    static var all: [Theologian] { [calvin, henry, spurgeon, owen] }
 }
 
 // MARK: - Sample / Preview Data
