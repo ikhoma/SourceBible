@@ -91,6 +91,10 @@ struct PillSection<Content: View>: View {
             headerView
             content()
         }
+        // Full-width anchor prevents the VStack from shrinking to content width
+        // in the empty-state (narrow text), which would mis-center the section
+        // header relative to where it sits when content fills the panel.
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -148,7 +152,7 @@ struct TranslationsView: View {
                 ForEach(parallels) { vt in
                     VStack(alignment: .leading, spacing: 6) {
                         Text(vt.translation.name)
-                            .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+                            .font(.caption).fontWeight(.semibold).foregroundStyle(.blue)
                         Text(vt.text)
                             .font(.callout).lineSpacing(3)
                     }

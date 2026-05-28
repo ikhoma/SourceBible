@@ -174,20 +174,30 @@ class ReaderViewModel: ObservableObject {
               let chapter = Int(parts[1]) else { return }
         let bookId = String(parts[0])
 
+        var needsLoad = false
+
         // Switch book if needed
         if bookId != currentBook.id {
             if let book = allBooks.first(where: { $0.id == bookId }) {
                 currentBook = book
+                needsLoad = true   // book changed → verses belong to different book
             }
         }
         // Switch chapter if needed
         if chapter != currentChapter {
             currentChapter = chapter
+            needsLoad = true
+        }
+        if needsLoad {
             loadChapter()
         }
-        // Select the target verse and open the bottom sheet
+
+        // Select the target verse, load Macula words, and open the bottom sheet.
+        // loadWordsForSelectedVerse() is required here — navigateToVerse() skips
+        // the normal tapVerse() path that loads words for the Original tab.
         if let verse = verses.first(where: { $0.id == verseId }) {
             selectedVerse = verse
+            loadWordsForSelectedVerse()
             isBottomSheetPresented = true
         }
     }
@@ -432,11 +442,17 @@ class ReaderViewModel: ObservableObject {
 
     private func loadStrongs(strongsId: String) {
         isLoadingStrongs = true
-        // Strong's lookups are fast indexed reads — stay on MainActor
+        // Strong's lookups are fast indexed reads — stay on MainActor.
+        // loadBookUsageGroups runs Queries A+B+C (total count, per-book group-by,
+        // N per-book verse fetches). Total < 50ms even for יהוה (6 512 occurrences).
         var entry = db.loadStrongs(id: strongsId)
-        entry?.concordance = db.loadConcordance(strongsId: strongsId,
-                                                translation: currentTranslation.id,
-                                                limit: 30)
+        if var e = entry {
+            let result = db.loadBookUsageGroups(strongsId: strongsId,
+                                                translation: currentTranslation.id)
+            e.totalCount = result.total
+            e.bookGroups = result.groups
+            entry = e
+        }
         strongsEntry = entry
         isLoadingStrongs = false
     }

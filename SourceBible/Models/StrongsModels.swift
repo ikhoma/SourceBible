@@ -18,7 +18,22 @@ struct StrongsEntry: Identifiable {
     let shortDefinition: String
     let semanticRange: [String]
     let fullDefinition: String  // BDB / Abbott-Smith (STEPBible)
-    var concordance: [ConcordanceEntry]
+    var concordance: [ConcordanceEntry]  // kept for DEBUG/Preview only; not used in production UI
+    var totalCount: Int = 0              // true occurrence count across the whole Bible
+    var bookGroups: [BookUsageGroup] = [] // per-book breakdown for WordUsageView
+}
+
+// MARK: - Book Usage Group
+
+/// Aggregated concordance data for one Bible book.
+/// Used in WordUsageView to render the per-book breakdown.
+struct BookUsageGroup: Identifiable {
+    /// Stable identifier: the OSIS book ID (e.g. "PSA").
+    let id: String
+    let bookId: String
+    let bookName: String          // localized full name from BibleBookNames
+    let count: Int                // distinct verses in this book that contain the word
+    let example: ConcordanceEntry // first occurrence in the book (v1); v1.5 → rhetorical_weight-based
 }
 
 // MARK: - Concordance
@@ -125,6 +140,21 @@ extension StrongsEntry {
             ConcordanceEntry(id: "PSA|2|12", reference: "Псалом 2:12", text: "Блаженні всі, що надіються на нього.",   bookId: "PSA", chapter: 2,  verse: 12),
             ConcordanceEntry(id: "PSA|32|1", reference: "Псалом 32:1", text: "Блаженний, кому прощено провину...",     bookId: "PSA", chapter: 32, verse: 1),
             ConcordanceEntry(id: "PSA|41|1", reference: "Псалом 41:1", text: "Блаженний, хто думає про бідного...",    bookId: "PSA", chapter: 41, verse: 1),
+        ],
+        totalCount: 45,
+        bookGroups: [
+            BookUsageGroup(
+                id: "GEN", bookId: "GEN", bookName: "Genesis", count: 4,
+                example: ConcordanceEntry(id: "GEN|30|13", reference: "Gen 30:13",
+                    text: "Happy am I! For daughters will call me blessed.", bookId: "GEN", chapter: 30, verse: 13)),
+            BookUsageGroup(
+                id: "PSA", bookId: "PSA", bookName: "Psalms", count: 26,
+                example: ConcordanceEntry(id: "PSA|1|1", reference: "Ps 1:1",
+                    text: "Blessed is the man who walks not in the counsel of the wicked...", bookId: "PSA", chapter: 1, verse: 1)),
+            BookUsageGroup(
+                id: "PRO", bookId: "PRO", bookName: "Proverbs", count: 8,
+                example: ConcordanceEntry(id: "PRO|3|13", reference: "Prov 3:13",
+                    text: "Blessed is the one who finds wisdom, and the one who gets understanding.", bookId: "PRO", chapter: 3, verse: 13)),
         ]
     )
 }

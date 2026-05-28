@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SourceBible — Design System Foundation</title>
+<style>
+  /* ─── Reset & Base ──────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* ── Brand ── */
+    --accent:          #1A6CF0;
+    --accent-dark:     #4D9FFF;
+    --accent-subtle:   rgba(26,108,240,0.06);
+    --accent-muted:    rgba(26,108,240,0.15);
+    --accent-hover:    rgba(26,108,240,0.10);
+
+    /* ── Backgrounds ── */
+    --bg-canvas:       #F2F2F7;
+    --bg-surface:      #FFFFFF;
+    --bg-surface-2:    #FFFFFF;
+    --bg-fill:         rgba(120,120,128,0.12);
+    --bg-fill-2:       rgba(120,120,128,0.16);
+    --bg-fill-3:       rgba(120,120,128,0.20);
+
+    /* ── Text ── */
+    --text-primary:    #000000;
+    --text-secondary:  rgba(60,60,67,0.60);
+    --text-tertiary:   rgba(60,60,67,0.30);
+    --text-quaternary: rgba(60,60,67,0.18);
+    --text-on-accent:  #FFFFFF;
+
+    /* ── Highlights (annotation) ── */
+    --hl-yellow:       rgba(255,204,0,0.40);
+    --hl-green:        rgba(52,199,89,0.35);
+    --hl-blue:         rgba(26,108,240,0.28);
+    --hl-rose:         rgba(255,45,85,0.30);
+
+    /* ── Separators ── */
+    --separator:       rgba(60,60,67,0.29);
+    --separator-opaque:#C6C6C8;
+
+    /* ── Verse selection ── */
+    --verse-sel-bar:   #1A6CF0;
+    --verse-sel-tint:  rgba(26,108,240,0.06);
+
+    /* ── Word highlight ── */
+    --word-hl:         rgba(26,108,240,0.15);
+
+    /* ─ CHROME ─ */
+    --chrome-bg:       #FFFFFF;
+    --chrome-text:     #000000;
+    --chrome-border:   rgba(0,0,0,0.08);
+    --chrome-shadow:   0 2px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    --badge-bg:        #1A6CF0;
+    --badge-text:      #FFFFFF;
+    --radius-sm:       6px;
+    --radius-md:       12px;
+    --radius-lg:       16px;
+    --radius-pill:     999px;
+    --font:            -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+  }
+
+  /* ─── Dark Mode ─────────────────────────────────────────────────────────── */
+  html.dark {
+    --accent:          #4D9FFF;
+    --accent-dark:     #4D9FFF;
+    --accent-subtle:   rgba(77,159,255,0.10);
+    --accent-muted:    rgba(77,159,255,0.20);
+    --accent-hover:    rgba(77,159,255,0.14);
+
+    --bg-canvas:       #000000;
+    --bg-surface:      #1C1C1E;
+    --bg-surface-2:    #2C2C2E;
+    --bg-fill:         rgba(120,120,128,0.18);
+    --bg-fill-2:       rgba(120,120,128,0.24);
+    --bg-fill-3:       rgba(120,120,128,0.32);
+
+    --text-primary:    #FFFFFF;
+    --text-secondary:  rgba(235,235,245,0.60);
+    --text-tertiary:   rgba(235,235,245,0.30);
+    --text-quaternary: rgba(235,235,245,0.18);
+    --text-on-accent:  #FFFFFF;
+
+    --hl-yellow:       rgba(255,214,10,0.36);
+    --hl-green:        rgba(50,215,75,0.32);
+    --hl-blue:         rgba(77,159,255,0.28);
+    --hl-rose:         rgba(255,69,58,0.30);
+
+    --separator:       rgba(84,84,88,0.65);
+    --separator-opaque:#38383A;
+
+    --verse-sel-bar:   #4D9FFF;
+    --verse-sel-tint:  rgba(77,159,255,0.10);
+    --word-hl:         rgba(77,159,255,0.20);
+
+    --chrome-bg:       #1C1C1E;
+    --chrome-text:     #FFFFFF;
+    --chrome-border:   rgba(255,255,255,0.08);
+    --chrome-shadow:   0 2px 16px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.30);
+    --badge-bg:        #4D9FFF;
+  }
+
+  /* ─── Global ─────────────────────────────────────────────────────────────── */
+  body {
+    font-family: var(--font);
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+    transition: background 0.25s, color 0.25s;
+  }
+
+  /* ─── Page chrome ────────────────────────────────────────────────────────── */
+  .page-header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--separator);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--chrome-shadow);
+  }
+  .page-header .wordmark {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--text-primary);
+  }
+  .page-header .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .page-header .spacer { flex: 1; }
+
+  /* ─── Dark/Light toggle ──────────────────────────────────────────────────── */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .toggle-label { font-size: 13px; color: var(--text-secondary); }
+  .toggle {
+    width: 44px; height: 26px;
+    background: var(--bg-fill-2);
+    border-radius: 13px;
+    position: relative;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 22px; height: 22px;
+    background: #FFFFFF;
+    border-radius: 50%;
+    top: 2px; left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.20);
+  }
+  html.dark .toggle { background: var(--accent); }
+  html.dark .toggle::after { transform: translateX(18px); }
+
+  /* ─── Layout ─────────────────────────────────────────────────────────────── */
+  .container { max-width: 960px; margin: 0 auto; padding: 48px 32px; }
+
+  /* ─── Section ────────────────────────────────────────────────────────────── */
+  .section { margin-bottom: 64px; }
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--separator);
+  }
+  .section-intro {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+    max-width: 640px;
+    line-height: 1.6;
+  }
+
+  /* ─── Group title ────────────────────────────────────────────────────────── */
+  .group-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 32px;
+    margin-bottom: 12px;
+  }
+
+  /* ─── Color Swatch Grid ──────────────────────────────────────────────────── */
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .swatch-grid.wide {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .swatch-card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--chrome-border);
+    box-shadow: var(--chrome-shadow);
+    transition: transform 0.15s;
+  }
+  .swatch-card:hover { transform: translateY(-1px); }
+
+  .swatch-color {
+    height: 80px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    padding: 8px 10px;
+  }
+  .swatch-color .hex-badge {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: "SF Mono", "Fira Mono", monospace;
+    background: rgba(0,0,0,0.35);
+    color: #FFFFFF;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+
+  .swatch-body { padding: 12px 14px; }
+  .swatch-token {
+    font-size: 12px;
+    font-weight: 700;
+    font-family: "SF Mono", "Fira Mono", monospace;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .swatch-swift {
+    font-size: 11px;
+    font-family: "SF Mono", "Fira Mono", monospace;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .swatch-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ─── Dual swatch (light + dark side by side) ────────────────────────────── */
+  .swatch-dual .swatch-color {
+    height: 56px;
+  }
+  .swatch-dual .dual-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .swatch-dual .dual-label {
+    font-size: 9px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ─── Typography Specimens ───────────────────────────────────────────────── */
+  .type-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .type-table th {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+    text-align: left;
+    padding: 8px 16px;
+    background: var(--bg-fill);
+    border-bottom: 1px solid var(--separator);
+  }
+  .type-table td {
+    padding: 16px 16px;
+    border-bottom: 1px solid var(--separator);
+    vertical-align: top;
+  }
+  .type-table tr:last-child td { border-bottom: none; }
+  .type-table tr:nth-child(even) td { background: var(--bg-fill); }
+  .type-table .col-specimen { width: 34%; }
+  .type-table .col-meta    { width: 28%; }
+  .type-table .col-usage   { width: 38%; }
+
+  .type-specimen { color: var(--text-primary); }
+  .type-meta { font-size: 12px; font-family: "SF Mono","Fira Mono",monospace; }
+  .type-meta .style-name {
+    font-size: 13px; font-weight: 700; color: var(--text-primary);
+    font-family: var(--font); margin-bottom: 4px;
+  }
+  .type-meta .swift-call { color: var(--accent); display: block; margin-bottom: 2px; }
+  .type-meta .size-info { color: var(--text-secondary); display: block; }
+  .type-usage {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .type-usage ul { padding-left: 14px; }
+  .type-usage li { margin-bottom: 3px; }
+
+  /* ─── Component demos ────────────────────────────────────────────────────── */
+  .demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .demo-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--chrome-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    flex: 1;
+    min-width: 260px;
+    box-shadow: var(--chrome-shadow);
+  }
+  .demo-card .demo-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 14px;
+  }
+
+  /* Verse row demo */
+  .verse-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--separator);
+    align-items: flex-start;
+  }
+  .verse-num {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    width: 22px;
+    text-align: right;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .verse-num.selected { color: var(--accent); }
+  .verse-text { font-size: 17px; line-height: 1.6; }
+  .verse-text .word-hl {
+    background: var(--word-hl);
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+
+  .verse-row.selected-row {
+    background: var(--verse-sel-tint);
+    border-radius: 10px;
+    border-left: 3px solid var(--verse-sel-bar);
+    border-bottom: none;
+    padding: 10px 10px 10px 8px;
+    margin: 0 -2px;
+  }
+
+  /* Pill demo */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 16px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    cursor: default;
+  }
+  .pill.active {
+    background: var(--text-primary);
+    color: var(--bg-surface);
+  }
+  .pill.inactive {
+    background: var(--bg-fill-3);
+    color: var(--text-primary);
+  }
+
+  /* Highlight chips */
+  .hl-demo {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .hl-chip {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 400;
+  }
+  .hl-chip.yellow { background: var(--hl-yellow); }
+  .hl-chip.green  { background: var(--hl-green); }
+  .hl-chip.blue   { background: var(--hl-blue); }
+  .hl-chip.rose   { background: var(--hl-rose); }
+
+  /* Bottom sheet action bar */
+  .action-bar {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--separator);
+    padding-top: 8px;
+    margin-top: 12px;
+  }
+  .action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 4px;
+    border-right: 1px solid var(--separator);
+  }
+  .action-btn:last-child { border-right: none; }
+  .action-icon { font-size: 18px; }
+  .action-label { font-size: 10px; color: var(--text-secondary); }
+  .action-icon.active-icon { color: var(--accent); }
+  .action-label.active-lbl { color: var(--accent); }
+
+  /* Nav capsule */
+  .capsule-nav {
+    display: inline-flex;
+    background: var(--bg-fill-2);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+  }
+  .capsule-btn {
+    width: 40px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Search result */
+  .search-result {
+    background: var(--bg-surface-2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .search-result .ref { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 3px; }
+  .search-result .snippet { font-size: 15px; line-height: 1.5; }
+  .search-result .snippet mark {
+    background: var(--word-hl);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+  .search-result .transl { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Code snippet inline */
+  code {
+    font-family: "SF Mono", "Fira Mono", "Menlo", monospace;
+    font-size: 11.5px;
+    background: var(--bg-fill-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* Spacing tokens table */
+  .spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--separator);
+  }
+  .spacing-row:last-child { border-bottom: none; }
+  .spacing-bar {
+    background: var(--accent);
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+  .spacing-info { font-family: "SF Mono","Fira Mono",monospace; font-size: 12px; }
+  .spacing-token { font-weight: 700; color: var(--text-primary); }
+  .spacing-val { color: var(--text-secondary); }
+  .spacing-usage { font-size: 12px; color: var(--text-secondary); }
+
+  /* Radius table */
+  .radius-row {
+    display: flex; align-items: center; gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--separator);
+  }
+  .radius-row:last-child { border-bottom: none; }
+  .radius-demo {
+    width: 56px; height: 40px;
+    background: var(--accent);
+    opacity: 0.18;
+    flex-shrink: 0;
+  }
+  .radius-info { font-family: "SF Mono","Fira Mono",monospace; font-size: 12px; }
+  .radius-token { font-weight: 700; font-size: 13px; color: var(--text-primary); }
+  .radius-val { color: var(--accent); }
+  .radius-usage { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* Two column layout for some sections */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 680px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ─── Footer ─────────────────────────────────────────────────────────────── */
+  .footer {
+    border-top: 1px solid var(--separator);
+    padding: 24px 32px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer .dot { opacity: 0.4; }
+</style>
+</head>
+<body>
+
+<!-- ─── PAGE HEADER ──────────────────────────────────────────────────────── -->
+<header class="page-header">
+  <div>
+    <div class="wordmark">SourceBible</div>
+    <div class="subtitle">Design System Foundation — Colour &amp; Typography</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="toggle-wrap">
+    <span class="toggle-label" id="mode-label">Light</span>
+    <button class="toggle" id="theme-toggle" aria-label="Toggle dark mode"></button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: OVERVIEW                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <h2 class="section-title">Design Principles</h2>
+    <p class="section-intro">
+      SourceBible is a scholarly Bible reader built for deep, unhurried engagement with sacred text.
+      The design system is built on four principles:
+      <strong>Legibility first</strong> — every typographic choice serves the reading experience;
+      <strong>Respectful restraint</strong> — no decorative colour, UI steps back to let the Word speak;
+      <strong>Adaptive fidelity</strong> — all tokens resolve to iOS semantic system colours so dark mode, accessibility text sizes, and high-contrast modes are handled by the OS;
+      <strong>Source transparency</strong> — the original-language layer (Hebrew/Greek Macula) and the translation layer share the same visual weight, differentiated only by typeface.
+    </p>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: COLOUR PALETTE                                               -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <h2 class="section-title">Colour Palette</h2>
+
+    <!-- ── Brand ── -->
+    <div class="group-title">Brand Accent</div>
+    <div class="swatch-grid wide">
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#1A6CF0">
+          <span class="hex-badge">#1A6CF0 · #4D9FFF</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">accent</div>
+          <div class="swatch-swift">Color.accent / UIColor.systemBlue</div>
+          <div class="swatch-desc">
+            The single interactive colour. Light: <code>#1A6CF0</code> — a calmer, more
+            bookish blue than pure system blue. Dark: <code>#4D9FFF</code> for WCAG AA
+            contrast on dark surfaces. Used for: verse-number when selected,
+            selected-verse left-bar, pill active state, navigation chevrons,
+            checkmark in translation picker, bookmarks, word-lookup header.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(26,108,240,0.06)">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.18)">accent × 6%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">accentSubtle</div>
+          <div class="swatch-swift">Color.accent.opacity(0.06)</div>
+          <div class="swatch-desc">
+            The fill behind a selected verse row. Intentionally very low opacity — the
+            left-bar accent stripe carries the selection signal; the tint is secondary
+            confirmation. Do not use for text backgrounds.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(26,108,240,0.15)">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.18)">accent × 15%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">accentMuted</div>
+          <div class="swatch-swift">Color.wordHighlight / UIColor.wordHighlight</div>
+          <div class="swatch-desc">
+            Word-level highlight: long-press selection in VerseTextView, concordance
+            keyword in WordTabContent, search snippet keyword in SearchView.
+            Three surfaces, one visual token — keeps the interactive vocabulary
+            consistent.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Backgrounds ── -->
+    <div class="group-title">Background Hierarchy</div>
+    <p class="section-intro" style="margin-bottom:16px;font-size:13px;">
+      iOS layering model: <strong>canvas</strong> (the outermost screen) →
+      <strong>surface</strong> (cards, sheets) → <strong>surface2</strong> (nested rows) →
+      <strong>fills</strong> (interactive state overlays). All map to system semantic values —
+      never hard-code hex for backgrounds.
+    </p>
+    <div class="swatch-grid">
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#F2F2F7; border-bottom: 1px solid #E5E5EA;">
+          <span class="hex-badge">#F2F2F7 / #000000</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">bg.canvas</div>
+          <div class="swatch-swift">Color(.systemGroupedBackground)</div>
+          <div class="swatch-desc">
+            App chrome background: Reader screen behind verse rows,
+            Search screen, Tab bar area. The grouped background creates visual
+            depth between the canvas and elevated sheets.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#FFFFFF; border-bottom: 1px solid #E5E5EA;">
+          <span class="hex-badge">#FFFFFF / #1C1C1E</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">bg.surface</div>
+          <div class="swatch-swift">Color(.systemBackground)</div>
+          <div class="swatch-desc">
+            Bottom sheets (VerseBottomSheetView, NoteEditorView), action bar,
+            search result cards, navigation overlays. This is the "lifted" layer —
+            always above canvas.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#FFFFFF; border-bottom: 1px solid #E5E5EA;">
+          <span class="hex-badge">#FFFFFF / #2C2C2E</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">bg.surface2</div>
+          <div class="swatch-swift">Color(.secondarySystemGroupedBackground)</div>
+          <div class="swatch-desc">
+            List rows inside grouped screens: search result list rows,
+            translation picker rows, word usage book-group rows.
+            One step above canvas in the grouped background stack.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(120,120,128,0.12);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">fill × 12%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">bg.fill</div>
+          <div class="swatch-swift">Color(.systemFill)</div>
+          <div class="swatch-desc">
+            Thin overlay for text field backgrounds and inactive
+            segmented-control segments. Barely perceptible — signals
+            interactivity without competing with content.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(120,120,128,0.16);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">fill × 16%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">bg.fill2</div>
+          <div class="swatch-swift">Color(.secondarySystemFill)</div>
+          <div class="swatch-desc">
+            CapsuleNavGroupStyle background (iOS ≤ 25), inactive pill
+            buttons, horizontal dividers behind nav groups. Slightly more
+            opaque than fill1 to give visual mass to grouped controls.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(120,120,128,0.20);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">fill × 20%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">bg.fill3</div>
+          <div class="swatch-swift">Color(.tertiarySystemFill)</div>
+          <div class="swatch-desc">
+            Large-area fills: pressed states, skeleton loading cells,
+            table header rows in the design system itself.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Text ── -->
+    <div class="group-title">Text Hierarchy</div>
+    <div class="swatch-grid">
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#000000;">
+          <span class="hex-badge">#000000 / #FFFFFF</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">text.primary</div>
+          <div class="swatch-swift">.foregroundStyle(.primary) / Color(.label)</div>
+          <div class="swatch-desc">
+            All body text: verse text in reader, word definitions in lexicon,
+            notes content, list item primary lines, navigation bar titles.
+            Full opacity — maximum contrast for extended reading.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(60,60,67,0.60);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">label × 60%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">text.secondary</div>
+          <div class="swatch-swift">.foregroundStyle(.secondary)</div>
+          <div class="swatch-desc">
+            Supporting metadata: translation language tag, book group
+            headers in concordance, note timestamps, action bar labels
+            (inactive), section subtitles in the word definition view.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(60,60,67,0.30);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.18)">label × 30%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">text.tertiary</div>
+          <div class="swatch-swift">.foregroundStyle(.tertiary) / Color(.tertiaryLabel)</div>
+          <div class="swatch-desc">
+            Verse numbers in their default (unselected) state. Very low
+            contrast keeps them visible without drawing attention away from
+            the verse text. Turns accent colour when verse is selected.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(60,60,67,0.18);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.15)">label × 18%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">text.quaternary</div>
+          <div class="swatch-swift">Color(.quaternaryLabel)</div>
+          <div class="swatch-desc">
+            Placeholder text in search and note fields. Only legible
+            against white/dark backgrounds — do not use on fills.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#FFFFFF; border-bottom:1px solid #E5E5EA;">
+          <span class="hex-badge">#FFFFFF</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">text.onAccent</div>
+          <div class="swatch-swift">Color(.systemBackground) on accent bg</div>
+          <div class="swatch-desc">
+            Text inside active pill buttons (background = text.primary),
+            labels on the accent-coloured selection bar. Always white —
+            do not adapt to dark mode since the containing background
+            already adapts.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Annotations ── -->
+    <div class="group-title">Annotation Highlights</div>
+    <p class="section-intro" style="margin-bottom:16px;font-size:13px;">
+      Four reader-annotation colours. All are rendered as semi-transparent overlays
+      so the underlying verse text remains fully legible. Opacities are
+      calibrated — yellow at 40%, green at 35%, blue at 28%, rose at 30%
+      — because warm hues require more transparency to avoid washing out serif glyphs.
+    </p>
+    <div class="swatch-grid wide">
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(255,204,0,0.40);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">#FFCC00 × 40%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">highlight.yellow</div>
+          <div class="swatch-swift">HighlightColor.yellow · systemYellow × 0.40</div>
+          <div class="swatch-desc">
+            Default highlight colour. Conventional "marker" association makes
+            it the most intuitive first pick. Suitable for general reading
+            annotations and important phrases. Persisted as rawValue
+            <code>"yellow"</code> in SQLite.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(52,199,89,0.35);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">#34C759 × 35%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">highlight.green</div>
+          <div class="swatch-swift">HighlightColor.green · systemGreen × 0.35</div>
+          <div class="swatch-desc">
+            Promises, fulfilled prophecies, covenant language. A lighter
+            opacity than yellow (35%) because green pigment renders darker
+            at equal alpha. Stored as <code>"green"</code>.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(26,108,240,0.28);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">#1A6CF0 × 28%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">highlight.blue</div>
+          <div class="swatch-swift">HighlightColor.blue · systemBlue × 0.28</div>
+          <div class="swatch-desc">
+            Doctrinal statements, historical notes, cross-reference anchors.
+            Lowest opacity (28%) because it shares the hue with the accent —
+            too saturated and it competes with the selection state.
+            Stored as <code>"blue"</code>.
+          </div>
+        </div>
+      </div>
+
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(255,45,85,0.30);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.22)">#FF2D55 × 30%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">highlight.rose</div>
+          <div class="swatch-swift">HighlightColor.pink · systemPink × 0.30</div>
+          <div class="swatch-desc">
+            Personal resonance, prayer verses, emotionally significant
+            passages. The warmest colour in the set — use sparingly.
+            Internally named "pink" for backward compatibility with stored
+            rawValues. Stored as <code>"pink"</code>.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Separators ── -->
+    <div class="group-title">Separators</div>
+    <div class="swatch-grid">
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:rgba(60,60,67,0.29);">
+          <span class="hex-badge" style="background:rgba(0,0,0,0.18)">label × 29%</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">separator</div>
+          <div class="swatch-swift">Color(.separator)</div>
+          <div class="swatch-desc">
+            Default Divider(). Verse row bottom edge in reader (opacity 0.4 on
+            top of this gives the subtle texture). Section dividers in bottom
+            sheet. Should never be set as a background — only as a line.
+          </div>
+        </div>
+      </div>
+      <div class="swatch-card">
+        <div class="swatch-color" style="background:#C6C6C8;">
+          <span class="hex-badge">#C6C6C8 / #38383A</span>
+        </div>
+        <div class="swatch-body">
+          <div class="swatch-token">separator.opaque</div>
+          <div class="swatch-swift">Color(.opaqueSeparator)</div>
+          <div class="swatch-desc">
+            Use when a separator must be visible against a non-white
+            background (e.g. grouped background canvas). Avoids the
+            bleed-through artefacts of the translucent version.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: TYPOGRAPHY SCALE                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <h2 class="section-title">Typographic Scale</h2>
+    <p class="section-intro">
+      All type is set in <strong>SF Pro</strong> (system font) via Dynamic Type, so every style
+      responds to the user's preferred text size and accessibility settings automatically.
+      Never hard-code a point size in a view — always use a named text style.
+      The sizes below are defaults at "Medium" Dynamic Type scale.
+    </p>
+
+    <table class="type-table">
+      <thead>
+        <tr>
+          <th class="col-specimen">Specimen</th>
+          <th class="col-meta">Style · Size · Weight</th>
+          <th class="col-usage">Where it's used</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- Large Title -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:34px;font-weight:700;letter-spacing:0.4px;line-height:1.2;">Search</span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Large Title</div>
+            <span class="swift-call">.font(.largeTitle)</span>
+            <span class="size-info">34pt · Bold · Tracked +0.4</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>NavigationStack large titles: Search tab, Notes list, Bookmarks list</li>
+              <li>Set via <code>.navigationBarTitleDisplayMode(.large)</code> — never place manually</li>
+              <li>Transitions to inline (Headline) on scroll</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Title 2 -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:22px;font-weight:700;letter-spacing:0.3px;line-height:1.3;">Genesis 1:1</span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Title 2 Bold</div>
+            <span class="swift-call">.font(.title2).bold()</span>
+            <span class="size-info">22pt · Bold · Tracked +0.3</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Bottom sheet header: verse reference (e.g. "Gen 1:1") and word form</li>
+              <li>Note editor navigation title</li>
+              <li>Paired with <code>.secondary</code> subheading at Footnote weight</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Title 3 -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:20px;font-weight:600;letter-spacing:0.2px;line-height:1.35;">בְּרֵאשִׁית</span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Title 3 Semibold</div>
+            <span class="swift-call">.font(.title3).fontWeight(.semibold)</span>
+            <span class="size-info">20pt · Semibold · Tracked +0.2</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Original-language word form in Word tab header (Hebrew / Greek)</li>
+              <li>Lexicon section headings (Qal, Piel, Hiphil stems)</li>
+              <li>Strong's number display badge when used as a heading</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Headline -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:17px;font-weight:600;line-height:1.4;">Genesis · KJV</span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Headline</div>
+            <span class="swift-call">.font(.headline)</span>
+            <span class="size-info">17pt · Semibold · Tracked 0</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Navigation bar inline title (chapter title on scroll)</li>
+              <li>Book/Chapter picker toolbar buttons</li>
+              <li>Translation ID button (e.g. "KJV", "RST")</li>
+              <li>List row primary labels in translation picker and note cards</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:17px;font-weight:400;line-height:1.65;">
+              In the beginning God created the heaven and the earth.
+            </span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Body</div>
+            <span class="swift-call">.font(.body)</span>
+            <span class="size-info">17pt · Regular · Line-height 1.65×</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>All verse text in ReaderView (primary reading surface)</li>
+              <li>Translation picker list row primary text</li>
+              <li>Note content body in NoteEditorView</li>
+              <li>Line spacing explicitly set to 6pt via <code>.lineSpacing(6)</code> for the plain Text fallback path — VerseTextView uses NSAttributedString lineHeightMultiplier</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Callout -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:16px;font-weight:400;line-height:1.5;">
+              Tap a word in the verse to see its meaning.
+            </span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Callout</div>
+            <span class="swift-call">.font(.callout)</span>
+            <span class="size-info">16pt · Regular · Tracked 0</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Word tab empty-state hint (no word selected)</li>
+              <li>Cross-reference verse text inside VerseTabContent</li>
+              <li>Lexicon definition body text — one step smaller than body so it doesn't compete with verse text on adjacent cards</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Subheadline -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:15px;font-weight:400;line-height:1.5;">
+              Old Testament · 929 chapters
+            </span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Subheadline</div>
+            <span class="swift-call">.font(.subheadline)</span>
+            <span class="size-info">15pt · Regular · Tracked 0</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Book group headers in BookChapterPickerView</li>
+              <li>Note card excerpt preview text</li>
+              <li>Bookmark card verse text snippet</li>
+              <li>Paired with Footnote weight metadata on the same row</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Footnote -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:13px;font-weight:400;line-height:1.5;">Cross-references · Morphology · Usage</span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Footnote</div>
+            <span class="swift-call">.font(.footnote)</span>
+            <span class="size-info">13pt · Regular · Tracked 0</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Pill button labels in bottom sheet (VersePill, WordSubTab)</li>
+              <li>Morphology detail rows: part-of-speech, stem, tense labels</li>
+              <li>Strong's ID labels (H1234, G456)</li>
+              <li>Search suggestion labels below the search field</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Caption 1 -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:12px;font-weight:400;line-height:1.4;color:rgba(60,60,67,0.6);">
+              <span style="font-size:12px;color:rgba(60,60,67,0.30);">1</span>
+              &nbsp;· English · 2 min ago
+            </span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Caption 1</div>
+            <span class="swift-call">.font(.caption)</span>
+            <span class="size-info">12pt · Regular · Tracked 0</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Verse numbers in reader rows (tertiaryLabel colour)</li>
+              <li>Translation language sub-label in picker ("Ukrainian", "English")</li>
+              <li>Navigation bar chevron icons (<code>.font(.caption)</code> on SF Symbols)</li>
+              <li>Note card timestamp and attachment metadata</li>
+              <li>Bookmark card book/chapter reference label</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Caption 2 -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:11px;font-weight:400;line-height:1.4;color:rgba(60,60,67,0.6);">
+              Highlight &nbsp; Note &nbsp; Bookmark &nbsp; Share
+            </span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Caption 2</div>
+            <span class="swift-call">.font(.caption2)</span>
+            <span class="size-info">11pt · Regular · Tracked 0</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Action bar icon labels at the bottom of VerseBottomSheetView (Highlight, Note, Bookmark, Share)</li>
+              <li>The smallest legible text in the app — do not go below this</li>
+              <li>Only use in conjunction with an icon above it to aid recognition</li>
+            </ul>
+          </td>
+        </tr>
+
+        <!-- Monospaced -->
+        <tr>
+          <td class="col-specimen">
+            <span class="type-specimen" style="font-size:13px;font-family:'SF Mono','Fira Mono',monospace;color:#1A6CF0;">
+              H1254 · G2316 · Qal.Pf.3ms
+            </span>
+          </td>
+          <td class="col-meta">
+            <div class="style-name">Mono / Code</div>
+            <span class="swift-call">.font(.footnote.monospaced())<br>.font(.system(.footnote, design: .monospaced))</span>
+            <span class="size-info">13pt · Regular · SF Mono</span>
+          </td>
+          <td class="col-usage type-usage">
+            <ul>
+              <li>Strong's numbers (H1234, G456) as identifiers — not prose</li>
+              <li>Morphology code strings (Qal.Pf.3ms) before decoding to human-readable</li>
+              <li>Debug / developer-facing overlays only</li>
+              <li>Always pair with accent colour to visually distinguish from prose</li>
+            </ul>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: SPACING & LAYOUT                                             -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <h2 class="section-title">Spacing &amp; Layout Tokens</h2>
+    <div class="two-col">
+      <div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:4px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.xs</span> <span class="spacing-val">4pt</span></div>
+            <div class="spacing-usage">Inline icon-to-label gap (chevron in toolbar button)</div>
+          </div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:8px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.sm</span> <span class="spacing-val">8pt</span></div>
+            <div class="spacing-usage">Pill-to-pill gap in pills row; action button padding</div>
+          </div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:12px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.md</span> <span class="spacing-val">12pt</span></div>
+            <div class="spacing-usage">Verse-number to verse-text horizontal gap; sheet header vertical padding</div>
+          </div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:16px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.lg</span> <span class="spacing-val">16pt</span></div>
+            <div class="spacing-usage">Pill button horizontal inner padding; list row inset</div>
+          </div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:20px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.xl</span> <span class="spacing-val">20pt</span></div>
+            <div class="spacing-usage">Primary horizontal content margin (ReaderView, BottomSheetView, pills row)</div>
+          </div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:24px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.xxl</span> <span class="spacing-val">24pt</span></div>
+            <div class="spacing-usage">Navigation bar button area vertical breathing room</div>
+          </div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-bar" style="width:100px;"></div>
+          <div>
+            <div class="spacing-info"><span class="spacing-token">space.safe.bottom</span> <span class="spacing-val">100pt</span></div>
+            <div class="spacing-usage">Bottom padding on scroll content to clear tab bar + home indicator</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="group-title" style="margin-top:0;">Corner Radii</div>
+        <div class="radius-row">
+          <div class="radius-demo" style="border-radius:4px;"></div>
+          <div>
+            <div class="radius-info"><span class="radius-token">radius.xs</span> <span class="radius-val">4pt</span></div>
+            <div class="radius-usage">Strong's ID chips, inline code badges</div>
+          </div>
+        </div>
+        <div class="radius-row">
+          <div class="radius-demo" style="border-radius:8px;"></div>
+          <div>
+            <div class="radius-info"><span class="radius-token">radius.sm</span> <span class="radius-val">8pt</span></div>
+            <div class="radius-usage">Word highlight background, search result cards</div>
+          </div>
+        </div>
+        <div class="radius-row">
+          <div class="radius-demo" style="border-radius:12px;"></div>
+          <div>
+            <div class="radius-info"><span class="radius-token">radius.md</span> <span class="radius-val">12pt</span></div>
+            <div class="radius-usage">Selected verse row container clip; note cards</div>
+          </div>
+        </div>
+        <div class="radius-row">
+          <div class="radius-demo" style="border-radius:16px;"></div>
+          <div>
+            <div class="radius-info"><span class="radius-token">radius.lg</span> <span class="radius-val">16pt</span></div>
+            <div class="radius-usage">Bottom sheets, modal cards, book picker header</div>
+          </div>
+        </div>
+        <div class="radius-row">
+          <div class="radius-demo" style="border-radius:28px;"></div>
+          <div>
+            <div class="radius-info"><span class="radius-token">radius.pill</span> <span class="radius-val">999pt</span></div>
+            <div class="radius-usage">Pill navigation buttons (CapsuleNavGroupStyle), pill tab buttons</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: COMPONENT DEMOS                                              -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <h2 class="section-title">Component Demos</h2>
+
+    <!-- Verse rows -->
+    <div class="group-title">Reader — Verse Rows</div>
+    <div class="demo-card" style="background: var(--bg-canvas);">
+      <div class="demo-label">ReaderView · VerseRowView</div>
+
+      <div class="verse-row">
+        <div class="verse-num">1</div>
+        <div class="verse-text">In the beginning God created the heaven and the earth.</div>
+      </div>
+
+      <div class="verse-row selected-row">
+        <div class="verse-num selected">2</div>
+        <div class="verse-text">And the earth was without form, and void; and darkness was upon the face of the <span class="word-hl">deep</span>. And the Spirit of God moved upon the face of the waters.</div>
+      </div>
+
+      <div class="verse-row">
+        <div class="verse-num">3</div>
+        <div class="verse-text">And God said, Let there be light: and there was light.</div>
+      </div>
+    </div>
+
+    <!-- Highlights -->
+    <div class="group-title" style="margin-top:28px;">Annotation Highlights</div>
+    <div class="demo-card">
+      <div class="demo-label">HighlightColor — all four variants on verse text</div>
+      <div class="hl-demo">
+        <div class="hl-chip yellow">Covenant promise</div>
+        <div class="hl-chip green">Fulfilled prophecy</div>
+        <div class="hl-chip blue">Doctrinal statement</div>
+        <div class="hl-chip rose">Personal resonance</div>
+      </div>
+    </div>
+
+    <!-- Pills -->
+    <div class="group-title" style="margin-top:28px;">Bottom Sheet — Pill Navigation</div>
+    <div class="demo-card">
+      <div class="demo-label">VersePill · WordSubTab</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="pill active">Cross-refs</span>
+        <span class="pill inactive">Context</span>
+        <span class="pill inactive">Notes</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+        <span class="pill active">Meaning</span>
+        <span class="pill inactive">Usage</span>
+      </div>
+    </div>
+
+    <!-- Nav capsule + action bar -->
+    <div class="group-title" style="margin-top:28px;">Bottom Sheet — Header &amp; Action Bar</div>
+    <div class="demo-row">
+      <div class="demo-card" style="flex:0 0 auto;min-width:auto;">
+        <div class="demo-label">CapsuleNavGroupStyle</div>
+        <div class="capsule-nav">
+          <div class="capsule-btn">‹</div>
+          <div class="capsule-btn">›</div>
+        </div>
+      </div>
+      <div class="demo-card" style="flex:1;">
+        <div class="demo-label">Action bar — VerseBottomSheetView</div>
+        <div class="action-bar">
+          <div class="action-btn">
+            <span class="action-icon active-icon">✦</span>
+            <span class="action-label active-lbl">Highlight</span>
+          </div>
+          <div class="action-btn">
+            <span class="action-icon">📝</span>
+            <span class="action-label">Note</span>
+          </div>
+          <div class="action-btn">
+            <span class="action-icon">🔖</span>
+            <span class="action-label">Bookmark</span>
+          </div>
+          <div class="action-btn">
+            <span class="action-icon">↑</span>
+            <span class="action-label">Share</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search result -->
+    <div class="group-title" style="margin-top:28px;">Search — Result Row</div>
+    <div class="demo-card">
+      <div class="demo-label">SearchResultRow · SearchView</div>
+      <div class="search-result">
+        <div class="ref">Genesis 1:1</div>
+        <div class="snippet">In the beginning God <mark>created</mark> the heaven and the earth.</div>
+        <div class="transl">KJV · Old Testament</div>
+      </div>
+      <div class="search-result">
+        <div class="ref">John 1:1</div>
+        <div class="snippet">In the beginning was the Word, and the Word was with God, and the Word was God.</div>
+        <div class="transl">KJV · New Testament</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6: SWIFT IMPLEMENTATION NOTE                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <section class="section">
+    <h2 class="section-title">Swift Implementation Notes</h2>
+    <p class="section-intro">
+      These tokens will live in a <code>DesignSystem</code> Swift file (or an
+      <code>Assets.xcassets</code> Color Set catalog). Key rules:
+    </p>
+    <div class="two-col">
+      <div class="demo-card">
+        <div class="demo-label">Recommended token structure</div>
+        <pre style="font-family:'SF Mono','Fira Mono',monospace;font-size:12px;line-height:1.7;color:var(--text-primary);overflow-x:auto;white-space:pre-wrap;">// DesignSystem/Colors.swift
+extension Color {
+  // Brand
+  static let dsAccent       = Color.accentColor
+  static let dsAccentSubtle = Color.accentColor.opacity(0.06)
+  static let dsAccentMuted  = Color.wordHighlight // exists
+
+  // Backgrounds (use semantic names)
+  static let dsCanvas    = Color(.systemGroupedBackground)
+  static let dsSurface   = Color(.systemBackground)
+  static let dsSurface2  = Color(.secondarySystemGroupedBackground)
+  static let dsFill      = Color(.systemFill)
+  static let dsFill2     = Color(.secondarySystemFill)
+  static let dsFill3     = Color(.tertiarySystemFill)
+}</pre>
+      </div>
+      <div class="demo-card">
+        <div class="demo-label">Key constraints</div>
+        <ul style="font-size:13px;line-height:1.7;color:var(--text-secondary);padding-left:18px;">
+          <li>Never hard-code <code>#FFFFFF</code> or <code>#000000</code> for backgrounds — use semantic colours so dark mode works automatically</li>
+          <li>All text colours use <code>.foregroundStyle(.primary/.secondary/.tertiary)</code> — these adapt to contrast modes</li>
+          <li>Accent is set via Xcode project accent color (Assets.xcassets → AccentColor) — <code>Color.accentColor</code> automatically uses it</li>
+          <li>Annotation colours are persisted as <code>String</code> rawValues in SQLite via <code>HighlightColor</code> enum — never store UIColor/Color directly</li>
+          <li>iOS 26 CapsuleNavGroupStyle uses <code>.glassEffect()</code> — no background token needed; iOS ≤ 25 falls back to <code>dsFill2</code></li>
+          <li>Typography: always use Dynamic Type text styles — no fixed sizes outside of SF Symbol size modifiers</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>SourceBible Design System</span>
+  <span class="dot">·</span>
+  <span>iOS 18+ · SwiftUI · SF Pro · Dynamic Type</span>
+  <span class="dot">·</span>
+  <span>Version 1.0 · May 2026</span>
+</footer>
+
+<script>
+  const toggle = document.getElementById('theme-toggle');
+  const label  = document.getElementById('mode-label');
+  const html   = document.documentElement;
+
+  // Auto-detect OS preference on load
+  if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    html.classList.add('dark');
+    label.textContent = 'Dark';
+  }
+
+  toggle.addEventListener('click', () => {
+    html.classList.toggle('dark');
+    label.textContent = html.classList.contains('dark') ? 'Dark' : 'Light';
+  });
+</script>
+</body>
+</html>

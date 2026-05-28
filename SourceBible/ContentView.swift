@@ -37,6 +37,11 @@ struct ContentView: View {
 
     // MARK: - Tab view (split out to keep body concise)
 
+    // .tint(.accentColor) on the TabView sets the selected-tab icon colour to blue.
+    // Each tab's root content overrides back to .tint(.primary) so navigation bar
+    // buttons and other interactive elements stay in the primary (black/white) colour
+    // and are not affected by the tab bar tint.
+
     @ViewBuilder
     private var tabView: some View {
         if #available(iOS 18, *) {
@@ -47,23 +52,27 @@ struct ContentView: View {
                         .environmentObject(notesVM)
                         .environmentObject(bookmarksVM)
                         .environmentObject(router)
+                        .tint(.primary)
                 }
                 Tab("tab.entries", systemImage: "bookmark.fill", value: AppTab.entries) {
                     EntriesView()
                         .environmentObject(notesVM)
                         .environmentObject(bookmarksVM)
                         .environmentObject(router)
+                        .tint(.primary)
                 }
                 Tab("tab.menu", systemImage: "ellipsis.circle.fill", value: AppTab.menu) {
                     MenuView()
+                        .tint(.primary)
                 }
                 Tab("tab.search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
                     SearchView()
                         .environmentObject(readerVM)
                         .environmentObject(router)
+                        .tint(.primary)
                 }
             }
-            .tint(.primary)
+            .tint(.accentColor)
         } else {
             TabView(selection: $selectedTab) {
                 ReaderView()
@@ -71,6 +80,7 @@ struct ContentView: View {
                     .environmentObject(notesVM)
                     .environmentObject(bookmarksVM)
                     .environmentObject(router)
+                    .tint(.primary)
                     .tabItem { Label("tab.bible", systemImage: "book.fill") }
                     .tag(AppTab.bible)
 
@@ -78,20 +88,23 @@ struct ContentView: View {
                     .environmentObject(notesVM)
                     .environmentObject(bookmarksVM)
                     .environmentObject(router)
+                    .tint(.primary)
                     .tabItem { Label("tab.entries", systemImage: "bookmark.fill") }
                     .tag(AppTab.entries)
 
                 MenuView()
+                    .tint(.primary)
                     .tabItem { Label("tab.menu", systemImage: "ellipsis.circle.fill") }
                     .tag(AppTab.menu)
 
                 SearchView()
                     .environmentObject(readerVM)
                     .environmentObject(router)
+                    .tint(.primary)
                     .tabItem { Label("tab.search", systemImage: "magnifyingglass") }
                     .tag(AppTab.search)
             }
-            .tint(.primary)
+            .tint(.accentColor)
         }
     }
 }

@@ -48,3 +48,23 @@ enum HighlightColor: String, CaseIterable, Codable {
         HighlightColor(rawValue: rawValue) ?? .yellow
     }
 }
+
+// MARK: - Word-level selection tint
+
+// Single source of truth for the transient word-selection highlight used in:
+//   • VerseTextView (long-press selection)
+//   • WordTabContent / highlightedVerseText (concordance / Usage tab)
+//   • SearchView / parseSnippet (search result keyword)
+//
+// Using backgroundColor (not bold) everywhere keeps the three sites visually
+// consistent and avoids line-reflow side-effects from font-weight changes.
+
+extension Color {
+    /// Background tint for word-level highlights (SwiftUI Text / AttributedString).
+    static let wordHighlight = Color.blue.opacity(0.15)
+}
+
+extension UIColor {
+    /// UIKit equivalent for word-level highlights (NSAttributedString / UITextView).
+    static let wordHighlight = UIColor.systemBlue.withAlphaComponent(0.2)
+}

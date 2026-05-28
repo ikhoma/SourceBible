@@ -10,8 +10,12 @@ struct SearchView: View {
     @EnvironmentObject private var router:   AppNavigationRouter
     @EnvironmentObject private var readerVM: ReaderViewModel
 
-    @State private var searchText:     String = ""
-    @State private var isSearchActive: Bool   = false
+    @State private var searchText:       String = ""
+    @State private var isSearchActive:   Bool   = false
+    /// Tracks whether the user pressed the Search key (vs. still typing).
+    /// Used to decide whether to show the loading spinner or blank content
+    /// while waiting for results, since the two phases need different layouts.
+    @State private var didCommitSearch:  Bool   = false
 
     // MARK: - Body
 
@@ -35,6 +39,7 @@ struct SearchView: View {
             commitSearch()
         }
         .onChange(of: searchText) { _, newValue in
+            didCommitSearch = false          // typing reset — suppress spinner, show blank
             vm.updateSuggestions(for: newValue)
             vm.search(query: newValue, translation: readerVM.currentTranslation.id)
         }
@@ -44,12 +49,21 @@ struct SearchView: View {
 
     @ViewBuilder
     private var content: some View {
-        if vm.isLoading {
-            loadingView
-        } else if !vm.results.isEmpty {
+        if !vm.results.isEmpty {
             resultsList
-        } else if vm.hasSearched {
+        } else if vm.hasSearched && !vm.isLoading {
             emptyResultsView
+        } else if vm.isLoading && didCommitSearch {
+            // User pressed the Search key — show spinner while the query runs.
+            loadingView
+        } else if isSearchActive && !searchText.isEmpty {
+            // iOS 26 bottom search bar: the suggestion overlay shares the same
+            // vertical layout space as this content. While typing (pre-results),
+            // render blank so the overlay doesn't squish a Spacer-based view
+            // into a narrow strip. The suggestions are the UX for this phase.
+            Color.clear
+        } else if vm.isLoading {
+            loadingView
         } else {
             emptyStateView
         }
@@ -68,10 +82,16 @@ struct SearchView: View {
         .listStyle(.insetGrouped)
         .scrollDismissesKeyboard(.interactively)
         .overlay(alignment: .bottom) {
-            Text("search.results_count \(vm.results.count)")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 6)
+            Group {
+                if vm.resultsCapped {
+                    Text("search.results_count_max \(vm.results.count)")
+                } else {
+                    Text("search.results_count \(vm.results.count)")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .padding(.bottom, 6)
         }
     }
 
@@ -80,13 +100,16 @@ struct SearchView: View {
     @ViewBuilder
     private var searchSuggestionsContent: some View {
         ForEach(vm.suggestions, id: \.self) { term in
-            // Use Text(verbatim:) + explicit HStack instead of Label(_:systemImage:).
-            // In iOS 26's bottom search bar, Label's LocalizedStringKey overload
-            // mis-renders String suggestions — each character appears on its own line.
+            // iOS 26 bottom search bar gives suggestion rows a near-zero proposed width,
+            // causing text to wrap character-by-character. Fix: claim full row width and
+            // clamp to a single line. Text(verbatim:) avoids the LocalizedStringKey
+            // overload that triggers a separate mis-render on the same OS version.
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 Text(verbatim: term)
+                    .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .searchCompletion(term)
         }
 
@@ -96,7 +119,9 @@ struct SearchView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "clock").foregroundStyle(.secondary)
                         Text(verbatim: recent)
+                            .lineLimit(1)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(.secondary)
                     .searchCompletion(recent)
                 }
@@ -193,6 +218,7 @@ struct SearchView: View {
     private func commitSearch() {
         let q = searchText.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return }
+        didCommitSearch = true               // explicit submit — show spinner
         vm.saveRecent(q)
         vm.search(query: q, translation: readerVM.currentTranslation.id)
     }
@@ -220,7 +246,9 @@ private struct SearchResultRow: View {
         }
     }
 
-    /// Parses ❮highlighted❯ markers into an AttributedString with tint + bold on matches.
+    /// Parses ❮highlighted❯ markers into an AttributedString.
+    /// Uses the shared `Color.wordHighlight` background, matching the verse-reader
+    /// word selection and the Usage-tab concordance highlight style.
     private func parseSnippet(_ raw: String) -> AttributedString {
         var output    = AttributedString()
         var remaining = raw[raw.startIndex...]
@@ -234,8 +262,7 @@ private struct SearchResultRow: View {
                 let hit = String(remaining[remaining.startIndex ..< close.lowerBound])
                 var highlighted = AttributedString(hit)
                 var container = AttributeContainer()
-                container.swiftUI.foregroundColor = Color.accentColor
-                container.swiftUI.font            = .callout.bold()
+                container.swiftUI.backgroundColor = Color.wordHighlight
                 highlighted.mergeAttributes(container)
                 output   += highlighted
                 remaining = remaining[close.upperBound...]

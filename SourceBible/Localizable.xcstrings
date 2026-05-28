@@ -2140,6 +2140,23 @@
         }
       }
     },
+    "search.results_count_max %lld" : {
+      "comment" : "%lld = capped result count (search hit the 150-result limit)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First %lld results"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перші %lld результатів"
+          }
+        }
+      }
+    },
     "search.tab.keyword" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2934,6 +2951,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld входжень у Біблії"
+          }
+        }
+      }
+    },
+    "word.usage.total_count" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld occurrences in the Bible"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld випадків у Біблії"
+          }
+        }
+      }
+    },
+    "word.usage.book_count" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Occurrence in this Book"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Occurrences in this Book"
+                }
+              }
+            }
+          }
+        },
+        "uk" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld входження у цій книзі"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld входження у цій книзі"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld входжень у цій книзі"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld входження у цій книзі"
+                }
+              }
+            }
           }
         }
       }

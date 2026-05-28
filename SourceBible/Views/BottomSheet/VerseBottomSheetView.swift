@@ -218,17 +218,14 @@ struct VerseBottomSheetView: View {
                 }
                 Button("action.cancel", role: .cancel) {}
             }
-            Divider().frame(height: 32)
             actionBtn(icon: "note.text", label: "action.note", isActive: false, color: .blue) {
                 let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
                 activeEditor = .note(note)
             }
-            Divider().frame(height: 32)
             actionBtn(icon: "bookmark", label: "action.bookmark",
                       isActive: bookmarksVM.isBookmarked(verseId: verse.id), color: .blue) {
                 bookmarksVM.toggleBookmark(verseId: verse.id)
             }
-            Divider().frame(height: 32)
             actionBtn(icon: "square.and.arrow.up", label: "action.share", isActive: false, color: .blue) {}
         }
         .padding(.horizontal, 8).padding(.vertical, 10)
@@ -237,7 +234,9 @@ struct VerseBottomSheetView: View {
     private func actionBtn(icon: String, label: LocalizedStringKey, isActive: Bool, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 20))
+                Image(systemName: icon)
+                    .symbolVariant(.fill)
+                    .font(.system(size: 20))
                     .foregroundStyle(isActive ? color : .secondary)
                 Text(label).font(.caption2)
                     .foregroundStyle(isActive ? color : .secondary)

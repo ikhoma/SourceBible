@@ -64,6 +64,16 @@ struct VerseTextView: UIViewRepresentable {
     func updateUIView(_ tv: UITextView, context: Context) {
         let coord = context.coordinator
 
+        // Invalidate the stored word range whenever the selected segment changes from
+        // outside this view (e.g. the user navigated via the ‹ › arrows in the bottom
+        // sheet). In that case we fall back to highlighting the full segment run.
+        // When the change originated from handleLongPress inside this view, the UUID
+        // is already updated before onWordTap fires, so the range is preserved.
+        if coord.selectedSegmentId != selectedSegment?.id {
+            coord.selectedWordRange  = nil
+            coord.selectedSegmentId  = selectedSegment?.id
+        }
+
         // Rebuild attributed string only when the text content or highlight changes.
         // selectedSegment changes are handled cheaply via applySelection() below.
         let contentChanged = coord.parsed.verseId != parsed.verseId
@@ -73,7 +83,8 @@ struct VerseTextView: UIViewRepresentable {
         }
 
         // Apply (or clear) selection highlight on top of the cached base string.
-        tv.attributedText = applySelection(to: coord.baseAttributedString)
+        tv.attributedText = applySelection(to: coord.baseAttributedString,
+                                           wordRange: coord.selectedWordRange)
         tv.invalidateIntrinsicContentSize()
 
         coord.parsed         = parsed
@@ -151,21 +162,40 @@ struct VerseTextView: UIViewRepresentable {
         return result
     }
 
-    /// Copies the base string and adds the blue selection background for the active segment.
+    /// Copies the base string and adds the word-selection background for the active segment.
     /// Returns the base string unchanged when nothing is selected.
-    func applySelection(to base: NSAttributedString) -> NSAttributedString {
+    ///
+    /// `wordRange` — when provided (set by a long-press inside this view), only that
+    /// character range is highlighted. This narrows the visual to the specific tapped
+    /// word, avoiding over-selection when a KJV segment spans multiple English words
+    /// (e.g. "in the morning" for H1242 = בֹּקֶר).
+    ///
+    /// When `wordRange` is nil (word set via navigation arrows), the whole segment run
+    /// is highlighted as a fallback so the user still sees which word is active.
+    func applySelection(to base: NSAttributedString,
+                        wordRange: NSRange? = nil) -> NSAttributedString {
+        guard selectedSegment != nil, base.length > 0 else { return base }
+
+        let result = NSMutableAttributedString(attributedString: base)
+
+        // Fast path: we have a precise word range from the long-press.
+        if let wr = wordRange,
+           wr.location != NSNotFound,
+           NSMaxRange(wr) <= result.length {
+            result.addAttribute(.backgroundColor, value: UIColor.wordHighlight, range: wr)
+            return result
+        }
+
+        // Fallback: highlight the whole segment (navigation-arrow word changes).
         let selectedIndex: Int? = selectedSegment.flatMap { seg in
             parsed.segments.firstIndex { $0.text == seg.text && $0.strongs == seg.strongs }
         }
-        guard let selIdx = selectedIndex, base.length > 0 else { return base }
+        guard let selIdx = selectedIndex else { return base }
 
-        let result = NSMutableAttributedString(attributedString: base)
         result.enumerateAttribute(.verseSegmentIndex,
                                    in: NSRange(location: 0, length: result.length)) { value, range, _ in
             if let idx = value as? Int, idx == selIdx {
-                result.addAttribute(.backgroundColor,
-                                    value: UIColor.systemBlue.withAlphaComponent(0.2),
-                                    range: range)
+                result.addAttribute(.backgroundColor, value: UIColor.wordHighlight, range: range)
             }
         }
         return result
@@ -198,6 +228,21 @@ struct VerseTextView: UIViewRepresentable {
         /// Cached base string (text + styles + highlight). Rebuilt only when content changes.
         var baseAttributedString: NSAttributedString = NSAttributedString()
 
+        // MARK: Word-range tracking
+        //
+        // Set by handleLongPress to the exact character range of the tapped word (as
+        // determined by NSString word-boundary enumeration). This lets applySelection()
+        // highlight just "morning" rather than the whole KJV segment "in the morning",
+        // when a single Hebrew word is translated with multiple English words.
+        //
+        // selectedSegmentId mirrors the UUID of the segment for which wordRange was
+        // computed. updateUIView() clears wordRange when a different segment becomes
+        // active (e.g. user navigated via ‹ › arrows), falling back to full-segment
+        // highlight for that case.
+
+        var selectedWordRange:  NSRange? = nil
+        var selectedSegmentId:  UUID?    = nil
+
         init(parsed: ParsedVerse, highlightColor: String?,
              onVerseTap: @escaping () -> Void,
              onWordTap:  @escaping (VerseSegment) -> Void) {
@@ -220,16 +265,35 @@ struct VerseTextView: UIViewRepresentable {
             let charIdx = charIndex(in: tv, at: point)
             guard charIdx < tv.attributedText.length else { return }
 
-            var wordRange = NSRange(location: NSNotFound, length: 0)
+            var segAttrRange = NSRange(location: NSNotFound, length: 0)
             guard let segIndex = tv.attributedText.attribute(
-                .verseSegmentIndex, at: charIdx, effectiveRange: &wordRange
+                .verseSegmentIndex, at: charIdx, effectiveRange: &segAttrRange
             ) as? Int else { return }
 
             let seg = parsed.segments[segIndex]
             guard !seg.strongs.isEmpty else { return }
 
+            // Find the word boundary around the tapped character.
+            // NSString.enumerateSubstrings(byWords) skips spaces and punctuation,
+            // so tapping "morning," highlights only "morning" (no trailing comma).
+            // Store the result on the coordinator BEFORE calling onWordTap() so
+            // that updateUIView() sees the matching (segmentId, wordRange) pair.
+            var tappedWordRange: NSRange? = nil
+            let nsStr = tv.attributedText.string as NSString
+            nsStr.enumerateSubstrings(
+                in: NSRange(location: 0, length: nsStr.length),
+                options: .byWords
+            ) { _, range, _, stop in
+                if NSLocationInRange(charIdx, range) {
+                    tappedWordRange = range
+                    stop.pointee = true
+                }
+            }
+            selectedWordRange = tappedWordRange
+            selectedSegmentId = seg.id
+
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            // Blue highlight is applied via selectedSegment → buildAttributedString (SwiftUI re-render)
+            // Highlight is applied via selectedSegment → applySelection() (SwiftUI re-render)
             onWordTap(seg)
         }
 

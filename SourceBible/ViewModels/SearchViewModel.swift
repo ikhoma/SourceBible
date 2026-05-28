@@ -9,10 +9,12 @@ final class SearchViewModel: ObservableObject {
 
     // MARK: - Published state
 
-    @Published var results:     [SearchResult] = []
-    @Published var suggestions: [String]       = []
-    @Published var isLoading:   Bool           = false
-    @Published var hasSearched: Bool           = false
+    @Published var results:      [SearchResult] = []
+    @Published var suggestions:  [String]       = []
+    @Published var isLoading:    Bool           = false
+    @Published var hasSearched:  Bool           = false
+    /// True when results hit the 150-result query cap (real count may be higher).
+    @Published var resultsCapped: Bool          = false
 
     // MARK: - Recent queries (persisted)
 
@@ -51,9 +53,10 @@ final class SearchViewModel: ObservableObject {
             let found = db.searchByText(query: trimmed, translation: translation)
 
             guard !Task.isCancelled else { return }
-            results     = found
-            isLoading   = false
-            hasSearched = true
+            results       = found
+            resultsCapped = found.count >= 150
+            isLoading     = false
+            hasSearched   = true
         }
     }
 

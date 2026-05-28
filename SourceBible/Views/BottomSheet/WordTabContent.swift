@@ -216,7 +216,9 @@ struct WordMeaningView: View {
         let ref   = "\(BibleBookNames.short(for: vm.currentBook.id)) \(ch):\(v)"
 
         var rows: [(String, String, Bool)] = [(t.string(for: MorphKey.rowWord), word.text, true)]
-        if let xlit = word.xlit, !xlit.isEmpty {
+        // Use displayXlit (xlit ?? xlitSimple): prefers Macula occurrence xlit when available,
+        // falls back to TBESH lemma xlit so the row is never silently empty.
+        if let xlit = word.displayXlit, !xlit.isEmpty {
             rows.append((t.string(for: MorphKey.rowTransliteration), xlit, false))
         }
         return VStack(alignment: .leading, spacing: 0) {
@@ -368,22 +370,65 @@ private struct InfoGroup: View {
 
 struct WordUsageView: View {
     let entry: StrongsEntry
+    @EnvironmentObject private var router: AppNavigationRouter
+
     var body: some View {
-        let countLabel = String(format: NSLocalizedString(MorphKey.usageCount, comment: ""), entry.concordance.count)
-        return PillSection(verbatimTitle: countLabel) {
-            ForEach(entry.concordance) { ref in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(ref.reference).font(.caption).fontWeight(.semibold).foregroundStyle(.blue)
-                    Text(highlightedVerseText(raw: ref.rawText, fallback: ref.text, strongsId: entry.id))
-                        .font(.callout).lineSpacing(3)
+        let totalLabel = String(
+            format: NSLocalizedString(MorphKey.usageTotalCount, comment: ""),
+            entry.totalCount
+        )
+        return PillSection(verbatimTitle: totalLabel) {
+            if entry.bookGroups.isEmpty {
+                Text(LocalizedStringKey(MorphKey.emptyNoData))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+            } else {
+                ForEach(entry.bookGroups) { group in
+                    BookUsageRow(group: group, strongsId: entry.id)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            router.pendingVerseId = group.example.id
+                        }
+                    Divider()
                 }
-                .padding(.bottom, 8)
-                .contentShape(Rectangle())
-                // TODO: navigate reader to this verse (router.pendingVerseId = ref.id)
-                Divider()
             }
         }
         .padding(.bottom, 16)
+    }
+}
+
+// MARK: - Book Usage Row
+
+private struct BookUsageRow: View {
+    let group: BookUsageGroup
+    let strongsId: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                // "Genesis 1:1" — full book name + chapter:verse of the example
+                Text("\(group.bookName) \(group.example.chapter):\(group.example.verse)")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.blue)
+                Spacer(minLength: 8)
+                // "1 Occurrence in this Book" / "5 Occurrences in this Book"
+                Text(String.localizedStringWithFormat(
+                    NSLocalizedString(MorphKey.usageBookCount, comment: ""),
+                    group.count
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+            }
+            Text(highlightedVerseText(raw: group.example.rawText,
+                                      fallback: group.example.text,
+                                      strongsId: strongsId))
+                .font(.callout)
+                .lineSpacing(3)
+        }
+        .padding(.bottom, 8)
     }
 }
 
@@ -452,7 +497,7 @@ private func highlightedVerseText(raw: String, fallback: String, strongsId: Stri
     for seg in segments {
         if seg.numbers.contains(baseNum) {
             var attr = AttributedString(seg.text)
-            attr.backgroundColor = Color.blue.opacity(0.06)
+            attr.backgroundColor = Color.wordHighlight
             result += attr
         } else {
             result += AttributedString(seg.text)
@@ -462,11 +507,14 @@ private func highlightedVerseText(raw: String, fallback: String, strongsId: Stri
     return result.characters.isEmpty ? AttributedString(fallback) : result
 }
 
-/// Strips all non-Strong's markup from a KJV text segment.
-/// Delegates to String.strippingBibleMarkup() (String+BibleMarkup.swift) —
-/// the single canonical implementation shared across the codebase.
+/// Strips all non-Strong's markup from a single KJV text chunk while preserving
+/// leading/trailing spaces, which serve as word separators when chunks are concatenated.
+///
+/// Uses `strippingBibleMarkupKeepingSpaces()` — NOT `strippingBibleMarkup()`.
+/// The trimming variant removes the leading space that KJV source encodes before each
+/// word, causing words to run together ("lodgedround aboutthe") when segments are joined.
 private func stripKJVSegment(_ s: String) -> String {
-    s.strippingBibleMarkup()
+    s.strippingBibleMarkupKeepingSpaces()
 }
 
 // MARK: - Morphology Decoder

@@ -195,7 +195,6 @@ struct VerseRowView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: isSelected ? 12 : 0))
 
-            Divider().padding(.leading, 34).opacity(0.4)
         }
     }
 }

@@ -377,6 +377,146 @@ final class DatabaseService: @unchecked Sendable {
         return entries
     }
 
+    // MARK: - Book Usage Groups (per-book concordance for WordUsageView)
+
+    /// Returns the true total occurrence count across the whole Bible plus a
+    /// per-book breakdown (count + first-occurrence example verse) for a Strong's ID.
+    ///
+    /// - Parameter strongsId: Raw Strong's ID including any sub-entry suffix (e.g. "H835a").
+    ///   The method strips the suffix internally so H835 and H835a are treated as the same root.
+    /// - Returns: A tuple of the total distinct-verse count and an array of BookUsageGroup,
+    ///   one per Bible book that contains the word, sorted in canonical order.
+    func loadBookUsageGroups(
+        strongsId: String,
+        translation: String,
+        fallbackTranslation: String = DatabaseService.defaultFallbackTranslation
+    ) -> (total: Int, groups: [BookUsageGroup]) {
+        guard isAvailable else {
+            #if DEBUG
+            return (StrongsEntry.sample.totalCount, StrongsEntry.sample.bookGroups)
+            #else
+            return (0, [])
+            #endif
+        }
+
+        // Strip trailing letter suffix: H835a → H835 (same logic as loadConcordance).
+        let base: String = {
+            guard let last = strongsId.last, last.isLetter,
+                  let prev = strongsId.dropLast().last, prev.isNumber
+            else { return strongsId }
+            return String(strongsId.dropLast())
+        }()
+
+        let strongsFilter = "(w.strongs_id = ? OR (w.strongs_id GLOB ? || '[a-z]' AND length(w.strongs_id) = length(?) + 1))"
+
+        // --- Query A: total word token count across the whole Bible ---
+        // COUNT(*) counts every word token — consistent with the standard reference count
+        // (e.g. יהוה = 6512 tokens, not 5515 distinct verses that contain it).
+        var total = 0
+        let totalSQL = """
+            SELECT COUNT(*)
+            FROM word w
+            WHERE \(strongsFilter)
+            """
+        query(totalSQL, bindings: [base, base, base]) { stmt in
+            total = Int(sqlite3_column_int(stmt, 0))
+        }
+
+        // --- Query B: per-book token count + first-occurrence key ---
+        // COUNT(*) for tokens (consistent with total). JOIN book for canonical ordering
+        // (ORDER BY w.book_id would sort OSIS IDs alphabetically: 1CH < 1KGS < 1SAM…).
+        // Encodes first (chapter, verse) as chapter*1000+verse so MIN() picks the
+        // earliest occurrence. Safe: max chapter=150, max verse=176 → 150176.
+        struct BookRow { let bookId: String; let count: Int; let chapter: Int; let verse: Int }
+        var bookRows: [BookRow] = []
+        let groupSQL = """
+            SELECT w.book_id,
+                   COUNT(*)                       AS book_count,
+                   MIN(w.chapter * 1000 + w.verse) AS first_cv
+            FROM word w
+            JOIN book b ON b.id = w.book_id
+            WHERE \(strongsFilter)
+            GROUP BY w.book_id
+            ORDER BY b.num
+            """
+        query(groupSQL, bindings: [base, base, base]) { stmt in
+            let bookId  = string(stmt, 0)
+            let count   = Int(sqlite3_column_int(stmt, 1))
+            let firstCV = Int(sqlite3_column_int(stmt, 2))
+            let chapter = firstCV / 1000
+            let verse   = firstCV % 1000
+            bookRows.append(BookRow(bookId: bookId, count: count, chapter: chapter, verse: verse))
+        }
+
+        // --- Query C: verse text for first occurrence per book ---
+        // Reuses the same verse_map JOIN pattern as loadConcordance to handle
+        // versification mismatches (e.g. Psalm headings in MT vs KJV/RST).
+        let exampleSQL = """
+            SELECT COALESCE(vm.trans_verse, w.verse) AS display_verse,
+                   COALESCE(v.text, v_fb.text)       AS resolved_text,
+                   CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback
+            FROM word w
+            LEFT JOIN verse_map vm    ON vm.translation    = ?
+                                     AND vm.book_id        = w.book_id
+                                     AND vm.chapter        = w.chapter
+                                     AND vm.macula_verse   = w.verse
+            LEFT JOIN verse_map vm_fb ON vm_fb.translation = ?
+                                     AND vm_fb.book_id     = w.book_id
+                                     AND vm_fb.chapter     = w.chapter
+                                     AND vm_fb.macula_verse = w.verse
+            LEFT JOIN verse v    ON v.book_id     = w.book_id
+                                AND v.chapter     = w.chapter
+                                AND v.verse       = COALESCE(vm.trans_verse, w.verse)
+                                AND v.translation = ?
+            LEFT JOIN verse v_fb ON v_fb.book_id  = w.book_id
+                                AND v_fb.chapter  = w.chapter
+                                AND v_fb.verse    = COALESCE(vm_fb.trans_verse, w.verse)
+                                AND v_fb.translation = ?
+            WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
+              AND \(strongsFilter)
+            LIMIT 1
+            """
+
+        var groups: [BookUsageGroup] = []
+        for row in bookRows {
+            var displayVerse = row.verse
+            var rawText      = ""
+            var isFallback   = false
+
+            query(exampleSQL, bindings: [
+                translation, fallbackTranslation, translation, fallbackTranslation,
+                row.bookId, row.chapter, row.verse,
+                base, base, base
+            ]) { stmt in
+                displayVerse = Int(sqlite3_column_int(stmt, 0))
+                rawText      = optString(stmt, 1) ?? ""
+                isFallback   = sqlite3_column_int(stmt, 2) != 0
+            }
+
+            // Skip if no verse text found in either translation.
+            let text = DatabaseService.stripBibleMarkup(rawText)
+            guard !text.isEmpty else { continue }
+
+            let short   = BibleBookNames.short(for: row.bookId)
+            let ref     = "\(short) \(row.chapter):\(displayVerse)"
+            let entryId = "\(row.bookId)|\(row.chapter)|\(displayVerse)"
+            let example = ConcordanceEntry(id: entryId, reference: ref,
+                                           text: text, rawText: rawText,
+                                           isFallback: isFallback,
+                                           bookId: row.bookId, chapter: row.chapter, verse: displayVerse)
+
+            groups.append(BookUsageGroup(
+                id:       row.bookId,
+                bookId:   row.bookId,
+                bookName: BibleBookNames.full(for: row.bookId),
+                count:    row.count,
+                example:  example
+            ))
+        }
+
+        return (total, groups)
+    }
+
     // MARK: - Verse Map (versification)
 
     /// Returns the Macula (MT) verse number for a given translation verse,
