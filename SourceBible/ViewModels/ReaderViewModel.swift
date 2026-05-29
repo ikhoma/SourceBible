@@ -31,6 +31,12 @@ class ReaderViewModel: ObservableObject {
     @Published var selectedSegment: VerseSegment? = nil // segment from VerseTextView long press
     @Published var bottomSheetMode: BottomSheetMode = .verse
 
+    /// Actual height of the verse sheet at its current detent, measured from inside the sheet.
+    /// Used by ReaderView to calculate how much bottom inset to reserve so the selected verse
+    /// scrolls to sit exactly 6 pt above the sheet top.
+    /// Starts at 0; ReaderView supplies a UIWindowScene-based fallback until the first measurement.
+    @Published var verseSheetHeight: CGFloat = 0
+
     // Pickers — use a single sheet slot to avoid "only one sheet supported" warning
     @Published var activeSheet: ActiveSheet? = nil
 
@@ -99,6 +105,17 @@ class ReaderViewModel: ObservableObject {
     // Always resolved via BibleBookNames so language switches take effect immediately
     // without needing to reload allBooks from the DB.
     var chapterTitle: String { "\(BibleBookNames.short(for: currentBook.id)) \(currentChapter)" }
+
+    /// Full chapter heading shown at the top of the reader — "Psalm 23" for Psalms, "Chapter 5" for everything else.
+    /// Reads appLanguage from UserDefaults so language switches take effect immediately.
+    var chapterHeading: String {
+        let isUkrainian = UserDefaults.standard.string(forKey: "appLanguage") == "uk"
+        if currentBook.id == "PSA" {
+            return isUkrainian ? "Псалом \(currentChapter)" : "Psalm \(currentChapter)"
+        } else {
+            return isUkrainian ? "Розділ \(currentChapter)" : "Chapter \(currentChapter)"
+        }
+    }
 
     var oldTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .old } }
     var newTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .new } }

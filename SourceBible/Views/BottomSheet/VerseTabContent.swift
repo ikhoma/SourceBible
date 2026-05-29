@@ -221,7 +221,8 @@ struct CommentariesView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(LocalizedStringKey(t.nameKey))
                                 .font(.callout).fontWeight(.medium).foregroundStyle(.primary)
-                            (Text(LocalizedStringKey(t.eraKey)) + Text(" · ") + Text(LocalizedStringKey(t.styleKey)))
+                            // Text + Text concatenation deprecated in iOS 26; use interpolation.
+                            Text("\(Text(LocalizedStringKey(t.eraKey))) · \(Text(LocalizedStringKey(t.styleKey)))")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -257,7 +258,7 @@ struct CommentaryDetailView: View {
                         .clipShape(Circle())
                     VStack(alignment: .leading, spacing: 4) {
                         Text(LocalizedStringKey(theologian.nameKey)).font(.headline)
-                        (Text(LocalizedStringKey(theologian.eraKey)) + Text(" · ") + Text(LocalizedStringKey(theologian.styleKey)))
+                        Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }

@@ -17,6 +17,53 @@ struct ReaderView: View {
     // book-name button keeps the previous locale's abbreviation until the user taps it.
     @Environment(\.locale) private var locale
 
+    // True when the Genesis chapter 1 full-bleed header image is visible.
+    private var showsGenesisHeader: Bool {
+        vm.currentBook.id == "GEN" && vm.currentChapter == 1
+    }
+
+    // Inset to add at the bottom of the scroll view when the verse sheet is open.
+    //
+    // Goal: anchor:.bottom lands verse.bottom exactly 6 pt above the sheet top (T).
+    //
+    // SwiftUI's safeAreaInset stacks ON TOP of the scroll view's existing home-indicator
+    // contentInset (bottomInset ≈ 34 pt). The scrollTo anchor sees the combined total:
+    //
+    //   verse.bottom = (H − bottomInset) − (bottomInset + insetH)
+    //
+    // Setting that equal to T − 6 and solving:
+    //
+    //   insetH = sheetH − 2·bottomInset + 6
+    //
+    // The fallback (used on the very first tap before onGeometryChange fires) estimates
+    // the medium-detent height as (screenH − safeTop) / 2, accurate to a few pt.
+    //
+    // @MainActor is required because UIApplication is strictly @MainActor under Swift 6
+    // strict concurrency. The property is only ever called from body (also @MainActor).
+    @MainActor private var verseSheetReservedHeight: CGFloat {
+        let scene       = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }.first
+        let bottomInset = scene?.windows.first?.safeAreaInsets.bottom ?? 34
+        // Use the measured sheet height once available; fall back to the medium-detent
+        // formula (screenH - safeTop) / 2 for the very first tap before the sheet appears.
+        // This is accurate to within a few pt on all current Face ID devices.
+        let sheetH: CGFloat
+        if vm.verseSheetHeight > 0 {
+            sheetH = vm.verseSheetHeight
+        } else {
+            let screenH = scene?.screen.bounds.height ?? 852
+            let safeTop = scene?.windows.first?.safeAreaInsets.top ?? 59
+            sheetH = (screenH - safeTop) / 2.0
+        }
+        // safeAreaInset stacks on top of the scroll view's existing home-indicator
+        // contentInset (= bottomInset). The anchor calculation sees both, so we must
+        // subtract bottomInset twice to avoid an accidental +34 pt shift.
+        // Net formula:  total_inset = bottomInset + insetH  →  we solve for insetH:
+        //   (H − bottomInset) − (bottomInset + insetH) = T − 6
+        //   insetH = sheetH − 2·bottomInset + 6
+        return max(0, sheetH - 2 * bottomInset + 6)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -30,8 +77,47 @@ struct ReaderView: View {
                     }.padding()
                 } else {
                     ScrollViewReader { proxy in
+                        let sheetOpen = vm.activeSheet == .verse
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 0) {
+
+                                if vm.currentChapter == 1 {
+                                    if showsGenesisHeader {
+                                        // Full-bleed header that extends behind the nav bar and
+                                        // status bar. Color.clear holds the layout height; the
+                                        // background image uses ignoresSafeArea to reach all the
+                                        // way to the top of the screen.
+                                        Color.clear
+                                            .frame(height: 260)
+                                            .frame(maxWidth: .infinity)
+                                            .background(alignment: .top) {
+                                                Image("genesis_header")
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(maxWidth: .infinity)
+                                                    .blendMode(.multiply)
+                                                    .ignoresSafeArea(edges: .top)
+                                            }
+                                            // Negate the LazyVStack's own padding so the image
+                                            // fills flush to the scroll view's top edge.
+                                            .padding(.top, -12)
+                                            .padding(.horizontal, -20)
+                                            .padding(.bottom, 20)
+                                    }
+
+                                    Text(BibleBookNames.full(for: vm.currentBook.id))
+                                        .font(.largeTitle)
+                                        .bold()
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .padding(.bottom, 8)
+                                }
+
+                                Text(vm.chapterHeading)
+                                    .font(.title2)
+                                    .bold()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.bottom, 8)
+
                                 ForEach(vm.verses) { verse in
                                     VerseRowView(
                                         verse: verse,
@@ -47,14 +133,59 @@ struct ReaderView: View {
                             }
                             .padding(.horizontal, 20)
                             .padding(.top, 12)
-                            .padding(.bottom, 100)
+                            // When the sheet is open keep a small margin above the sheet;
+                            // when closed use the original generous bottom padding.
+                            .padding(.bottom, sheetOpen ? 16 : 100)
+                        }
+                        // Reserve space equal to the medium-detent sheet height so the
+                        // scroll view treats the visible-above-sheet area as its viewport.
+                        // .bottom anchor then lands the selected verse flush above the sheet.
+                        //
+                        // Always returns a concrete Color view (no conditional ViewBuilder) to
+                        // avoid type-inference ambiguity with iOS 26 safeAreaInset overloads.
+                        // Height is 0 when the sheet is closed, so there is no visible effect.
+                        .safeAreaInset(edge: .bottom, spacing: nil) {
+                            Color.clear.frame(height: sheetOpen ? verseSheetReservedHeight : 0)
                         }
                         .onChange(of: vm.selectedVerse?.id) { _, newId in
                             guard let id = newId else { return }
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                proxy.scrollTo(id, anchor: .center)
+                            if sheetOpen && vm.verseSheetHeight > 0 {
+                                // Sheet already measured → scroll immediately with exact inset.
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo(id, anchor: .bottom)
+                                }
+                            } else if sheetOpen {
+                                // Sheet is just opening; height not yet measured.
+                                // Defer by one RunLoop tick so the sheet presentation has
+                                // committed and onGeometryChange has a chance to fire first.
+                                // If it still hasn't arrived, we rely on the verseSheetHeight
+                                // onChange below to nudge the final position.
+                                DispatchQueue.main.async {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        proxy.scrollTo(id, anchor: .bottom)
+                                    }
+                                }
+                            } else {
+                                // Sheet closed → centre the verse on screen as before.
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo(id, anchor: .center)
+                                }
                             }
                         }
+                        // Fine-correction scroll: fires when the sheet height is first
+                        // measured (0 → actual). Covers the case where the initial scroll
+                        // used the fallback insetH before the sheet settled.
+                        .onChange(of: vm.verseSheetHeight) { oldH, newH in
+                            guard oldH <= 0, newH > 0 else { return }
+                            guard let id = vm.selectedVerse?.id,
+                                  vm.activeSheet == .verse else { return }
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                proxy.scrollTo(id, anchor: .bottom)
+                            }
+                        }
+                        // Only extend behind the nav bar when the genesis header image
+                        // is present. Other chapters must render below the nav bar as normal.
+                        .ignoresSafeAreaIf(showsGenesisHeader, edges: .top)
                     }
                 }
             }
@@ -228,6 +359,22 @@ struct TranslationPickerView: View {
                     Button("action.close") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Conditional ignoresSafeArea helper
+
+private extension View {
+    /// Applies `.ignoresSafeArea(edges:)` only when `condition` is true.
+    /// Used to extend the scroll view behind the nav bar only on chapters
+    /// that have a full-bleed header image.
+    @ViewBuilder
+    func ignoresSafeAreaIf(_ condition: Bool, edges: Edge.Set) -> some View {
+        if condition {
+            self.ignoresSafeArea(edges: edges)
+        } else {
+            self
         }
     }
 }
