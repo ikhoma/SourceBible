@@ -37,6 +37,19 @@ class ReaderViewModel: ObservableObject {
     /// Starts at 0; ReaderView supplies a UIWindowScene-based fallback until the first measurement.
     @Published var verseSheetHeight: CGFloat = 0
 
+    /// Set by navigateToPreviousVerse / navigateToNextVerse before changing selectedVerse.
+    /// ReaderView reads this to choose the scroll animation:
+    ///   .tap      → .snappy spring (direct manipulation feel)
+    ///   .chevron  → .easeInOut    (sequential traversal feel)
+    /// Reset to .tap after each scroll so taps always get the spring.
+    var verseScrollIntent: VerseScrollIntent = .tap
+
+    /// Incremented on every tapVerse() call and every chevron navigation, even when
+    /// selectedVerse.id is unchanged (re-tap of the same verse).
+    /// ReaderView observes this instead of selectedVerse.id so re-tapping a verse
+    /// always re-scrolls it back above the sheet if the user has scrolled away.
+    @Published var verseScrollTrigger: Int = 0
+
     // Pickers — use a single sheet slot to avoid "only one sheet supported" warning
     @Published var activeSheet: ActiveSheet? = nil
 
@@ -334,6 +347,7 @@ class ReaderViewModel: ObservableObject {
         selectedSegment = nil
         bottomSheetMode = .verse
         activeSheet = .verse
+        verseScrollTrigger += 1
         loadWordsForSelectedVerse()
     }
 
@@ -361,9 +375,11 @@ class ReaderViewModel: ObservableObject {
         guard let current = selectedVerse,
               let idx = verses.firstIndex(where: { $0.id == current.id }),
               idx > 0 else { return }
+        verseScrollIntent = .chevron
         selectedVerse = verses[idx - 1]
         selectedWord = nil
         selectedSegment = nil
+        verseScrollTrigger += 1
         loadWordsForSelectedVerse()
     }
 
@@ -371,9 +387,11 @@ class ReaderViewModel: ObservableObject {
         guard let current = selectedVerse,
               let idx = verses.firstIndex(where: { $0.id == current.id }),
               idx < verses.count - 1 else { return }
+        verseScrollIntent = .chevron
         selectedVerse = verses[idx + 1]
         selectedWord = nil
         selectedSegment = nil
+        verseScrollTrigger += 1
         loadWordsForSelectedVerse()
     }
 
@@ -531,6 +549,11 @@ class ReaderViewModel: ObservableObject {
 
 enum BottomSheetMode: Hashable {
     case verse, word
+}
+
+enum VerseScrollIntent {
+    case tap     // direct tap → spring (.snappy)
+    case chevron // chevron navigation → easeInOut (calm, sequential)
 }
 
 // MARK: - Active Sheet (single slot to avoid multi-sheet conflicts)

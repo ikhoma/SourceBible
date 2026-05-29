@@ -147,29 +147,24 @@ struct ReaderView: View {
                         .safeAreaInset(edge: .bottom, spacing: nil) {
                             Color.clear.frame(height: sheetOpen ? verseSheetReservedHeight : 0)
                         }
-                        .onChange(of: vm.selectedVerse?.id) { _, newId in
-                            guard let id = newId else { return }
-                            if sheetOpen && vm.verseSheetHeight > 0 {
-                                // Sheet already measured → scroll immediately with exact inset.
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo(id, anchor: .bottom)
-                                }
-                            } else if sheetOpen {
-                                // Sheet is just opening; height not yet measured.
-                                // Defer by one RunLoop tick so the sheet presentation has
-                                // committed and onGeometryChange has a chance to fire first.
-                                // If it still hasn't arrived, we rely on the verseSheetHeight
-                                // onChange below to nudge the final position.
-                                DispatchQueue.main.async {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        proxy.scrollTo(id, anchor: .bottom)
-                                    }
-                                }
-                            } else {
-                                // Sheet closed → centre the verse on screen as before.
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    proxy.scrollTo(id, anchor: .center)
-                                }
+                        // Observes verseScrollTrigger (not selectedVerse.id) so that
+                        // re-tapping the already-selected verse still re-scrolls it
+                        // above the sheet if the user has manually scrolled away.
+                        .onChange(of: vm.verseScrollTrigger) { _, _ in
+                            guard let id = vm.selectedVerse?.id else { return }
+                            // Choose animation based on what triggered the verse change:
+                            //   .tap     → .snappy spring — direct manipulation feel.
+                            //   .chevron → .easeInOut    — calm sequential traversal.
+                            let intent = vm.verseScrollIntent
+                            vm.verseScrollIntent = .tap   // reset for next interaction
+                            let animation: Animation = intent == .chevron
+                                ? .easeInOut(duration: 0.32)
+                                : .snappy
+                            let anchor: UnitPoint = sheetOpen ? .bottom : .center
+                            // Defer one RunLoop tick so safeAreaInset is committed to
+                            // the UIScrollView before scrollTo uses the extra room.
+                            DispatchQueue.main.async {
+                                withAnimation(animation) { proxy.scrollTo(id, anchor: anchor) }
                             }
                         }
                         // Fine-correction scroll: fires when the sheet height is first
@@ -179,7 +174,9 @@ struct ReaderView: View {
                             guard oldH <= 0, newH > 0 else { return }
                             guard let id = vm.selectedVerse?.id,
                                   vm.activeSheet == .verse else { return }
-                            withAnimation(.easeInOut(duration: 0.15)) {
+                            // Fine-correction: short easeOut, not spring — this is an
+                            // invisible nudge, not a user gesture. No snap needed.
+                            withAnimation(.easeOut(duration: 0.15)) {
                                 proxy.scrollTo(id, anchor: .bottom)
                             }
                         }
