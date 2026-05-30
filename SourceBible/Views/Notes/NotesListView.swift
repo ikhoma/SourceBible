@@ -30,6 +30,7 @@ struct NotesListView: View {
                             } label: {
                                 Label("action.delete", systemImage: "trash")
                             }
+                            .tint(.red)
                         }
                     }
                 }

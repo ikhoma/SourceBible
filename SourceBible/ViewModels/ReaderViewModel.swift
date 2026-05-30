@@ -50,6 +50,7 @@ class ReaderViewModel: ObservableObject {
     /// always re-scrolls it back above the sheet if the user has scrolled away.
     @Published var verseScrollTrigger: Int = 0
 
+
     // Pickers — use a single sheet slot to avoid "only one sheet supported" warning
     @Published var activeSheet: ActiveSheet? = nil
 
@@ -190,6 +191,12 @@ class ReaderViewModel: ObservableObject {
         }
     }
 
+    func prevChapter() {
+        guard currentChapter > 1 else { return }
+        currentChapter -= 1
+        loadChapter()
+    }
+
     func nextChapter() {
         guard currentChapter < currentBook.chapterCount else { return }
         currentChapter += 1
@@ -229,6 +236,11 @@ class ReaderViewModel: ObservableObject {
             selectedVerse = verse
             loadWordsForSelectedVerse()
             isBottomSheetPresented = true
+            // Trigger scroll-above-sheet so the selected verse is visible when
+            // navigating from search. When the chapter changed (needsLoad = true)
+            // the scroll view was reset via .id(currentChapter) — defer one RunLoop
+            // tick so the new layout is committed before scrollTo fires.
+            verseScrollTrigger += 1
         }
     }
 

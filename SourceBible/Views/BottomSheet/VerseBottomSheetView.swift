@@ -110,14 +110,14 @@ struct VerseBottomSheetView: View {
 
             Spacer()
 
-            HStack(spacing: 0) {
+            HStack(spacing: 12) {
                 Button {
                     if vm.bottomSheetMode == .verse { vm.navigateToPreviousVerse() }
                     else { vm.navigateToPreviousWord() }
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 40, height: 34)
+                        .frame(width: 36, height: 36)
                 }
                 .disabled(isPrevDisabled)
 
@@ -127,7 +127,7 @@ struct VerseBottomSheetView: View {
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 40, height: 34)
+                        .frame(width: 36, height: 36)
                 }
                 .disabled(isNextDisabled)
             }

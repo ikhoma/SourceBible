@@ -180,14 +180,40 @@ struct ReaderView: View {
                                 proxy.scrollTo(id, anchor: .bottom)
                             }
                         }
+                        // Reset scroll position to top on every chapter change.
+                        .id(vm.currentChapter)
                         // Only extend behind the nav bar when the genesis header image
                         // is present. Other chapters must render below the nav bar as normal.
                         .ignoresSafeAreaIf(showsGenesisHeader, edges: .top)
+                        .gesture(
+                            DragGesture(minimumDistance: 40, coordinateSpace: .local)
+                                .onEnded { value in
+                                    // Only respond to mostly-horizontal swipes
+                                    guard abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
+                                    if value.translation.width < 0 {
+                                        vm.nextChapter()   // swipe left  → next
+                                    } else {
+                                        vm.prevChapter()   // swipe right → prev
+                                    }
+                                }
+                        )
                     }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button { vm.prevChapter() } label: {
+                        Image(systemName: "chevron.left")
+                    }
+                    .disabled(vm.currentChapter <= 1)
+
+                    Button { vm.nextChapter() } label: {
+                        Image(systemName: "chevron.right")
+                    }
+                    .disabled(vm.currentChapter >= vm.currentBook.chapterCount)
+                }
+
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 8) {
                         Button { vm.isBookPickerPresented = true } label: {
@@ -195,7 +221,7 @@ struct ReaderView: View {
                                 Text(vm.chapterTitle)
                                     .font(.headline).foregroundStyle(.primary)
                                 Image(systemName: "chevron.down")
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.primary)
                             }
                         }
                         Button { vm.isTranslationPickerPresented = true } label: {
@@ -203,7 +229,7 @@ struct ReaderView: View {
                                 Text(vm.currentTranslation.id)
                                     .font(.headline).foregroundStyle(.primary)
                                 Image(systemName: "chevron.down")
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.primary)
                             }
                         }
                     }
@@ -302,7 +328,7 @@ struct VerseRowView: View {
                                 .fill(Color(UIColor.systemGroupedBackground))
                                 .padding(.leading, 2)
                             ConcentricRectangle()
-                                .fill(Color.blue.opacity(0.06))
+                                .fill(Color.blue.opacity(0.1))
                                 .padding(.leading, 2)
                         }
                         .containerShape(RoundedRectangle(cornerRadius: 12))
@@ -315,7 +341,7 @@ struct VerseRowView: View {
                                 .fill(Color(UIColor.systemGroupedBackground))
                                 .padding(.leading, 2)
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.blue.opacity(0.06))
+                                .fill(Color.blue.opacity(0.1))
                                 .padding(.leading, 2)
                         }
                     }

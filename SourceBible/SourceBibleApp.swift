@@ -16,6 +16,7 @@ struct SourceBibleApp: App {
 
     /// Persisted language code ("en" | "uk"). Drives locale environment on change.
     @AppStorage("appLanguage") private var appLanguage: String = Self.defaultLanguage
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
 
     /// On first launch: follow system locale if supported, else "en".
     private static var defaultLanguage: String {
@@ -63,6 +64,7 @@ struct SourceBibleApp: App {
                 // LanguageSettingsView before appLanguage is written.
                 // No .id() here — avoids resetting navigation state on language change.
                 // See ADR-006: docs/architecture/ADR-006-localization-translation-provider.md
+                .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environment(\.locale, Locale(identifier: appLanguage))
                 .onChange(of: appLanguage) { _, lang in
                     // Keep bundle swizzle in sync for String(localized:) in model code

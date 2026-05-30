@@ -34,6 +34,7 @@ struct BookmarksListView: View {
                                 } label: {
                                     Label("action.delete", systemImage: "trash")
                                 }
+                                .tint(.red)
                             }
                     }
                 }

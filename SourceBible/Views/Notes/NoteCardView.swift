@@ -54,7 +54,7 @@ struct NoteCardView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(Color(.secondarySystemGroupedBackground))
         )
     }
 
