@@ -48,3 +48,4 @@ build/
 
 # ── Local workflow scripts ─────────────────────────────────────
 commit_all.sh
+SourceBible/Resources/sourcebible-backup.db
