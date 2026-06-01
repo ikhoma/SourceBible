@@ -442,26 +442,28 @@ def _xml_nodes_for_chapter(zf, book_id, book_num, chapter):
     return result
 
 
-def _xml_match_verse(db_words, mac_words):
+def _xml_match_verse(db_words, mac_words, strong_attr='strongnumberx'):
     """
     Match DB word rows to Macula XML nodes using Strong's occurrence index.
     Robust against count mismatches between TSV and XML.
 
-    db_words: list of (word_id, verse, position, strongs_id)
-    mac_words: list of w.attrib dicts from XML
+    db_words:    list of (word_id, verse, position, strongs_id)
+    mac_words:   list of w.attrib dicts from XML
+    strong_attr: XML attribute name for Strong's number
+                 ('strongnumberx' for Hebrew, 'strong' for Greek)
     Returns: list of (word_id, mac_attrib | None)
     """
     from collections import defaultdict
 
     def _norm(s):
-        """'H1980' → '1980', '0835a' → '835a'"""
+        """'H1980' → '1980', 'G1063' → '1063', '0835a' → '835a'"""
         if not s:
             return ''
         return s.lstrip('H').lstrip('G').lstrip('0') or '0'
 
     mac_by_strong = defaultdict(list)
     for mac in mac_words:
-        key = _norm(mac.get('strongnumberx', ''))
+        key = _norm(mac.get(strong_attr, ''))
         mac_by_strong[key].append(mac)
 
     occ_counter = defaultdict(int)
@@ -548,6 +550,120 @@ def enrich_macula_from_xml(cur):
                     SET gloss_macula=?, syntax_role=?, greek=?, greek_strong=?, after_char=?
                     WHERE id=?
                 """, updates)
+                total_updated += len(updates)
+
+    print(f"  Updated  : {total_updated:,} words")
+    print(f"  No match : {total_no_match:,} (columns left NULL)")
+
+
+# ─────────────────────────────────────────────
+# Step 3c — Enrich Greek words from Macula Greek XML lowfat
+#   Reads per-book XML files from macula-greek-main.zip/Nestle1904/lowfat/
+#   Populates: after_char
+#   One file per NT book (unlike Hebrew which is one file per chapter).
+#   OSIS book IDs match Macula ref abbreviations directly (MAT, MRK, JHN…).
+# ─────────────────────────────────────────────
+
+_MACULA_GRK_FILES = {
+    'MAT': '01-matthew',    'MRK': '02-mark',       'LUK': '03-luke',
+    'JHN': '04-john',       'ACT': '05-acts',        'ROM': '06-romans',
+    '1CO': '07-1corinthians','2CO': '08-2corinthians','GAL': '09-galatians',
+    'EPH': '10-ephesians',  'PHP': '11-philippians', 'COL': '12-colossians',
+    '1TH': '13-1thessalonians','2TH': '14-2thessalonians',
+    '1TI': '15-1timothy',   '2TI': '16-2timothy',   'TIT': '17-titus',
+    'PHM': '18-philemon',   'HEB': '19-hebrews',    'JAS': '20-james',
+    '1PE': '21-1peter',     '2PE': '22-2peter',     '1JN': '23-1john',
+    '2JN': '24-2john',      '3JN': '25-3john',      'JUD': '26-jude',
+    'REV': '27-revelation',
+}
+
+
+def _xml_nodes_for_book(zf, book_id):
+    """
+    Read a Macula Greek lowfat XML book file from the zip.
+    Returns {(chapter, verse): [list of w.attrib dicts in document order]}.
+    """
+    import xml.etree.ElementTree as ET
+    fname = _MACULA_GRK_FILES.get(book_id)
+    if not fname:
+        return {}
+    path = f'macula-greek-main/Nestle1904/lowfat/{fname}.xml'
+    try:
+        xml_bytes = zf.read(path)
+    except KeyError:
+        return {}
+    root = ET.fromstring(xml_bytes)
+    result = {}
+    for w in root.iter('w'):
+        ref = w.get('ref', '')
+        # Format: 'JHN 3:16!2'
+        m = re.match(r'\w+ (\d+):(\d+)!', ref)
+        if not m:
+            continue
+        ch, vs = int(m.group(1)), int(m.group(2))
+        result.setdefault((ch, vs), []).append(w.attrib)
+    return result
+
+
+def enrich_macula_greek_from_xml(cur):
+    """
+    Populate after_char for Greek words from Macula Greek XML lowfat.
+    Runs after import_macula_greek() which already filled surface/morph/xlit from TSV.
+    """
+    print("\n[3c] Enriching Greek words (after_char) from Macula Greek XML lowfat...")
+    if not MACULA_GRK_ZIP.exists():
+        print(f"  SKIP: {MACULA_GRK_ZIP} not found.")
+        return
+
+    cur.execute("""
+        SELECT DISTINCT book_id FROM word WHERE language = 'grc' ORDER BY book_id
+    """)
+    book_ids = [r[0] for r in cur.fetchall()]
+    print(f"  Processing {len(book_ids)} Greek books...")
+
+    total_updated  = 0
+    total_no_match = 0
+
+    with zipfile.ZipFile(MACULA_GRK_ZIP) as zf:
+        for book_id in book_ids:
+            nodes = _xml_nodes_for_book(zf, book_id)
+            if not nodes:
+                continue
+
+            cur.execute("""
+                SELECT id, verse, position, strongs_id
+                FROM word
+                WHERE book_id=? AND language='grc'
+                ORDER BY chapter, verse, position
+            """, (book_id,))
+            db_words = cur.fetchall()
+
+            # Group by (chapter, verse) — extract chapter from word id 'MAT|1|1|1'
+            db_by_cv = {}
+            for row in db_words:
+                parts = row[0].split('|')
+                if len(parts) >= 3:
+                    cv = (int(parts[1]), int(parts[2]))
+                    db_by_cv.setdefault(cv, []).append(row)
+
+            updates = []
+            for cv, db_cv_words in db_by_cv.items():
+                mac_cv = nodes.get(cv, [])
+                pairs = _xml_match_verse(db_cv_words, mac_cv, strong_attr='strong')
+                for word_id, mac in pairs:
+                    if mac is None:
+                        total_no_match += 1
+                        continue
+                    raw_after = mac.get('after', '').strip()
+                    after_char = raw_after if raw_after else None
+                    if after_char is not None:
+                        updates.append((after_char, word_id))
+
+            if updates:
+                cur.executemany(
+                    "UPDATE word SET after_char=? WHERE id=?",
+                    updates
+                )
                 total_updated += len(updates)
 
     print(f"  Updated  : {total_updated:,} words")
@@ -1463,8 +1579,9 @@ def main():
     verify_xlit_integrity(cur);     con.commit()   # fail-fast: abort if any sub-entry got wrong xlit from base entry
     import_macula_hebrew(cur);      con.commit()   # populates word table (surface, lemma, morph, gloss, xlit from TSV)
     enrich_macula_from_xml(cur);    con.commit()   # populates gloss_macula, syntax_role, greek, greek_strong from XML
-    import_macula_greek(cur);       con.commit()
-    import_translations(cur);       con.commit()
+    import_macula_greek(cur);            con.commit()
+    enrich_macula_greek_from_xml(cur);   con.commit()   # populates after_char for Greek words
+    import_translations(cur);            con.commit()
     import_footnotes(cur);          con.commit()
     import_cross_references(cur);   con.commit()
     build_verse_fts(cur, con);      con.commit()   # FTS5 index for text search

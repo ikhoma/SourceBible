@@ -811,21 +811,17 @@ struct WordRow: View {
                         if let sid = word.strongsId {
                             Text(sid)
                                 .font(.caption).fontWeight(.semibold)
-                                .foregroundStyle(isSelected
-                                                 ? Color(UIColor.systemBackground)
-                                                 : .secondary)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(isSelected
-                                            ? Color(UIColor.label)
-                                            : Color(UIColor.secondarySystemFill))
-                                .clipShape(Capsule())
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(Color(UIColor.secondarySystemFill))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
 
                         if let morph = word.morphology,
                            let label = MorphologyDecoder.decode(morph, using: t) {
                             Text(label)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                                .font(.footnote)
+                                .foregroundStyle(.tertiary)
                         }
                     }
 
@@ -833,7 +829,7 @@ struct WordRow: View {
                     if let gloss = word.gloss, !gloss.isEmpty {
                         Text(gloss)
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                 }
 
