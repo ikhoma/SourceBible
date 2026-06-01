@@ -159,7 +159,8 @@ final class DatabaseService: @unchecked Sendable {
             SELECT w.id, w.surface, w.strongs_id, w.morph, w.gloss_macula,
                    COALESCE(NULLIF(s.transliteration,''), '') AS xlit_lex,
                    w.xlit AS xlit_ctx,
-                   w.syntax_role, w.greek, w.greek_strong
+                   w.syntax_role, w.greek, w.greek_strong,
+                   w.after_char
             FROM word w
             LEFT JOIN strongs s ON w.strongs_id = s.id
             WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
@@ -176,10 +177,12 @@ final class DatabaseService: @unchecked Sendable {
             let syntaxRole  = optString(stmt, 7)   // Macula syntactic role
             let greek       = optString(stmt, 8)   // LXX Greek word
             let greekStrong = optString(stmt, 9)   // LXX Greek Strong's
+            let afterChar   = optString(stmt, 10)  // Macula trailing char (maqaf ־, sof pasuq ׃, etc.)
             words.append(BibleWord(id: id, text: surface, strongsId: strongsId,
                                    morphology: morph, gloss: gloss,
                                    xlitSimple: xlitLex, xlit: xlitCtx,
-                                   syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong))
+                                   syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong,
+                                   afterChar: afterChar))
         }
         return words
     }

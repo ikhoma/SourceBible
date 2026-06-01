@@ -21,6 +21,7 @@ Load the full document only when the task is relevant to it.
 | `ADR-012-unified-user-data-layer.md` | Unified User Data Layer | Accepted (amended ×4) | GRDB writable DB; sync-ready schema; block-based notes; PreAuthIdentity pattern |
 | `ADR-013-word-usage-book-groups.md` | Word Usage Tab — Per-Book Concordance Data Model | Accepted | Replace flat concordance list with BookUsageGroup per-book breakdown; N per-book queries on MainActor; chapter*1000+verse encoding; forward-compat with v1.5 rhetorical_weight |
 | `ADR-014-verse-text-view-cache-invalidation.md` | VerseTextView Cache Invalidation via `.id()` | Accepted | Use SwiftUI `.id()` keyed on `verseId+translationId+highlightColor` to force UITextView recreation on content changes; preserves coordinator cache for selection fast path |
+| `ADR-015-trailing-chars.md` | Trailing Characters from Macula `after` Attribute | Proposed | Store `after_char TEXT` in word table from XML; `BibleWord.displayText` for rendering; migration script for existing DBs; fixes maqaf ־ missing from Original tab |
 
 ---
 
@@ -35,6 +36,7 @@ Load the full document only when the task is relevant to it.
 | `verse_versification_system_design.md` | VersificationService — Design & Spec | Draft | Extract versification logic from ViewModel into VersificationService; consumers: loadWordsForSelectedVerse (done), concordance display (bug), cross-refs |
 | `unified_word_lookup_system_design.md` | Unified Word Lookup — Design & Spec | Draft | Unify Оригінал tap + translation long-press into single flow; BibleWord bridge in tapWord (TODO); isParticleSegment non-clickable particles (TODO) |
 | `spec-word-usage-redesign.md` | Word Usage Tab — Redesign | Draft | Show total count + per-book breakdown (book name · count · one example verse); replaces capped 30-item flat list |
+| `spec-trailing-chars.md` | Trailing Characters (maqaf etc.) | Draft | Add `after_char` DB column from Macula XML `after` attr; surface in WordRow; migration script + full rebuild path |
 | `plan-word-usage-redesign.md` | Word Usage Tab — Implementation Plan | Draft | 7-step order: model → DB method → ViewModel → MorphKey → strings → View; N per-book queries, chapter*1000+verse encoding, stays on MainActor |
 | `proposal_smarter_examples_v1.5.md` | Smarter Example Selection — v1.5 Proposal | Proposal | Pre-compute `rhetorical_weight` in DB (cross_reference votes); Swift picks highest-weight verse per book instead of first occurrence; fallback chain: rhetorical → syntactic centrality → first |
 

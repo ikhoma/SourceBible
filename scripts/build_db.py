@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS word (
     syntax_role  TEXT,              -- Macula syntactic role: v=predicate, s=subject, o=object, etc.
     greek        TEXT,              -- LXX Greek equivalent surface form (e.g. "ἐπορεύθη")
     greek_strong TEXT,              -- LXX Greek Strong's number (e.g. "G4198")
+    after_char   TEXT,              -- trailing char from Macula XML `after` attr (maqaf ־, sof pasuq ׃, paseq ׀)
     FOREIGN KEY (book_id)    REFERENCES book(id),
     FOREIGN KEY (strongs_id) REFERENCES strongs(id)
 );
@@ -529,18 +530,22 @@ def enrich_macula_from_xml(cur):
                     greek_strong = mac.get('greekstrong', '')
                     if greek_strong:
                         greek_strong = 'G' + greek_strong
+                    # .strip() removes surrounding whitespace; empty result → NULL (space-only = no char)
+                    raw_after = mac.get('after', '').strip()
+                    after_char = raw_after if raw_after else None
                     updates.append((
                         mac.get('gloss', '')     or None,   # gloss_macula
                         mac.get('role', '')      or None,   # syntax_role
                         mac.get('greek', '')     or None,   # greek
                         greek_strong             or None,   # greek_strong
+                        after_char,                         # after_char
                         word_id,
                     ))
 
             if updates:
                 cur.executemany("""
                     UPDATE word
-                    SET gloss_macula=?, syntax_role=?, greek=?, greek_strong=?
+                    SET gloss_macula=?, syntax_role=?, greek=?, greek_strong=?, after_char=?
                     WHERE id=?
                 """, updates)
                 total_updated += len(updates)

@@ -781,11 +781,11 @@ enum MorphologyDecoder {
     }
 }
 
-// MARK: - Word Card
+// MARK: - Word Row
 
-/// Card displayed in OriginalWordsView for each word in a verse.
-/// Only the Strong's badge on the right triggers onTap → switches to word mode.
-struct WordCard: View {
+/// Flat list row displayed in OriginalWordsView for each word in a verse.
+/// Tapping the entire row navigates to Word/Meaning detail.
+struct WordRow: View {
     let word: BibleWord
     let isSelected: Bool
     let onTap: () -> Void
@@ -793,56 +793,60 @@ struct WordCard: View {
     private let t: TranslationProvider = BundleTranslationProvider()
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        Button(action: onTap) {
+            HStack(alignment: .center, spacing: 0) {
+                VStack(alignment: .leading, spacing: 5) {
+                    // Top line: Hebrew text · xlit · Strong's badge · morph
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(word.displayText)
+                            .font(.system(size: 26, weight: .light))
+                            .foregroundStyle(.primary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(word.text)
-                    .font(.system(size: 26, weight: .light))
-                    .foregroundStyle(.primary)
+                        if let xlit = word.displayXlit, !xlit.isEmpty {
+                            Text(xlit)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
 
-                // displayXlit: contextual (Macula) first, lexical (TBESH) fallback
-                if let xlit = word.displayXlit, !xlit.isEmpty {
-                    Text(xlit)
-                        .font(.callout).foregroundStyle(.secondary)
-                } else if let gloss = word.gloss, !gloss.isEmpty {
-                    Text(gloss)
-                        .font(.callout).foregroundStyle(.secondary)
-                }
+                        if let sid = word.strongsId {
+                            Text(sid)
+                                .font(.caption).fontWeight(.semibold)
+                                .foregroundStyle(isSelected
+                                                 ? Color(UIColor.systemBackground)
+                                                 : .secondary)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(isSelected
+                                            ? Color(UIColor.label)
+                                            : Color(UIColor.secondarySystemFill))
+                                .clipShape(Capsule())
+                        }
 
-                if word.displayXlit?.isEmpty == false,
-                   let gloss = word.gloss, !gloss.isEmpty {
-                    Text(gloss)
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-
-                if let morph = word.morphology,
-                   let label = MorphologyDecoder.decode(morph, using: t) {
-                    Text(label)
-                        .font(.caption).foregroundStyle(.tertiary)
-                }
-            }
-
-            Spacer()
-
-            if let sid = word.strongsId {
-                VStack {
-                    Button(action: onTap) {
-                        Text(sid)
-                            .font(.caption).fontWeight(.semibold)
-                            .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .secondary)
-                            .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(isSelected
-                                        ? Color(UIColor.label)
-                                        : Color(UIColor.secondarySystemFill))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        if let morph = word.morphology,
+                           let label = MorphologyDecoder.decode(morph, using: t) {
+                            Text(label)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    Spacer()
+
+                    // Bottom line: gloss / meaning
+                    if let gloss = word.gloss, !gloss.isEmpty {
+                        Text(gloss)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .padding(14)
-        .background(Color(UIColor.secondarySystemFill))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
     }
 }
+

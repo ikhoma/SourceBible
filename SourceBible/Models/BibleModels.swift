@@ -148,19 +148,26 @@ struct BibleWord: Identifiable, Hashable {
     let syntaxRole: String?     // Macula syntactic role: v=predicate, s=subject, o=object…
     let greek: String?          // LXX Greek surface form (e.g. "ἐπορεύθη")
     let greekStrong: String?    // LXX Greek Strong's number (e.g. "G4198")
+    let afterChar: String?      // trailing char from Macula `after` attr (e.g. "־" maqaf, "׃" sof pasuq)
 
     init(id: String, text: String, strongsId: String? = nil,
          morphology: String? = nil, gloss: String? = nil,
          xlitSimple: String? = nil, xlit: String? = nil,
-         syntaxRole: String? = nil, greek: String? = nil, greekStrong: String? = nil) {
+         syntaxRole: String? = nil, greek: String? = nil, greekStrong: String? = nil,
+         afterChar: String? = nil) {
         self.id = id; self.text = text; self.strongsId = strongsId
         self.morphology = morphology; self.gloss = gloss
         self.xlitSimple = xlitSimple; self.xlit = xlit
         self.syntaxRole = syntaxRole; self.greek = greek; self.greekStrong = greekStrong
+        self.afterChar = afterChar
     }
 
     /// Best available transliteration: occurrence-specific first, lemma fallback.
     var displayXlit: String? { xlit ?? xlitSimple }
+
+    /// Surface form as it appears in the text, including any trailing connector.
+    /// Use this for display in Original tab; use `text` for Strong's lookup and search.
+    var displayText: String { text + (afterChar ?? "") }
 }
 
 // StrongsEntry, ConcordanceEntry → Models/StrongsModels.swift

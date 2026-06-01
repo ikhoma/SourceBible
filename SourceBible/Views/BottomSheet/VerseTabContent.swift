@@ -175,22 +175,31 @@ struct OriginalWordsView: View {
         (vm.selectedVerse?.words ?? []).filter { $0.strongsId != nil }
     }
 
+    private var sectionTitleKey: LocalizedStringKey {
+        vm.currentBook.testament == .old
+            ? "verse.section.original.hebrew"
+            : "verse.section.original.greek"
+    }
+
     var body: some View {
-        PillSection(title: "verse.section.original") {
+        PillSection(title: sectionTitleKey) {
             if words.isEmpty {
                 Text("verse.original.empty")
                     .font(.callout).foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
-                VStack(spacing: 10) {
-                    ForEach(words) { word in
-                        WordCard(
+                VStack(spacing: 0) {
+                    ForEach(Array(words.enumerated()), id: \.element.id) { i, word in
+                        WordRow(
                             word: word,
                             isSelected: vm.selectedWord?.id == word.id
                         ) {
                             if let verse = vm.selectedVerse {
                                 vm.tapWord(word, in: verse)
                             }
+                        }
+                        if i < words.count - 1 {
+                            Divider()
                         }
                     }
                 }
