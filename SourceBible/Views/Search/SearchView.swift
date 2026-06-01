@@ -17,6 +17,23 @@ struct SearchView: View {
     /// while waiting for results, since the two phases need different layouts.
     @State private var didCommitSearch:  Bool   = false
 
+    // MARK: - Filter state
+    enum TestamentFilter { case all, old, new }
+    @State private var testamentFilter: TestamentFilter = .all
+
+    /// Results after applying the active testament filter.
+    private var filteredResults: [SearchResult] {
+        vm.results.filter { result in
+            let parts  = result.id.split(separator: "|")
+            let bookId = parts.isEmpty ? "" : String(parts[0])
+            switch testamentFilter {
+            case .old where BibleBookNames.testament(for: bookId) != .old: return false
+            case .new where BibleBookNames.testament(for: bookId) != .new: return false
+            default: return true
+            }
+        }
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -24,6 +41,7 @@ struct SearchView: View {
             content
                 .navigationTitle("tab.search")
                 .navigationBarTitleDisplayMode(.large)
+                .toolbar(!vm.results.isEmpty && !isSearchActive ? .hidden : .automatic, for: .navigationBar)
         }
         .background(Color(.systemGroupedBackground))
         .searchable(
@@ -72,27 +90,44 @@ struct SearchView: View {
     // MARK: - Results list
 
     private var resultsList: some View {
-        List(vm.results) { result in
-            SearchResultRow(result: result)
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
-                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-                .contentShape(Rectangle())
-                .onTapGesture { navigate(to: result) }
-        }
-        .listStyle(.insetGrouped)
-        .scrollDismissesKeyboard(.interactively)
-        .overlay(alignment: .bottom) {
-            Group {
-                if vm.resultsCapped {
-                    Text("search.results_count_max \(vm.results.count)")
-                } else {
-                    Text("search.results_count \(vm.results.count)")
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("search.results_header \(searchText.trimmingCharacters(in: .whitespaces))")
+                        .font(.title2).bold()
+                        .foregroundStyle(.primary)
+                    Group {
+                        if vm.resultsCapped {
+                            Text("search.results_count_max \(filteredResults.count)")
+                        } else {
+                            Text("search.results_count \(filteredResults.count)")
+                        }
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
+                .padding(.vertical, 4)
+                .listRowSeparator(.hidden)
+
+                ForEach(filteredResults) { result in
+                    SearchResultRow(result: result)
+                        .contentShape(Rectangle())
+                        .onTapGesture { navigate(to: result) }
+                }
+            } header: {
+                Picker("", selection: $testamentFilter) {
+                    Text("search.filter.all").tag(TestamentFilter.all)
+                    Text("search.filter.old").tag(TestamentFilter.old)
+                    Text("search.filter.new").tag(TestamentFilter.new)
+                }
+                .pickerStyle(.segmented)
+                .padding(.vertical, 10)
+                .padding(.top, -8)
             }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .padding(.bottom, 6)
         }
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
+        .scrollDismissesKeyboard(.immediately)
     }
 
     // MARK: - Autocomplete suggestions
@@ -174,7 +209,7 @@ struct SearchView: View {
                         Image(systemName: "clock").foregroundStyle(.tertiary).frame(width: 20)
                         Text(recent)
                         Spacer()
-                        Image(systemName: "arrow.up.left").font(.caption).foregroundStyle(.quaternary)
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.quaternary)
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -183,16 +218,25 @@ struct SearchView: View {
                     }
                 }
             } header: {
-                HStack {
-                    Text("search.recent")
-                    Spacer()
-                    Button("search.clear") { vm.clearRecent() }
-                        .font(.caption)
+                VStack(spacing: 0) {
+                    HStack {
+                        Text("search.recent")
+                            .font(.title3).bold()
+                            .foregroundStyle(.primary)
+                            .textCase(nil)
+                        Spacer()
+                        Button("search.clear") { vm.clearRecent() }
+                            .font(.callout)
+                            .foregroundStyle(.tint)
+                            .textCase(nil)
+                    }
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+                    Divider()
                 }
             }
-            .listRowBackground(Color(.secondarySystemGroupedBackground))
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
     }
 
     private var searchHintView: some View {
@@ -235,14 +279,20 @@ private struct SearchResultRow: View {
     let result: SearchResult
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(result.reference)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tint)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(result.reference)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(.accentColor)
 
-            Text(parseSnippet(result.snippet))
-                .font(.callout)
-                .lineLimit(3)
+                Text(parseSnippet(result.snippet))
+                    .font(.callout)
+                    .lineLimit(3)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.quaternary)
         }
     }
 

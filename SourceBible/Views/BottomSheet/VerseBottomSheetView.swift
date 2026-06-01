@@ -19,6 +19,7 @@ struct VerseBottomSheetView: View {
     /// Lifted here so the selected pill survives switching to/from word mode.
     @State private var versePill: VersePill = .crossRefs
     @State private var wordSubTab: WordSubTab = .meaning
+    @Namespace private var pillNS
     /// Controls which note editor sheet is open on top of this bottom sheet.
     @State private var activeEditor: ActiveEditor? = nil
     /// Shows the highlight color picker confirmation dialog.
@@ -173,17 +174,17 @@ struct VerseBottomSheetView: View {
 
     private var pillsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 0) {
                 if vm.bottomSheetMode == .verse {
                     ForEach(VersePill.allCases, id: \.self) { p in
                         pillBtn(p.label, isActive: versePill == p) {
-                            withAnimation { versePill = p }
+                            withAnimation(.bouncy(duration: 0.3)) { versePill = p }
                         }
                     }
                 } else {
                     ForEach(WordSubTab.allCases, id: \.self) { t in
                         pillBtn(t.label, isActive: wordSubTab == t) {
-                            withAnimation { wordSubTab = t }
+                            withAnimation(.bouncy(duration: 0.3)) { wordSubTab = t }
                         }
                     }
                 }
@@ -196,11 +197,16 @@ struct VerseBottomSheetView: View {
     private func pillBtn(_ label: LocalizedStringKey, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
-                .font(.footnote)
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .background(isActive ? Color(UIColor.label) : Color(UIColor.tertiarySystemFill))
+                .font(.footnote.weight(.medium))
+                .padding(.horizontal, 12).padding(.vertical, 6)
                 .foregroundStyle(isActive ? Color(UIColor.systemBackground) : Color(UIColor.label))
-                .clipShape(Capsule())
+                .background {
+                    if isActive {
+                        Capsule()
+                            .fill(Color(UIColor.label))
+                            .matchedGeometryEffect(id: "pill-bg", in: pillNS)
+                    }
+                }
         }
     }
 

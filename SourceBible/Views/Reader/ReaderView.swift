@@ -52,7 +52,7 @@ struct ReaderView: View {
             sheetH = vm.verseSheetHeight
         } else {
             let screenH = scene?.screen.bounds.height ?? 852
-            let safeTop = scene?.windows.first?.safeAreaInsets.top ?? 59
+            let safeTop  = scene?.windows.first?.safeAreaInsets.top ?? 59
             sheetH = (screenH - safeTop) / 2.0
         }
         // safeAreaInset stacks on top of the scroll view's existing home-indicator
@@ -77,6 +77,7 @@ struct ReaderView: View {
                     }.padding()
                 } else {
                     ScrollViewReader { proxy in
+
                         let sheetOpen = vm.activeSheet == .verse
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 0) {
@@ -170,6 +171,9 @@ struct ReaderView: View {
                         // Fine-correction scroll: fires when the sheet height is first
                         // measured (0 → actual). Covers the case where the initial scroll
                         // used the fallback insetH before the sheet settled.
+                        // Fine-correction scroll: fires when the sheet height is first
+                        // measured (0 → actual). Covers the case where the initial scroll
+                        // used the fallback insetH before the sheet settled.
                         .onChange(of: vm.verseSheetHeight) { oldH, newH in
                             guard oldH <= 0, newH > 0 else { return }
                             guard let id = vm.selectedVerse?.id,
@@ -197,6 +201,33 @@ struct ReaderView: View {
                                     }
                                 }
                         )
+                    }
+
+                    // Gesture-blocking overlay for the sheet-covered region.
+                    //
+                    // Problem: presentationBackgroundInteraction(.enabled) forwards touch
+                    // events from the sheet to the background view hierarchy. When the user
+                    // swipes DOWN inside the sheet's internal ScrollView (to collapse/dismiss),
+                    // that same gesture leaks to the background ScrollView and scrolls it.
+                    //
+                    // Fix: place a transparent, hit-testable view over the sheet-covered area.
+                    // It sits above the ScrollView in the ZStack, so background hit-testing
+                    // stops here instead of reaching the ScrollView. No gesture handlers are
+                    // attached — it simply absorbs the leaked touch.
+                    //
+                    // Coverage: vm.verseSheetHeight (content) + 40 pt (home indicator +
+                    // a small buffer) gives the full sheet-top-to-screen-bottom area.
+                    // The visible area above the sheet top is NOT covered, so intentional
+                    // background scrolling while the sheet is open still works.
+                    if vm.activeSheet == .verse {
+                        let coverHeight = vm.verseSheetHeight > 0
+                            ? vm.verseSheetHeight + 40
+                            : 450
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .frame(height: coverHeight)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                            .ignoresSafeArea(edges: .bottom)
                     }
                 }
             }
