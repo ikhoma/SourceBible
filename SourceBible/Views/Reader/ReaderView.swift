@@ -122,6 +122,7 @@ struct ReaderView: View {
                                 ForEach(vm.verses) { verse in
                                     VerseRowView(
                                         verse: verse,
+                                        translationId: vm.currentTranslation.id,
                                         isSelected: vm.selectedVerse?.id == verse.id
                                                     && vm.activeSheet == .verse,
                                         selectedSegment: vm.selectedVerse?.id == verse.id
@@ -307,6 +308,7 @@ struct ReaderView: View {
 
 struct VerseRowView: View {
     let verse: BibleVerse
+    var translationId: String = ""
     var isSelected: Bool = false
     var selectedSegment: VerseSegment? = nil
     var onVerseTap: () -> Void
@@ -331,6 +333,7 @@ struct VerseRowView: View {
                         onVerseTap: onVerseTap,
                         onWordTap: onWordTap
                     )
+                    .id("\(verse.id)-\(translationId)-\(verse.highlightColor ?? "none")")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 10)
                     .padding(.trailing, 12)

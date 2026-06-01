@@ -20,6 +20,7 @@ Load the full document only when the task is relevant to it.
 | `ADR-011-notes-bookmarks-persistence.md` | Notes & Bookmarks Persistence | Superseded by ADR-012 | UserDefaults approach rejected; kept as historical record |
 | `ADR-012-unified-user-data-layer.md` | Unified User Data Layer | Accepted (amended ×4) | GRDB writable DB; sync-ready schema; block-based notes; PreAuthIdentity pattern |
 | `ADR-013-word-usage-book-groups.md` | Word Usage Tab — Per-Book Concordance Data Model | Accepted | Replace flat concordance list with BookUsageGroup per-book breakdown; N per-book queries on MainActor; chapter*1000+verse encoding; forward-compat with v1.5 rhetorical_weight |
+| `ADR-014-verse-text-view-cache-invalidation.md` | VerseTextView Cache Invalidation via `.id()` | Accepted | Use SwiftUI `.id()` keyed on `verseId+translationId+highlightColor` to force UITextView recreation on content changes; preserves coordinator cache for selection fast path |
 
 ---
 
