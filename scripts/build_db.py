@@ -172,6 +172,7 @@ CREATE TABLE IF NOT EXISTS word (
     greek        TEXT,              -- LXX Greek equivalent surface form (e.g. "ἐπορεύθη")
     greek_strong TEXT,              -- LXX Greek Strong's number (e.g. "G4198")
     after_char   TEXT,              -- trailing char from Macula XML `after` attr (maqaf ־, sof pasuq ׃, paseq ׀)
+    lexical_class TEXT,             -- Macula TSV `class` field: noun/verb/adj/adv/prep/cj/pron/ij/intj/art/ptcl/rel/num/om/x
     FOREIGN KEY (book_id)    REFERENCES book(id),
     FOREIGN KEY (strongs_id) REFERENCES strongs(id)
 );
@@ -315,8 +316,8 @@ def import_macula_hebrew(cur):
             rows = parse_macula_tsv(raw, language="hbo", strongs_col="strongnumberx", lang_prefix="H")
 
     cur.executemany(
-        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         rows
     )
     print(f"  {len(rows):,} Hebrew words imported.")
@@ -341,8 +342,8 @@ def import_macula_greek(cur):
             rows = parse_macula_tsv(raw, language="grc", strongs_col="strong", lang_prefix="G")
 
     cur.executemany(
-        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         rows
     )
     print(f"  {len(rows):,} Greek words imported.")
@@ -386,13 +387,17 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix):
         raw_xlit = row.get("transliteration", "").strip()
         xlit = simplify_xlit(raw_xlit) or None
 
+        # Macula lexical class — overrides morph-derived POS for edge cases like
+        # H835a (אַשְׁרֵי) which has morph 'Ncmpc' (noun) but class 'ij' (interjection).
+        lexical_class = row.get("class", "").strip() or None
+
         verse_key = (osis, ch, vs)
         pos = verse_seq.get(verse_key, 0) + 1
         verse_seq[verse_key] = pos
 
         word_id = f"{osis}|{ch}|{vs}|{pos}"
         rows.append((word_id, osis, ch, vs, pos, surface, lemma,
-                     strongs_id, morph, gloss, language, xlit))
+                     strongs_id, morph, gloss, language, xlit, lexical_class))
     return rows
 
 # ─────────────────────────────────────────────
@@ -927,6 +932,10 @@ def simplify_xlit(academic: str) -> str:
     s = s.strip('-').strip(':').strip()
     if not s:
         return ''
+    # A word-final shewa (ə) in Hebrew is always silent (shewa nach) — drop it.
+    # This prevents hālaḵə → halakhe; it should be halakh.
+    # Must be done BEFORE the ə→e replacement below.
+    s = re.sub(r'ə$', '', s)
     # Order matters: multi-char sequences must come before their single-char prefixes
     replacements = [
         # Aleph / Ayin breath marks → drop
@@ -944,6 +953,10 @@ def simplify_xlit(academic: str) -> str:
         ('ḥ', 'ch'), ('Ḥ', 'Ch'),
         ('ḵ', 'kh'), ('Ḵ', 'Kh'),
         ('ś', 's'),  ('Ś', 'S'),
+        # Plural construct / vocalic endings
+        ('ərê', 'rey'),
+        ('erê', 'rey'),
+        ('rê', 'rey'),
         # Shewa
         ('ə', 'e'),
         # Vav: wə/wā/wi/wō/wū must come before bare w
@@ -962,7 +975,19 @@ def simplify_xlit(academic: str) -> str:
     )
     # Drop any remaining non-ASCII (safety net)
     s = re.sub(r'[^\x00-\x7F]', '', s)
-    return s.lower().strip()
+    s = s.lower().strip()
+    # Guard 1: strip trailing 'e' from silent-shewa suffix on final kaf
+    # (הָלַךְ֙ → hālaḵə → halakhe → halakh; דֶּרֶךְ֙ → derekhe → derekh)
+    if s.endswith('khe'):
+        s = s[:-1]
+    # Guard 2: strip mater-lectionis yod after i-vowel at word end.
+    # Macula writes 'kiy' for כִּי (hiriq + yod as vowel letter) but the
+    # spoken form is simply 'ki'. The yod is not a consonant here.
+    # Applies broadly: kiy→ki, biy→bi, niy→ni, etc.
+    # Does NOT affect 'ay' (patah+yod) or 'ey' (tsere+yod) which are diphthongs.
+    if s.endswith('iy'):
+        s = s[:-1]  # kiy→ki, niy→ni, biy→bi
+    return s
 
 
 def import_stepbible_lexicons(cur):
@@ -1366,11 +1391,20 @@ def parse_openbible_ref(ref):
 
 def import_cross_references(cur):
     print("\n[6/6] Importing cross-references...")
-    try:
-        raw_bytes = download(OPENBIBLE_URL, "openbible_xref.zip", binary=True)
-    except Exception as e:
-        print(f"  WARNING: {e}. Skipping cross-references.")
-        return
+    # Check data/ folder first (same convention as all other source files),
+    # then fall back to .cache/, then try downloading.
+    local = DATA_DIR / "openbible_xref.zip"
+    if local.exists():
+        print(f"  [local] openbible_xref.zip")
+        raw_bytes = local.read_bytes()
+    else:
+        try:
+            raw_bytes = download(OPENBIBLE_URL, "openbible_xref.zip", binary=True)
+        except Exception as e:
+            print(f"  WARNING: {e}. Skipping cross-references.")
+            print(f"  → Download manually: {OPENBIBLE_URL}")
+            print(f"  → Save as: data/openbible_xref.zip")
+            return
 
     with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
         tsv_name = next((n for n in zf.namelist()

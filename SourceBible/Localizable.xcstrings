@@ -2675,6 +2675,7 @@
       }
     },
     "verse.commentary.placeholder" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2686,6 +2687,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+          }
+        }
+      }
+    },
+    "verse.commentaries.none_for_book" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No commentaries available for this book."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для цієї книги коментарі відсутні."
+          }
+        }
+      }
+    },
+    "verse.commentary.unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No commentary available for this verse."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коментар для цього вірша відсутній."
           }
         }
       }

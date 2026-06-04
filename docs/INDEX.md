@@ -22,6 +22,7 @@ Load the full document only when the task is relevant to it.
 | `ADR-013-word-usage-book-groups.md` | Word Usage Tab — Per-Book Concordance Data Model | Accepted | Replace flat concordance list with BookUsageGroup per-book breakdown; N per-book queries on MainActor; chapter*1000+verse encoding; forward-compat with v1.5 rhetorical_weight |
 | `ADR-014-verse-text-view-cache-invalidation.md` | VerseTextView Cache Invalidation via `.id()` | Accepted | Use SwiftUI `.id()` keyed on `verseId+translationId+highlightColor` to force UITextView recreation on content changes; preserves coordinator cache for selection fast path |
 | `ADR-015-trailing-chars.md` | Trailing Characters from Macula `after` Attribute | Proposed | Store `after_char TEXT` in word table from XML; `BibleWord.displayText` for rendering; migration script for existing DBs; fixes maqaf ־ missing from Original tab |
+| `ADR-016-original-pill-nasb-bridge.md` | Original Pill — NASB-Gated Clickability, Unified Word Page, Verse Highlight | Proposed | Morph-based particle detection (R/C/T); `baseStrongsNumber` helper fixes sub-entry ID mismatch; unified tapWord flows; chevron nav over meaningful words only |
 
 ---
 
@@ -35,8 +36,10 @@ Load the full document only when the task is relevant to it.
 | `plan-highlights-bookmarks-notes.md` | Highlights, Bookmarks, Notes — Implementation Plan | Draft | Step-by-step implementation plan for annotation system |
 | `verse_versification_system_design.md` | VersificationService — Design & Spec | Draft | Extract versification logic from ViewModel into VersificationService; consumers: loadWordsForSelectedVerse (done), concordance display (bug), cross-refs |
 | `unified_word_lookup_system_design.md` | Unified Word Lookup — Design & Spec | Draft | Unify Оригінал tap + translation long-press into single flow; BibleWord bridge in tapWord (TODO); isParticleSegment non-clickable particles (TODO) |
+| `spec-original-nasb-bridge.md` | Original Pill ↔ NASB Bridge | Draft | Supersedes unified_word_lookup; morph-based particle detection; unified word page; chevron nav over non-particle words; verse text highlight from both entry points |
 | `spec-word-usage-redesign.md` | Word Usage Tab — Redesign | Draft | Show total count + per-book breakdown (book name · count · one example verse); replaces capped 30-item flat list |
 | `spec-trailing-chars.md` | Trailing Characters (maqaf etc.) | Draft | Add `after_char` DB column from Macula XML `after` attr; surface in WordRow; migration script + full rebuild path |
+| `commentary-system-design.md` | Commentary System — Bug Diagnoses & Architecture | Draft | Henry verse→section mapping bug (Genesis 2:7); Owen Hebrews 1 blank screen; range header display; validation checklist |
 | `plan-word-usage-redesign.md` | Word Usage Tab — Implementation Plan | Draft | 7-step order: model → DB method → ViewModel → MorphKey → strings → View; N per-book queries, chapter*1000+verse encoding, stays on MainActor |
 | `proposal_smarter_examples_v1.5.md` | Smarter Example Selection — v1.5 Proposal | Proposal | Pre-compute `rhetorical_weight` in DB (cross_reference votes); Swift picks highest-weight verse per book instead of first occurrence; fallback chain: rhetorical → syntactic centrality → first |
 
@@ -48,6 +51,7 @@ Load the full document only when the task is relevant to it.
 |---|---|---|---|
 | `PDR-Auth-Strategy.md` | Trust-First Authentication | Accepted | No login wall; local-first data; sync opt-in |
 | `PDR-Highlights-Bookmarks-Notes.md` | Notes/Highlights/Bookmarks Differentiation | — | Distinct UX roles for three annotation types |
+| `PDR-Book-Covers.md` | Book Cover Design — Doré Engravings | Accepted | Doré engraving + blue bg; Protestant canonical section tag + chapter count per cover; section vocab mirrors browse flow |
 
 ---
 

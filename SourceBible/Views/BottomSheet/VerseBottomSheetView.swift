@@ -142,7 +142,7 @@ struct VerseBottomSheetView: View {
             return vm.verses.first?.id == verse.id
         } else {
             guard let w = vm.selectedWord else { return true }
-            return vm.verseWordsWithStrongs.first?.id == w.id
+            return vm.translationOrderedClickableWords.first?.id == w.id
         }
     }
 
@@ -151,7 +151,7 @@ struct VerseBottomSheetView: View {
             return vm.verses.last?.id == verse.id
         } else {
             guard let w = vm.selectedWord else { return true }
-            return vm.verseWordsWithStrongs.last?.id == w.id
+            return vm.translationOrderedClickableWords.last?.id == w.id
         }
     }
 

@@ -243,7 +243,7 @@ struct WordMeaningView: View {
 
     @ViewBuilder
     private func morphologySection(word: BibleWord, morph: String) -> some View {
-        if let decoded = MorphologyDecoder.decodeFull(morph, using: t) {
+        if let decoded = MorphologyDecoder.decodeFull(morph, lexicalClass: word.lexicalClass, using: t) {
             let rows = morphologyRows(word: word, decoded: decoded)
             if !rows.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
@@ -533,10 +533,41 @@ struct FullMorphology {
 
 enum MorphologyDecoder {
 
+    // MARK: Lexical class → POS label
+
+    /// Maps Macula TSV `class` values to localized POS strings.
+    /// Returns nil for unknown/unrecognised class values so the morph-derived
+    /// partOfSpeech remains untouched.
+    static func lexicalClassLabel(
+        _ cls: String,
+        using t: TranslationProvider = BundleTranslationProvider()
+    ) -> String? {
+        switch cls {
+        case "noun":  return t.string(for: MorphKey.posNoun)
+        case "verb":  return t.string(for: MorphKey.posVerb)
+        case "adj":   return t.string(for: MorphKey.posAdjective)
+        case "adv":   return t.string(for: MorphKey.posAdverb)
+        case "prep":  return t.string(for: MorphKey.posPreposition)
+        case "cj":    return t.string(for: MorphKey.posConjunction)
+        case "conj":  return t.string(for: MorphKey.posConjunction)  // Greek alias
+        case "pron":  return t.string(for: MorphKey.posPronoun)
+        case "ij", "intj": return t.string(for: MorphKey.posInterjection)
+        case "art":   return t.string(for: MorphKey.posArticle)
+        case "ptcl":  return t.string(for: MorphKey.posParticle)
+        case "rel":   return t.string(for: MorphKey.posRelPronoun)
+        case "det":   return t.string(for: MorphKey.posArticle)      // Greek determiner
+        case "num":   return t.string(for: MorphKey.posAdjective)    // numeral → adjective bucket
+        case "om", "x": return nil  // object marker / suffix — let morph code handle
+        default:      return nil
+        }
+    }
+
+
     // MARK: Full decode (for WordMeaningView detail)
 
     static func decodeFull(
         _ code: String,
+        lexicalClass: String? = nil,
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> FullMorphology? {
         guard !code.isEmpty else { return nil }
@@ -586,6 +617,13 @@ enum MorphologyDecoder {
                 m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
             }
         default: return nil
+        }
+        // lexical_class is the authoritative POS — apply it last so it overrides
+        // whatever the morph code derived. e.g. H835a: morph='Ncmpc' → "Noun",
+        // but class='ij' → "Interjection".
+        if let cls = lexicalClass,
+           let posLabel = lexicalClassLabel(cls, using: t) {
+            m.partOfSpeech = posLabel
         }
         return m
     }
@@ -784,65 +822,77 @@ enum MorphologyDecoder {
 // MARK: - Word Row
 
 /// Flat list row displayed in OriginalWordsView for each word in a verse.
-/// Tapping the entire row navigates to Word/Meaning detail.
+/// Clickable rows (isClickable: true) navigate to Word/Meaning detail on tap.
+/// Non-clickable rows (particles, articles) display basic info only — no tap, no chevron.
 struct WordRow: View {
     let word: BibleWord
     let isSelected: Bool
+    let isClickable: Bool
     let onTap: () -> Void
 
     private let t: TranslationProvider = BundleTranslationProvider()
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(alignment: .center, spacing: 0) {
-                VStack(alignment: .leading, spacing: 5) {
-                    // Top line: Hebrew text · xlit · Strong's badge · morph
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(word.displayText)
-                            .font(.system(size: 26, weight: .light))
-                            .foregroundStyle(.primary)
+        if isClickable {
+            Button(action: onTap) {
+                rowContent(showChevron: true)
+            }
+            .buttonStyle(.plain)
+        } else {
+            rowContent(showChevron: false)
+        }
+    }
 
-                        if let xlit = word.displayXlit, !xlit.isEmpty {
-                            Text(xlit)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
+    private func rowContent(showChevron: Bool) -> some View {
+        HStack(alignment: .center, spacing: 0) {
+            VStack(alignment: .leading, spacing: 5) {
+                // Top line: Hebrew/Greek text · xlit · Strong's badge · morph
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(word.displayText)
+                        .font(.system(size: 26, weight: .light))
+                        .foregroundStyle(isClickable ? .primary : .secondary)
 
-                        if let sid = word.strongsId {
-                            Text(sid)
-                                .font(.caption).fontWeight(.semibold)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(Color(UIColor.secondarySystemFill))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-
-                        if let morph = word.morphology,
-                           let label = MorphologyDecoder.decode(morph, using: t) {
-                            Text(label)
-                                .font(.footnote)
-                                .foregroundStyle(.tertiary)
-                        }
+                    if let xlit = word.displayXlit, !xlit.isEmpty {
+                        Text(xlit)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
                     }
 
-                    // Bottom line: gloss / meaning
-                    if let gloss = word.gloss, !gloss.isEmpty {
-                        Text(gloss)
-                            .font(.callout)
-                            .foregroundStyle(.primary)
+                    if let sid = word.strongsId {
+                        Text(sid)
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color(UIColor.secondarySystemFill))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    if let morph = word.morphology,
+                       let label = MorphologyDecoder.decode(morph, using: t) {
+                        Text(label)
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
                     }
                 }
 
-                Spacer(minLength: 8)
+                // Bottom line: gloss — show for all words that have one, clickable or not
+                if let gloss = word.gloss, !gloss.isEmpty {
+                    Text(gloss)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                }
+            }
 
+            Spacer(minLength: 8)
+
+            if showChevron {
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }
 

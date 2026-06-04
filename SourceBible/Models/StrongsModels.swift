@@ -85,6 +85,28 @@ struct Commentary: Identifiable {
     let text: String
 }
 
+/// A single commentary section as returned by DatabaseService.loadCommentary.
+/// Preserves authorial range metadata so the UI can display "Verses 8–15" headers.
+struct CommentarySection {
+    let text: String
+    let startChapter: Int
+    let startVerse: Int
+    let endChapter: Int
+    let endVerse: Int
+
+    /// Human-readable verse range label, e.g. "Verse 7" or "Verses 8–15".
+    var verseRangeLabel: String {
+        if startChapter == endChapter && startVerse == endVerse {
+            return "Verse \(startVerse)"
+        } else if startChapter == endChapter {
+            return "Verses \(startVerse)–\(endVerse)"
+        } else {
+            // Cross-chapter range (rare in Henry, present in Owen)
+            return "Verses \(startChapter):\(startVerse)–\(endChapter):\(endVerse)"
+        }
+    }
+}
+
 extension Theologian {
     // Must be `var`, not `let`, so that language switching (Bundle.main swizzle + .id re-render)
     // causes SwiftUI to re-evaluate these computed values and pick up translated name/era/style keys.

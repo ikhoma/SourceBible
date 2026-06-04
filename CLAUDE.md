@@ -178,8 +178,9 @@ Xcode кешує старий `sourcebible.db`. Без Clean — код бачи
 
 ```bash
 cd ~/Projects/SourceBible
-python3 scripts/build_db.py                    # ~10 хв
-python3 build_verse_map.py sourcebible.db      # ~1 хв, 7292 рядки
+python3 scripts/build_db.py                      # ~10 хв
+python3 build_verse_map.py sourcebible.db        # ~1 хв, 7292 рядки
+python3 scripts/import_commentaries.py sourcebible.db  # ~2 хв, 36 071 вірші (Calvin + Henry + Spurgeon + Owen)
 cp sourcebible.db SourceBible/Resources/sourcebible.db
 # Xcode: ⇧⌘K → Run
 ```

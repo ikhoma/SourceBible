@@ -149,17 +149,18 @@ struct BibleWord: Identifiable, Hashable {
     let greek: String?          // LXX Greek surface form (e.g. "ἐπορεύθη")
     let greekStrong: String?    // LXX Greek Strong's number (e.g. "G4198")
     let afterChar: String?      // trailing char from Macula `after` attr (e.g. "־" maqaf, "׃" sof pasuq)
+    let lexicalClass: String?   // Macula TSV `class`: noun/verb/adj/adv/prep/cj/pron/ij/intj/art/ptcl/rel/num
 
     init(id: String, text: String, strongsId: String? = nil,
          morphology: String? = nil, gloss: String? = nil,
          xlitSimple: String? = nil, xlit: String? = nil,
          syntaxRole: String? = nil, greek: String? = nil, greekStrong: String? = nil,
-         afterChar: String? = nil) {
+         afterChar: String? = nil, lexicalClass: String? = nil) {
         self.id = id; self.text = text; self.strongsId = strongsId
         self.morphology = morphology; self.gloss = gloss
         self.xlitSimple = xlitSimple; self.xlit = xlit
         self.syntaxRole = syntaxRole; self.greek = greek; self.greekStrong = greekStrong
-        self.afterChar = afterChar
+        self.afterChar = afterChar; self.lexicalClass = lexicalClass
     }
 
     /// Best available transliteration: occurrence-specific first, lemma fallback.

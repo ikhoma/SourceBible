@@ -138,6 +138,28 @@ final class DatabaseService: @unchecked Sendable {
         return result
     }
 
+    /// Load Strong's base numbers from NASB markup for a single verse.
+    /// Returns the set of numeric strings extracted from <S>NNN</S> tags.
+    /// Used by ReaderViewModel to gate clickability in the Original pill regardless
+    /// of which translation the user is currently reading.
+    func loadNASBStrongs(bookId: String, chapter: Int, verse: Int) -> Set<String> {
+        guard isAvailable else { return [] }
+        var result = Set<String>()
+        let sql = "SELECT text FROM verse WHERE translation = 'NASB' AND book_id = ? AND chapter = ? AND verse = ?"
+        query(sql, bindings: [bookId, chapter, verse]) { stmt in
+            let raw = string(stmt, 0)
+            // Extract all <S>NNN</S> tags
+            var search = raw[raw.startIndex...]
+            while let open = search.range(of: "<S>"),
+                  let close = search[open.upperBound...].range(of: "</S>") {
+                let num = String(search[open.upperBound..<close.lowerBound])
+                if !num.isEmpty { result.insert(num) }
+                search = search[close.upperBound...]
+            }
+        }
+        return result
+    }
+
     // MARK: - Words (Macula)
 
     /// Load original-language words for a verse.
@@ -160,29 +182,30 @@ final class DatabaseService: @unchecked Sendable {
                    COALESCE(NULLIF(s.transliteration,''), '') AS xlit_lex,
                    w.xlit AS xlit_ctx,
                    w.syntax_role, w.greek, w.greek_strong,
-                   w.after_char
+                   w.after_char, w.lexical_class
             FROM word w
             LEFT JOIN strongs s ON w.strongs_id = s.id
             WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
             ORDER BY w.position
             """
         query(sql, bindings: [bookId, chapter, verse]) { stmt in
-            let id          = string(stmt, 0)
-            let surface     = string(stmt, 1)
-            let strongsId   = optString(stmt, 2)
-            let morph       = optString(stmt, 3)
-            let gloss       = optString(stmt, 4)   // Macula contextual gloss
-            let xlitLex     = optString(stmt, 5)   // TBESH lemma xlit
-            let xlitCtx     = optString(stmt, 6)   // Macula occurrence xlit
-            let syntaxRole  = optString(stmt, 7)   // Macula syntactic role
-            let greek       = optString(stmt, 8)   // LXX Greek word
-            let greekStrong = optString(stmt, 9)   // LXX Greek Strong's
-            let afterChar   = optString(stmt, 10)  // Macula trailing char (maqaf ־, sof pasuq ׃, etc.)
+            let id           = string(stmt, 0)
+            let surface      = string(stmt, 1)
+            let strongsId    = optString(stmt, 2)
+            let morph        = optString(stmt, 3)
+            let gloss        = optString(stmt, 4)   // Macula contextual gloss
+            let xlitLex      = optString(stmt, 5)   // TBESH lemma xlit
+            let xlitCtx      = optString(stmt, 6)   // Macula occurrence xlit
+            let syntaxRole   = optString(stmt, 7)   // Macula syntactic role
+            let greek        = optString(stmt, 8)   // LXX Greek word
+            let greekStrong  = optString(stmt, 9)   // LXX Greek Strong's
+            let afterChar    = optString(stmt, 10)  // Macula trailing char (maqaf ־, sof pasuq ׃, etc.)
+            let lexicalClass = optString(stmt, 11)  // Macula lexical class (noun/verb/ij/intj/…)
             words.append(BibleWord(id: id, text: surface, strongsId: strongsId,
                                    morphology: morph, gloss: gloss,
                                    xlitSimple: xlitLex, xlit: xlitCtx,
                                    syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong,
-                                   afterChar: afterChar))
+                                   afterChar: afterChar, lexicalClass: lexicalClass))
         }
         return words
     }
@@ -582,6 +605,49 @@ final class DatabaseService: @unchecked Sendable {
                                        isFallback: isFallback))
         }
         return refs
+    }
+
+    // MARK: - Commentary
+
+    /// Returns the set of commentary source names that have at least one
+    /// section for the given book (e.g. {"Calvin", "Henry"}).
+    /// Used to hide theologians with no coverage for the current book.
+    func commentarySourcesAvailable(bookId: String) -> Set<String> {
+        guard isAvailable else { return [] }
+        var sources = Set<String>()
+        query("SELECT DISTINCT source FROM comments WHERE book_id = ?",
+              bindings: [bookId]) { stmt in
+            sources.insert(string(stmt, 0))
+        }
+        return sources
+    }
+
+    /// Loads a commentary section for a specific verse.
+    /// Uses a two-table join: comment_verses (lookup index) → comments (full text).
+    /// One commentary section may cover multiple verses; the full section is returned
+    /// regardless of which verse triggered the lookup.
+    /// Returns nil when no commentary exists for the requested verse.
+    func loadCommentary(bookId: String, chapter: Int, verse: Int, source: String = "Calvin") -> CommentarySection? {
+        guard isAvailable else { return nil }
+        var result: CommentarySection?
+        let sql = """
+            SELECT c.text, c.start_chapter, c.start_verse, c.end_chapter, c.end_verse
+            FROM comments c
+            JOIN comment_verses cv ON cv.comment_id = c.id
+            WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
+              AND c.source = ?
+            LIMIT 1
+            """
+        query(sql, bindings: [bookId, chapter, verse, source]) { stmt in
+            result = CommentarySection(
+                text:         self.string(stmt, 0),
+                startChapter: Int(sqlite3_column_int(stmt, 1)),
+                startVerse:   Int(sqlite3_column_int(stmt, 2)),
+                endChapter:   Int(sqlite3_column_int(stmt, 3)),
+                endVerse:     Int(sqlite3_column_int(stmt, 4))
+            )
+        }
+        return result
     }
 
     // MARK: - Search

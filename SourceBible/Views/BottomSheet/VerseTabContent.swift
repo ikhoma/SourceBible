@@ -32,8 +32,8 @@ struct VerseTabView: View {
         }
         .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 20)
         .onAppear        { loadData() }
-        .onChange(of: verse.id)                 { loadData() }
-        .onChange(of: vm.currentTranslation.id) { loadData() }
+        .onChange(of: verse.id)                 { _, _ in loadData() }
+        .onChange(of: vm.currentTranslation.id) { _, _ in loadData() }
     }
 
     private func loadData() {
@@ -169,10 +169,9 @@ struct TranslationsView: View {
 struct OriginalWordsView: View {
     @EnvironmentObject var vm: ReaderViewModel
 
-    /// Always read from vm.selectedVerse so we get words after lazy load,
-    /// not a stale snapshot from the moment the sheet opened.
+    /// All Macula words for the verse (including particles shown as non-interactive rows).
     private var words: [BibleWord] {
-        (vm.selectedVerse?.words ?? []).filter { $0.strongsId != nil }
+        vm.selectedVerse?.words ?? []
     }
 
     private var sectionTitleKey: LocalizedStringKey {
@@ -192,7 +191,8 @@ struct OriginalWordsView: View {
                     ForEach(Array(words.enumerated()), id: \.element.id) { i, word in
                         WordRow(
                             word: word,
-                            isSelected: vm.selectedWord?.id == word.id
+                            isSelected: vm.selectedWord?.id == word.id,
+                            isClickable: vm.isClickable(word)
                         ) {
                             if let verse = vm.selectedVerse {
                                 vm.tapWord(word, in: verse)
@@ -213,35 +213,53 @@ struct OriginalWordsView: View {
 struct CommentariesView: View {
     let verseId: String
     @State private var selectedTheologian: Theologian? = nil
-    @Environment(\.locale) private var locale
+    @State private var availableSources: Set<String> = []
+
+    /// Book ID parsed from verseId "BOOK|chapter|verse"
+    private var bookId: String {
+        String(verseId.split(separator: "|").first ?? "")
+    }
+
+    /// Only show theologians that have commentary for the current book.
+    private var visibleTheologians: [Theologian] {
+        Theologian.all.filter { availableSources.contains($0.id.capitalized) }
+    }
 
     var body: some View {
         PillSection(title: "verse.section.commentaries") {
-            ForEach(Theologian.all) { t in
-                Button {
-                    selectedTheologian = t
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(t.imageName)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 44, height: 44)
-                            .clipShape(Circle())
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(LocalizedStringKey(t.nameKey))
-                                .font(.callout).fontWeight(.medium).foregroundStyle(.primary)
-                            // Text + Text concatenation deprecated in iOS 26; use interpolation.
-                            Text("\(Text(LocalizedStringKey(t.eraKey))) · \(Text(LocalizedStringKey(t.styleKey)))")
-                                .font(.caption).foregroundStyle(.secondary)
+            if visibleTheologians.isEmpty {
+                Text("verse.commentaries.none_for_book")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .padding(.top, 4)
+            } else {
+                ForEach(visibleTheologians) { t in
+                    Button {
+                        selectedTheologian = t
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(t.imageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44)
+                                .clipShape(Circle())
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(LocalizedStringKey(t.nameKey))
+                                    .font(.callout).fontWeight(.medium).foregroundStyle(.primary)
+                                Text("\(Text(LocalizedStringKey(t.eraKey))) · \(Text(LocalizedStringKey(t.styleKey)))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.vertical, 8)
+                    .foregroundStyle(.primary)
+                    Divider()
                 }
-                .foregroundStyle(.primary)
-                Divider()
             }
+        }
+        .task(id: bookId) {
+            availableSources = DatabaseService.shared.commentarySourcesAvailable(bookId: bookId)
         }
         .sheet(item: $selectedTheologian) { t in
             NavigationStack {
@@ -256,9 +274,23 @@ struct CommentariesView: View {
 struct CommentaryDetailView: View {
     let theologian: Theologian
     let verseId: String
+
+    /// Parsed from verseId "BOOK|chapter|verse"
+    private var verseComponents: (bookId: String, chapter: Int, verse: Int)? {
+        let parts = verseId.split(separator: "|")
+        guard parts.count == 3,
+              let ch = Int(parts[1]),
+              let vs = Int(parts[2]) else { return nil }
+        return (String(parts[0]), ch, vs)
+    }
+
+    @State private var section: CommentarySection? = nil
+    @State private var isLoaded = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // Theologian header
                 HStack(spacing: 14) {
                     Image(theologian.imageName)
                         .resizable()
@@ -272,12 +304,77 @@ struct CommentaryDetailView: View {
                     }
                 }
                 Divider()
-                Text("verse.commentary.placeholder")
-                    .font(.body).lineSpacing(6).foregroundStyle(.secondary)
+
+                // Body
+                if !isLoaded {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 24)
+                } else if let sec = section {
+                    // Verse range label (e.g. "Verses 8–15") — only shown when the
+                    // section covers more than the single tapped verse, so the user
+                    // understands why they're seeing a broader block of text.
+                    Text(sec.verseRangeLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    // Use UITextView for commentary body — SwiftUI Text() silently
+                    // fails to render very large strings (Owen sections can exceed
+                    // 230,000 characters). UITextView handles arbitrary length text.
+                    CommentaryTextView(text: sec.text)
+                } else {
+                    Text("verse.commentary.unavailable")
+                        .font(.body).foregroundStyle(.secondary).italic()
+                }
             }
             .padding(20)
         }
         .navigationTitle(LocalizedStringKey(theologian.nameKey))
+
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: verseId) {
+            await loadCommentary()
+        }
+    }
+
+    @MainActor
+    private func loadCommentary() async {
+        isLoaded = false
+        section = nil
+        defer { isLoaded = true }  // always mark loaded, even if guard/early-return fires
+        guard let vc = verseComponents else { return }
+        section = DatabaseService.shared.loadCommentary(
+            bookId: vc.bookId, chapter: vc.chapter, verse: vc.verse,
+            source: theologian.id.capitalized  // "Calvin", "Henry", etc.
+        )
+    }
+}
+
+// MARK: - CommentaryTextView
+
+/// Paragraph-split commentary renderer.
+///
+/// SwiftUI `Text` silently fails on very large strings — Owen's Heb 1:1-2
+/// is ~231,000 characters, which SwiftUI can't lay out in a single pass.
+/// Splitting on paragraph breaks and rendering each chunk as a separate `Text`
+/// keeps individual views small while `LazyVStack` defers off-screen rendering,
+/// making it performant for any commentary length.
+private struct CommentaryTextView: View {
+    let text: String
+
+    private var paragraphs: [String] {
+        text.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, para in
+                Text(para)
+                    .font(.body)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }

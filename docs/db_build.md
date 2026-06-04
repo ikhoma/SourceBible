@@ -73,13 +73,53 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 
 Потім у Xcode: **Product → Clean Build Folder** (Shift+Cmd+K), потім Run.
 
-Або одразу повний цикл (всі три кроки):
+Або одразу повний цикл (всі кроки):
 ```bash
 cd ~/Projects/SourceBible \
   && python3 scripts/build_db.py \
   && python3 build_verse_map.py sourcebible.db \
+  && python3 scripts/import_commentaries.py sourcebible.db \
   && cp sourcebible.db SourceBible/Resources/sourcebible.db \
   && echo "✓ DB built and copied to Resources"
+```
+
+## Крок 3: Commentaries (Calvin + Henry + Spurgeon + Owen)
+
+Імпортує чотири public-domain коментаторів у таблицю `commentary` (~36 071 вірші).
+
+| Джерело | Файл | Формат | Охоплення | Ліцензія |
+|---|---|---|---|---|
+| Calvin | `data/CalvinCommentaries.zip` | SWORD zCom | 48 книг, ~11 014 вірші | Public Domain |
+| Matthew Henry | `data/matthew_henry.zip` | HTML | 66 книг, ~22 495 вірші | Public Domain |
+| Spurgeon | `data/chspurgeon-tod-main.zip` | Markdown | Psalms only, ~2 259 вірші | MIT |
+| Owen | `data/OwenHebrews-commentary.cmtx` | SQLite/RTF | Hebrews only, ~303 вірші | ⚠️ див. нижче |
+
+> ⚠️ **Owen — ліцензійне обмеження:** текст публічного домену, але датасет отримано під умовою **не продавати і не включати в комерційні пакети**. Якщо в майбутньому вводиться платна/підписна модель — замінити `OwenHebrews-commentary.cmtx` на інше видання (наприклад, CCEL.org) до релізу платного тиру.
+
+```bash
+cd ~/Projects/SourceBible
+python3 scripts/import_commentaries.py sourcebible.db
+cp sourcebible.db SourceBible/Resources/sourcebible.db
+# Xcode: ⇧⌘K → Run
+```
+
+Очікуваний вивід:
+```
+→ Importing Calvin (SWORD zCom)...
+   Calvin:   11014 verses
+→ Importing Matthew Henry (HTML)...
+   Henry:    22495 verses
+→ Importing Spurgeon — Treasury of David (Markdown)...
+   Spurgeon:  2259 verses
+→ Importing Owen — Exposition of Hebrews (SQLite/RTF)...
+   Owen:       303 verses
+✓ Done: 36071 total commentary entries in sourcebible.db
+```
+
+Схема таблиці:
+```sql
+commentary(source TEXT, book_id TEXT, chapter INT, verse INT, text TEXT,
+           PRIMARY KEY(source, book_id, chapter, verse))
 ```
 
 ---
