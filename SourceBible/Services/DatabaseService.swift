@@ -178,7 +178,8 @@ final class DatabaseService: @unchecked Sendable {
         // xlit (word.xlit): occurrence-specific transliteration from Macula (e.g. "hālaḵə")
         // xlit_lex: lemma transliteration from TBESH via strongs.transliteration (e.g. "ha.lakh")
         let sql = """
-            SELECT w.id, w.surface, w.strongs_id, w.morph, w.gloss_macula,
+            SELECT w.id, w.surface, w.strongs_id, w.morph,
+                   COALESCE(w.gloss_macula, w.gloss) AS display_gloss,
                    COALESCE(NULLIF(s.transliteration,''), '') AS xlit_lex,
                    w.xlit AS xlit_ctx,
                    w.syntax_role, w.greek, w.greek_strong,

@@ -336,10 +336,22 @@ def import_macula_greek(cur):
         print(f"  → Download macula-greek-main.zip from GitHub and put it in data/")
         return
 
+    # Load BibleHub transliterations if available (produced by fetch_biblehub_translit.py).
+    # Keys are normalized Greek surface forms; values are per-form transliterations.
+    bh_translit_path = DATA_DIR / "greek_translit.json"
+    bh_translit: dict = {}
+    if bh_translit_path.exists():
+        import json as _json
+        bh_translit = _json.loads(bh_translit_path.read_text("utf-8"))
+        print(f"  BibleHub translit loaded: {len(bh_translit):,} entries")
+    else:
+        print(f"  No greek_translit.json found — run fetch_biblehub_translit.py for surface xlit")
+
     with zipfile.ZipFile(MACULA_GRK_ZIP) as zf:
         with zf.open(MACULA_GRK_TSV) as f:
             raw = io.TextIOWrapper(f, encoding="utf-8")
-            rows = parse_macula_tsv(raw, language="grc", strongs_col="strong", lang_prefix="G")
+            rows = parse_macula_tsv(raw, language="grc", strongs_col="strong",
+                                    lang_prefix="G", xlit_lookup=bh_translit)
 
     cur.executemany(
         "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class) "
@@ -349,7 +361,7 @@ def import_macula_greek(cur):
     print(f"  {len(rows):,} Greek words imported.")
 
 
-def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix):
+def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: dict = {}):
     """Parse a Macula consolidated TSV (file-like object). Returns word rows.
 
     The Macula Hebrew TSV uses word-group position numbers (PSA 1:2!3 can have
@@ -357,6 +369,9 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix):
     We assign each non-empty token a *sequential* position within its verse so
     nothing is dropped.  Greek has one token per position so this is a no-op
     there, but it's safe for both corpora.
+
+    xlit_lookup: optional {normalized_greek_form: transliteration} from BibleHub.
+    When provided, per-form surface xlit is used instead of the TSV column fallback.
     """
     rows = []
     reader = csv.DictReader(fileobj, delimiter="\t")
@@ -377,15 +392,20 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix):
 
         lemma   = row.get("lemma", "").strip() or None
         morph   = row.get("morph", "").strip() or None
-        gloss   = row.get("english", "").strip() or None
+        gloss   = (row.get("english") or row.get("gloss") or "").strip() or None
 
         raw_strongs = row.get(strongs_col, "").strip()
         strongs_id  = normalize_strongs(raw_strongs, lang_prefix)
 
-        # Contextual transliteration — already in academic form, simplify for display.
-        # This reflects the actual vowel-pointed form in context (e.g. H871a = "ba" not "be").
-        raw_xlit = row.get("transliteration", "").strip()
-        xlit = simplify_xlit(raw_xlit) or None
+        # Transliteration priority:
+        # 1. BibleHub per-form xlit (keyed on normalized form — strip trailing punct)
+        # 2. TSV transliteration/translit column (Hebrew only; Greek TSV has none)
+        normalized = row.get("normalized", surface).strip()
+        norm_key   = normalized.rstrip(" ,.:;·’‘’’’")
+        xlit       = xlit_lookup.get(norm_key) or xlit_lookup.get(surface.rstrip(" ,.:;·’‘’’"))
+        if not xlit:
+            raw_xlit = (row.get("transliteration") or row.get("translit") or "").strip()
+            xlit = simplify_xlit(raw_xlit) or None
 
         # Macula lexical class — overrides morph-derived POS for edge cases like
         # H835a (אַשְׁרֵי) which has morph 'Ncmpc' (noun) but class 'ij' (interjection).

@@ -716,10 +716,19 @@ enum MorphologyDecoder {
 
     static func decode(
         _ code: String,
+        lexicalClass: String? = nil,
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> String? {
         guard !code.isEmpty else { return nil }
-        return code.contains("-") ? decodeGreek(code, t: t) : decodeHebrew(code, t: t)
+        let morphResult = code.contains("-") ? decodeGreek(code, t: t) : decodeHebrew(code, t: t)
+        // lexicalClass is authoritative for POS — same override logic as decodeFull.
+        // Fixes Greek words where morph routing is ambiguous (e.g. G3326 "P" no-dash →
+        // decodeHebrew P=Pronoun, G846 "P-GSM3S" → decodeGreek P=Preposition).
+        if let cls = lexicalClass,
+           let posLabel = lexicalClassLabel(cls, using: t) {
+            return posLabel
+        }
+        return morphResult
     }
 
     // MARK: Hebrew (OSHB, no language prefix)
@@ -849,8 +858,8 @@ struct WordRow: View {
                 // Top line: Hebrew/Greek text · xlit · Strong's badge · morph
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(word.displayText)
-                        .font(.system(size: 26, weight: .light))
-                        .foregroundStyle(isClickable ? .primary : .secondary)
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(.primary)
 
                     if let xlit = word.displayXlit, !xlit.isEmpty {
                         Text(xlit)
@@ -868,7 +877,7 @@ struct WordRow: View {
                     }
 
                     if let morph = word.morphology,
-                       let label = MorphologyDecoder.decode(morph, using: t) {
+                       let label = MorphologyDecoder.decode(morph, lexicalClass: word.lexicalClass, using: t) {
                         Text(label)
                             .font(.footnote)
                             .foregroundStyle(.tertiary)

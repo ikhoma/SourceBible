@@ -174,6 +174,12 @@ H871a (прийменник בְּ) і H871 (місто Атарот) — абс
 **⛔ Після зміни DB завжди робити Clean Build Folder (⇧⌘K).**
 Xcode кешує старий `sourcebible.db`. Без Clean — код бачить стару схему.
 
+**⛔ Python скрипти писати для Python 3.9.**
+Mac має Python 3.9 за замовчуванням. Не використовувати синтаксис 3.10+:
+- `str | None` → `Optional[str]` (з `from typing import Optional`)
+- `list[str]` як тип параметра → `List[str]` або просто `list`
+- `dict[str, X]` як тип параметра → `Dict[str, X]` або просто `dict`
+
 ## Повний цикл збірки DB
 
 ```bash
