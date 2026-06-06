@@ -232,7 +232,21 @@ struct VerseBottomSheetView: View {
                       isActive: bookmarksVM.isBookmarked(verseId: verse.id), color: .blue) {
                 bookmarksVM.toggleBookmark(verseId: verse.id)
             }
-            actionBtn(icon: "square.and.arrow.up", label: "action.share", isActive: false, color: .blue) {}
+            ShareLink(item: VerseShareFormatter.format(
+                verse: verse,
+                bookName: vm.currentBook.name,
+                translationId: vm.currentTranslation.id
+            )) {
+                VStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up")
+                        .symbolVariant(.fill)
+                        .font(.system(size: 20))
+                        .foregroundStyle(.secondary)
+                    Text("action.share").font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity).padding(.vertical, 6)
+            }
         }
         .padding(.horizontal, 8).padding(.vertical, 10)
     }
