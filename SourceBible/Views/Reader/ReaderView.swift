@@ -16,52 +16,51 @@ struct ReaderView: View {
     // body when one of its observed dependencies changes. Without this, the toolbar
     // book-name button keeps the previous locale's abbreviation until the user taps it.
     @Environment(\.locale) private var locale
+    @AppStorage("hideBookCovers") private var hideBookCovers = false
 
-    // True when the Genesis chapter 1 full-bleed header image is visible.
-    private var showsGenesisHeader: Bool {
-        vm.currentBook.id == "GEN" && vm.currentChapter == 1
+    // Tracks which detent the verse sheet is resting at.
+    // Updated only when the sheet *settles* at a detent (not during drag),
+    // so the background layout doesn't re-evaluate on every animation frame.
+    @State private var selectedDetent: PresentationDetent = .medium
+
+    // True when the book cover should be shown (chapter 1 of any book, not hidden).
+    private var showsBookCover: Bool {
+        !hideBookCovers && vm.currentChapter == 1
     }
 
     // Inset to add at the bottom of the scroll view when the verse sheet is open.
     //
     // Goal: anchor:.bottom lands verse.bottom exactly 6 pt above the sheet top (T).
     //
-    // SwiftUI's safeAreaInset stacks ON TOP of the scroll view's existing home-indicator
-    // contentInset (bottomInset ≈ 34 pt). The scrollTo anchor sees the combined total:
+    // Uses the selected detent (medium/large) rather than the live sheet height so
+    // that the background layout only recalculates when the sheet *settles*, not on
+    // every drag frame. This eliminates the per-frame layout loop that caused lag.
     //
-    //   verse.bottom = (H − bottomInset) − (bottomInset + insetH)
+    // At .large detent the sheet covers the whole screen; no extra inset is needed.
     //
-    // Setting that equal to T − 6 and solving:
-    //
-    //   insetH = sheetH − 2·bottomInset + 6
-    //
-    // The fallback (used on the very first tap before onGeometryChange fires) estimates
-    // the medium-detent height as (screenH − safeTop) / 2, accurate to a few pt.
-    //
-    // @MainActor is required because UIApplication is strictly @MainActor under Swift 6
-    // strict concurrency. The property is only ever called from body (also @MainActor).
+    // @MainActor is required because UIApplication is strictly @MainActor under Swift 6.
     @MainActor private var verseSheetReservedHeight: CGFloat {
+        guard selectedDetent != .large else { return 0 }
         let scene       = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }.first
         let bottomInset = scene?.windows.first?.safeAreaInsets.bottom ?? 34
-        // Use the measured sheet height once available; fall back to the medium-detent
-        // formula (screenH - safeTop) / 2 for the very first tap before the sheet appears.
-        // This is accurate to within a few pt on all current Face ID devices.
-        let sheetH: CGFloat
-        if vm.verseSheetHeight > 0 {
-            sheetH = vm.verseSheetHeight
-        } else {
-            let screenH = scene?.screen.bounds.height ?? 852
-            let safeTop  = scene?.windows.first?.safeAreaInsets.top ?? 59
-            sheetH = (screenH - safeTop) / 2.0
-        }
+        let screenH     = scene?.screen.bounds.height ?? 874
+        // iOS allocates exactly screenH * 0.5 to the medium-detent sheet content view,
+        // so sheetH = screenH / 2 (not minus safeTop). The old fallback used
+        // (screenH - safeTop) / 2 which was ~30 pt too small on Face ID devices.
+        let sheetH      = screenH / 2.0
         // safeAreaInset stacks on top of the scroll view's existing home-indicator
-        // contentInset (= bottomInset). The anchor calculation sees both, so we must
-        // subtract bottomInset twice to avoid an accidental +34 pt shift.
-        // Net formula:  total_inset = bottomInset + insetH  →  we solve for insetH:
-        //   (H − bottomInset) − (bottomInset + insetH) = T − 6
+        // contentInset (= bottomInset). Subtract it twice to avoid a +34 pt shift.
         //   insetH = sheetH − 2·bottomInset + 6
         return max(0, sheetH - 2 * bottomInset + 6)
+    }
+
+    // Height of the medium detent — used for the gesture-blocking overlay.
+    @MainActor private var mediumDetentHeight: CGFloat {
+        let scene   = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }.first
+        let screenH = scene?.screen.bounds.height ?? 874
+        return screenH / 2.0
     }
 
     var body: some View {
@@ -83,34 +82,26 @@ struct ReaderView: View {
                             LazyVStack(alignment: .leading, spacing: 0) {
 
                                 if vm.currentChapter == 1 {
-                                    if showsGenesisHeader {
-                                        // Full-bleed header that extends behind the nav bar and
-                                        // status bar. Color.clear holds the layout height; the
-                                        // background image uses ignoresSafeArea to reach all the
-                                        // way to the top of the screen.
-                                        Color.clear
-                                            .frame(height: 260)
-                                            .frame(maxWidth: .infinity)
-                                            .background(alignment: .top) {
-                                                Image("genesis_header")
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(maxWidth: .infinity)
-                                                    .blendMode(.multiply)
-                                                    .ignoresSafeArea(edges: .top)
-                                            }
-                                            // Negate the LazyVStack's own padding so the image
-                                            // fills flush to the scroll view's top edge.
-                                            .padding(.top, -12)
-                                            .padding(.horizontal, -20)
-                                            .padding(.bottom, 20)
+                                    if showsBookCover {
+                                        // Full-bleed book cover extending behind the nav bar.
+                                        // Negative padding cancels LazyVStack's own insets so
+                                        // the cover reaches flush to the scroll view's top edge.
+                                        BookCoverView(
+                                            bookId: vm.currentBook.id,
+                                            bookName: BibleBookNames.full(for: vm.currentBook.id),
+                                            chapterCount: vm.currentBook.chapterCount
+                                        )
+                                        .padding(.top, -12)
+                                        .padding(.horizontal, -16)
+                                        .padding(.bottom, 20)
+                                    } else {
+                                        // Cover hidden: regular Large Title (original layout)
+                                        Text(BibleBookNames.full(for: vm.currentBook.id))
+                                            .font(.largeTitle)
+                                            .bold()
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                            .padding(.bottom, 8)
                                     }
-
-                                    Text(BibleBookNames.full(for: vm.currentBook.id))
-                                        .font(.largeTitle)
-                                        .bold()
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .padding(.bottom, 8)
                                 }
 
                                 Text(vm.chapterHeading)
@@ -133,7 +124,7 @@ struct ReaderView: View {
                                     .id(verse.id)
                                 }
                             }
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal)
                             .padding(.top, 12)
                             // When the sheet is open keep a small margin above the sheet;
                             // when closed use the original generous bottom padding.
@@ -169,27 +160,21 @@ struct ReaderView: View {
                                 withAnimation(animation) { proxy.scrollTo(id, anchor: anchor) }
                             }
                         }
-                        // Fine-correction scroll: fires when the sheet height is first
-                        // measured (0 → actual). Covers the case where the initial scroll
-                        // used the fallback insetH before the sheet settled.
-                        // Fine-correction scroll: fires when the sheet height is first
-                        // measured (0 → actual). Covers the case where the initial scroll
-                        // used the fallback insetH before the sheet settled.
-                        .onChange(of: vm.verseSheetHeight) { oldH, newH in
-                            guard oldH <= 0, newH > 0 else { return }
+                        // Re-anchor scroll when the detent changes (medium ↔ large).
+                        // Fires only when the user releases the drag, not on every frame.
+                        .onChange(of: selectedDetent) { _, newDetent in
                             guard let id = vm.selectedVerse?.id,
                                   vm.activeSheet == .verse else { return }
-                            // Fine-correction: short easeOut, not spring — this is an
-                            // invisible nudge, not a user gesture. No snap needed.
-                            withAnimation(.easeOut(duration: 0.15)) {
-                                proxy.scrollTo(id, anchor: .bottom)
+                            let anchor: UnitPoint = newDetent == .large ? .center : .bottom
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                proxy.scrollTo(id, anchor: anchor)
                             }
                         }
                         // Reset scroll position to top on every chapter change.
                         .id(vm.currentChapter)
                         // Only extend behind the nav bar when the genesis header image
                         // is present. Other chapters must render below the nav bar as normal.
-                        .ignoresSafeAreaIf(showsGenesisHeader, edges: .top)
+                        .ignoresSafeAreaIf(showsBookCover, edges: .top)
                         .gesture(
                             DragGesture(minimumDistance: 40, coordinateSpace: .local)
                                 .onEnded { value in
@@ -221,9 +206,7 @@ struct ReaderView: View {
                     // The visible area above the sheet top is NOT covered, so intentional
                     // background scrolling while the sheet is open still works.
                     if vm.activeSheet == .verse {
-                        let coverHeight = vm.verseSheetHeight > 0
-                            ? vm.verseSheetHeight + 40
-                            : 450
+                        let coverHeight = mediumDetentHeight + 40
                         Color.clear
                             .contentShape(Rectangle())
                             .frame(height: coverHeight)
@@ -284,7 +267,7 @@ struct ReaderView: View {
                             .environmentObject(notesVM)
                             .environmentObject(bookmarksVM)
                             .environmentObject(router)
-                            .presentationDetents([.medium, .large])
+                            .presentationDetents([.medium, .large], selection: $selectedDetent)
                             .presentationDragIndicator(.visible)
                             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                             .presentationSizing(.page)
@@ -294,7 +277,7 @@ struct ReaderView: View {
                             .environmentObject(notesVM)
                             .environmentObject(bookmarksVM)
                             .environmentObject(router)
-                            .presentationDetents([.medium, .large])
+                            .presentationDetents([.medium, .large], selection: $selectedDetent)
                             .presentationDragIndicator(.visible)
                             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                     }

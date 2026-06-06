@@ -534,6 +534,22 @@
         }
       }
     },
+    "menu.hide_book_covers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Book Covers"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сховати обкладинки книг"
+          }
+        }
+      }
+    },
     "menu.language" : {
       "localizations" : {
         "en" : {
@@ -2465,6 +2481,9 @@
         }
       }
     },
+    "THE BOOK OF" : {
+
+    },
     "theologian.calvin.era" : {
       "localizations" : {
         "en" : {
@@ -2657,6 +2676,22 @@
         }
       }
     },
+    "verse.commentaries.none_for_book" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No commentaries available for this book."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для цієї книги коментарі відсутні."
+          }
+        }
+      }
+    },
     "verse.commentary_notice" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2687,22 +2722,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
-          }
-        }
-      }
-    },
-    "verse.commentaries.none_for_book" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No commentaries available for this book."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Для цієї книги коментарі відсутні."
           }
         }
       }

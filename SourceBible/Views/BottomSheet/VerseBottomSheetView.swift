@@ -66,15 +66,6 @@ struct VerseBottomSheetView: View {
             .background(Color(UIColor.systemBackground))
         }
         .background(Color(UIColor.systemBackground))
-        // Capture the sheet's actual presented height so ReaderView can reserve exactly
-        // the right amount of bottom inset for the "verse above sheet" scroll behaviour.
-        // .onGeometryChange fires on every layout pass (including detent changes),
-        // unlike GeometryReader + onAppear which only fires once on first appearance.
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.height
-        } action: { height in
-            vm.verseSheetHeight = height
-        }
         // Single editor sheet slot — avoids "only one sheet" warning
         .sheet(item: $activeEditor) { editor in
             switch editor {

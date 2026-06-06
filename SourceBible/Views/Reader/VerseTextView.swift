@@ -327,7 +327,7 @@ struct VerseTextView: UIViewRepresentable {
                         Text(verse.text).font(.body).lineSpacing(6)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal)
                 Divider().padding(.leading, 34).opacity(0.4)
             }
         }

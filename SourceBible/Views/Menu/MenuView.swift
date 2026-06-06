@@ -6,6 +6,7 @@ import SwiftUI
 struct MenuView: View {
     @State private var fontSize: Double = 17
     @AppStorage("isDarkMode") private var isDark = false
+    @AppStorage("hideBookCovers") private var hideBookCovers = false
     @Environment(\.locale) private var locale
     @AppStorage("appLanguage") private var appLanguage: String = "en"
 
@@ -37,6 +38,8 @@ struct MenuView: View {
                     Slider(value: $fontSize, in: 13...24, step: 1)
                     Toggle("menu.dark_theme", isOn: $isDark)
                         .tint(.green)
+                    Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
+                        .tint(.blue)
                 }
                 Section("menu.section.translation") {
                     NavigationLink("menu.default_translation") {

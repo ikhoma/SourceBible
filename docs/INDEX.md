@@ -22,7 +22,8 @@ Load the full document only when the task is relevant to it.
 | `ADR-013-word-usage-book-groups.md` | Word Usage Tab — Per-Book Concordance Data Model | Accepted | Replace flat concordance list with BookUsageGroup per-book breakdown; N per-book queries on MainActor; chapter*1000+verse encoding; forward-compat with v1.5 rhetorical_weight |
 | `ADR-014-verse-text-view-cache-invalidation.md` | VerseTextView Cache Invalidation via `.id()` | Accepted | Use SwiftUI `.id()` keyed on `verseId+translationId+highlightColor` to force UITextView recreation on content changes; preserves coordinator cache for selection fast path |
 | `ADR-015-trailing-chars.md` | Trailing Characters from Macula `after` Attribute | Proposed | Store `after_char TEXT` in word table from XML; `BibleWord.displayText` for rendering; migration script for existing DBs; fixes maqaf ־ missing from Original tab |
-| `ADR-016-original-pill-nasb-bridge.md` | Original Pill — NASB-Gated Clickability, Unified Word Page, Verse Highlight | Proposed | Morph-based particle detection (R/C/T); `baseStrongsNumber` helper fixes sub-entry ID mismatch; unified tapWord flows; chevron nav over meaningful words only |
+| `ADR-016-original-pill-nasb-bridge.md` | Original Pill — NASB-Gated Clickability, Unified Word Page, Verse Highlight | Proposed |
+| `ADR-017-book-covers.md` | Book Covers — Architecture | Accepted | BookCoverView + BookCoverData; hideBookCovers toggle; static asset strategy; all 66 books | Morph-based particle detection (R/C/T); `baseStrongsNumber` helper fixes sub-entry ID mismatch; unified tapWord flows; chevron nav over meaningful words only |
 
 ---
 
@@ -30,6 +31,7 @@ Load the full document only when the task is relevant to it.
 
 | File | Title | Status | Summary |
 |---|---|---|---|
+| `spec-book-covers.md` | Book Covers — System Design | Draft | BookCoverView + BookCoverData; all 66 books; toggle in Settings; Doré image asset strategy |
 | `spec-highlights-bookmarks-notes.md` | Highlights, Bookmarks, Notes — Update | Draft | P0/P1/P2 requirements for unified annotation system |
 | `spec-localization-i18n.md` | UI Localization & i18n | Draft | EN+UK MVP; MorphologyDecoder abstraction; Settings language picker; BDB translation deferred to P2 |
 | `plan-localization-i18n.md` | Localization — Implementation Plan | Draft | 8-step implementation order; LocalizedBundle swizzle; MorphKey extraction; full string audit |

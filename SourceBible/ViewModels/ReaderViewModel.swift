@@ -36,12 +36,6 @@ class ReaderViewModel: ObservableObject {
     /// clickability in the Original pill (Option A: NASB-gated).
     @Published var nasbVerseStrongs: Set<String> = []
 
-    /// Actual height of the verse sheet at its current detent, measured from inside the sheet.
-    /// Used by ReaderView to calculate how much bottom inset to reserve so the selected verse
-    /// scrolls to sit exactly 6 pt above the sheet top.
-    /// Starts at 0; ReaderView supplies a UIWindowScene-based fallback until the first measurement.
-    @Published var verseSheetHeight: CGFloat = 0
-
     /// Set by navigateToPreviousVerse / navigateToNextVerse before changing selectedVerse.
     /// ReaderView reads this to choose the scroll animation:
     ///   .tap      → .snappy spring (direct manipulation feel)
