@@ -23,7 +23,8 @@ Load the full document only when the task is relevant to it.
 | `ADR-014-verse-text-view-cache-invalidation.md` | VerseTextView Cache Invalidation via `.id()` | Accepted | Use SwiftUI `.id()` keyed on `verseId+translationId+highlightColor` to force UITextView recreation on content changes; preserves coordinator cache for selection fast path |
 | `ADR-015-trailing-chars.md` | Trailing Characters from Macula `after` Attribute | Proposed | Store `after_char TEXT` in word table from XML; `BibleWord.displayText` for rendering; migration script for existing DBs; fixes maqaf ־ missing from Original tab |
 | `ADR-016-original-pill-nasb-bridge.md` | Original Pill — NASB-Gated Clickability, Unified Word Page, Verse Highlight | Proposed |
-| `ADR-017-book-covers.md` | Book Covers — Architecture | Accepted | BookCoverView + BookCoverData; hideBookCovers toggle; static asset strategy; all 66 books | Morph-based particle detection (R/C/T); `baseStrongsNumber` helper fixes sub-entry ID mismatch; unified tapWord flows; chevron nav over meaningful words only |
+| `ADR-017-book-covers.md` | Book Covers — Architecture | Accepted | `BookCoverView` + `BookCoverData`; Doré engraving on all 66 books; blue gradient bg; `hideBookCovers` Settings toggle; minimal changes to ReaderView |
+| `ADR-018-translation-native-book-names.md` | Translation-Native Book Names and Order | Accepted | `book_name` table (book_id, translation_id, long_name, short_name, sort_order); extracted from MyBible `books` table in build_db.py; BibleBookNames becomes UI-only fallback; enables per-translation ordering | BookCoverView + BookCoverData; hideBookCovers toggle; static asset strategy; all 66 books | Morph-based particle detection (R/C/T); `baseStrongsNumber` helper fixes sub-entry ID mismatch; unified tapWord flows; chevron nav over meaningful words only |
 
 ---
 

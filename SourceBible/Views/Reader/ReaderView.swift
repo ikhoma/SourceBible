@@ -11,10 +11,9 @@ struct ReaderView: View {
     @EnvironmentObject var router:      AppNavigationRouter
 
     // Drives re-evaluation of Text(vm.chapterTitle) when locale changes.
-    // chapterTitle calls BibleBookNames.short(for:) which reads UserDefaults at call
-    // time — correct value is available immediately, but SwiftUI only re-evaluates
-    // body when one of its observed dependencies changes. Without this, the toolbar
-    // book-name button keeps the previous locale's abbreviation until the user taps it.
+    // chapterTitle now uses translationBookNames (published), so it re-evaluates
+    // automatically on translation switch. The locale dependency is still needed
+    // for BibleBookNames fallback paths (cross-refs, notes, etc.).
     @Environment(\.locale) private var locale
     @AppStorage("hideBookCovers") private var hideBookCovers = false
 
@@ -88,7 +87,8 @@ struct ReaderView: View {
                                         // the cover reaches flush to the scroll view's top edge.
                                         BookCoverView(
                                             bookId: vm.currentBook.id,
-                                            bookName: BibleBookNames.full(for: vm.currentBook.id),
+                                            bookName: vm.translationBookNames[vm.currentBook.id]?.long
+                                                ?? BibleBookNames.full(for: vm.currentBook.id),
                                             chapterCount: vm.currentBook.chapterCount
                                         )
                                         .padding(.top, -12)
@@ -96,7 +96,8 @@ struct ReaderView: View {
                                         .padding(.bottom, 20)
                                     } else {
                                         // Cover hidden: regular Large Title (original layout)
-                                        Text(BibleBookNames.full(for: vm.currentBook.id))
+                                        Text(vm.translationBookNames[vm.currentBook.id]?.long
+                                             ?? BibleBookNames.full(for: vm.currentBook.id))
                                             .font(.largeTitle)
                                             .bold()
                                             .frame(maxWidth: .infinity, alignment: .center)
@@ -382,7 +383,7 @@ struct TranslationPickerView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(t.name).font(.body)
-                        Text(t.language == "uk" ? "lang.ukrainian" : "lang.english").font(.caption).foregroundStyle(.secondary)
+                        Text(languageLabel(for: t.language)).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     if vm.currentTranslation.id == t.id {
@@ -399,6 +400,14 @@ struct TranslationPickerView: View {
                     Button("action.close") { dismiss() }
                 }
             }
+        }
+    }
+
+    private func languageLabel(for code: String) -> LocalizedStringKey {
+        switch code {
+        case "uk": return "lang.ukrainian"
+        case "ru": return "lang.russian"
+        default:   return "lang.english"
         }
     }
 }

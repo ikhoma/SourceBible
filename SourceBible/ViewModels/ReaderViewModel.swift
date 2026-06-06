@@ -82,6 +82,9 @@ class ReaderViewModel: ObservableObject {
     private var db: DatabaseService { DatabaseService.shared }
     @Published var allBooks: [BibleBook] = []
     @Published var availableTranslations: [Translation] = []
+    /// Translation-native book names: bookId → (long, short, sortOrder).
+    /// Loaded on init and whenever the translation changes.
+    @Published var translationBookNames: [String: (long: String, short: String, order: Int)] = [:]
 
     // MARK: - Init
 
@@ -104,8 +107,9 @@ class ReaderViewModel: ObservableObject {
         isLoading = true
         Task { [weak self] in
             guard let self else { return }
-            self.allBooks             = self.db.loadBooks()
+            self.allBooks              = self.db.loadBooks()
             self.availableTranslations = self.db.loadTranslations()
+            self.translationBookNames  = self.db.loadBookNames(for: self.currentTranslation.id)
             self.currentBook = self.allBooks.first(where: { $0.id == "PSA" })
                             ?? self.allBooks.first
                             ?? self.currentBook
@@ -115,18 +119,28 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Computed
 
-    // Always resolved via BibleBookNames so language switches take effect immediately
-    // without needing to reload allBooks from the DB.
-    var chapterTitle: String { "\(BibleBookNames.short(for: currentBook.id)) \(currentChapter)" }
+    /// Short book abbreviation for the toolbar pill — uses translation-native short name when available.
+    var currentBookShortName: String {
+        translationBookNames[currentBook.id]?.short ?? BibleBookNames.short(for: currentBook.id)
+    }
+
+    var chapterTitle: String { "\(currentBookShortName) \(currentChapter)" }
 
     /// Full chapter heading shown at the top of the reader — "Psalm 23" for Psalms, "Chapter 5" for everything else.
-    /// Reads appLanguage from UserDefaults so language switches take effect immediately.
+    /// Derives the heading word from the current translation's language so it's always native to the translation.
     var chapterHeading: String {
-        let isUkrainian = UserDefaults.standard.string(forKey: "appLanguage") == "uk"
+        let lang = currentTranslation.language
         if currentBook.id == "PSA" {
-            return isUkrainian ? "Псалом \(currentChapter)" : "Psalm \(currentChapter)"
+            switch lang {
+            case "ru", "uk": return "Псалом \(currentChapter)"
+            default:         return "Psalm \(currentChapter)"
+            }
         } else {
-            return isUkrainian ? "Розділ \(currentChapter)" : "Chapter \(currentChapter)"
+            switch lang {
+            case "ru": return "Глава \(currentChapter)"
+            case "uk": return "Розділ \(currentChapter)"
+            default:   return "Chapter \(currentChapter)"
+            }
         }
     }
 
@@ -283,6 +297,7 @@ class ReaderViewModel: ObservableObject {
 
     func selectTranslation(_ translation: Translation) {
         currentTranslation = translation
+        translationBookNames = db.loadBookNames(for: translation.id)
         isTranslationPickerPresented = false
         loadChapter()
         // Re-load concordance so the word usage tab reflects the new translation immediately.

@@ -37,10 +37,10 @@ struct BookChapterPickerView: View {
 
     private var bookList: some View {
         List {
-            Section(Testament.old.localizedName) {
+            Section(header: Text("testament.old")) {
                 ForEach(filtered(.old)) { book in bookRow(book) }
             }
-            Section(Testament.new.localizedName) {
+            Section(header: Text("testament.new")) {
                 ForEach(filtered(.new)) { book in bookRow(book) }
             }
         }
@@ -49,9 +49,7 @@ struct BookChapterPickerView: View {
     }
 
     private func bookRow(_ book: BibleBook) -> some View {
-        // Use BibleBookNames.full() at display time (reads UserDefaults) rather than
-        // the cached book.name, so names update immediately after a language switch.
-        let displayName = BibleBookNames.full(for: book.id)
+        let displayName = translationName(for: book.id)
         return HStack {
             Text(displayName)
             Spacer()
@@ -66,12 +64,22 @@ struct BookChapterPickerView: View {
     }
 
     private func filtered(_ testament: Testament) -> [BibleBook] {
-        let books = vm.allBooks.filter { $0.testament == testament }
+        let books = vm.allBooks
+            .filter { $0.testament == testament }
+            .sorted {
+                let a = vm.translationBookNames[$0.id]?.order ?? Int.max
+                let b = vm.translationBookNames[$1.id]?.order ?? Int.max
+                return a < b
+            }
         guard !searchText.isEmpty else { return books }
-        // Search against the live localized name so Ukrainian search works.
         return books.filter {
-            BibleBookNames.full(for: $0.id).localizedCaseInsensitiveContains(searchText)
+            translationName(for: $0.id).localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    /// Returns the translation-native book name, falling back to the UI locale name.
+    private func translationName(for bookId: String) -> String {
+        vm.translationBookNames[bookId]?.long ?? BibleBookNames.full(for: bookId)
     }
 
     private func chapterGrid(for book: BibleBook) -> some View {
@@ -94,7 +102,7 @@ struct BookChapterPickerView: View {
             }
             .padding(16)
         }
-        .navigationTitle(BibleBookNames.full(for: book.id))
+        .navigationTitle(translationName(for: book.id))
     }
 }
 

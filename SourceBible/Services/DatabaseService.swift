@@ -96,6 +96,27 @@ final class DatabaseService: @unchecked Sendable {
         return translations
     }
 
+    // MARK: - Book names (translation-native)
+
+    /// Loads translation-native book names and display order.
+    /// Returns a map of bookId → (longName, shortName, sortOrder).
+    func loadBookNames(for translationId: String) -> [String: (long: String, short: String, order: Int)] {
+        var result: [String: (long: String, short: String, order: Int)] = [:]
+        let sql = """
+            SELECT book_id, long_name, short_name, sort_order
+            FROM book_name WHERE translation_id = ?
+            ORDER BY sort_order
+            """
+        query(sql, bindings: [translationId]) { stmt in
+            let id    = string(stmt, 0)
+            let long  = string(stmt, 1)
+            let short = string(stmt, 2)
+            let order = Int(sqlite3_column_int(stmt, 3))
+            result[id] = (long, short, order)
+        }
+        return result
+    }
+
     // MARK: - Verses
 
     /// Load all verses for a chapter in a given translation.

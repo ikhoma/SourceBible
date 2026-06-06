@@ -26,6 +26,7 @@ enum BibleBookNames {
         isUkrainian ? (ukFull[bookId] ?? bookId) : (enFull[bookId] ?? bookId)
     }
 
+
     /// Testament for a given OSIS book ID (language-independent).
     static func testament(for bookId: String) -> Testament {
         testamentMap[bookId] ?? .old
@@ -157,4 +158,5 @@ enum BibleBookNames {
         "2PE":"2-а Петра",          "1JN":"1-а Івана",         "2JN":"2-а Івана",
         "3JN":"3-я Івана",          "JUD":"Юди",               "REV":"Об'явлення"
     ]
+
 }

@@ -219,6 +219,18 @@ CREATE TABLE IF NOT EXISTS footnote (
     FOREIGN KEY (book_id)     REFERENCES book(id)
 );
 
+CREATE TABLE IF NOT EXISTS book_name (
+    book_id        TEXT NOT NULL,
+    translation_id TEXT NOT NULL,
+    long_name      TEXT NOT NULL,
+    short_name     TEXT NOT NULL,
+    sort_order     INTEGER NOT NULL,
+    PRIMARY KEY (book_id, translation_id),
+    FOREIGN KEY (book_id)        REFERENCES book(id),
+    FOREIGN KEY (translation_id) REFERENCES translation(id)
+);
+CREATE INDEX IF NOT EXISTS idx_book_name_tid ON book_name(translation_id);
+
 CREATE INDEX IF NOT EXISTS idx_verse_loc    ON verse(translation, book_id, chapter, verse);
 CREATE INDEX IF NOT EXISTS idx_word_verse   ON word(book_id, chapter, verse);
 CREATE INDEX IF NOT EXISTS idx_word_strongs ON word(strongs_id);
@@ -1201,6 +1213,32 @@ def _clean_verse(text):
     return re.sub(r'\s+', ' ', _STRIP_RE.sub('', text)).strip()
 
 
+def _extract_book_names(src, book_mapping):
+    """
+    Read long_name / short_name from a MyBible `books` table.
+    Returns list of (osis_id, long_name, short_name, sort_order).
+    Falls back to empty list if the table doesn't exist (some stripped modules omit it).
+    """
+    try:
+        # No ORDER BY: sources that store rows in their canonical order (e.g. RST
+        # stores Synodal NT order: Catholic Epistles before Paul's Epistles) will
+        # produce the correct sort_order automatically.  Sources whose SQLite engine
+        # returns rows by primary key (book_number) fall back to Protestant canonical
+        # order, which is the correct default for KJV/ASV/NASB.
+        rows = src.execute(
+            "SELECT book_number, long_name, short_name FROM books"
+        ).fetchall()
+    except Exception:
+        return []
+
+    result = []
+    for sort_order, (book_num, long_name, short_name) in enumerate(rows):
+        osis = book_mapping.get(int(book_num))
+        if osis and long_name:
+            result.append((osis, long_name.strip(), (short_name or long_name).strip(), sort_order))
+    return result
+
+
 def import_translations(cur):
     print("\n[5/6] Importing translations...")
     for (tid, name, lang, db_path) in TRANSLATIONS:
@@ -1231,6 +1269,25 @@ def import_translations(cur):
             continue
 
         book_mapping = _build_book_mapping(src, tname, bcol)
+
+        # Extract and store translation-native book names
+        book_name_rows = _extract_book_names(src, book_mapping)
+        if book_name_rows:
+            cur.executemany(
+                "INSERT OR REPLACE INTO book_name "
+                "(book_id, translation_id, long_name, short_name, sort_order) VALUES (?,?,?,?,?)",
+                [(osis, tid, long, short, order) for (osis, long, short, order) in book_name_rows]
+            )
+            print(f"    {len(book_name_rows)} book names extracted.")
+        else:
+            # Fallback: use name_en from BOOKS constant with canonical sort_order
+            fallback = [(b[1], tid, b[3], b[3], b[0] - 1) for b in BOOKS]
+            cur.executemany(
+                "INSERT OR IGNORE INTO book_name "
+                "(book_id, translation_id, long_name, short_name, sort_order) VALUES (?,?,?,?,?)",
+                fallback
+            )
+            print(f"    No `books` table found — using name_en fallback.")
 
         # Log mapping for diagnostics — useful when adding new translations
         mapping_log = CACHE_DIR / f"book_mapping_{tid}.json"

@@ -234,7 +234,8 @@ struct VerseBottomSheetView: View {
             }
             ShareLink(item: VerseShareFormatter.format(
                 verse: verse,
-                bookName: vm.currentBook.name,
+                bookName: vm.translationBookNames[verse.bookId]?.long
+                    ?? BibleBookNames.full(for: verse.bookId),
                 translationId: vm.currentTranslation.id
             )) {
                 VStack(spacing: 4) {
