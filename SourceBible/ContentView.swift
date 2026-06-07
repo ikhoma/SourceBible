@@ -63,6 +63,7 @@ struct ContentView: View {
                 }
                 Tab("tab.menu", systemImage: "ellipsis.circle.fill", value: AppTab.menu) {
                     MenuView()
+                        .environmentObject(readerVM)
                         .tint(.primary)
                 }
                 Tab("tab.search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
@@ -93,6 +94,7 @@ struct ContentView: View {
                     .tag(AppTab.entries)
 
                 MenuView()
+                    .environmentObject(readerVM)
                     .tint(.primary)
                     .tabItem { Label("tab.menu", systemImage: "ellipsis.circle.fill") }
                     .tag(AppTab.menu)

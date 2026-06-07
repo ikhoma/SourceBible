@@ -109,6 +109,11 @@ class ReaderViewModel: ObservableObject {
             guard let self else { return }
             self.allBooks              = self.db.loadBooks()
             self.availableTranslations = self.db.loadTranslations()
+            // Restore persisted default translation (set from Menu settings)
+            if let savedId = UserDefaults.standard.string(forKey: "defaultTranslationId"),
+               let match = self.availableTranslations.first(where: { $0.id == savedId }) {
+                self.currentTranslation = match
+            }
             self.translationBookNames  = self.db.loadBookNames(for: self.currentTranslation.id)
             self.currentBook = self.allBooks.first(where: { $0.id == "PSA" })
                             ?? self.allBooks.first

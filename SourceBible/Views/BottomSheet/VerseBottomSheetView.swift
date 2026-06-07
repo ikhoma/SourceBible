@@ -189,7 +189,8 @@ struct VerseBottomSheetView: View {
         Button(action: action) {
             Text(label)
                 .font(.footnote.weight(.medium))
-                .padding(.horizontal, 12).padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .frame(height: 28)
                 .foregroundStyle(isActive ? Color(UIColor.systemBackground) : Color(UIColor.label))
                 .background {
                     if isActive {

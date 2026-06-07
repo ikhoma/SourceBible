@@ -4,9 +4,11 @@
 import SwiftUI
 
 struct MenuView: View {
-    @State private var fontSize: Double = 17
+    @EnvironmentObject var readerVM: ReaderViewModel
+    @State private var brightness: Double = Double(UIScreen.main.brightness)
     @AppStorage("isDarkMode") private var isDark = false
-    @AppStorage("hideBookCovers") private var hideBookCovers = false
+    @AppStorage("hideBookCovers") private var hideBookCovers = true
+    @AppStorage("defaultTranslationId") private var defaultTranslationId: String = "KJV"
     @Environment(\.locale) private var locale
     @AppStorage("appLanguage") private var appLanguage: String = "en"
 
@@ -29,21 +31,30 @@ struct MenuView: View {
         // full NavigationStack reconstruction is safe.
         NavigationStack {
             Form {
-                Section("menu.section.reading") {
+                Section("menu.section.appearance") {
                     HStack {
-                        Text("menu.font_size")
+                        Text("menu.brightness")
                         Spacer()
-                        Text("\(Int(fontSize))").foregroundStyle(.secondary)
+                        Text("\(Int(brightness * 100))%").foregroundStyle(.secondary)
                     }
-                    Slider(value: $fontSize, in: 13...24, step: 1)
+                    Slider(value: $brightness, in: 0...1)
+                        .onChange(of: brightness) { _, newValue in
+                            UIScreen.main.brightness = newValue
+                        }
                     Toggle("menu.dark_theme", isOn: $isDark)
                         .tint(.green)
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
                         .tint(.blue)
                 }
                 Section("menu.section.translation") {
-                    NavigationLink("menu.default_translation") {
-                        Text("menu.choose_translation")
+                    NavigationLink {
+                        DefaultTranslationPickerView(
+                            translations: readerVM.availableTranslations,
+                            selectedId: $defaultTranslationId
+                        )
+                    } label: {
+                        LabeledContent("menu.default_translation",
+                                       value: defaultTranslationId)
                     }
                 }
                 Section("menu.section.app") {
@@ -63,4 +74,47 @@ struct MenuView: View {
     }
 }
 
-#Preview { MenuView() }
+// MARK: - DefaultTranslationPickerView
+
+struct DefaultTranslationPickerView: View {
+    let translations: [Translation]
+    @Binding var selectedId: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List(translations) { t in
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(t.name).font(.body)
+                    Text(languageLabel(for: t.language))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if t.id == selectedId {
+                    Image(systemName: "checkmark").foregroundStyle(.blue)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedId = t.id
+                dismiss()
+            }
+        }
+        .navigationTitle("menu.default_translation")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func languageLabel(for code: String) -> LocalizedStringKey {
+        switch code {
+        case "uk": return "lang.ukrainian"
+        case "ru": return "lang.russian"
+        default:   return "lang.english"
+        }
+    }
+}
+
+#Preview {
+    @MainActor in
+    MenuView().environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
+}

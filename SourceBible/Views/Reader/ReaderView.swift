@@ -15,7 +15,7 @@ struct ReaderView: View {
     // automatically on translation switch. The locale dependency is still needed
     // for BibleBookNames fallback paths (cross-refs, notes, etc.).
     @Environment(\.locale) private var locale
-    @AppStorage("hideBookCovers") private var hideBookCovers = false
+    @AppStorage("hideBookCovers") private var hideBookCovers = true
 
     // Tracks which detent the verse sheet is resting at.
     // Updated only when the sheet *settles* at a detent (not during drag),
@@ -106,7 +106,7 @@ struct ReaderView: View {
                                 }
 
                                 Text(vm.chapterHeading)
-                                    .font(.title2)
+                                    .font(.title)
                                     .bold()
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.bottom, 8)

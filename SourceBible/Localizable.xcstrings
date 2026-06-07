@@ -33,6 +33,9 @@
     "%lld." : {
 
     },
+    "%lld%%" : {
+
+    },
     "action.back" : {
       "localizations" : {
         "en" : {
@@ -486,7 +489,24 @@
         }
       }
     },
+    "menu.brightness" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brightness"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Яскравість"
+          }
+        }
+      }
+    },
     "menu.choose_translation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -535,6 +555,7 @@
       }
     },
     "menu.font_size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -598,7 +619,24 @@
         }
       }
     },
+    "menu.section.appearance" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вигляд"
+          }
+        }
+      }
+    },
     "menu.section.reading" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

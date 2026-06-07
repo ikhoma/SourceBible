@@ -11,6 +11,7 @@ struct NoteEditorView: View {
 
     @State private var noteWithBlocks: NoteWithBlocks
     @State private var textBody: String
+    @State private var editorHeight: CGFloat = 44
 
     init(noteWithBlocks: NoteWithBlocks) {
         _noteWithBlocks = State(initialValue: noteWithBlocks)
@@ -43,25 +44,34 @@ struct NoteEditorView: View {
 
             Divider()
 
-            // Verse context card(s) — tap to jump to that verse in the Reader
-            ForEach(verseBlocks, id: \.id) { block in
-                if let content = decodeVerseBlock(block) {
-                    VerseContextCard(verseId: content.verseId, text: content.text)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-                        .onTapGesture {
-                            dismiss()
-                            router.requestNavigation(to: content.verseId)
-                        }
-                }
-            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
 
-            // UIKit-backed text editor
-            NoteTextEditor(text: $textBody)
-                .padding(.horizontal, 12)
-                .padding(.top, verseBlocks.isEmpty ? 16 : 4)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Verse context card(s) — tap to jump to that verse in the Reader
+                    ForEach(verseBlocks, id: \.id) { block in
+                        if let content = decodeVerseBlock(block) {
+                            VerseContextCard(verseId: content.verseId, text: content.text)
+                                .onTapGesture {
+                                    dismiss()
+                                    router.requestNavigation(to: content.verseId)
+                                }
+                        }
+                    }
+
+                    // Note text bubble — styled to match NoteCardView, auto-sizes to content
+                    NoteTextEditor(text: $textBody, contentHeight: $editorHeight)
+                        .frame(height: editorHeight)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color(.secondarySystemFill))
+                        )
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+            }
         }
     }
 
@@ -119,13 +129,15 @@ struct NoteEditorView: View {
 
 private struct NoteTextEditor: UIViewControllerRepresentable {
     @Binding var text: String
+    @Binding var contentHeight: CGFloat
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text, contentHeight: $contentHeight) }
 
     func makeUIViewController(context: Context) -> NoteEditorHostController {
         let vc = NoteEditorHostController()
-        vc.coordinator  = context.coordinator
-        vc.initialText  = text
+        vc.coordinator       = context.coordinator
+        vc.initialText       = text
+        vc.onLayoutCallback  = context.coordinator.updateHeight
         return vc
     }
 
@@ -139,9 +151,13 @@ private struct NoteTextEditor: UIViewControllerRepresentable {
 
     final class Coordinator: NSObject, UITextViewDelegate {
         @Binding var text: String
+        @Binding var contentHeight: CGFloat
         var isEditing = false
 
-        init(text: Binding<String>) { _text = text }
+        init(text: Binding<String>, contentHeight: Binding<CGFloat>) {
+            _text          = text
+            _contentHeight = contentHeight
+        }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
             isEditing = true
@@ -161,6 +177,16 @@ private struct NoteTextEditor: UIViewControllerRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             text = textView.textColor == .tertiaryLabel ? "" : textView.text
+            updateHeight(textView)
+        }
+
+        func updateHeight(_ textView: UITextView) {
+            let size = textView.sizeThatFits(
+                CGSize(width: textView.bounds.width, height: .greatestFiniteMagnitude))
+            let newHeight = max(44, size.height)
+            if abs(newHeight - contentHeight) > 0.5 {
+                DispatchQueue.main.async { self.contentHeight = newHeight }
+            }
         }
     }
 }
@@ -173,16 +199,19 @@ private final class NoteEditorHostController: UIViewController {
     // so NoteEditorHostController can be private without a visibility conflict.
     var coordinator: (any UITextViewDelegate)?
     var initialText: String = ""
+    /// Called after layout so the Coordinator can report initial height to SwiftUI.
+    var onLayoutCallback: ((UITextView) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
 
         let tv = UITextView()
-        tv.font            = .preferredFont(forTextStyle: .body)
-        tv.backgroundColor = .clear
-        tv.textColor       = .label
-        tv.delegate        = coordinator
+        tv.font              = .preferredFont(forTextStyle: .body)
+        tv.backgroundColor   = .clear
+        tv.textColor         = .label
+        tv.isScrollEnabled   = false   // lets SwiftUI control height via sizeThatFits
+        tv.delegate          = coordinator
         tv.translatesAutoresizingMaskIntoConstraints = false
 
         if initialText.isEmpty {
@@ -202,6 +231,11 @@ private final class NoteEditorHostController: UIViewController {
         self.textView = tv
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if let tv = textView { onLayoutCallback?(tv) }
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         // viewDidAppear fires after the sheet animation completes —
@@ -211,25 +245,34 @@ private final class NoteEditorHostController: UIViewController {
 }
 
 // MARK: - Verse Context Card
+// Matches NoteCardView styling exactly: white card, ref label, gray bar, verse text.
 
 private struct VerseContextCard: View {
     let verseId: String
     let text: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Rectangle()
-                .fill(Color.accentColor)
-                .frame(width: 3)
-                .cornerRadius(2)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(refLabel).font(.caption).foregroundStyle(.secondary)
-                Text(text).font(.callout).foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(refLabel)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(Color(.separator))
+                    .frame(width: 4)
+                    .padding(.vertical, 2)
+                Text(text)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
             }
         }
-        .padding(12)
-        .background(Color(UIColor.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
     }
 
     private var refLabel: String {

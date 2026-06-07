@@ -179,7 +179,7 @@ struct WordMeaningView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(entry.originalWord)
-                        .font(.system(size: 30, weight: .light))
+                        .font(.title3)
                     // Header shows the LEMMA form (entry.originalWord), so use the LEMMA xlit.
                     // Surface-form xlit (vm.selectedWord?.xlit) is shown in contextSection below.
                     let xlit: String = !entry.xlitSimple.isEmpty
@@ -187,7 +187,7 @@ struct WordMeaningView: View {
                         : entry.transliteration
                     if !xlit.isEmpty {
                         Text(xlit)
-                            .font(.system(size: 18, weight: .light))
+                            .font(.title3)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -269,7 +269,8 @@ struct WordMeaningView: View {
                                 Text(sec.stemName)
                                     .font(.caption).fontWeight(.medium)
                                     .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 10).padding(.vertical, 4)
+                                    .padding(.horizontal, 10)
+                                    .frame(height: 28)
                                     .background(Color(UIColor.tertiarySystemFill))
                                     .clipShape(Capsule())
                                     .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 2)
@@ -858,7 +859,7 @@ struct WordRow: View {
                 // Top line: Hebrew/Greek text · xlit · Strong's badge · morph
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(word.displayText)
-                        .font(.system(size: 26, weight: .regular))
+                        .font(.title3)
                         .foregroundStyle(.primary)
 
                     if let xlit = word.displayXlit, !xlit.isEmpty {
