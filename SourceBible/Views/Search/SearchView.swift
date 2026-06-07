@@ -312,7 +312,7 @@ private struct SearchResultRow: View {
                 let hit = String(remaining[remaining.startIndex ..< close.lowerBound])
                 var highlighted = AttributedString(hit)
                 var container = AttributeContainer()
-                container.swiftUI.backgroundColor = Color.wordHighlight
+                container.swiftUI.foregroundColor = Color.blue
                 highlighted.mergeAttributes(container)
                 output   += highlighted
                 remaining = remaining[close.upperBound...]

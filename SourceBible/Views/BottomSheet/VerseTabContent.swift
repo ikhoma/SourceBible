@@ -121,13 +121,13 @@ struct CrossRefsView: View {
                 ForEach(refs) { ref in
                     VStack(alignment: .leading, spacing: 6) {
                         Text(ref.targetReference)
-                            .font(.caption).fontWeight(.semibold).foregroundStyle(.blue)
+                            .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
                         if ref.targetText.isEmpty {
                             Text("verse.text_unavailable")
                                 .font(.callout).foregroundStyle(.tertiary).italic()
                         } else {
                             Text(ref.targetText)
-                                .font(.callout).lineSpacing(3)
+                                .font(.callout)
                         }
                     }
                     .padding(.bottom, 8)
@@ -152,9 +152,9 @@ struct TranslationsView: View {
                 ForEach(parallels) { vt in
                     VStack(alignment: .leading, spacing: 6) {
                         Text(vt.translation.name)
-                            .font(.caption).fontWeight(.semibold).foregroundStyle(.blue)
+                            .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
                         Text(vt.text)
-                            .font(.callout).lineSpacing(3)
+                            .font(.callout)
                     }
                     .padding(.bottom, 8)
                     Divider()

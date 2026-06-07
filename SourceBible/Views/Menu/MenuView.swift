@@ -42,7 +42,7 @@ struct MenuView: View {
                             UIScreen.main.brightness = newValue
                         }
                     Toggle("menu.dark_theme", isOn: $isDark)
-                        .tint(.green)
+                        .tint(.blue)
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
                         .tint(.blue)
                 }

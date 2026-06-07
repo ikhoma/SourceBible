@@ -412,7 +412,7 @@ private struct BookUsageRow: View {
                 Text("\(group.bookName) \(group.example.chapter):\(group.example.verse)")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.primary)
                 Spacer(minLength: 8)
                 // "1 Occurrence in this Book" / "5 Occurrences in this Book"
                 Text(String.localizedStringWithFormat(
@@ -498,7 +498,7 @@ private func highlightedVerseText(raw: String, fallback: String, strongsId: Stri
     for seg in segments {
         if seg.numbers.contains(baseNum) {
             var attr = AttributedString(seg.text)
-            attr.backgroundColor = Color.wordHighlight
+            attr.foregroundColor = Color.blue
             result += attr
         } else {
             result += AttributedString(seg.text)
