@@ -227,7 +227,7 @@ struct SearchView: View {
                         Spacer()
                         Button("search.clear") { vm.clearRecent() }
                             .font(.callout)
-                            .foregroundStyle(.tint)
+                            .foregroundStyle(.blue)
                             .textCase(nil)
                     }
                     .padding(.top, 4)

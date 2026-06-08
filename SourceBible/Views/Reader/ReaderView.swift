@@ -78,12 +78,12 @@ struct ReaderView: View {
 
                         let sheetOpen = vm.activeSheet == .verse
                         ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
 
                                 if vm.currentChapter == 1 {
                                     if showsBookCover {
                                         // Full-bleed book cover extending behind the nav bar.
-                                        // Negative padding cancels LazyVStack's own insets so
+                                        // Negative padding cancels VStack's own insets so
                                         // the cover reaches flush to the scroll view's top edge.
                                         BookCoverView(
                                             bookId: vm.currentBook.id,
@@ -253,7 +253,7 @@ struct ReaderView: View {
             }
         }
         // Single sheet slot for all presentations — avoids "only one sheet supported" warning
-        .sheet(item: $vm.activeSheet) { sheet in
+        .sheet(item: $vm.activeSheet, onDismiss: { vm.clearWordSelection() }) { sheet in
             switch sheet {
             case .bookPicker:
                 BookChapterPickerView().environmentObject(vm)

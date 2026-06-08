@@ -32,15 +32,17 @@ struct MenuView: View {
         NavigationStack {
             Form {
                 Section("menu.section.appearance") {
-                    HStack {
-                        Text("menu.brightness")
-                        Spacer()
-                        Text("\(Int(brightness * 100))%").foregroundStyle(.secondary)
-                    }
-                    Slider(value: $brightness, in: 0...1)
-                        .onChange(of: brightness) { _, newValue in
-                            UIScreen.main.brightness = newValue
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("menu.brightness")
+                            Spacer()
+                            Text("\(Int(brightness * 100))%").foregroundStyle(.secondary)
                         }
+                        Slider(value: $brightness, in: 0...1)
+                            .onChange(of: brightness) { _, newValue in
+                                UIScreen.main.brightness = newValue
+                            }
+                    }
                     Toggle("menu.dark_theme", isOn: $isDark)
                         .tint(.blue)
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)

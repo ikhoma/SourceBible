@@ -57,13 +57,15 @@ struct VerseBottomSheetView: View {
             }
             // Changing id recreates the ScrollView → scroll position always resets to top
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
+            // Reserve space so last content item isn't hidden under the floating pill
+            .contentMargins(.bottom, 64, for: .scrollContent)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay {
             VStack(spacing: 0) {
-                Divider()
+                Spacer()
                 actionBar
             }
-            .background(Color(UIColor.systemBackground))
+            .ignoresSafeArea(edges: .bottom)
         }
         .background(Color(UIColor.systemBackground))
         // Single editor sheet slot — avoids "only one sheet" warning
@@ -206,17 +208,15 @@ struct VerseBottomSheetView: View {
 
     private var actionBar: some View {
         HStack(spacing: 0) {
-            actionBtn(icon: "highlighter", label: "action.highlight",
-                      isActive: vm.isCurrentVerseHighlighted,
-                      color: vm.currentVerseHighlightColor?.color ?? .yellow) {
+            iconActionBtn(icon: "highlighter",
+                          isActive: vm.isCurrentVerseHighlighted,
+                          color: vm.currentVerseHighlightColor?.color ?? .yellow) {
                 showColorPicker = true
             }
             .confirmationDialog(Text("action.highlight_color_title"),
                                 isPresented: $showColorPicker, titleVisibility: .visible) {
                 ForEach(HighlightColor.allCases, id: \.self) { hColor in
-                    Button(hColor.label) {
-                        vm.setHighlightColor(hColor, for: verse)
-                    }
+                    Button(hColor.label) { vm.setHighlightColor(hColor, for: verse) }
                 }
                 if vm.isCurrentVerseHighlighted {
                     Button("action.remove_highlight", role: .destructive) {
@@ -225,45 +225,44 @@ struct VerseBottomSheetView: View {
                 }
                 Button("action.cancel", role: .cancel) {}
             }
-            actionBtn(icon: "note.text", label: "action.note", isActive: false, color: .blue) {
+
+            iconActionBtn(icon: "note.text", isActive: false, color: .blue) {
                 let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
                 activeEditor = .note(note)
             }
-            actionBtn(icon: "bookmark", label: "action.bookmark",
-                      isActive: bookmarksVM.isBookmarked(verseId: verse.id), color: .blue) {
+
+            iconActionBtn(icon: "bookmark",
+                          isActive: bookmarksVM.isBookmarked(verseId: verse.id),
+                          color: .blue) {
                 bookmarksVM.toggleBookmark(verseId: verse.id)
             }
+
             ShareLink(item: VerseShareFormatter.format(
                 verse: verse,
                 bookName: vm.translationBookNames[verse.bookId]?.long
                     ?? BibleBookNames.full(for: verse.bookId),
                 translationId: vm.currentTranslation.id
             )) {
-                VStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.up")
-                        .symbolVariant(.fill)
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                    Text("action.share").font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity).padding(.vertical, 6)
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.primary)
+                    .frame(width: 52, height: 44)
             }
         }
-        .padding(.horizontal, 8).padding(.vertical, 10)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(Color(UIColor.systemBackground))
+        .overlay(alignment: .top) { Divider() }
     }
 
-    private func actionBtn(icon: String, label: LocalizedStringKey, isActive: Bool, color: Color, action: @escaping () -> Void) -> some View {
+    private func iconActionBtn(icon: String, isActive: Bool, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .symbolVariant(.fill)
-                    .font(.system(size: 20))
-                    .foregroundStyle(isActive ? color : .secondary)
-                Text(label).font(.caption2)
-                    .foregroundStyle(isActive ? color : .secondary)
-            }
-            .frame(maxWidth: .infinity).padding(.vertical, 6)
+            Image(systemName: icon)
+                .symbolVariant(.fill)
+                .font(.system(size: 20))
+                .foregroundStyle(isActive ? color : .primary)
+                .frame(width: 52, height: 44)
         }
     }
 }

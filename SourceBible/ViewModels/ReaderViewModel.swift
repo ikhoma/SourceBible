@@ -356,6 +356,9 @@ class ReaderViewModel: ObservableObject {
         // the normal tapVerse() path that loads words for the Original tab.
         if let verse = verses.first(where: { $0.id == verseId }) {
             selectedVerse = verse
+            selectedWord = nil
+            selectedSegment = nil
+            bottomSheetMode = .verse
             loadWordsForSelectedVerse()
             isBottomSheetPresented = true
             // Trigger scroll-above-sheet so the selected verse is visible when
@@ -540,6 +543,13 @@ class ReaderViewModel: ObservableObject {
         activeSheet = .verse
         syncSegment(for: word)
         loadStrongs(for: word)
+    }
+
+    /// Called when the bottom sheet is dismissed — clears word/segment selection
+    /// so the verse text no longer shows a highlight after the sheet closes.
+    func clearWordSelection() {
+        selectedWord = nil
+        selectedSegment = nil
     }
 
     func navigateToPreviousVerse() {

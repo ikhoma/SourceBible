@@ -15,8 +15,26 @@ struct CapsuleNavGroupStyle: ViewModifier {
     }
 }
 
+/// Liquid Glass capsule pill for the action bar.
+/// iOS 26+: native glassEffect. iOS 18–25: ultraThinMaterial fallback.
+struct GlassActionPillModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+                .glassEffect(in: Capsule())
+        } else {
+            content
+                .background(.ultraThinMaterial, in: Capsule())
+        }
+    }
+}
+
 extension View {
     func capsuleNavGroupStyle() -> some View {
         modifier(CapsuleNavGroupStyle())
+    }
+
+    func glassActionPill() -> some View {
+        modifier(GlassActionPillModifier())
     }
 }
