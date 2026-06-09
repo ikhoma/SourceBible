@@ -25,6 +25,8 @@ Load the full document only when the task is relevant to it.
 | `ADR-016-original-pill-nasb-bridge.md` | Original Pill — NASB-Gated Clickability, Unified Word Page, Verse Highlight | Proposed |
 | `ADR-017-book-covers.md` | Book Covers — Architecture | Accepted | `BookCoverView` + `BookCoverData`; Doré engraving on all 66 books; blue gradient bg; `hideBookCovers` Settings toggle; minimal changes to ReaderView |
 | `ADR-018-translation-native-book-names.md` | Translation-Native Book Names and Order | Accepted | `book_name` table (book_id, translation_id, long_name, short_name, sort_order); extracted from MyBible `books` table in build_db.py; BibleBookNames becomes UI-only fallback; enables per-translation ordering | BookCoverView + BookCoverData; hideBookCovers toggle; static asset strategy; all 66 books | Morph-based particle detection (R/C/T); `baseStrongsNumber` helper fixes sub-entry ID mismatch; unified tapWord flows; chevron nav over meaningful words only |
+| `ADR-019-strongs-original-lemma-source.md` | Source of `strongs.original` — TBESH vs Macula `word.lemma` | Accepted | Keep TBESH as primary headword source; improve Macula fallback in `_enrich_strongs_stubs` to use frequency-ranked `GROUP BY lemma ORDER BY COUNT(*) DESC` instead of `LIMIT 1`; 11% of sub-entries have multiple lemma values in Macula (H871a: 3 variants, H3807a: 6 variants) |
+| `ADR-020-hebrew-translit-build-validation.md` | Hebrew Transliteration Build-Time Validation | Proposed | Two-level validation in `_apply_bh_hebrew_translit()`: per-verse count parity + per-slot Strong's alignment; writes `data/hebrew_translit_mismatches.tsv`; fixes 3 gaps in rebuild plan (unverified HTML regex, narrow translit char class, missing `:count` sentinel) |
 
 ---
 
@@ -45,6 +47,7 @@ Load the full document only when the task is relevant to it.
 | `spec-verse-sharing.md` | Verse Sharing | Draft | iOS native ShareLink; VerseShareFormatter static func; plain text format with reference + translation id; P0 bottom sheet, P1 context menu |
 | `commentary-system-design.md` | Commentary System — Bug Diagnoses & Architecture | Draft | Henry verse→section mapping bug (Genesis 2:7); Owen Hebrews 1 blank screen; range header display; validation checklist |
 | `plan-word-usage-redesign.md` | Word Usage Tab — Implementation Plan | Draft | 7-step order: model → DB method → ViewModel → MorphKey → strings → View; N per-book queries, chapter*1000+verse encoding, stays on MainActor |
+| `plan-hebrew-translit-rebuild.md` | Hebrew Transliteration — Full DB Rebuild Plan | Approved | New `slot`, `after_char`, `xlit_slot` columns; `fetch_biblehub_translit_hebrew.py` positional scraper; full `build_db.py` rebuild; supersedes `add_after_char.py` migration |
 | `proposal_smarter_examples_v1.5.md` | Smarter Example Selection — v1.5 Proposal | Proposal | Pre-compute `rhetorical_weight` in DB (cross_reference votes); Swift picks highest-weight verse per book instead of first occurrence; fallback chain: rhetorical → syntactic centrality → first |
 
 ---
@@ -56,6 +59,7 @@ Load the full document only when the task is relevant to it.
 | `PDR-Auth-Strategy.md` | Trust-First Authentication | Accepted | No login wall; local-first data; sync opt-in |
 | `PDR-Highlights-Bookmarks-Notes.md` | Notes/Highlights/Bookmarks Differentiation | — | Distinct UX roles for three annotation types |
 | `PDR-Book-Covers.md` | Book Cover Design — Doré Engravings | Accepted | Doré engraving + blue bg; Protestant canonical section tag + chapter count per cover; section vocab mirrors browse flow |
+| `PDR-Hebrew-Transliteration-Rules.md` | Hebrew Transliteration Rules for `simplify_xlit()` | Accepted | Grammar rules + 4 bugs fixed: monosyllabic shewa, dagesh doubling, spirant peh (combining char), modifier letter ᵃ |
 
 ---
 
