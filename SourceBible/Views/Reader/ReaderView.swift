@@ -203,6 +203,30 @@ struct ReaderView: View {
                     // scrolling is now disabled via .scrollDisabled, and the sheet no
                     // longer forwards touches (presentationBackgroundInteraction removed),
                     // so there is no swipe leak to absorb.
+
+                    // 🐞 TEMP DEBUG — remove before merge.
+                    // Live readout of the Study Mode geometry pipeline. If the
+                    // sheet is mis-sized, a screenshot of these numbers shows
+                    // exactly which stage broke:
+                    //   rows == 0      → row measurement never fires
+                    //   verse == 0     → selectedVerse lookup misses the dict
+                    //   cont == 0      → container measurement never fires
+                    //   sheet == cont/2 → pre-measurement fallback is active
+                    // Doubles as a build canary: no red digits = stale build.
+                    if vm.activeSheet == .verse {
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text("rows \(vm.verseRowHeights.count)")
+                            Text("verse \(Int(vm.pinnedVerseHeight))")
+                            Text("cont \(Int(vm.readerContainerHeight))")
+                            Text("sheet \(Int(vm.studySheetHeight))")
+                        }
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.red)
+                        .padding(4)
+                        .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 4))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .allowsHitTesting(false)
+                    }
                 }
             }
             // Track the reader content area height for studySheetHeight (R3).
@@ -210,6 +234,11 @@ struct ReaderView: View {
                 vm.readerContainerHeight = newHeight
             }
             .navigationBarTitleDisplayMode(.inline)
+            // Also inject the desired sheet height from the PRESENTING
+            // hierarchy: presented sheets inherit this environment live, and
+            // it is unclear whether CustomPresentationDetent's Context reads
+            // the presenter's or the content's environment — cover both.
+            .environment(\.studySheetHeight, vm.studySheetHeight)
             .toolbar {
                 // R5: trailing <> chevrons retarget by state —
                 //   Reader:                  prev/next chapter

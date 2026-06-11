@@ -94,10 +94,11 @@ struct VerseBottomSheetView: View {
         // (replacing a [.height(x)] set proved a no-op on device).
         .presentationDetents([.custom(StudySheetDetent.self)])
         .environment(\.studySheetHeight, vm.studySheetHeight)
-        // Belt-and-suspenders: force UIKit to re-resolve the detent whenever
-        // the desired height changes (SwiftUI alone proved lazy on device).
+        // UIKit-level driver: sets sheet.detents directly with the desired
+        // height on every change (SwiftUI's own detent updates proved
+        // unreliable on device — see StudySheetDetentApplier).
         .background(
-            StudySheetDetentInvalidator(height: vm.studySheetHeight)
+            StudySheetDetentApplier(height: vm.studySheetHeight)
                 .frame(width: 0, height: 0)
         )
         // Dismiss only from the header / grabber zone (gestures above) or the

@@ -31,45 +31,57 @@ struct StudySheetDetent: CustomPresentationDetent {
     }
 }
 
-// MARK: - UIKit re-resolution helper
+// MARK: - UIKit detent applier
 
-/// SwiftUI re-resolves custom detents lazily — on device the open sheet did
-/// not pick up environment-value changes. This zero-size representable digs
-/// out the hosting UISheetPresentationController via the responder chain and
-/// calls `invalidateDetents()` inside `animateChanges` whenever the desired
-/// height changes, forcing an immediate, animated re-resolution of
-/// StudySheetDetent (which then reads the fresh environment value).
-struct StudySheetDetentInvalidator: UIViewRepresentable {
+/// Drives the sheet height at the UIKit level, bypassing SwiftUI's detent
+/// plumbing entirely. On device, neither replacing a SwiftUI .height set nor
+/// invalidateDetents()-driven re-resolution of a custom detent resized the
+/// open sheet — so this zero-size representable finds the hosting
+/// UISheetPresentationController via the responder chain and SETS
+/// `sheet.detents` directly to a UIKit custom detent with the desired height,
+/// animated via animateChanges. The only dependency left is the verse
+/// measurement itself.
+struct StudySheetDetentApplier: UIViewRepresentable {
     let height: CGFloat
 
-    func makeUIView(context: Context) -> InvalidatorView {
-        let v = InvalidatorView()
+    func makeUIView(context: Context) -> ApplierView {
+        let v = ApplierView()
         v.isUserInteractionEnabled = false
         v.backgroundColor = .clear
         return v
     }
 
-    func updateUIView(_ uiView: InvalidatorView, context: Context) {
-        uiView.invalidate(for: height)
+    func updateUIView(_ uiView: ApplierView, context: Context) {
+        uiView.desiredHeight = height
     }
 
-    final class InvalidatorView: UIView {
-        private var lastHeight: CGFloat = 0
+    @MainActor
+    final class ApplierView: UIView {
+        var desiredHeight: CGFloat = 0 {
+            didSet {
+                guard abs(desiredHeight - oldValue) > 0.5 else { return }
+                apply(animated: true)
+            }
+        }
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            // First chance the responder chain reaches the presented VC.
-            invalidate(for: lastHeight, force: true)
+            // First moment the responder chain reaches the presented VC.
+            apply(animated: false)
         }
 
-        func invalidate(for height: CGFloat, force: Bool = false) {
-            if !force {
-                guard abs(height - lastHeight) > 0.5 else { return }
+        private func apply(animated: Bool) {
+            guard desiredHeight > 0, let sheet = sheetController() else { return }
+            let h = desiredHeight
+            let detent = UISheetPresentationController.Detent.custom(
+                identifier: .init("studySheet")
+            ) { context in
+                min(h, context.maximumDetentValue)
             }
-            lastHeight = height
-            guard let sheet = sheetController() else { return }
-            sheet.animateChanges {
-                sheet.invalidateDetents()
+            if animated {
+                sheet.animateChanges { sheet.detents = [detent] }
+            } else {
+                sheet.detents = [detent]
             }
         }
 
