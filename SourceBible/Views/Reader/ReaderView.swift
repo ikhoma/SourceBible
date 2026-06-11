@@ -24,10 +24,23 @@ struct ReaderView: View {
     // single .height detent is computed so its top edge sits ~8 pt below the
     // pinned verse. Only the sheet's internal content scrolls.
 
-    /// Gap between the nav bar bottom and the top of the pinned verse (R1).
-    private static let pinnedTopGap: CGFloat = 16
-    /// Visual gap between the bottom of the pinned verse and the sheet top (R3).
+    /// Top inset for the pinned verse (R1). The verse TEXT must sit 16 pt below
+    /// the toolbar; the verse row has 10 pt of internal vertical padding, so the
+    /// row frame itself is anchored 6 pt below the nav bar (6 + 10 = 16 visual).
+    private static let pinnedTopInset: CGFloat = 6
+    /// Visual gap between the bottom of the pinned verse row and the sheet top (R3).
     private static let sheetGap: CGFloat = 8
+
+    /// Bottom safe-area (home indicator) inset. `.height()` detents are measured
+    /// from the very bottom of the screen INCLUDING this region, while
+    /// containerHeight excludes it — so the sheet height must add it back,
+    /// otherwise the sheet sits ~34 pt too low and the next verse peeks out.
+    /// @MainActor because UIApplication is strictly @MainActor under Swift 6.
+    @MainActor private var bottomSafeAreaInset: CGFloat {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }.first
+        return scene?.windows.first?.safeAreaInsets.bottom ?? 34
+    }
 
     /// Height of the reader content area (below nav bar, above bottom safe area).
     /// Captured via onGeometryChange on the root ZStack.
@@ -37,17 +50,22 @@ struct ReaderView: View {
     @State private var pinnedVerseHeight: CGFloat = 0
 
     /// Single computed detent height for the Study Mode sheet (R3):
-    ///   studySheetHeight = container − pinnedTopGap − pinnedVerseHeight − sheetGap
+    ///   studySheetHeight = container + bottomSafeArea − topInset − verse − gap
+    /// (bottomSafeArea added back because .height() detents span the home
+    /// indicator region — see bottomSafeAreaInset doc.)
+    /// The sheet top then sits exactly `sheetGap` below the pinned verse row,
+    /// covering all the verses below it.
     /// Edge case 1: pinnedVerseHeight is capped at 35% of the container, and the
     /// sheet never shrinks below 30% of the container (very long verses are
     /// partially covered by the sheet rather than crushing it).
-    private var studySheetHeight: CGFloat {
+    @MainActor private var studySheetHeight: CGFloat {
         guard containerHeight > 0 else { return 400 }   // pre-layout fallback
         // Until the pinned verse is measured, approximate with a half-screen sheet
         // to avoid a full-height flash on first presentation frame.
         guard pinnedVerseHeight > 0 else { return containerHeight * 0.5 }
         let cappedVerse = min(pinnedVerseHeight, containerHeight * 0.35)
-        let h = containerHeight - Self.pinnedTopGap - cappedVerse - Self.sheetGap
+        let h = containerHeight + bottomSafeAreaInset
+              - Self.pinnedTopInset - cappedVerse - Self.sheetGap
         return max(h, containerHeight * 0.30)
     }
 
@@ -148,13 +166,14 @@ struct ReaderView: View {
                         // proxy.scrollTo(...) still works — required for chevron
                         // navigation to re-anchor the newly selected verse.
                         .scrollDisabled(sheetOpen)
-                        // R1: extra 16 pt top inset in Study Mode so anchor:.top lands
-                        // the pinned verse exactly 16 pt below the nav bar bottom.
+                        // R1: top inset in Study Mode so anchor:.top lands the pinned
+                        // verse TEXT exactly 16 pt below the nav bar (6 pt inset +
+                        // 10 pt internal row padding — see pinnedTopInset doc).
                         //
                         // Always returns a concrete Color view (no conditional ViewBuilder) to
                         // avoid type-inference ambiguity with iOS 26 safeAreaInset overloads.
                         .safeAreaInset(edge: .top, spacing: nil) {
-                            Color.clear.frame(height: sheetOpen ? Self.pinnedTopGap : 0)
+                            Color.clear.frame(height: sheetOpen ? Self.pinnedTopInset : 0)
                         }
                         // R3: reserve the sheet-covered area so anchor:.top can pin ANY
                         // verse (including the chapter's last ones) to the top. The
@@ -182,6 +201,17 @@ struct ReaderView: View {
                             // the UIScrollView before scrollTo uses the extra room.
                             DispatchQueue.main.async {
                                 withAnimation(animation) { proxy.scrollTo(id, anchor: anchor) }
+                            }
+                            // Re-assert the anchor after the sheet presentation /
+                            // detent / inset animations settle — the first pass can
+                            // compute against stale geometry and land the verse a
+                            // few points low. No-ops when already in place.
+                            if sheetOpen {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                    withAnimation(.easeOut(duration: 0.15)) {
+                                        proxy.scrollTo(id, anchor: anchor)
+                                    }
+                                }
                             }
                         }
                         // Reset scroll position to top on every chapter change.
