@@ -108,7 +108,14 @@ struct ReaderView: View {
                                         guard newHeight > 0,
                                               abs((vm.verseRowHeights[verse.id] ?? 0) - newHeight) > 0.5
                                         else { return }
-                                        vm.verseRowHeights[verse.id] = newHeight
+                                        // Defer the published write one tick: the callback runs
+                                        // during the layout pass, and synchronous objectWillChange
+                                        // writes for many rows at once can be dropped/ignored
+                                        // ("Publishing changes from within view updates").
+                                        let id = verse.id
+                                        Task { @MainActor in
+                                            vm.verseRowHeights[id] = newHeight
+                                        }
                                     }
                                 }
                             }

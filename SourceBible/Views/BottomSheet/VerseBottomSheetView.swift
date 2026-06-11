@@ -48,9 +48,9 @@ struct VerseBottomSheetView: View {
     /// Drag-down on the non-scrolling top block exits Study Mode (R7).
     /// System interactive dismiss is disabled, so this is the only drag exit.
     private var dismissDragGesture: some Gesture {
-        DragGesture(minimumDistance: 25, coordinateSpace: .local)
+        DragGesture(minimumDistance: 15, coordinateSpace: .local)
             .onEnded { value in
-                guard value.translation.height > 60,
+                guard value.translation.height > 40,
                       value.translation.height > abs(value.translation.width)
                 else { return }
                 vm.activeSheet = nil
@@ -59,16 +59,15 @@ struct VerseBottomSheetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Non-scrolling top block: the only zone that drag-dismisses the
-            // sheet. Swipes inside the content ScrollView below must scroll,
-            // never dismiss (system interactive dismiss is disabled).
-            VStack(spacing: 0) {
-                sheetHeader
-                modeTabs
-                pillsRow        // fixed — does not scroll vertically
-            }
-            .contentShape(Rectangle())
-            .simultaneousGesture(dismissDragGesture)
+            // The header row is the drag-to-close zone (plus the grabber strip
+            // overlay below). modeTabs and pillsRow are excluded on purpose:
+            // the segmented control and the horizontal ScrollView swallow
+            // vertical drags, making dismissal feel broken from there.
+            sheetHeader
+                .contentShape(Rectangle())
+                .simultaneousGesture(dismissDragGesture)
+            modeTabs
+            pillsRow        // fixed — does not scroll vertically
             Divider()
             ScrollView {   // only content scrolls
                 if vm.bottomSheetMode == .verse {
@@ -81,13 +80,27 @@ struct VerseBottomSheetView: View {
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
         }
         .background(Color("sheetBackground"))
+        // Grabber strip: drag-to-close also works from the very top of the
+        // sheet (where the system drag indicator is drawn).
+        .overlay(alignment: .top) {
+            Color.clear
+                .frame(height: 24)
+                .contentShape(Rectangle())
+                .simultaneousGesture(dismissDragGesture)
+        }
         // R3: constant detent SET — the system re-resolves StudySheetDetent's
         // height from the environment value below on presentation updates,
         // which is the reliable channel for resizing an open sheet
         // (replacing a [.height(x)] set proved a no-op on device).
         .presentationDetents([.custom(StudySheetDetent.self)])
         .environment(\.studySheetHeight, vm.studySheetHeight)
-        // Dismiss only from the non-scrolling top block (gesture above) or the
+        // Belt-and-suspenders: force UIKit to re-resolve the detent whenever
+        // the desired height changes (SwiftUI alone proved lazy on device).
+        .background(
+            StudySheetDetentInvalidator(height: vm.studySheetHeight)
+                .frame(width: 0, height: 0)
+        )
+        // Dismiss only from the header / grabber zone (gestures above) or the
         // toolbar Back button. Without this, a downward scroll in the content
         // randomly dragged the whole sheet (R7 fine-tune).
         .interactiveDismissDisabled(true)

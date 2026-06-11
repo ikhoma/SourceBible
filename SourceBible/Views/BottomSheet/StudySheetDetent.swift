@@ -30,3 +30,58 @@ struct StudySheetDetent: CustomPresentationDetent {
         min(context.studySheetHeight, context.maxDetentValue)
     }
 }
+
+// MARK: - UIKit re-resolution helper
+
+/// SwiftUI re-resolves custom detents lazily — on device the open sheet did
+/// not pick up environment-value changes. This zero-size representable digs
+/// out the hosting UISheetPresentationController via the responder chain and
+/// calls `invalidateDetents()` inside `animateChanges` whenever the desired
+/// height changes, forcing an immediate, animated re-resolution of
+/// StudySheetDetent (which then reads the fresh environment value).
+struct StudySheetDetentInvalidator: UIViewRepresentable {
+    let height: CGFloat
+
+    func makeUIView(context: Context) -> InvalidatorView {
+        let v = InvalidatorView()
+        v.isUserInteractionEnabled = false
+        v.backgroundColor = .clear
+        return v
+    }
+
+    func updateUIView(_ uiView: InvalidatorView, context: Context) {
+        uiView.invalidate(for: height)
+    }
+
+    final class InvalidatorView: UIView {
+        private var lastHeight: CGFloat = 0
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            // First chance the responder chain reaches the presented VC.
+            invalidate(for: lastHeight, force: true)
+        }
+
+        func invalidate(for height: CGFloat, force: Bool = false) {
+            if !force {
+                guard abs(height - lastHeight) > 0.5 else { return }
+            }
+            lastHeight = height
+            guard let sheet = sheetController() else { return }
+            sheet.animateChanges {
+                sheet.invalidateDetents()
+            }
+        }
+
+        private func sheetController() -> UISheetPresentationController? {
+            var responder: UIResponder? = self
+            while let r = responder {
+                if let vc = r as? UIViewController {
+                    return vc.sheetPresentationController
+                }
+                responder = r.next
+            }
+            return nil
+        }
+    }
+}
