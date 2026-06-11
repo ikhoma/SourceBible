@@ -319,25 +319,29 @@ class ReaderViewModel: ObservableObject {
     /// area). Written by ReaderView via onGeometryChange.
     @Published var readerContainerHeight: CGFloat = 0
 
-    /// Bottom safe-area (home indicator) inset. `.height()` detents span this
-    /// region while readerContainerHeight excludes it — add it back.
-    private var bottomSafeAreaInset: CGFloat {
+    /// Global (screen-coordinate) bottom edge of the pinned verse row,
+    /// written by ReaderView while Study Mode is active. Direct geometry:
+    /// no assumptions about nav-bar or container heights — those produced a
+    /// systematic ~50 pt gap (debug session 2026-06-12: ZStack-measured
+    /// container disagreed with the scroll viewport's real top inset).
+    @Published var pinnedVerseGlobalBottom: CGFloat = 0
+
+    /// Full screen height in points.
+    private var screenHeight: CGFloat {
         let scene = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }.first
-        return scene?.windows.first?.safeAreaInsets.bottom ?? 34
+        return scene?.screen.bounds.height ?? 874
     }
 
-    /// Single detent height for the Study Mode sheet:
-    ///   container + bottomSafeArea − topInset − pinnedVerse − gap
-    /// Edge case: verse capped at 35% of the container; sheet never below 30%.
+    /// Single detent height for the Study Mode sheet, measured from the very
+    /// bottom of the screen (matches UIKit custom-detent semantics observed
+    /// on device): sheet top lands `sheetGap` below the pinned verse bottom.
+    /// Clamped: never below 30% (very long verse) nor above 85% of the screen.
     var studySheetHeight: CGFloat {
-        let c = readerContainerHeight
-        guard c > 0 else { return 400 }                  // pre-layout fallback
-        guard pinnedVerseHeight > 0 else { return c * 0.5 }  // pre-measurement
-        let cappedVerse = min(pinnedVerseHeight, c * 0.35)
-        let h = c + bottomSafeAreaInset
-              - Self.pinnedTopInset - cappedVerse - Self.sheetGap
-        return max(h, c * 0.30)
+        let screenH = screenHeight
+        guard pinnedVerseGlobalBottom > 0 else { return screenH * 0.45 }  // pre-measurement
+        let h = screenH - pinnedVerseGlobalBottom - Self.sheetGap
+        return min(max(h, screenH * 0.30), screenH * 0.85)
     }
 
     // MARK: - Study Mode navigation state

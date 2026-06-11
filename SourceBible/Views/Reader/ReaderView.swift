@@ -117,6 +117,21 @@ struct ReaderView: View {
                                             vm.verseRowHeights[id] = newHeight
                                         }
                                     }
+                                    // Track the SELECTED row's bottom edge in screen
+                                    // coordinates — drives studySheetHeight directly
+                                    // (sheet top = verse bottom + gap), with no nav-bar /
+                                    // container assumptions. Fires continuously while the
+                                    // re-anchor scroll animates and settles at the final
+                                    // position; the detent applier animates each step.
+                                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }) { maxY in
+                                        guard vm.activeSheet == .verse,
+                                              vm.selectedVerse?.id == verse.id,
+                                              abs(vm.pinnedVerseGlobalBottom - maxY) > 0.5
+                                        else { return }
+                                        Task { @MainActor in
+                                            vm.pinnedVerseGlobalBottom = maxY
+                                        }
+                                    }
                                 }
                             }
                             .padding(.horizontal)
@@ -215,9 +230,8 @@ struct ReaderView: View {
                     // Doubles as a build canary: no red digits = stale build.
                     if vm.activeSheet == .verse {
                         VStack(alignment: .trailing, spacing: 1) {
-                            Text("rows \(vm.verseRowHeights.count)")
                             Text("verse \(Int(vm.pinnedVerseHeight))")
-                            Text("cont \(Int(vm.readerContainerHeight))")
+                            Text("vBot \(Int(vm.pinnedVerseGlobalBottom))")
                             Text("sheet \(Int(vm.studySheetHeight))")
                         }
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
