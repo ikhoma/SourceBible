@@ -150,21 +150,26 @@ struct BibleWord: Identifiable, Hashable {
     let greekStrong: String?    // LXX Greek Strong's number (e.g. "G4198")
     let afterChar: String?      // trailing char from Macula `after` attr (e.g. "־" maqaf, "׃" sof pasuq)
     let lexicalClass: String?   // Macula TSV `class`: noun/verb/adj/adv/prep/cj/pron/ij/intj/art/ptcl/rel/num
+    let slot: Int?              // Macula !N group position; tokens sharing same slot = one display word
+    let xlitSlot: String?       // BibleHub combined slot translit (root token only; nil on helpers + Greek)
 
     init(id: String, text: String, strongsId: String? = nil,
          morphology: String? = nil, gloss: String? = nil,
          xlitSimple: String? = nil, xlit: String? = nil,
          syntaxRole: String? = nil, greek: String? = nil, greekStrong: String? = nil,
-         afterChar: String? = nil, lexicalClass: String? = nil) {
+         afterChar: String? = nil, lexicalClass: String? = nil,
+         slot: Int? = nil, xlitSlot: String? = nil) {
         self.id = id; self.text = text; self.strongsId = strongsId
         self.morphology = morphology; self.gloss = gloss
         self.xlitSimple = xlitSimple; self.xlit = xlit
         self.syntaxRole = syntaxRole; self.greek = greek; self.greekStrong = greekStrong
         self.afterChar = afterChar; self.lexicalClass = lexicalClass
+        self.slot = slot; self.xlitSlot = xlitSlot
     }
 
-    /// Best available transliteration: occurrence-specific first, lemma fallback.
-    var displayXlit: String? { xlit ?? xlitSimple }
+    /// Best transliteration for display (Hebrew-aware):
+    /// BibleHub combined slot translit → Macula occurrence xlit → TBESH lemma xlit
+    var bestXlit: String? { xlitSlot ?? xlit ?? xlitSimple }
 
     /// Surface form as it appears in the text, including any trailing connector.
     /// Use this for display in Original tab; use `text` for Strong's lookup and search.

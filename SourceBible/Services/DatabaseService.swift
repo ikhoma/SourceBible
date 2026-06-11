@@ -200,11 +200,12 @@ final class DatabaseService: @unchecked Sendable {
         // xlit_lex: lemma transliteration from TBESH via strongs.transliteration (e.g. "ha.lakh")
         let sql = """
             SELECT w.id, w.surface, w.strongs_id, w.morph,
-                   COALESCE(w.gloss_macula, w.gloss) AS display_gloss,
+                   COALESCE(w.gloss_display, w.gloss_macula, w.gloss) AS display_gloss,
                    COALESCE(NULLIF(s.transliteration,''), '') AS xlit_lex,
                    w.xlit AS xlit_ctx,
                    w.syntax_role, w.greek, w.greek_strong,
-                   w.after_char, w.lexical_class
+                   w.after_char, w.lexical_class,
+                   w.slot, w.xlit_slot
             FROM word w
             LEFT JOIN strongs s ON w.strongs_id = s.id
             WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
@@ -223,11 +224,14 @@ final class DatabaseService: @unchecked Sendable {
             let greekStrong  = optString(stmt, 9)   // LXX Greek Strong's
             let afterChar    = optString(stmt, 10)  // Macula trailing char (maqaf ־, sof pasuq ׃, etc.)
             let lexicalClass = optString(stmt, 11)  // Macula lexical class (noun/verb/ij/intj/…)
+            let slot         = optInt(stmt, 12)     // Macula !N group position (nil for Greek)
+            let xlitSlot     = optString(stmt, 13)  // BibleHub combined slot translit (root token only)
             words.append(BibleWord(id: id, text: surface, strongsId: strongsId,
                                    morphology: morph, gloss: gloss,
                                    xlitSimple: xlitLex, xlit: xlitCtx,
                                    syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong,
-                                   afterChar: afterChar, lexicalClass: lexicalClass))
+                                   afterChar: afterChar, lexicalClass: lexicalClass,
+                                   slot: slot, xlitSlot: xlitSlot))
         }
         return words
     }
@@ -261,7 +265,7 @@ final class DatabaseService: @unchecked Sendable {
         }()
 
         let sql = """
-            SELECT id, original, transliteration,
+            SELECT id, original, transliteration, xlit_simple,
                    pronunciation, part_of_speech, short_def, long_def
             FROM strongs WHERE id = ?
             """
@@ -269,11 +273,12 @@ final class DatabaseService: @unchecked Sendable {
         func buildEntry(from stmt: OpaquePointer) -> StrongsEntry {
             let sid        = string(stmt, 0)
             let original   = string(stmt, 1)
-            let xlitSimple = string(stmt, 2)
-            let pron       = string(stmt, 3)
-            let pos        = string(stmt, 4)
-            let shortDef   = string(stmt, 5)
-            let longDef    = string(stmt, 6)
+            let xlit       = string(stmt, 2)   // academic: rēʾšîyṯ (openscriptures)
+            let xlitSimple = string(stmt, 3)   // simplified: reshit (TBESH)
+            let pron       = string(stmt, 4)
+            let pos        = string(stmt, 5)
+            let shortDef   = string(stmt, 6)
+            let longDef    = string(stmt, 7)
             let semanticRange = shortDef
                 .components(separatedBy: CharacterSet(charactersIn: ";,"))
                 .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -283,8 +288,8 @@ final class DatabaseService: @unchecked Sendable {
             return StrongsEntry(
                 id: sid,
                 originalWord: original,
-                transliteration: xlitSimple,
-                xlitSimple: xlitSimple,
+                transliteration: xlit.isEmpty ? xlitSimple : xlit,
+                xlitSimple: xlitSimple.isEmpty ? xlit : xlitSimple,
                 pronunciation: pron,
                 partOfSpeech: pos,
                 shortDefinition: shortDef,
@@ -680,8 +685,8 @@ final class DatabaseService: @unchecked Sendable {
     ///   "love" → MATCH '"love"*'  finds "love", "loved", "lovely" etc.
     ///   "God is" → MATCH '"God is"*' finds exact phrase prefix.
     ///
-    /// Results are ranked by FTS5 BM25 relevance. The snippet() function marks
-    /// matched tokens with ❮…❯ so the UI can highlight them.
+    /// Results are ranked by FTS5 BM25 relevance. The highlight() function returns
+    /// the full verse text with matched tokens wrapped in ❮…❯ so the UI can highlight them.
     func searchByText(query rawQuery: String, translation: String, limit: Int = 150) -> [SearchResult] {
         guard isAvailable else { return [] }
         let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
@@ -690,10 +695,10 @@ final class DatabaseService: @unchecked Sendable {
         var results: [SearchResult] = []
         let ftsExpr = makeFTSQuery(trimmed)
 
-        // snippet(verse_fts, col=0, open, close, ellipsis, numTokens=12)
+        // highlight(verse_fts, col=0, open, close) — full verse text, matches wrapped in ❮…❯
         let sql = """
             SELECT v.book_id, v.chapter, v.verse,
-                   snippet(verse_fts, 0, '❮', '❯', '…', 12) AS snip
+                   highlight(verse_fts, 0, '❮', '❯') AS snip
             FROM verse_fts
             JOIN verse v ON v.rowid = verse_fts.rowid
             WHERE verse_fts MATCH ?
@@ -790,6 +795,12 @@ private extension DatabaseService {
         guard sqlite3_column_type(stmt, col) != SQLITE_NULL,
               let cStr = sqlite3_column_text(stmt, col) else { return nil }
         return String(cString: cStr)
+    }
+
+    /// Read a nullable INTEGER column.
+    func optInt(_ stmt: OpaquePointer?, _ col: Int32) -> Int? {
+        guard sqlite3_column_type(stmt, col) != SQLITE_NULL else { return nil }
+        return Int(sqlite3_column_int(stmt, col))
     }
 }
 

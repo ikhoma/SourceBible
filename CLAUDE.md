@@ -1,5 +1,11 @@
 # SourceBible — контекст для агента
 
+## ⛔ НЕ ЗМІНЮВАТИ КОД БЕЗ ЯВНОГО ПРОХАННЯ
+
+**Ніколи не редагуй Swift файли, скрипти або базу без того щоб користувач явно попросив це зробити.**
+Аналіз, діагностика, пояснення — OK. Зміна файлів — тільки після "зроби це" або "виправ це".
+Це правило введено після того як агент кілька разів ламав код без дозволу.
+
 ## 📋 Docs & знання проекту
 
 ### При ініціалізації кожного чату
@@ -169,6 +175,13 @@ python3 build_verse_map.py sourcebible.db
 **⛔ Не брати xlit sub-entry від базового Strong's номера.**
 H871a (прийменник בְּ) і H871 (місто Атарот) — абсолютно різні слова. Strip suffix для xlit = неправильний xlit. Fallback H835a→H835 безпечний тільки якщо `original[0]` збігається.
 
+**⛔ При зміні `_parse_stepbible_file()` — перевіряти regex `data_re` для TBESH suffixed IDs.**
+Баг виявлено у червні 2026: regex `r'^[HG]\d{4,5}\t'` мовчки скіпає 1 424 рядки TBESH де `eStrong#` = `H1471a`, `H6213a`, `H6743b` тощо. Для ~542 Strong's IDs у TBESH взагалі немає bare-number рядка — тільки suffixed. Результат: `short_def`/`long_def` = NULL для цих слів (наприклад H1471 גּוֹי, H6213 עָשָׂה, H5034 נָבֵל).
+
+Правильний regex: `r'^[HG]\d{4,5}[a-z]?\t'` — дозволяє опціональний суфікс. Плюс треба propagate дані suffixed-row → базовий ID (H1471a → H1471).
+
+Деталі і код виправлення: `docs/db_build.md` → розділ "TBESH suffixed eStrong# entries".
+
 ### Xcode
 
 **⛔ Після зміни DB завжди робити Clean Build Folder (⇧⌘K).**
@@ -187,6 +200,7 @@ cd ~/Projects/SourceBible
 python3 scripts/build_db.py                      # ~10 хв
 python3 build_verse_map.py sourcebible.db        # ~1 хв, 7292 рядки
 python3 scripts/import_commentaries.py sourcebible.db  # ~2 хв, 36 071 вірші (Calvin + Henry + Spurgeon + Owen)
+python3 scripts/process_glosses.py sourcebible.db      # синтез глос
 cp sourcebible.db SourceBible/Resources/sourcebible.db
 # Xcode: ⇧⌘K → Run
 ```
@@ -207,7 +221,11 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 word(id, book_id, chapter, verse, position, surface, lemma,
      strongs_id, morph, gloss, language, xlit,
      gloss_macula,   -- ← не gloss! перейменовано
-     syntax_role, greek, greek_strong)
+     syntax_role, greek, greek_strong,
+     after_char,     -- trailing char from Macula XML (maqaf ־, sof pasuq ׃)
+     lexical_class,  -- Macula TSV `class` field
+     slot,           -- Macula !N group position (multiple tokens share same slot = 1 display word)
+     xlit_slot)      -- BibleHub combined per-slot translit (ADR-020)
 ```
 `gloss_macula` — стара назва була `gloss`, перейменована. Якщо код падає з "no such column: w.gloss_macula" — база стара, потрібна перезбірка.
 

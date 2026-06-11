@@ -20,6 +20,51 @@ extension NSAttributedString.Key {
     static let verseSegmentIndex = NSAttributedString.Key("com.sourcebible.segmentIndex")
 }
 
+// MARK: - HighlightableTextView
+
+/// UITextView subclass that draws per-line background highlights in draw(_:).
+///
+/// Problem with alternatives:
+///   • tv.backgroundColor        → fills the entire frame width; short last lines look wrong
+///   • NSAttributedString .backgroundColor → fills only glyph bounds, leaving inter-line
+///                                          gaps equal to the font leading
+///
+/// This subclass solves both:
+///   • draws usedRect.width per line   → no trailing colour on short/last lines
+///   • draws lineFragRect.height per line → no gaps between wrapped lines
+///
+/// draw(_:) and NSLayoutManager are both @MainActor on iOS 26 SDK → zero Swift 6 issues.
+private final class HighlightableTextView: UITextView {
+
+    var highlightColor: UIColor? {
+        didSet { setNeedsDisplay() }
+    }
+
+    override func draw(_ rect: CGRect) {
+        if let color = highlightColor {
+            color.setFill()
+            let dx = textContainerInset.left
+            let dy = textContainerInset.top
+            let fullRange = layoutManager.glyphRange(for: textContainer)
+            layoutManager.enumerateLineFragments(forGlyphRange: fullRange) { lineFragRect, usedRect, _, _, _ in
+                let fill = CGRect(
+                    x: usedRect.minX + dx,
+                    y: lineFragRect.minY + dy,
+                    width: usedRect.width,
+                    height: lineFragRect.height
+                )
+                UIBezierPath(rect: fill).fill()
+            }
+        }
+        super.draw(rect)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if highlightColor != nil { setNeedsDisplay() }
+    }
+}
+
 // MARK: - VerseTextView
 
 struct VerseTextView: UIViewRepresentable {
@@ -35,7 +80,7 @@ struct VerseTextView: UIViewRepresentable {
     // MARK: UIViewRepresentable
 
     func makeUIView(context: Context) -> UITextView {
-        let tv = UITextView()
+        let tv = HighlightableTextView()
         tv.isEditable        = false
         tv.isSelectable      = false
         tv.isScrollEnabled   = false
@@ -64,28 +109,64 @@ struct VerseTextView: UIViewRepresentable {
     func updateUIView(_ tv: UITextView, context: Context) {
         let coord = context.coordinator
 
-        // Invalidate the stored word range whenever the selected segment changes from
-        // outside this view (e.g. the user navigated via the ‹ › arrows in the bottom
-        // sheet). In that case we fall back to highlighting the full segment run.
-        // When the change originated from handleLongPress inside this view, the UUID
-        // is already updated before onWordTap fires, so the range is preserved.
-        if coord.selectedSegmentId != selectedSegment?.id {
+        // Detect selection changes BEFORE mutating coordinator state so we can
+        // accurately track whether this updateUIView call needs to redraw.
+        //
+        // Case A — segment changed from outside (‹ › chevron navigation or verse tap):
+        //   selectedSegment?.id ≠ coord.selectedSegmentId → clear stored word range
+        //   so applySelection() falls back to full-segment highlight.
+        // Case B — same segment, same word (no-op re-render from parent): both IDs match,
+        //   the stored word range is still valid — leave it alone.
+        // Case C — handleLongPress fired: it already updated coord.selectedSegmentId
+        //   and coord.selectedWordRange before onWordTap (and therefore before this
+        //   updateUIView call), so the IDs will match and we'll detect the word range
+        //   change below instead.
+        let selectionChanged = coord.selectedSegmentId != selectedSegment?.id
+        if selectionChanged {
             coord.selectedWordRange  = nil
             coord.selectedSegmentId  = selectedSegment?.id
         }
 
-        // Rebuild attributed string only when the text content or highlight changes.
-        // selectedSegment changes are handled cheaply via applySelection() below.
+        // Detect word-range changes within the same segment (user long-pressed a
+        // different word inside an already-selected multi-word segment).
+        let newRange = coord.selectedWordRange
+        let wordRangeChanged: Bool = {
+            switch (coord.lastRenderedWordRange, newRange) {
+            case (.none, .none):            return false
+            case (.some, .none), (.none, .some): return true
+            case (.some(let a), .some(let b)): return a.location != b.location || a.length != b.length
+            }
+        }()
+
+        // Rebuild attributed string only when verse content or highlight colour changed.
         let contentChanged = coord.parsed.verseId != parsed.verseId
                           || coord.highlightColor  != highlightColor
         if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
             coord.baseAttributedString = buildBaseAttributedString()
         }
 
-        // Apply (or clear) selection highlight on top of the cached base string.
-        tv.attributedText = applySelection(to: coord.baseAttributedString,
-                                           wordRange: coord.selectedWordRange)
-        tv.invalidateIntrinsicContentSize()
+        // Verse-level highlight: drawn in HighlightableTextView.draw(_:) which fills
+        // lineFragRect.height (no inter-line gaps) but only usedRect.width (no trailing
+        // colour past the text on short/last lines).
+        (tv as? HighlightableTextView)?.highlightColor = highlightColor.map {
+            HighlightColor.from($0).uiColor.withAlphaComponent(0.22)
+        }
+
+        // Only assign attributedText when something actually changed.
+        //
+        // UIKit resolves dynamic (adaptive) colors — UIColor.label, UIColor.systemRed, etc. —
+        // in UITextView.attributedText automatically via traitCollectionDidChange when the
+        // color scheme flips light ↔ dark. We must NOT re-set attributedText on color-scheme
+        // changes alone: doing so forces a full text-layout pass on every visible VerseTextView
+        // simultaneously, which is what caused the freeze on the first theme switch when a
+        // chapter with many verses (e.g. Genesis 1 with 31 verses) is open.
+        if contentChanged || selectionChanged || wordRangeChanged
+                || tv.attributedText == nil || tv.attributedText.length == 0 {
+            tv.attributedText = applySelection(to: coord.baseAttributedString,
+                                               wordRange: coord.selectedWordRange)
+            tv.invalidateIntrinsicContentSize()
+            coord.lastRenderedWordRange = coord.selectedWordRange
+        }
 
         coord.parsed         = parsed
         coord.highlightColor = highlightColor
@@ -150,13 +231,6 @@ struct VerseTextView: UIViewRepresentable {
                 .verseSegmentIndex: index
             ]
             result.append(NSAttributedString(string: seg.text, attributes: attrs))
-        }
-
-        // Verse-level highlight background (does not include selection — that's added later)
-        if let rawColor = highlightColor, result.length > 0 {
-            let uiColor = HighlightColor.from(rawColor).uiColor.withAlphaComponent(0.22)
-            result.addAttribute(.backgroundColor, value: uiColor,
-                                range: NSRange(location: 0, length: result.length))
         }
 
         return result
@@ -240,8 +314,12 @@ struct VerseTextView: UIViewRepresentable {
         // active (e.g. user navigated via ‹ › arrows), falling back to full-segment
         // highlight for that case.
 
-        var selectedWordRange:  NSRange? = nil
-        var selectedSegmentId:  UUID?    = nil
+        var selectedWordRange:      NSRange? = nil
+        var selectedSegmentId:      UUID?    = nil
+        /// Tracks the word range used in the most recent attributedText assignment.
+        /// Compared against selectedWordRange in updateUIView to detect intra-segment
+        /// re-taps (different word, same segment UUID) that still need a redraw.
+        var lastRenderedWordRange:  NSRange? = nil
 
         init(parsed: ParsedVerse, highlightColor: String?,
              onVerseTap: @escaping () -> Void,

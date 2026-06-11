@@ -67,7 +67,7 @@ struct VerseBottomSheetView: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
-        .background(Color(UIColor.systemBackground))
+        .background(Color("sheetBackground"))
         // Single editor sheet slot — avoids "only one sheet" warning
         .sheet(item: $activeEditor) { editor in
             switch editor {
@@ -156,6 +156,12 @@ struct VerseBottomSheetView: View {
             Text("sheet.mode.word").tag(BottomSheetMode.word)
         }
         .pickerStyle(.segmented)
+        .onAppear {
+            UISegmentedControl.appearance().setTitleTextAttributes(
+                [.font: UIFont.systemFont(ofSize: 13, weight: .medium)], for: .normal)
+            UISegmentedControl.appearance().setTitleTextAttributes(
+                [.font: UIFont.systemFont(ofSize: 13, weight: .medium)], for: .selected)
+        }
         .padding(.horizontal, 20).padding(.vertical, 8)
         .onChange(of: vm.bottomSheetMode) { _, newMode in
             guard newMode == .word else { return }
@@ -193,7 +199,7 @@ struct VerseBottomSheetView: View {
                 .font(.footnote.weight(.medium))
                 .padding(.horizontal, 12)
                 .frame(height: 28)
-                .foregroundStyle(isActive ? Color(UIColor.systemBackground) : Color(UIColor.label))
+                .foregroundStyle(isActive ? Color("sheetBackground") : Color(UIColor.label))
                 .background {
                     if isActive {
                         Capsule()
@@ -252,7 +258,7 @@ struct VerseBottomSheetView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
-        .background(Color(UIColor.systemBackground))
+        .background(Color("sheetBackground"))
         .overlay(alignment: .top) { Divider() }
     }
 

@@ -173,6 +173,8 @@ CREATE TABLE IF NOT EXISTS word (
     greek_strong TEXT,              -- LXX Greek Strong's number (e.g. "G4198")
     after_char   TEXT,              -- trailing char from Macula XML `after` attr (maqaf ־, sof pasuq ׃, paseq ׀)
     lexical_class TEXT,             -- Macula TSV `class` field: noun/verb/adj/adv/prep/cj/pron/ij/intj/art/ptcl/rel/num/om/x
+    slot         INTEGER,           -- Macula !N group position (multiple tokens share same slot = one display word)
+    xlit_slot    TEXT,              -- BibleHub per-slot transliteration (keyed by verse-slot position via ADR-020)
     FOREIGN KEY (book_id)    REFERENCES book(id),
     FOREIGN KEY (strongs_id) REFERENCES strongs(id)
 );
@@ -233,6 +235,7 @@ CREATE INDEX IF NOT EXISTS idx_book_name_tid ON book_name(translation_id);
 
 CREATE INDEX IF NOT EXISTS idx_verse_loc    ON verse(translation, book_id, chapter, verse);
 CREATE INDEX IF NOT EXISTS idx_word_verse   ON word(book_id, chapter, verse);
+CREATE INDEX IF NOT EXISTS idx_word_slot    ON word(book_id, chapter, verse, slot);
 CREATE INDEX IF NOT EXISTS idx_word_strongs ON word(strongs_id);
 CREATE INDEX IF NOT EXISTS idx_xref_from   ON cross_reference(from_book, from_chapter, from_verse);
 CREATE INDEX IF NOT EXISTS idx_xref_to     ON cross_reference(to_book, to_chapter, to_verse);
@@ -328,8 +331,8 @@ def import_macula_hebrew(cur):
             rows = parse_macula_tsv(raw, language="hbo", strongs_col="strongnumberx", lang_prefix="H")
 
     cur.executemany(
-        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class,slot) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         rows
     )
     print(f"  {len(rows):,} Hebrew words imported.")
@@ -366,8 +369,8 @@ def import_macula_greek(cur):
                                     lang_prefix="G", xlit_lookup=bh_translit)
 
     cur.executemany(
-        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class,slot) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         rows
     )
     print(f"  {len(rows):,} Greek words imported.")
@@ -395,7 +398,7 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: d
         parsed = parse_macula_ref(ref)
         if not parsed:
             continue
-        osis, ch, vs, _group_pos = parsed   # _group_pos is the word-group !N; unused
+        osis, ch, vs, slot = parsed          # slot = Macula !N group position; multiple tokens share same slot
 
         surface = row.get("text", "").strip()
         if not surface:
@@ -429,7 +432,7 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: d
 
         word_id = f"{osis}|{ch}|{vs}|{pos}"
         rows.append((word_id, osis, ch, vs, pos, surface, lemma,
-                     strongs_id, morph, gloss, language, xlit, lexical_class))
+                     strongs_id, morph, gloss, language, xlit, lexical_class, slot))
     return rows
 
 # ─────────────────────────────────────────────
@@ -801,6 +804,46 @@ def import_strongs(cur):
 
     print(f"  Total: {total:,} entries")
 
+
+def _seed_strongs_stubs(cur):
+    """
+    INSERT stub rows (id, language) for every Strong's ID found in the Macula TSV files.
+
+    Purpose: the word table has FOREIGN KEY (strongs_id) REFERENCES strongs(id).
+    If the openscriptures JSON download fails, import_strongs() inserts nothing and
+    import_macula_hebrew() dies with IntegrityError.
+
+    This function guarantees the strongs table contains at least a stub row for every
+    ID referenced by Macula, so the FK constraint is always satisfiable.
+    TBESH UPDATE in import_stepbible_lexicons() later fills xlit_simple and long_def.
+
+    Uses INSERT OR IGNORE so it is safe to run after a partial import_strongs().
+    """
+    sources = [
+        (MACULA_HEB_ZIP, MACULA_HEB_TSV, "strongnumberx", "H"),
+        (MACULA_GRK_ZIP, MACULA_GRK_TSV, "strong",        "G"),
+    ]
+    total = 0
+    for zip_path, tsv_path, col, prefix in sources:
+        if not zip_path.exists():
+            continue
+        ids = set()
+        with zipfile.ZipFile(zip_path) as zf:
+            with zf.open(tsv_path) as f:
+                reader = csv.DictReader(io.TextIOWrapper(f, "utf-8"), delimiter="\t")
+                for row in reader:
+                    sid = normalize_strongs(row.get(col, "").strip(), prefix)
+                    if sid:
+                        ids.add(sid)
+        lang = "hbo" if prefix == "H" else "grc"
+        cur.executemany(
+            "INSERT OR IGNORE INTO strongs (id, language) VALUES (?, ?)",
+            [(sid, lang) for sid in ids],
+        )
+        total += len(ids)
+    print(f"  Strongs stubs seeded: {total:,} unique IDs")
+
+
 # ─────────────────────────────────────────────
 # Step 4b — STEPBible TBESH / TBESG
 #   Fills long_def (BDB for Hebrew, Abbott-Smith for Greek)
@@ -857,8 +900,10 @@ def _parse_stepbible_file(text):
     lines = text.splitlines()
     header = None
     rows = []
-    # Matches a bare Strong's ID: H0001 or G0001 (no trailing letter suffix)
-    data_re = re.compile(r'^[HG]\d{4,5}\t')
+    # Matches a Strong's ID row: H0001 or G0001, optionally with a lowercase suffix (H1471a, H6213a).
+    # IMPORTANT: ~542 Hebrew IDs exist in TBESH ONLY as suffixed entries (no bare H1471, H6213, etc.).
+    # The old regex r'^[HG]\d{4,5}\t' silently skipped 1 424 rows — June 2026 bug.
+    data_re = re.compile(r'^[HG]\d{4,5}[a-z]?\t')
 
     for line in lines:
         # Detect the header: the line with 'eStrong' AND 'dStrong' as first two tab cells
@@ -876,7 +921,7 @@ def _parse_stepbible_file(text):
         if not stripped or stripped.startswith("=") or stripped.startswith("$") or stripped.startswith("-"):
             continue
 
-        # Only parse bare Strong's ID rows
+        # Only parse Strong's ID rows (bare or suffixed)
         if not data_re.match(line):
             continue
 
@@ -1069,6 +1114,8 @@ def import_stepbible_lexicons(cur):
                 continue
 
             xlit_simple = _find_col(row, "transliteration", "xlit", "translit", "pronunciation")
+            # TBESH/TBESG col 6 = "Gloss" — brief English gloss
+            short_def   = _find_col(row, "gloss")
             long_def    = _find_col(row, "longdefinition", "definition", "fulldefinition",
                                          "longdef", "bdb", "abbottsmith", "meaning")
             # Last-resort: use the last column (always the definition in STEPBible files)
@@ -1079,28 +1126,56 @@ def import_stepbible_lexicons(cur):
 
             # Truncate to avoid bloat
             xlit_simple = xlit_simple[:100]
+            short_def   = short_def[:200]
             long_def    = long_def[:5000]
 
-            # UPDATE: fill xlit_simple always for exact ID match.
-            # IMPORTANT: do NOT propagate to extended IDs (H835a, H871a etc.) —
-            # TBESH has separate entries for them with their own correct xlit.
-            # Propagation would assign the wrong word's xlit (e.g. H871 "Atharim"
-            # would overwrite H871a "inseparable bet").
+            # UPDATE: fill xlit_simple / short_def / long_def from TBESH/TBESG.
+            #
+            # DIRECTION: suffixed row → its own strongs row (H1471a → strongs WHERE id='H1471a').
+            # IMPORTANT: do NOT propagate base → extended (H871 Atharim → H871a inseparable bet) —
+            # those are unrelated words that happen to share the same numeric range.
+            #
+            # NOTE: strongs.original is NOT populated here — it comes from Macula
+            # word.lemma in _backfill_strongs_originals_from_macula() which runs
+            # after the word table is populated.
+            #
+            # NULL-safe conditions: stub rows have NULL (not ''), so use IS NULL OR = ''.
             cur.execute("""
                 UPDATE strongs
                 SET
-                    xlit_simple     = CASE WHEN ? != '' THEN ?            ELSE xlit_simple     END,
-                    transliteration = CASE WHEN transliteration = '' AND ? != '' THEN ? ELSE transliteration END,
-                    long_def        = CASE WHEN ? != '' THEN ?                         ELSE long_def        END
+                    xlit_simple     = CASE WHEN ? != ''                                                      THEN ? ELSE xlit_simple     END,
+                    transliteration = CASE WHEN (transliteration IS NULL OR transliteration = '') AND ? != '' THEN ? ELSE transliteration END,
+                    short_def       = CASE WHEN (short_def IS NULL OR short_def = '') AND ? != ''            THEN ? ELSE short_def       END,
+                    long_def        = CASE WHEN ? != ''                                                      THEN ? ELSE long_def        END
                 WHERE id = ?
             """, (
                 xlit_simple, xlit_simple,
                 xlit_simple, xlit_simple,
+                short_def,   short_def,
                 long_def,    long_def,
                 sid,
             ))
             if cur.rowcount:
                 updated += 1
+
+            # For suffixed TBESH entries (H1471a, H6213a, etc.), also propagate to the base ID
+            # (H1471, H6213). Macula tags these words using the bare number — without this step
+            # those strongs rows stay NULL even after a full rebuild.
+            # Safety: only fill if the base row's fields are currently NULL/empty (won't overwrite
+            # a base entry that already has its own TBESH data, e.g. H3887 verb לוּץ).
+            import re as _re
+            m_base = _re.match(r'^([HG]\d+)[a-z]$', sid)
+            if m_base:
+                base_sid = m_base.group(1)
+                cur.execute("""
+                    UPDATE strongs SET
+                        xlit_simple = CASE WHEN (xlit_simple IS NULL OR xlit_simple = '') AND ? != '' THEN ? ELSE xlit_simple END,
+                        short_def   = CASE WHEN (short_def   IS NULL OR short_def   = '') AND ? != '' THEN ? ELSE short_def   END,
+                        long_def    = CASE WHEN (long_def    IS NULL OR long_def    = '') AND ? != '' THEN ? ELSE long_def    END
+                    WHERE id = ?
+                """, (xlit_simple, xlit_simple, short_def, short_def, long_def, long_def, base_sid))
+                if cur.rowcount:
+                    updated += 1
 
         print(f"  {lang_prefix}: {updated:,} rows updated, {skipped} skipped (bad Strong's ID)")
         total_updated += updated
@@ -1525,17 +1600,47 @@ def import_cross_references(cur):
 # Step 7 — Finalize
 # ─────────────────────────────────────────────
 
+def _backfill_strongs_originals_from_macula(cur):
+    """
+    Populate strongs.original (Hebrew/Greek script lemma) from word.lemma.
+
+    Runs AFTER both import_macula_hebrew() and import_macula_greek() so the
+    word table is fully populated.  Uses the first non-empty lemma found for
+    each Strong's ID — Macula lemmas are normalised lexical forms so any row
+    for that ID gives the same (or equivalent) value.
+
+    This replaces the old openscriptures JSON approach: we never need
+    strongsHebrew.json / strongsGreek.json for the original-script column.
+    """
+    print("\n[6b] Backfilling strongs.original from Macula word.lemma...")
+    cur.execute("""
+        UPDATE strongs
+        SET original = (
+            SELECT lemma FROM word
+            WHERE word.strongs_id = strongs.id
+              AND lemma IS NOT NULL AND lemma != ''
+            LIMIT 1
+        )
+        WHERE (original IS NULL OR original = '')
+          AND EXISTS (
+                SELECT 1 FROM word
+                WHERE word.strongs_id = strongs.id
+                  AND lemma IS NOT NULL AND lemma != ''
+              )
+    """)
+    print(f"  Backfilled: {cur.rowcount:,} Strong's entries got original from Macula")
+
+
 def _apply_xlit_fallback(cur):
     """
-    Fallback pass: for any Strong's entry that TBESH/TBESG left without an
-    xlit_simple, derive one from the academic 'transliteration' field using
-    simplify_xlit().  This covers ~1,400 extended IDs (H835a, H871a …) that
-    have no TBESH row of their own.
+    DEPRECATED — no longer called in the build pipeline.
 
-    Correct pipeline:
-      1. import_strongs  — populates 'transliteration' from strongsHebrew/Greek.json
-      2. import_stepbible_lexicons — fills xlit_simple from TBESH/TBESG (exact ID only)
-      3. _apply_xlit_fallback — fills xlit_simple ONLY where still NULL or ''
+    Previously derived xlit_simple from strongs.transliteration (openscriptures
+    academic notation like ʾašrēy) via simplify_xlit().  Superseded by
+    _apply_word_table_xlit_fallback which uses word.xlit / xlit_slot from
+    TBESH and BibleHub — the actual authoritative sources for xlit_simple.
+
+    Kept for reference; remove in a future cleanup sprint.
     """
     print("\n[4c] Applying xlit_simple fallback for entries without TBESH data...")
     cur.execute(
@@ -1554,6 +1659,167 @@ def _apply_xlit_fallback(cur):
             )
             updated += 1
     print(f"  Fallback filled: {updated:,} entries")
+
+
+def _apply_word_table_xlit_fallback(cur):
+    """
+    4th and final fallback for strongs entries that survived all previous steps
+    with no xlit_simple or short_def.
+
+    Targets ~507 Macula sub-entry stubs (H871a, H1886a, H2050b, H3807a, ...)
+    that are:
+      - NOT in the openscriptures JSON (only bare IDs there)
+      - NOT in TBESH (covers morphological vocabulary, not every Macula sub-entry)
+      - Have no academic 'transliteration' (stub rows only have id + language)
+
+    Three-pass strategy for xlit_simple (in priority order):
+      Pass 1: word.xlit     — per-occurrence Macula TSV transliteration (most tokens)
+      Pass 2: word.xlit_slot — BibleHub combined slot translit (covers suffix tokens
+                               where word.xlit is NULL, e.g. H2050c וֹ, H3509b כּ)
+      Pass 3: hardcoded suffix dict — known Macula pronominal-suffix IDs not in TBESH
+      Pass 4: base-entry fallback — rare proper-name variants (H758a → H758 xlit)
+
+    For short_def: one pass using word.gloss (most common value per strongs_id).
+
+    Must run AFTER import_macula_hebrew and import_macula_greek so the word table
+    is populated.  Safe to re-run (only fills NULL/empty fields).
+    """
+    print("\n[4d] Applying word-table xlit/gloss fallback for remaining stubs...")
+    total_xlit = 0
+
+    # Pass 1: word.xlit (standalone token transliteration)
+    cur.execute("""
+        UPDATE strongs
+        SET xlit_simple = (
+            SELECT w.xlit
+            FROM word w
+            WHERE w.strongs_id = strongs.id
+              AND w.xlit IS NOT NULL AND w.xlit != ''
+            GROUP BY w.xlit
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        )
+        WHERE (xlit_simple IS NULL OR xlit_simple = '')
+          AND EXISTS (
+              SELECT 1 FROM word w
+              WHERE w.strongs_id = strongs.id
+                AND w.xlit IS NOT NULL AND w.xlit != ''
+          )
+    """)
+    pass1 = cur.rowcount
+    total_xlit += pass1
+
+    # Pass 2: word.xlit_slot (BibleHub combined slot translit — covers suffix tokens
+    # like H2050c וֹ whose word.xlit is NULL because they are bound morphemes)
+    cur.execute("""
+        UPDATE strongs
+        SET xlit_simple = (
+            SELECT w.xlit_slot
+            FROM word w
+            WHERE w.strongs_id = strongs.id
+              AND w.xlit_slot IS NOT NULL AND w.xlit_slot != ''
+            GROUP BY w.xlit_slot
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        )
+        WHERE (xlit_simple IS NULL OR xlit_simple = '')
+          AND EXISTS (
+              SELECT 1 FROM word w
+              WHERE w.strongs_id = strongs.id
+                AND w.xlit_slot IS NOT NULL AND w.xlit_slot != ''
+          )
+    """)
+    pass2 = cur.rowcount
+    total_xlit += pass2
+
+    # Pass 3: hardcoded xlit for known Macula pronominal-suffix IDs.
+    # These are morphological sub-entries unique to the Macula annotation scheme —
+    # they don't appear in TBESH, openscriptures, or BibleHub (hence NULL in all
+    # prior passes).  Transliterations follow the simplified convention used by TBESH.
+    SUFFIX_XLIT = {
+        # vav conjunction/suffix variants
+        "H2050c": "o",    # וֹ  3ms pronominal suffix (holam)
+        "H2050d": "va",   # וָ  vav + qamets (before some gutturals)
+        # definite article variants
+        "H1886c": "ha",   # הָ  article + patach furtive
+        "H1886d": "he",   # הֶ  article before guttural with segol
+        # pronominal suffixes (3ms, 1cp, etc.)
+        "H1930a": "hu",   # הוּ 3ms suffix (alternate spelling)
+        "H5105b": "nu",   # נּוּ 1cp suffix (-enu / -nu)
+        "H5105a": "ni",   # נִּי 1cs suffix (-ni)
+        # inseparable preposition variants
+        "H3509a": "k",    # כְּ  inseparable kaf (sheva)
+        "H3509b": "ka",   # כַּ  inseparable kaf (patach)
+        "H3509c": "ko",   # כּ   inseparable kaf (other vowel)
+        # lamed variants occasionally sub-entered by Macula
+        "H3808a": "l",    # לְ  inseparable lamed
+        "H3808b": "la",   # לַ
+        # Rare OT place-name variants whose base IDs never appear in Macula word table
+        # (no base row exists → pass 4 base-fallback can't resolve them)
+        "H3565a": "kor-a.shan",   # כּוֹר עָשָׁן  Kor-ashan
+        "H3592a": "ki.don",       # כִּידוֹן      Kidon
+        "H5225a": "na.kon",       # נָכוֹן        Nacon
+        "H5626a": "se.ra",        # שֶׁרַע         Serah
+        "H5886a": "en-hak.ko.re", # עֵין הַקּוֹרֵא En-hakkore
+    }
+    pass3 = 0
+    for sid, xlit_val in SUFFIX_XLIT.items():
+        cur.execute(
+            "UPDATE strongs SET xlit_simple = ? WHERE id = ? AND (xlit_simple IS NULL OR xlit_simple = '')",
+            (xlit_val, sid)
+        )
+        pass3 += cur.rowcount
+    total_xlit += pass3
+
+    # Pass 4: base-entry fallback for remaining rare sub-entries (proper-name variants
+    # like H758a/b/c, H425b, H8407a, H2361a — a handful of occurrences each).
+    # Strip the suffix letter and copy xlit_simple from the base strongs entry.
+    import re as _re
+    cur.execute("""
+        SELECT id FROM strongs
+        WHERE (xlit_simple IS NULL OR xlit_simple = '')
+          AND EXISTS (SELECT 1 FROM word w WHERE w.strongs_id = strongs.id)
+    """)
+    still_missing = [r[0] for r in cur.fetchall()]
+    pass4 = 0
+    for sid in still_missing:
+        m = _re.match(r'^([HG]\d+)[a-z]$', sid)
+        if not m:
+            continue
+        base_sid = m.group(1)
+        cur.execute("SELECT xlit_simple FROM strongs WHERE id = ? AND xlit_simple IS NOT NULL AND xlit_simple != ''",
+                    (base_sid,))
+        row = cur.fetchone()
+        if row:
+            cur.execute("UPDATE strongs SET xlit_simple = ? WHERE id = ?", (row[0], sid))
+            pass4 += 1
+    total_xlit += pass4
+
+    # short_def: most common word.gloss for this strongs_id
+    cur.execute("""
+        UPDATE strongs
+        SET short_def = (
+            SELECT w.gloss
+            FROM word w
+            WHERE w.strongs_id = strongs.id
+              AND w.gloss IS NOT NULL AND w.gloss != ''
+            GROUP BY w.gloss
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        )
+        WHERE (short_def IS NULL OR short_def = '')
+          AND EXISTS (
+              SELECT 1 FROM word w
+              WHERE w.strongs_id = strongs.id
+                AND w.gloss IS NOT NULL AND w.gloss != ''
+          )
+    """)
+    gloss_filled = cur.rowcount
+
+    print(f"  Word-table fallback xlit: pass1={pass1} (word.xlit), "
+          f"pass2={pass2} (xlit_slot), pass3={pass3} (suffix dict), "
+          f"pass4={pass4} (base fallback) = {total_xlit} total")
+    print(f"  Word-table fallback short_def: {gloss_filled:,} filled")
 
 
 def build_verse_fts(cur, con):
@@ -1664,6 +1930,115 @@ def finalize(cur, con):
     print("      Make sure 'Copy items if needed' and your app target are checked.")
 
 # ─────────────────────────────────────────────
+# Step 2b — Apply BibleHub Hebrew transliterations (positional)
+# ─────────────────────────────────────────────
+
+# Macula-internal helper tokens that BibleHub never assigns a transliteration to.
+# These are empty morphological slots (e.g. H871a = preposition בְּ that fuses into
+# the following word's display form).  Slots where ALL tokens are helpers are not
+# counted as "display words" for the purpose of aligning with BibleHub position keys.
+HELPER_STRONGS = {"H1886a", "H871a", "H3509a", "H1930a",
+                  "H2050b", "H2050c", "H2050d", "H5105b"}
+
+
+def _apply_bh_hebrew_translit(cur):
+    """
+    Populate word.xlit_slot for all OT Hebrew words using BibleHub positional translit.
+    Reads data/hebrew_translit.json (produced by fetch_biblehub_translit_hebrew.py).
+
+    Match logic (ADR-020):
+    - For each verse, get all (word_id, slot, strongs_id) from Macula.
+    - "Display slots": distinct slot values containing >= 1 non-helper token, sorted asc.
+    - BH display word K maps to display_slot[K-1].
+    - All Macula tokens sharing that slot get xlit_slot = BH transliteration at position K.
+    - If len(display_slots) != BH count: skip with COUNT_MISMATCH (no corruption).
+    """
+    bh_path = DATA_DIR / "hebrew_translit.json"
+    if not bh_path.exists():
+        print("\n[2b] Skipping BH Hebrew xlit — hebrew_translit.json not found.")
+        print("     Run: python3 scripts/fetch_biblehub_translit_hebrew.py")
+        return
+
+    bh_data = json.loads(bh_path.read_text("utf-8"))
+    print(f"\n[2b] Applying BH Hebrew transliterations ({len(bh_data):,} entries)...")
+
+    # Fetch all OT Hebrew verses
+    cur.execute("""
+        SELECT DISTINCT book_id, chapter, verse
+        FROM word WHERE language = 'hbo'
+        ORDER BY book_id, chapter, verse
+    """)
+    verses = cur.fetchall()
+
+    updates = []
+    updated = skipped = mismatch = 0
+
+    for (book_id, ch, vs) in verses:
+        verse_key = "%s:%d:%d" % (book_id, ch, vs)
+
+        bh_count = bh_data.get("%s:count" % verse_key)
+        if bh_count is None:
+            skipped += 1
+            continue
+
+        cur.execute("""
+            SELECT id, slot, strongs_id
+            FROM word
+            WHERE book_id=? AND chapter=? AND verse=? AND language='hbo'
+            ORDER BY slot, position
+        """, (book_id, ch, vs))
+        tokens = cur.fetchall()
+        if not tokens:
+            continue
+
+        # Compute display slots (distinct slot values with >= 1 non-helper token)
+        slot_has_display = {}
+        for (wid, tok_slot, sids) in tokens:
+            if tok_slot is None:
+                continue
+            if tok_slot not in slot_has_display:
+                slot_has_display[tok_slot] = False
+            if sids not in HELPER_STRONGS:
+                slot_has_display[tok_slot] = True
+
+        display_slots = sorted(k for k, v in slot_has_display.items() if v)
+
+        if len(display_slots) != bh_count:
+            mismatch += 1
+            continue
+
+        # Map each display slot -> BH translit
+        slot_to_xlit = {}
+        for bh_pos, dslot in enumerate(display_slots, 1):
+            entry = bh_data.get("%s:%d" % (verse_key, bh_pos))
+            if entry and isinstance(entry, dict):
+                t = entry.get("translit", "")
+                if t:
+                    slot_to_xlit[dslot] = t
+
+        for (wid, tok_slot, sids) in tokens:
+            if tok_slot is not None and tok_slot in slot_to_xlit:
+                # Only set xlit_slot on the ROOT (non-helper) token.
+                # Helper tokens (H1886a, H871a, etc.) fall back to their own
+                # per-token xlit/xlitSimple so they don't show the combined
+                # slot translit (e.g. hā-'îš) where their own short form belongs.
+                if sids not in HELPER_STRONGS:
+                    updates.append((slot_to_xlit[tok_slot], wid))
+                    updated += 1
+
+        if len(updates) >= 5000:
+            cur.executemany("UPDATE word SET xlit_slot=? WHERE id=?", updates)
+            updates.clear()
+
+    if updates:
+        cur.executemany("UPDATE word SET xlit_slot=? WHERE id=?", updates)
+
+    print("  xlit_slot set for %d tokens (%d verses skipped, %d count mismatches)" % (
+        updated, skipped, mismatch
+    ))
+
+
+# ─────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────
 
@@ -1685,13 +2060,20 @@ def main():
 
     import_books(cur);              con.commit()
     import_strongs(cur);            con.commit()   # must be before words (FK constraint)
+    _seed_strongs_stubs(cur);       con.commit()   # ensures FK satisfiable even when JSON download fails
     import_stepbible_lexicons(cur); con.commit()   # enriches strongs with BDB + xlit_simple (TBESH/TBESG, exact ID only)
-    _apply_xlit_fallback(cur);      con.commit()   # fills remaining xlit_simple NULLs from academic transliteration
+    # _apply_xlit_fallback removed: it derived xlit_simple from openscriptures academic
+    # transliteration (ʾašrēy-style notation), which is neither TBESH nor BH format.
+    # _apply_word_table_xlit_fallback (below, after Macula import) handles the same
+    # cases better using actual word.xlit / xlit_slot values from TBESH and BH sources.
     verify_xlit_integrity(cur);     con.commit()   # fail-fast: abort if any sub-entry got wrong xlit from base entry
-    import_macula_hebrew(cur);      con.commit()   # populates word table (surface, lemma, morph, gloss, xlit from TSV)
+    import_macula_hebrew(cur);      con.commit()   # populates word table (surface, lemma, morph, gloss, xlit, slot from TSV)
+    _apply_bh_hebrew_translit(cur); con.commit()   # populates xlit_slot from BH positional translit (ADR-020)
     enrich_macula_from_xml(cur);    con.commit()   # populates gloss_macula, syntax_role, greek, greek_strong from XML
     import_macula_greek(cur);            con.commit()
     enrich_macula_greek_from_xml(cur);   con.commit()   # populates after_char for Greek words
+    _backfill_strongs_originals_from_macula(cur); con.commit()  # fills strongs.original from word.lemma (Macula)
+    _apply_word_table_xlit_fallback(cur); con.commit()          # fills xlit_simple/short_def for ~507 sub-entry stubs not in TBESH
     import_translations(cur);            con.commit()
     import_footnotes(cur);          con.commit()
     import_cross_references(cur);   con.commit()

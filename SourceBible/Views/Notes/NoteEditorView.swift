@@ -253,9 +253,7 @@ private struct VerseContextCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(refLabel)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.primary)
+            ReferenceLabel(refLabel)
 
             HStack(alignment: .top, spacing: 10) {
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
@@ -271,7 +269,7 @@ private struct VerseContextCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(Color("cardBackground"))
         )
     }
 

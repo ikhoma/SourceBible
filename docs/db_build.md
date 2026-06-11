@@ -174,7 +174,9 @@ let lines = normalized.components(separatedBy: "\n")
 
 ### ❌ Sub-entry IDs (H835a, H871a, H3887a) мають порожній `long_def`
 
-**Причина:** TBESH зберігає тільки базові ID (H835, H3887). Sub-entries з суфіксом (`a/b/c`) — це концепція openscriptures, не TBESH. Парсер `_parse_stepbible_file()` навмисно пропускає рядки без базового ID (`data_re = r'^[HG]\d{4,5}\t'`).
+**Причина:** TBESH зберігає власні sub-entries (H835a, H3887a тощо) для слів де базовий номер і sub-entry — це пов'язані лексеми. **Але** парсер `_parse_stepbible_file()` у старих версіях скіпав ці рядки через regex `data_re = r'^[HG]\d{4,5}\t'` (потребує TAB одразу після цифр, без суфікса) — це баг парсера, описаний нижче.
+
+Для H835a/H3887a fix: Swift fallback до базового ID (якщо перша буква збігається) достатній, бо ці sub-entries мають той самий корінь. Дивись "Рішення в DatabaseService" нижче.
 
 Наслідок: клік на перше слово Пс 1:1 (אַשְׁרֵי → H835a) не показував лексичних даних.
 
@@ -221,6 +223,49 @@ if sameRoot { /* merge base long_def */ }
 Build автоматично NULLить `transliteration` для цих entries (`xlit_simple` з TBESH зберігається). Це безпечно — `xlit_simple` має пріоритет у UI.
 
 **Реальна проблема яку check запобігає:** H871a (прийменник בְּ) отримує xlit від H871 (місто Атарот). `import_stepbible_lexicons()` використовує `WHERE id = ?` (exact match only, без propagation).
+
+---
+
+### ❌ TBESH suffixed `eStrong#` entries (H1471a, H6213a) — порожні `short_def`/`long_def` для ~542 слів
+
+**Виявлено:** червень 2026. Симптом: вкладка "Значення" для слів Псалма 1 показувала порожні gloss і BDB-визначення (H1471 גּוֹי, H5034 נָבֵל, H6213 עָשָׂה, H6743 צָלַח та інші).
+
+**Причина — баг regex у `_parse_stepbible_file()`:**
+```python
+# БАГ: потребує TAB одразу після цифр, скіпає рядки з суфіксом
+data_re = re.compile(r'^[HG]\d{4,5}\t')
+
+# ВИПРАВЛЕННЯ: дозволити опціональний суфікс перед TAB
+data_re = re.compile(r'^[HG]\d{4,5}[a-z]?\t')
+```
+
+TBESH містить рядки де `eStrong#` — це `H1471a`, `H6213a`, `H6743b` тощо. Для **542 Strong's IDs** у TBESH взагалі немає bare-number рядка — є тільки suffixed-entry. Старий regex мовчки скіпав 1 424 рядки (з 11 682 data rows), залишаючи `short_def`/`long_def` = NULL.
+
+Macula при цьому тегує ці самі слова як `H1471`, `H6213` (без суфікса) — тому запис у таблиці `strongs` існує, але порожній.
+
+**Масштаб:** ~542 Strong's IDs з порожніми визначеннями. Помітно на: גּוֹי (H1471), עָשָׂה (H6213), צָלַח (H6743), נָבֵל (H5034), plus hundreds of others across the OT.
+
+**Де баг присутній:**
+- `scripts/build_db.py` — функція `_parse_stepbible_file()`, рядок ~904
+- `scripts/fix_strongs_tbesh.py` — та сама функція (copy-paste)
+
+**Повне виправлення потребує також:** після зміни regex, в import-циклі додати UPDATE базового ID (H1471) коли TBESH-рядок suffixed (H1471a):
+```python
+m_base = re.match(r'^([HG]\d+)[a-z]$', sid)
+if m_base:
+    base_sid = m_base.group(1)
+    cur.execute("""
+        UPDATE strongs SET
+            xlit_simple = CASE WHEN (xlit_simple IS NULL OR xlit_simple = '') AND ? != '' THEN ? ELSE xlit_simple END,
+            short_def   = CASE WHEN (short_def   IS NULL OR short_def   = '') AND ? != '' THEN ? ELSE short_def   END,
+            long_def    = CASE WHEN (long_def    IS NULL OR long_def    = '') AND ? != '' THEN ? ELSE long_def    END
+        WHERE id = ?
+    """, (xlit_simple, xlit_simple, short_def, short_def, long_def, long_def, base_sid))
+```
+
+**Workaround без rebuild:** повний `scripts/build_db.py` rebuild (~10 хв) після патча обох файлів — виправляє проблему повністю.
+
+**Це не повязано** з sub-entry fallback у Swift — там інша проблема (H835a → H835 lookup). Тут проблема в тому, що база взагалі не містить даних для H1471 тощо.
 
 ---
 
@@ -350,11 +395,15 @@ import_strongs              ← FK для word table; заповнює short_def
                                long_def з kjv_def (буде перезаписано TBESH нижче!)
 import_stepbible_lexicons   ← TBESH/TBESG: перезаписує long_def BDB-визначенням,
                                заповнює xlit_simple; exact-ID only (без sub-entry propagation)
-_apply_xlit_fallback        ← xlit_simple для entries без TBESH
+_apply_xlit_fallback        ← xlit_simple для entries без TBESH (з academic transliteration)
 verify_xlit_integrity       ← fail-safe check (auto-null false positives, не abort)
 import_macula_hebrew        ← заповнює word table з TSV (surface, morph, gloss, xlit)
 enrich_macula_from_xml      ← додає gloss_macula, syntax_role, greek, greek_strong з XML
 import_macula_greek
+_backfill_strongs_originals ← strongs.original з word.lemma (Macula)
+_apply_word_table_xlit_fallback ← 4th fallback: xlit_simple + short_def для ~507 sub-entry
+                               stubs (H871a, H1886a, H2050b…) що не є в TBESH/openscriptures;
+                               бере найпоширенішу word.xlit / word.gloss для кожного strongs_id
 import_translations
 import_footnotes
 import_cross_references

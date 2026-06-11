@@ -15,12 +15,10 @@ struct NoteCardView: View {
 
             // ── Header: verse reference + date ──────────────────────────
             HStack(alignment: .firstTextBaseline) {
-                Text(verseRef)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
+                ReferenceLabel(verseRef)
                 Spacer(minLength: 12)
                 Text(dateLabel)
-                    .font(.system(size: 14))
+                    .font(.footnote)
                     .foregroundStyle(.tertiary)
             }
 
@@ -54,7 +52,7 @@ struct NoteCardView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(Color("cardBackground"))
         )
     }
 

@@ -531,7 +531,15 @@ class ReaderViewModel: ObservableObject {
             selectedWord = nil
         }
 
-        loadStrongs(for: segment, bookId: verse.bookId)
+        // Prefer the Macula word's strongsId (e.g. H3887a) over the segment ID (e.g. H3887).
+        // The strongs table is backfilled from Macula, so bare OpenScriptures IDs like H3887
+        // may have no row at all — only the sub-entry H3887a exists. Using the Macula ID
+        // ensures loadStrongs finds a row and the sub-entry fallback can kick in.
+        if let word = selectedWord {
+            loadStrongs(for: word)
+        } else {
+            loadStrongs(for: segment, bookId: verse.bookId)
+        }
     }
 
     /// Called from OriginalWordsView (bottom sheet) — receives a Macula BibleWord.

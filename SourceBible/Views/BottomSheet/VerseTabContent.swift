@@ -106,6 +106,24 @@ func sectionHeader(_ text: LocalizedStringKey) -> some View {
         .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
 }
 
+// MARK: - Reference Label
+// Single source of truth for scripture-place labels ("Book Chapter:Verse")
+// in cards across cross-refs and word-usage. Internal so WordTabContent reuses it.
+
+struct ReferenceLabel: View {
+    private let text: Text
+
+    init(_ string: String) { self.text = Text(string) }
+    init(_ key: LocalizedStringKey) { self.text = Text(key) }
+
+    var body: some View {
+        text
+            .font(.footnote)
+            .fontWeight(.semibold)
+            .foregroundStyle(.primary)
+    }
+}
+
 // MARK: - Cross Refs
 
 struct CrossRefsView: View {
@@ -120,8 +138,7 @@ struct CrossRefsView: View {
             } else {
                 ForEach(refs) { ref in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(ref.targetReference)
-                            .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
+                        ReferenceLabel(ref.targetReference)
                         if ref.targetText.isEmpty {
                             Text("verse.text_unavailable")
                                 .font(.callout).foregroundStyle(.tertiary).italic()
@@ -152,7 +169,7 @@ struct TranslationsView: View {
                 ForEach(parallels) { vt in
                     VStack(alignment: .leading, spacing: 6) {
                         Text(vt.translation.name)
-                            .font(.caption).fontWeight(.semibold).foregroundStyle(.primary)
+                            .font(.footnote).fontWeight(.semibold).foregroundStyle(.primary)
                         Text(vt.text)
                             .font(.callout)
                     }
@@ -169,7 +186,7 @@ struct TranslationsView: View {
 struct OriginalWordsView: View {
     @EnvironmentObject var vm: ReaderViewModel
 
-    /// All Macula words for the verse (including particles shown as non-interactive rows).
+    /// All Macula tokens for the verse (raw; use `displayWords` for rendering).
     private var words: [BibleWord] {
         vm.selectedVerse?.words ?? []
     }
@@ -180,15 +197,89 @@ struct OriginalWordsView: View {
             : "verse.section.original.greek"
     }
 
+    // MARK: – Slot combining
+
+    /// Strong's IDs for grammatical glue particles (article, inseparable prepositions, maqaf).
+    /// These are absorbed into the combined display word; their individual rows are hidden.
+    private static let helperStrongs: Set<String> = [
+        "H1886a",  // definite article הַ/הָ
+        "H871a",   // inseparable preposition בְּ/בַּ/בָּ
+        "H3509a",  // inseparable preposition כְּ (like/as)
+        "H1930a",  // inseparable preposition לְ
+        "H2050b", "H2050c", "H2050d",  // maqaf connectors
+        "H5105b",  // waw conjunctive prefix (rare isolated slot)
+    ]
+
+    /// Words grouped by Macula slot → one display row per Hebrew word.
+    /// Greek verses (slot == nil for all tokens) are returned unchanged.
+    private var displayWords: [BibleWord] {
+        guard !words.isEmpty, words.first?.slot != nil else { return words }
+
+        // Group consecutive tokens that share the same slot value
+        var groups: [[BibleWord]] = []
+        var current: [BibleWord] = []
+        var currentSlot: Int? = nil
+
+        for word in words {
+            guard let s = word.slot else {
+                // Safety fallback: a token with no slot stands alone
+                if !current.isEmpty { groups.append(current); current = [] }
+                groups.append([word])
+                currentSlot = nil
+                continue
+            }
+            if s != currentSlot {
+                if !current.isEmpty { groups.append(current) }
+                current = [word]
+                currentSlot = s
+            } else {
+                current.append(word)
+            }
+        }
+        if !current.isEmpty { groups.append(current) }
+
+        // Merge each group into one representative BibleWord
+        return groups.map { tokens in
+            guard tokens.count > 1 else { return tokens[0] }
+            // Root = first non-helper token (carries Strong's, xlit, tap target)
+            let root = tokens.first(where: {
+                guard let sid = $0.strongsId else { return true }
+                return !Self.helperStrongs.contains(sid)
+            }) ?? tokens[0]
+            // Combined surface: concatenate each token's displayText (already includes afterChar)
+            let surface   = tokens.map(\.displayText).joined()
+            let gloss     = tokens.compactMap(\.gloss).filter { !$0.isEmpty }.joined(separator: " ")
+            let morphology = tokens.compactMap(\.morphology).filter { !$0.isEmpty }.joined(separator: "·")
+            return BibleWord(
+                id: root.id,
+                text: surface,
+                strongsId: root.strongsId,
+                morphology: morphology.isEmpty ? nil : morphology,
+                gloss: gloss.isEmpty ? nil : gloss,
+                xlitSimple: root.xlitSimple,
+                xlit: root.xlit,
+                syntaxRole: root.syntaxRole,
+                greek: root.greek,
+                greekStrong: root.greekStrong,
+                afterChar: nil,          // already baked into `surface` via displayText join
+                lexicalClass: root.lexicalClass,
+                slot: root.slot,
+                xlitSlot: root.xlitSlot  // BH combined slot translit (nil on helpers, set on root)
+            )
+        }
+    }
+
+    // MARK: – Body
+
     var body: some View {
         PillSection(title: sectionTitleKey) {
-            if words.isEmpty {
+            if displayWords.isEmpty {
                 Text("verse.original.empty")
                     .font(.callout).foregroundStyle(.secondary)
                     .padding(.vertical, 8)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(Array(words.enumerated()), id: \.element.id) { i, word in
+                    ForEach(Array(displayWords.enumerated()), id: \.element.id) { i, word in
                         WordRow(
                             word: word,
                             isSelected: vm.selectedWord?.id == word.id,
@@ -198,7 +289,7 @@ struct OriginalWordsView: View {
                                 vm.tapWord(word, in: verse)
                             }
                         }
-                        if i < words.count - 1 {
+                        if i < displayWords.count - 1 {
                             Divider()
                         }
                     }
@@ -284,6 +375,27 @@ struct CommentaryDetailView: View {
         return (String(parts[0]), ch, vs)
     }
 
+    /// "Ps 1:3 — J. Calvin" or "Ps 1:1–3 — J. Calvin" once the section is loaded.
+    private var detailTitle: String {
+        guard let vc = verseComponents else { return theologian.shortName }
+        let book = BibleBookNames.short(for: vc.bookId)
+        let ref: String
+        if let sec = section {
+            if sec.startChapter == sec.endChapter {
+                if sec.startVerse == sec.endVerse {
+                    ref = "\(book) \(sec.startChapter):\(sec.startVerse)"
+                } else {
+                    ref = "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endVerse)"
+                }
+            } else {
+                ref = "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endChapter):\(sec.endVerse)"
+            }
+        } else {
+            ref = "\(book) \(vc.chapter):\(vc.verse)"
+        }
+        return "\(ref) — \(theologian.shortName)"
+    }
+
     @State private var section: CommentarySection? = nil
     @State private var isLoaded = false
 
@@ -311,12 +423,6 @@ struct CommentaryDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 24)
                 } else if let sec = section {
-                    // Verse range label (e.g. "Verses 8–15") — only shown when the
-                    // section covers more than the single tapped verse, so the user
-                    // understands why they're seeing a broader block of text.
-                    Text(sec.verseRangeLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
                     // Use UITextView for commentary body — SwiftUI Text() silently
                     // fails to render very large strings (Owen sections can exceed
                     // 230,000 characters). UITextView handles arbitrary length text.
@@ -328,7 +434,7 @@ struct CommentaryDetailView: View {
             }
             .padding(20)
         }
-        .navigationTitle(LocalizedStringKey(theologian.nameKey))
+        .navigationTitle(detailTitle)
 
         .navigationBarTitleDisplayMode(.inline)
         .task(id: verseId) {

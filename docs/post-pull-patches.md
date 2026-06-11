@@ -5,45 +5,11 @@ Re-apply these after `git pull` if they get overwritten.
 
 ---
 
-## 1. `SourceBible/Services/DatabaseService.swift` — `loadWords()` SQL fix
+## 1. `SourceBible/Services/DatabaseService.swift` — `loadWords()` SQL
 
-**Why:** `xlitSimple` was hardcoded to `nil`. The fix adds a `LEFT JOIN` to the `strongs`
-table so each word gets its TBESH lemma transliteration as a fallback when Macula `xlit` is NULL.
+**Why:** `xlitSimple` needs a `LEFT JOIN` to `strongs` for `s.xlit_simple` fallback when Macula `xlit` is NULL.
 
-### Find this (old code):
-
-```swift
-let sql = """
-    SELECT w.id, w.surface, w.strongs_id, w.morph,
-           COALESCE(w.gloss, w.gloss_macula) AS display_gloss,
-           w.xlit,
-           w.syntax_role, w.greek, w.greek_strong,
-           w.after_char, w.lexical_class
-    FROM word w
-    WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
-    ORDER BY w.position
-    """
-query(sql, bindings: [bookId, chapter, verse]) { stmt in
-    let id           = string(stmt, 0)
-    let surface      = string(stmt, 1)
-    let strongsId    = optString(stmt, 2)
-    let morph        = optString(stmt, 3)
-    let gloss        = optString(stmt, 4)
-    let xlit         = optString(stmt, 5)
-    let syntaxRole   = optString(stmt, 6)
-    let greek        = optString(stmt, 7)
-    let greekStrong  = optString(stmt, 8)
-    let afterChar    = optString(stmt, 9)
-    let lexicalClass = optString(stmt, 10)
-    words.append(BibleWord(id: id, text: surface, strongsId: strongsId,
-                           morphology: morph, gloss: gloss,
-                           xlitSimple: nil, xlit: xlit,
-                           syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong,
-                           afterChar: afterChar, lexicalClass: lexicalClass))
-}
-```
-
-### Replace with (new code):
+### Current correct code (re-apply if overwritten):
 
 ```swift
 // word.gloss: short form from Macula TSV english field (e.g. "created", "beginning")

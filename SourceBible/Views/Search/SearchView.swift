@@ -42,8 +42,8 @@ struct SearchView: View {
                 .navigationTitle("tab.search")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar(!vm.results.isEmpty && !isSearchActive ? .hidden : .automatic, for: .navigationBar)
+                .background(Color("appBackground"))
         }
-        .background(Color(.systemGroupedBackground))
         .searchable(
             text: $searchText,
             isPresented: $isSearchActive,
@@ -126,6 +126,7 @@ struct SearchView: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .listSectionSpacing(.compact)
         .scrollDismissesKeyboard(.immediately)
     }
@@ -237,6 +238,7 @@ struct SearchView: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
     private var searchHintView: some View {
@@ -280,14 +282,11 @@ private struct SearchResultRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(result.reference)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundColor(.accentColor)
+            VStack(alignment: .leading, spacing: 6) {
+                ReferenceLabel(result.reference)
 
                 Text(parseSnippet(result.snippet))
                     .font(.callout)
-                    .lineLimit(3)
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")

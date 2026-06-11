@@ -48,6 +48,7 @@ struct MenuView: View {
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
                         .tint(.blue)
                 }
+                .listRowBackground(Color("cardBackground"))
                 Section("menu.section.translation") {
                     NavigationLink {
                         DefaultTranslationPickerView(
@@ -59,6 +60,7 @@ struct MenuView: View {
                                        value: defaultTranslationId)
                     }
                 }
+                .listRowBackground(Color("cardBackground"))
                 Section("menu.section.app") {
                     NavigationLink {
                         LanguageSettingsView()
@@ -69,7 +71,10 @@ struct MenuView: View {
                         Text("Source Bible v1.0")
                     }
                 }
+                .listRowBackground(Color("cardBackground"))
             }
+            .scrollContentBackground(.hidden)
+            .background(Color("appBackground"))
             .navigationTitle("tab.menu")
         }
         .id(locale.identifier)

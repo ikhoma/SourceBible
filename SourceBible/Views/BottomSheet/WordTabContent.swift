@@ -194,7 +194,7 @@ struct WordMeaningView: View {
                 if !entry.shortDefinition.isEmpty {
                     Text(entry.shortDefinition)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                 }
             }
             Spacer(minLength: 12)
@@ -216,9 +216,9 @@ struct WordMeaningView: View {
         let ref   = "\(BibleBookNames.short(for: vm.currentBook.id)) \(ch):\(v)"
 
         var rows: [(String, String, Bool)] = [(t.string(for: MorphKey.rowWord), word.text, true)]
-        // Use displayXlit (xlit ?? xlitSimple): prefers Macula occurrence xlit when available,
-        // falls back to TBESH lemma xlit so the row is never silently empty.
-        if let xlit = word.displayXlit, !xlit.isEmpty {
+        // Use bestXlit: BibleHub combined slot translit → Macula occurrence xlit → TBESH lemma xlit.
+        // xlitSlot covers suffix-combined words like ḥep̄-ṣōw; falls back to per-token xlit/lemma.
+        if let xlit = word.bestXlit, !xlit.isEmpty {
             rows.append((t.string(for: MorphKey.rowTransliteration), xlit, false))
         }
         return VStack(alignment: .leading, spacing: 0) {
@@ -262,39 +262,35 @@ struct WordMeaningView: View {
         if !sections.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 sectionLabel(t.string(for: MorphKey.sectionLexical))
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(sections) { sec in
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(sections.enumerated()), id: \.offset) { si, sec in
                         VStack(alignment: .leading, spacing: 0) {
                             if !sec.stemName.isEmpty {
                                 Text(sec.stemName)
-                                    .font(.caption).fontWeight(.medium)
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 10)
-                                    .frame(height: 28)
-                                    .background(Color(UIColor.tertiarySystemFill))
-                                    .clipShape(Capsule())
-                                    .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 2)
+                                    .padding(.top, 10).padding(.bottom, 4)
                             }
-                            VStack(spacing: 0) {
-                                ForEach(Array(sec.definitions.enumerated()), id: \.offset) { i, def in
-                                    HStack(alignment: .top, spacing: 8) {
-                                        Text("\(i + 1).")
-                                            .font(.callout).foregroundStyle(.tertiary)
-                                            .frame(width: 22, alignment: .trailing)
-                                        Text(def)
-                                            .font(.callout)
-                                            .lineSpacing(3)
-                                        Spacer(minLength: 0)
-                                    }
-                                    .padding(.horizontal, 14).padding(.vertical, 10)
-                                    if i < sec.definitions.count - 1 {
-                                        Divider().padding(.leading, 44)
-                                    }
+                            ForEach(Array(sec.definitions.enumerated()), id: \.offset) { i, def in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("\(i + 1). \(def)")
+                                        .font(.callout)
+                                        .lineSpacing(3)
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.vertical, 10)
+                                if i < sec.definitions.count - 1 {
+                                    Rectangle()
+                                        .fill(Color(UIColor.separator))
+                                        .frame(height: 0.5)
                                 }
                             }
                         }
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if si < sections.count - 1 {
+                            Rectangle()
+                                .fill(Color(UIColor.separator))
+                                .frame(height: 0.5)
+                        }
                     }
                 }
             }
@@ -317,10 +313,9 @@ struct WordMeaningView: View {
 
     private func sectionLabel(_ title: String) -> some View {
         Text(title.uppercased())
-            .font(.caption2).fontWeight(.semibold)
+            .font(.caption).fontWeight(.medium)
             .foregroundStyle(.secondary)
-            .kerning(0.4)
-            .padding(.top, 20).padding(.bottom, 8).padding(.horizontal, 2)
+            .padding(.top, 20).padding(.bottom, 4).padding(.horizontal, 2)
     }
 
     private func syntaxRoleLabel(_ role: String) -> String? {
@@ -347,23 +342,23 @@ private struct InfoGroup: View {
             ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
                 HStack(spacing: 12) {
                     Text(row.0)
-                        .font(.callout).fontWeight(.medium)
+                        .font(.footnote)
                         .foregroundStyle(.primary)
                     Spacer()
                     Text(row.1)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.trailing)
                         .environment(\.layoutDirection, row.2 ? .rightToLeft : .leftToRight)
                 }
-                .padding(.horizontal, 14).padding(.vertical, 12)
+                .padding(.vertical, 10)
                 if i < rows.count - 1 {
-                    Divider().padding(.leading, 14)
+                    Rectangle()
+                        .fill(Color(UIColor.separator))
+                        .frame(height: 0.5)
                 }
             }
         }
-        .background(Color(UIColor.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -409,17 +404,14 @@ private struct BookUsageRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 // "Genesis 1:1" — full book name + chapter:verse of the example
-                Text("\(group.bookName) \(group.example.chapter):\(group.example.verse)")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                ReferenceLabel("\(group.bookName) \(group.example.chapter):\(group.example.verse)")
                 Spacer(minLength: 8)
                 // "1 Occurrence in this Book" / "5 Occurrences in this Book"
                 Text(String.localizedStringWithFormat(
                     NSLocalizedString(MorphKey.usageBookCount, comment: ""),
                     group.count
                 ))
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.trailing)
             }
@@ -862,7 +854,7 @@ struct WordRow: View {
                         .font(.title3)
                         .foregroundStyle(.primary)
 
-                    if let xlit = word.displayXlit, !xlit.isEmpty {
+                    if let xlit = word.bestXlit, !xlit.isEmpty {
                         Text(xlit)
                             .font(.callout)
                             .foregroundStyle(.secondary)

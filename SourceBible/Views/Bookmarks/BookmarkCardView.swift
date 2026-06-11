@@ -20,9 +20,7 @@ struct BookmarkCardView: View {
 
             // ── Header: verse reference + bookmark icon ──────────────────
             HStack(alignment: .center) {
-                Text(verseRef)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary)
+                ReferenceLabel(verseRef)
                 Spacer(minLength: 12)
                 Image(systemName: "bookmark.fill")
                     .font(.system(size: 14, weight: .medium))
@@ -45,7 +43,7 @@ struct BookmarkCardView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(Color("cardBackground"))
         )
         .onAppear {
             guard verseText == nil else { return }

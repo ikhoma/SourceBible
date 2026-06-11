@@ -135,8 +135,12 @@ struct VerseParser {
     }
 
     private mutating func handleText(_ raw: String) {
-        // Whitespace-only між тегами — ігноруємо
-        guard !raw.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        // Truly empty (zero-length) strings are ignored; whitespace-only strings are NOT.
+        // Dropping whitespace-only text nodes was the source of missing spaces between
+        // tagged words, e.g. RST "сказал<S>3004</S> <i>Бог</i>" → "сказалБог".
+        // The space between </S> and <i> is a whitespace-only text node that must be
+        // preserved as a segment so the rendered text reads "сказал Бог".
+        guard !raw.isEmpty else { return }
 
         if insideS { strongsBuffer  += raw; return }
         if insideN { footnoteBuffer += raw; return }
@@ -236,11 +240,13 @@ struct VerseParser {
         return s
     }
 
-    /// Індекс останнього сегмента з непорожнім текстом (для прив'язки Strong's)
+    /// Індекс останнього сегмента з непорожнім *значущим* текстом (для прив'язки Strong's).
+    /// Пропускає whitespace-only сегменти (міжтегові пробіли), щоб Strong's прив'язувався
+    /// до реального слова, а не до пробілу між тегами.
     private func lastTextSegmentIndex() -> Int? {
         segments.indices.reversed().first { !segments[$0].isLineBreak
                                          && !segments[$0].isParagraphBreak
-                                         && !segments[$0].text.isEmpty }
+                                         && !segments[$0].text.trimmingCharacters(in: .whitespaces).isEmpty }
     }
 
     /// "835" → ["H835"]   "8384, 5929" → ["H8384","H5929"]   "G976" → ["G976"]

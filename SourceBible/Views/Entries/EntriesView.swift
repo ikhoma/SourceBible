@@ -20,7 +20,7 @@ struct EntriesView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(Color(.systemGroupedBackground))
+                .background(Color("appBackground"))
 
                 if tab == .notes {
                     NotesListView()
@@ -31,7 +31,7 @@ struct EntriesView: View {
                 }
             }
             .animation(nil, value: tab)
-            .background(Color(.systemGroupedBackground))
+            .background(Color("appBackground"))
             // .id forces the Picker and list content to reconstruct on locale change.
             // Picker segment labels (LocalizedStringKey) are cached by UISegmentedControl
             // and do not re-evaluate automatically when the SwiftUI locale environment changes.

@@ -65,7 +65,7 @@ struct ReaderView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                Color("appBackground").ignoresSafeArea()
                 if vm.isLoading {
                     ProgressView(LocalizedStringKey("reader.loading"))
                 } else if let error = vm.errorMessage {
@@ -101,7 +101,7 @@ struct ReaderView: View {
                                             .font(.largeTitle)
                                             .bold()
                                             .frame(maxWidth: .infinity, alignment: .center)
-                                            .padding(.bottom, 8)
+                                            .padding(.bottom, 16)
                                     }
                                 }
 
@@ -109,7 +109,7 @@ struct ReaderView: View {
                                     .font(.title)
                                     .bold()
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.bottom, 8)
+                                    .padding(.bottom, 16)
 
                                 ForEach(vm.verses) { verse in
                                     VerseRowView(
@@ -176,19 +176,16 @@ struct ReaderView: View {
                         // Only extend behind the nav bar when the genesis header image
                         // is present. Other chapters must render below the nav bar as normal.
                         .ignoresSafeAreaIf(showsBookCover, edges: .top)
-                        .gesture(
-                            DragGesture(minimumDistance: 40, coordinateSpace: .local)
-                                .onEnded { value in
-                                    // Only respond to mostly-horizontal swipes
-                                    guard abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-                                    if value.translation.width < 0 {
-                                        vm.nextChapter()   // swipe left  → next
-                                    } else {
-                                        vm.prevChapter()   // swipe right → prev
-                                    }
-                                }
-                        )
                     }
+
+                    // Edge swipe gesture for chapter navigation.
+                    // UIScreenEdgePanGestureRecognizer fires from the hardware screen
+                    // edge regardless of UITextView hit-testing, so it works over all content.
+                    EdgeSwipeNavigator(
+                        onPrevChapter: { vm.prevChapter() },
+                        onNextChapter: { vm.nextChapter() }
+                    )
+                    .ignoresSafeArea()
 
                     // Gesture-blocking overlay for the sheet-covered region.
                     //
@@ -253,7 +250,7 @@ struct ReaderView: View {
             }
         }
         // Single sheet slot for all presentations — avoids "only one sheet supported" warning
-        .sheet(item: $vm.activeSheet, onDismiss: { vm.clearWordSelection() }) { sheet in
+        .sheet(item: $vm.activeSheet, onDismiss: { vm.clearWordSelection(); selectedDetent = .medium }) { sheet in
             switch sheet {
             case .bookPicker:
                 BookChapterPickerView().environmentObject(vm)
@@ -343,7 +340,7 @@ struct VerseRowView: View {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12).fill(Color.blue)
                             ConcentricRectangle()
-                                .fill(Color(UIColor.systemGroupedBackground))
+                                .fill(Color("appBackground"))
                                 .padding(.leading, 2)
                             ConcentricRectangle()
                                 .fill(Color.blue.opacity(0.1))
@@ -356,7 +353,7 @@ struct VerseRowView: View {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12).fill(Color.blue)
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(UIColor.systemGroupedBackground))
+                                .fill(Color("appBackground"))
                                 .padding(.leading, 2)
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.blue.opacity(0.1))

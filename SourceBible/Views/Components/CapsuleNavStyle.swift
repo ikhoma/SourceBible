@@ -9,9 +9,14 @@ import SwiftUI
 
 struct CapsuleNavGroupStyle: ViewModifier {
     func body(content: Content) -> some View {
-        content
-            .background(Color(UIColor.secondarySystemFill))
-            .clipShape(Capsule())
+        if #available(iOS 26, *) {
+            content
+                .glassEffect(in: Capsule())
+        } else {
+            content
+                .background(Color(UIColor.secondarySystemFill))
+                .clipShape(Capsule())
+        }
     }
 }
 
