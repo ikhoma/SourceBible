@@ -301,24 +301,6 @@ class ReaderViewModel: ObservableObject {
     /// Visual gap between the bottom of the pinned verse row and the sheet top.
     static let sheetGap: CGFloat = 8
 
-    /// Measured heights of ALL verse rows (verse.id → height), written by
-    /// ReaderView from an unconditional onGeometryChange on every row.
-    /// Measuring every row (instead of only the selected one) makes the value
-    /// deterministic: selection changes are a dictionary lookup, with no
-    /// dependence on a conditional measuring view firing its initial callback.
-    /// Rows are re-measured automatically on translation switch / Dynamic Type.
-    @Published var verseRowHeights: [String: CGFloat] = [:]
-
-    /// Height of the pinned (selected) verse row.
-    var pinnedVerseHeight: CGFloat {
-        guard let id = selectedVerse?.id else { return 0 }
-        return verseRowHeights[id] ?? 0
-    }
-
-    /// Height of the reader content area (below nav bar, above bottom safe
-    /// area). Written by ReaderView via onGeometryChange.
-    @Published var readerContainerHeight: CGFloat = 0
-
     /// Global (screen-coordinate) bottom edge of the pinned verse row,
     /// written by ReaderView while Study Mode is active. Direct geometry:
     /// no assumptions about nav-bar or container heights — those produced a

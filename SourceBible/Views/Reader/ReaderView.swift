@@ -20,13 +20,13 @@ struct ReaderView: View {
     // MARK: - Study Mode geometry (spec-study-mode-redesign.md R1–R3)
     //
     // In Study Mode (vm.activeSheet == .verse) the selected verse is pinned
-    // 16 pt below the toolbar, reader scrolling is disabled, and the sheet's
-    // single .height detent is computed so its top edge sits ~8 pt below the
-    // pinned verse. Only the sheet's internal content scrolls.
+    // 16 pt below the toolbar, reader scrolling is disabled, and the sheet
+    // is sized so its top edge sits ~8 pt below the pinned verse. Only the
+    // sheet's internal content scrolls.
     //
-    // The geometry state (pinnedVerseHeight / readerContainerHeight /
-    // studySheetHeight) lives in ReaderViewModel, and the detent itself is
-    // applied INSIDE VerseBottomSheetView. Rationale: presentation-modifier
+    // Geometry state (pinnedVerseGlobalBottom / studySheetHeight) lives in
+    // ReaderViewModel; the height is applied INSIDE VerseBottomSheetView via
+    // StudySheetDetentApplier (UIKit). Rationale: presentation-modifier
     // arguments captured in the .sheet content closure here go STALE — the
     // closure is not re-evaluated when the presenter's @State changes — so a
     // detent set in this file never resized the already-open sheet. The
@@ -99,30 +99,15 @@ struct ReaderView: View {
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
                                     .id(verse.id)
-                                    // Measure EVERY row unconditionally (R3): heights land in
-                                    // vm.verseRowHeights, and vm.pinnedVerseHeight is a lookup
-                                    // for the selected id. Unlike the previous conditional
-                                    // background, this never depends on a freshly-inserted view
-                                    // firing its initial geometry callback when selection moves.
-                                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { newHeight in
-                                        guard newHeight > 0,
-                                              abs((vm.verseRowHeights[verse.id] ?? 0) - newHeight) > 0.5
-                                        else { return }
-                                        // Defer the published write one tick: the callback runs
-                                        // during the layout pass, and synchronous objectWillChange
-                                        // writes for many rows at once can be dropped/ignored
-                                        // ("Publishing changes from within view updates").
-                                        let id = verse.id
-                                        Task { @MainActor in
-                                            vm.verseRowHeights[id] = newHeight
-                                        }
-                                    }
-                                    // Track the SELECTED row's bottom edge in screen
+                                    // R3: track the SELECTED row's bottom edge in screen
                                     // coordinates — drives studySheetHeight directly
                                     // (sheet top = verse bottom + gap), with no nav-bar /
                                     // container assumptions. Fires continuously while the
                                     // re-anchor scroll animates and settles at the final
                                     // position; the detent applier animates each step.
+                                    // The published write is deferred one tick: the callback
+                                    // runs during the layout pass, where synchronous
+                                    // objectWillChange writes can be dropped.
                                     .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }) { maxY in
                                         guard vm.activeSheet == .verse,
                                               vm.selectedVerse?.id == verse.id,
@@ -218,34 +203,7 @@ struct ReaderView: View {
                     // scrolling is now disabled via .scrollDisabled, and the sheet no
                     // longer forwards touches (presentationBackgroundInteraction removed),
                     // so there is no swipe leak to absorb.
-
-                    // 🐞 TEMP DEBUG — remove before merge.
-                    // Live readout of the Study Mode geometry pipeline. If the
-                    // sheet is mis-sized, a screenshot of these numbers shows
-                    // exactly which stage broke:
-                    //   rows == 0      → row measurement never fires
-                    //   verse == 0     → selectedVerse lookup misses the dict
-                    //   cont == 0      → container measurement never fires
-                    //   sheet == cont/2 → pre-measurement fallback is active
-                    // Doubles as a build canary: no red digits = stale build.
-                    if vm.activeSheet == .verse {
-                        VStack(alignment: .trailing, spacing: 1) {
-                            Text("verse \(Int(vm.pinnedVerseHeight))")
-                            Text("vBot \(Int(vm.pinnedVerseGlobalBottom))")
-                            Text("sheet \(Int(vm.studySheetHeight))")
-                        }
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.red)
-                        .padding(4)
-                        .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 4))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .allowsHitTesting(false)
-                    }
                 }
-            }
-            // Track the reader content area height for studySheetHeight (R3).
-            .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { newHeight in
-                vm.readerContainerHeight = newHeight
             }
             .navigationBarTitleDisplayMode(.inline)
             // Also inject the desired sheet height from the PRESENTING
@@ -302,7 +260,8 @@ struct ReaderView: View {
         // Single sheet slot for all presentations — avoids "only one sheet supported" warning
         .sheet(item: $vm.activeSheet, onDismiss: {
             // R7: shared exit path for Back button and header drag-down.
-            // (verseRowHeights stays valid — next entry sizes correctly at once.)
+            // (pinnedVerseGlobalBottom stays as a sane initial value for the
+            // next entry; it is re-measured as soon as the verse re-anchors.)
             vm.clearWordSelection()
         }) { sheet in
             switch sheet {
