@@ -23,60 +23,15 @@ struct ReaderView: View {
     // 16 pt below the toolbar, reader scrolling is disabled, and the sheet's
     // single .height detent is computed so its top edge sits ~8 pt below the
     // pinned verse. Only the sheet's internal content scrolls.
-
-    /// Top inset for the pinned verse (R1). The verse TEXT must sit 16 pt below
-    /// the toolbar; the verse row has 10 pt of internal vertical padding, so the
-    /// row frame itself is anchored 6 pt below the nav bar (6 + 10 = 16 visual).
-    private static let pinnedTopInset: CGFloat = 6
-    /// Visual gap between the bottom of the pinned verse row and the sheet top (R3).
-    private static let sheetGap: CGFloat = 8
-
-    /// Bottom safe-area (home indicator) inset. `.height()` detents are measured
-    /// from the very bottom of the screen INCLUDING this region, while
-    /// containerHeight excludes it — so the sheet height must add it back,
-    /// otherwise the sheet sits ~34 pt too low and the next verse peeks out.
-    /// @MainActor because UIApplication is strictly @MainActor under Swift 6.
-    @MainActor private var bottomSafeAreaInset: CGFloat {
-        let scene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }.first
-        return scene?.windows.first?.safeAreaInsets.bottom ?? 34
-    }
-
-    /// Height of the reader content area (below nav bar, above bottom safe area).
-    /// Captured via onGeometryChange on the root ZStack.
-    @State private var containerHeight: CGFloat = 0
-    /// Measured height of the currently selected (pinned) verse row.
-    /// Updated via onGeometryChange on the selected row; drives studySheetHeight.
-    @State private var pinnedVerseHeight: CGFloat = 0
-
-    /// Currently selected detent of the Study Mode sheet.
-    ///
-    /// IMPORTANT: an already-presented sheet does NOT move when the
-    /// presentationDetents SET changes — programmatic resize only happens
-    /// through the `selection:` binding. Every time studySheetHeight changes
-    /// (verse navigation, Dynamic Type), this must be re-pointed to
-    /// .height(studySheetHeight) in the same transaction.
-    @State private var sheetDetent: PresentationDetent = .height(400)
-
-    /// Single computed detent height for the Study Mode sheet (R3):
-    ///   studySheetHeight = container + bottomSafeArea − topInset − verse − gap
-    /// (bottomSafeArea added back because .height() detents span the home
-    /// indicator region — see bottomSafeAreaInset doc.)
-    /// The sheet top then sits exactly `sheetGap` below the pinned verse row,
-    /// covering all the verses below it.
-    /// Edge case 1: pinnedVerseHeight is capped at 35% of the container, and the
-    /// sheet never shrinks below 30% of the container (very long verses are
-    /// partially covered by the sheet rather than crushing it).
-    @MainActor private var studySheetHeight: CGFloat {
-        guard containerHeight > 0 else { return 400 }   // pre-layout fallback
-        // Until the pinned verse is measured, approximate with a half-screen sheet
-        // to avoid a full-height flash on first presentation frame.
-        guard pinnedVerseHeight > 0 else { return containerHeight * 0.5 }
-        let cappedVerse = min(pinnedVerseHeight, containerHeight * 0.35)
-        let h = containerHeight + bottomSafeAreaInset
-              - Self.pinnedTopInset - cappedVerse - Self.sheetGap
-        return max(h, containerHeight * 0.30)
-    }
+    //
+    // The geometry state (pinnedVerseHeight / readerContainerHeight /
+    // studySheetHeight) lives in ReaderViewModel, and the detent itself is
+    // applied INSIDE VerseBottomSheetView. Rationale: presentation-modifier
+    // arguments captured in the .sheet content closure here go STALE — the
+    // closure is not re-evaluated when the presenter's @State changes — so a
+    // detent set in this file never resized the already-open sheet. The
+    // sheet's own body re-renders on every vm change, so modifiers applied
+    // there stay live. ReaderView only MEASURES and writes into the VM.
 
     // True when the book cover should be shown (chapter 1 of any book, not hidden).
     private var showsBookCover: Bool {
@@ -156,13 +111,9 @@ struct ReaderView: View {
                                                 of: { $0.size.height }
                                             ) { newHeight in
                                                 guard newHeight > 0,
-                                                      abs(newHeight - pinnedVerseHeight) > 0.5 else { return }
+                                                      abs(newHeight - vm.pinnedVerseHeight) > 0.5 else { return }
                                                 withAnimation(.easeInOut(duration: 0.25)) {
-                                                    pinnedVerseHeight = newHeight
-                                                    // Re-point the selection so the
-                                                    // open sheet actually resizes —
-                                                    // see sheetDetent doc.
-                                                    sheetDetent = .height(studySheetHeight)
+                                                    vm.pinnedVerseHeight = newHeight
                                                 }
                                             }
                                         }
@@ -190,13 +141,13 @@ struct ReaderView: View {
                         // Always returns a concrete Color view (no conditional ViewBuilder) to
                         // avoid type-inference ambiguity with iOS 26 safeAreaInset overloads.
                         .safeAreaInset(edge: .top, spacing: 0) {
-                            Color.clear.frame(height: sheetOpen ? Self.pinnedTopInset : 0)
+                            Color.clear.frame(height: sheetOpen ? ReaderViewModel.pinnedTopInset : 0)
                         }
                         // R3: reserve the sheet-covered area so anchor:.top can pin ANY
                         // verse (including the chapter's last ones) to the top. The
                         // effective viewport above the sheet ≈ pinned verse + gap.
                         .safeAreaInset(edge: .bottom, spacing: 0) {
-                            Color.clear.frame(height: sheetOpen ? studySheetHeight : 0)
+                            Color.clear.frame(height: sheetOpen ? vm.studySheetHeight : 0)
                         }
                         // Observes verseScrollTrigger (not selectedVerse.id) so that
                         // re-tapping the already-selected verse still re-scrolls it
@@ -257,17 +208,7 @@ struct ReaderView: View {
             }
             // Track the reader content area height for studySheetHeight (R3).
             .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { newHeight in
-                containerHeight = newHeight
-                if vm.activeSheet == .verse {
-                    sheetDetent = .height(studySheetHeight)
-                }
-            }
-            // Sync the detent selection on Study Mode entry, before the verse
-            // is measured (pinnedVerseHeight == 0 → half-screen approximation).
-            .onChange(of: vm.activeSheet) { _, newSheet in
-                if newSheet == .verse {
-                    sheetDetent = .height(studySheetHeight)
-                }
+                vm.readerContainerHeight = newHeight
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -320,8 +261,7 @@ struct ReaderView: View {
         .sheet(item: $vm.activeSheet, onDismiss: {
             // R7: shared exit path for Back button and drag-to-dismiss.
             vm.clearWordSelection()
-            pinnedVerseHeight = 0                       // re-measure on next entry
-            sheetDetent = .height(studySheetHeight)     // keep selection ∈ detent set
+            vm.pinnedVerseHeight = 0   // re-measure on next Study Mode entry
         }) { sheet in
             switch sheet {
             case .bookPicker:
@@ -330,18 +270,15 @@ struct ReaderView: View {
                 TranslationPickerView().environmentObject(vm)
                     .presentationDetents([.medium])
             case .verse:
-                // R3: single computed detent — the sheet is pressed up under the
-                // pinned verse and resizes dynamically (verse nav, Dynamic Type).
-                // Drag-down on the indicator = dismiss (the only drag gesture left).
+                // R3: the dynamic .height detent is applied INSIDE
+                // VerseBottomSheetView (its body re-renders on vm changes;
+                // anything passed here goes stale — see geometry note above).
+                // Only the static presentation modifiers stay here.
                 //
                 // presentationBackgroundInteraction(.enabled) is here ONLY to kill
                 // the system dimming/shadow over the background (it was covering
                 // the pinned verse). The background reader is still locked via
                 // .scrollDisabled, so the old swipe-leak problem cannot return.
-                //
-                // iOS 18 fallback note: .height detents are reactive on iOS 26;
-                // on iOS 16–18 resizing an open sheet may not shrink correctly
-                // (known UIKit issue) — acceptable until the iOS 18 compat sprint.
                 if let verse = vm.selectedVerse {
                     if #available(iOS 18.0, *) {
                         VerseBottomSheetView(verse: verse)
@@ -349,7 +286,6 @@ struct ReaderView: View {
                             .environmentObject(notesVM)
                             .environmentObject(bookmarksVM)
                             .environmentObject(router)
-                            .presentationDetents([.height(studySheetHeight)], selection: $sheetDetent)
                             .presentationDragIndicator(.visible)
                             .presentationBackgroundInteraction(.enabled)
                             .presentationSizing(.page)
@@ -359,7 +295,6 @@ struct ReaderView: View {
                             .environmentObject(notesVM)
                             .environmentObject(bookmarksVM)
                             .environmentObject(router)
-                            .presentationDetents([.height(studySheetHeight)], selection: $sheetDetent)
                             .presentationDragIndicator(.visible)
                             .presentationBackgroundInteraction(.enabled)
                     }

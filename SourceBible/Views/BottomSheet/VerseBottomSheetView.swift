@@ -28,6 +28,12 @@ struct VerseBottomSheetView: View {
     /// Controls which note editor sheet is open on top of this bottom sheet.
     @State private var activeEditor: ActiveEditor? = nil
 
+    /// Selected detent of this sheet. The detent set AND this selection are
+    /// applied here (not in ReaderView): this body re-renders on every vm
+    /// change, so the .height value stays live, and re-pointing the selection
+    /// is what actually makes an already-presented sheet resize.
+    @State private var detent: PresentationDetent = .height(400)
+
     private enum ActiveEditor: Identifiable {
         case note(NoteWithBlocks)
         var id: String {
@@ -62,6 +68,19 @@ struct VerseBottomSheetView: View {
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
         }
         .background(Color("sheetBackground"))
+        // R3: single dynamic-height detent pressed up under the pinned verse.
+        // vm.studySheetHeight changes on verse navigation / Dynamic Type;
+        // the set updates live (body re-renders) and onChange re-points the
+        // selection so the open sheet animates to the new height.
+        .presentationDetents([.height(vm.studySheetHeight)], selection: $detent)
+        .onAppear {
+            detent = .height(vm.studySheetHeight)
+        }
+        .onChange(of: vm.studySheetHeight) { _, newHeight in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                detent = .height(newHeight)
+            }
+        }
         // Single editor sheet slot — avoids "only one sheet" warning
         .sheet(item: $activeEditor) { editor in
             switch editor {

@@ -3,6 +3,7 @@
 
 import Foundation
 import Combine
+import UIKit   // UIWindowScene — bottom safe-area inset for studySheetHeight
 
 @MainActor
 class ReaderViewModel: ObservableObject {
@@ -284,6 +285,47 @@ class ReaderViewModel: ObservableObject {
     var isCurrentVerseHighlighted: Bool {
         guard let v = selectedVerse else { return false }
         return highlightColors[v.id] != nil
+    }
+
+    // MARK: - Study Mode geometry (spec-study-mode-redesign.md R1/R3)
+    //
+    // Lives in the VM (not ReaderView @State) because the sheet detent must be
+    // applied INSIDE VerseBottomSheetView: presentation-modifier arguments
+    // captured in the presenting view's .sheet content closure go stale (the
+    // closure is not re-evaluated when the presenter's @State changes), while
+    // the sheet's own body re-renders on every vm change.
+
+    /// Top inset for the pinned verse. The verse TEXT sits 16 pt below the
+    /// toolbar: 6 pt inset + 10 pt internal row padding.
+    static let pinnedTopInset: CGFloat = 6
+    /// Visual gap between the bottom of the pinned verse row and the sheet top.
+    static let sheetGap: CGFloat = 8
+
+    /// Measured height of the pinned (selected) verse row. Written by ReaderView.
+    @Published var pinnedVerseHeight: CGFloat = 0
+    /// Height of the reader content area (below nav bar, above bottom safe
+    /// area). Written by ReaderView via onGeometryChange.
+    @Published var readerContainerHeight: CGFloat = 0
+
+    /// Bottom safe-area (home indicator) inset. `.height()` detents span this
+    /// region while readerContainerHeight excludes it — add it back.
+    private var bottomSafeAreaInset: CGFloat {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }.first
+        return scene?.windows.first?.safeAreaInsets.bottom ?? 34
+    }
+
+    /// Single detent height for the Study Mode sheet:
+    ///   container + bottomSafeArea − topInset − pinnedVerse − gap
+    /// Edge case: verse capped at 35% of the container; sheet never below 30%.
+    var studySheetHeight: CGFloat {
+        let c = readerContainerHeight
+        guard c > 0 else { return 400 }                  // pre-layout fallback
+        guard pinnedVerseHeight > 0 else { return c * 0.5 }  // pre-measurement
+        let cappedVerse = min(pinnedVerseHeight, c * 0.35)
+        let h = c + bottomSafeAreaInset
+              - Self.pinnedTopInset - cappedVerse - Self.sheetGap
+        return max(h, c * 0.30)
     }
 
     // MARK: - Study Mode navigation state
