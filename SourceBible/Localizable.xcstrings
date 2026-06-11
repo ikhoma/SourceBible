@@ -156,7 +156,6 @@
       }
     },
     "action.bookmark" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -221,7 +220,6 @@
       }
     },
     "action.highlight" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -238,6 +236,7 @@
       }
     },
     "action.highlight_color_title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -270,6 +269,7 @@
       }
     },
     "action.remove_highlight" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -286,7 +286,6 @@
       }
     },
     "action.share" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

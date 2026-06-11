@@ -105,54 +105,47 @@ struct VerseBottomSheetView: View {
 
     // MARK: - Context Menu (R6)
 
-    /// Ellipsis capsule button with all verse actions: highlight / note / bookmark / share.
+    /// Ellipsis capsule button with all verse actions.
+    /// Standard iOS 26 menu layout:
+    ///   • top row — 3 main actions (Note / Bookmark / Share) as a horizontal
+    ///     ControlGroup (system "medium element size" row with icon + label);
+    ///   • section below — the highlight palette as an inline checklist
+    ///     (None first, then the 5 colors — R8).
     private var contextMenu: some View {
         Menu {
-            highlightPicker
+            ControlGroup {
+                Button {
+                    let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
+                    activeEditor = .note(note)
+                } label: {
+                    Label("action.note", systemImage: "note.text")
+                }
 
-            Button {
-                let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
-                activeEditor = .note(note)
-            } label: {
-                Label("action.note", systemImage: "note.text")
-            }
+                Button {
+                    bookmarksVM.toggleBookmark(verseId: verse.id)
+                } label: {
+                    if bookmarksVM.isBookmarked(verseId: verse.id) {
+                        Label("action.bookmark", systemImage: "bookmark.fill")
+                    } else {
+                        Label("action.bookmark", systemImage: "bookmark")
+                    }
+                }
 
-            Button {
-                bookmarksVM.toggleBookmark(verseId: verse.id)
-            } label: {
-                if bookmarksVM.isBookmarked(verseId: verse.id) {
-                    Label("action.bookmark", systemImage: "bookmark.fill")
-                } else {
-                    Label("action.bookmark", systemImage: "bookmark")
+                ShareLink(item: VerseShareFormatter.format(
+                    verse: verse,
+                    bookName: vm.translationBookNames[verse.bookId]?.long
+                        ?? BibleBookNames.full(for: verse.bookId),
+                    translationId: vm.currentTranslation.id
+                )) {
+                    Label("action.share", systemImage: "square.and.arrow.up")
                 }
             }
 
-            ShareLink(item: VerseShareFormatter.format(
-                verse: verse,
-                bookName: vm.translationBookNames[verse.bookId]?.long
-                    ?? BibleBookNames.full(for: verse.bookId),
-                translationId: vm.currentTranslation.id
-            )) {
-                Label("action.share", systemImage: "square.and.arrow.up")
-            }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 14, weight: .semibold))
-                .frame(width: 36, height: 36)
-        }
-        .modifier(CapsuleNavGroupStyle())
-        .accessibilityLabel(Text("sheet.menu.a11y"))
-    }
-
-    /// Highlight submenu rendered as a checklist (R8):
-    /// None on top, divider (section break), then the 5 palette colors with ✓ on the active one.
-    ///
-    /// Implemented as a nested Menu with an inline Picker — iOS renders an inline-style
-    /// Picker inside a Menu as a native checklist. Sections produce the separator.
-    /// Legacy highlights (yellow/green) are not in pickerCases → the selection value
-    /// matches no tag → no checkmark anywhere, and choosing a new color overwrites (edge case 5).
-    private var highlightPicker: some View {
-        Menu {
+            // Highlight checklist (R8). An inline Picker inside a Menu renders as
+            // a native checklist section; the Section split draws the separator
+            // between None and the colors. Legacy highlights (yellow/green) are
+            // not in pickerCases → the selection matches no tag → no checkmark
+            // anywhere, and choosing a new color overwrites (edge case 5).
             Picker("action.highlight", selection: highlightSelection) {
                 Section {
                     Text("highlight.color.none").tag(HighlightColor?.none)
@@ -173,8 +166,12 @@ struct VerseBottomSheetView: View {
             }
             .pickerStyle(.inline)
         } label: {
-            Label("action.highlight", systemImage: "highlighter")
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 36, height: 36)
         }
+        .modifier(CapsuleNavGroupStyle())
+        .accessibilityLabel(Text("sheet.menu.a11y"))
     }
 
     /// nil = no highlight (None). Setting nil removes the highlight.

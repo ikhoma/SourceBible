@@ -275,8 +275,11 @@ struct ReaderView: View {
                 // R3: single computed detent — the sheet is pressed up under the
                 // pinned verse and resizes dynamically (verse nav, Dynamic Type).
                 // Drag-down on the indicator = dismiss (the only drag gesture left).
-                // presentationBackgroundInteraction is intentionally absent: the
-                // background is locked in Study Mode (R2).
+                //
+                // presentationBackgroundInteraction(.enabled) is here ONLY to kill
+                // the system dimming/shadow over the background (it was covering
+                // the pinned verse). The background reader is still locked via
+                // .scrollDisabled, so the old swipe-leak problem cannot return.
                 //
                 // iOS 18 fallback note: .height detents are reactive on iOS 26;
                 // on iOS 16–18 resizing an open sheet may not shrink correctly
@@ -290,6 +293,7 @@ struct ReaderView: View {
                             .environmentObject(router)
                             .presentationDetents([.height(studySheetHeight)])
                             .presentationDragIndicator(.visible)
+                            .presentationBackgroundInteraction(.enabled)
                             .presentationSizing(.page)
                     } else {
                         VerseBottomSheetView(verse: verse)
@@ -299,6 +303,7 @@ struct ReaderView: View {
                             .environmentObject(router)
                             .presentationDetents([.height(studySheetHeight)])
                             .presentationDragIndicator(.visible)
+                            .presentationBackgroundInteraction(.enabled)
                     }
                 }
             }
