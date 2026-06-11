@@ -99,24 +99,16 @@ struct ReaderView: View {
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
                                     .id(verse.id)
-                                    // Measure the pinned verse row (R3). The background is
-                                    // attached only on the selected row, so onGeometryChange
-                                    // fires with the initial size whenever selection moves
-                                    // (chevron nav), and on any reflow (translation switch,
-                                    // Dynamic Type). withAnimation keeps the detent resize smooth.
-                                    .background {
-                                        if sheetOpen && vm.selectedVerse?.id == verse.id {
-                                            Color.clear.onGeometryChange(
-                                                for: CGFloat.self,
-                                                of: { $0.size.height }
-                                            ) { newHeight in
-                                                guard newHeight > 0,
-                                                      abs(newHeight - vm.pinnedVerseHeight) > 0.5 else { return }
-                                                withAnimation(.easeInOut(duration: 0.25)) {
-                                                    vm.pinnedVerseHeight = newHeight
-                                                }
-                                            }
-                                        }
+                                    // Measure EVERY row unconditionally (R3): heights land in
+                                    // vm.verseRowHeights, and vm.pinnedVerseHeight is a lookup
+                                    // for the selected id. Unlike the previous conditional
+                                    // background, this never depends on a freshly-inserted view
+                                    // firing its initial geometry callback when selection moves.
+                                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { newHeight in
+                                        guard newHeight > 0,
+                                              abs((vm.verseRowHeights[verse.id] ?? 0) - newHeight) > 0.5
+                                        else { return }
+                                        vm.verseRowHeights[verse.id] = newHeight
                                     }
                                 }
                             }
@@ -259,9 +251,9 @@ struct ReaderView: View {
         }
         // Single sheet slot for all presentations — avoids "only one sheet supported" warning
         .sheet(item: $vm.activeSheet, onDismiss: {
-            // R7: shared exit path for Back button and drag-to-dismiss.
+            // R7: shared exit path for Back button and header drag-down.
+            // (verseRowHeights stays valid — next entry sizes correctly at once.)
             vm.clearWordSelection()
-            vm.pinnedVerseHeight = 0   // re-measure on next Study Mode entry
         }) { sheet in
             switch sheet {
             case .bookPicker:

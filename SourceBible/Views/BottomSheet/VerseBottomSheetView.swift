@@ -28,12 +28,6 @@ struct VerseBottomSheetView: View {
     /// Controls which note editor sheet is open on top of this bottom sheet.
     @State private var activeEditor: ActiveEditor? = nil
 
-    /// Selected detent of this sheet. The detent set AND this selection are
-    /// applied here (not in ReaderView): this body re-renders on every vm
-    /// change, so the .height value stays live, and re-pointing the selection
-    /// is what actually makes an already-presented sheet resize.
-    @State private var detent: PresentationDetent = .height(400)
-
     private enum ActiveEditor: Identifiable {
         case note(NoteWithBlocks)
         var id: String {
@@ -51,11 +45,30 @@ struct VerseBottomSheetView: View {
         vm.selectedVerse ?? fallbackVerse
     }
 
+    /// Drag-down on the non-scrolling top block exits Study Mode (R7).
+    /// System interactive dismiss is disabled, so this is the only drag exit.
+    private var dismissDragGesture: some Gesture {
+        DragGesture(minimumDistance: 25, coordinateSpace: .local)
+            .onEnded { value in
+                guard value.translation.height > 60,
+                      value.translation.height > abs(value.translation.width)
+                else { return }
+                vm.activeSheet = nil
+            }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            sheetHeader
-            modeTabs
-            pillsRow        // fixed — does not scroll vertically
+            // Non-scrolling top block: the only zone that drag-dismisses the
+            // sheet. Swipes inside the content ScrollView below must scroll,
+            // never dismiss (system interactive dismiss is disabled).
+            VStack(spacing: 0) {
+                sheetHeader
+                modeTabs
+                pillsRow        // fixed — does not scroll vertically
+            }
+            .contentShape(Rectangle())
+            .simultaneousGesture(dismissDragGesture)
             Divider()
             ScrollView {   // only content scrolls
                 if vm.bottomSheetMode == .verse {
@@ -68,19 +81,16 @@ struct VerseBottomSheetView: View {
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
         }
         .background(Color("sheetBackground"))
-        // R3: single dynamic-height detent pressed up under the pinned verse.
-        // vm.studySheetHeight changes on verse navigation / Dynamic Type;
-        // the set updates live (body re-renders) and onChange re-points the
-        // selection so the open sheet animates to the new height.
-        .presentationDetents([.height(vm.studySheetHeight)], selection: $detent)
-        .onAppear {
-            detent = .height(vm.studySheetHeight)
-        }
-        .onChange(of: vm.studySheetHeight) { _, newHeight in
-            withAnimation(.easeInOut(duration: 0.25)) {
-                detent = .height(newHeight)
-            }
-        }
+        // R3: constant detent SET — the system re-resolves StudySheetDetent's
+        // height from the environment value below on presentation updates,
+        // which is the reliable channel for resizing an open sheet
+        // (replacing a [.height(x)] set proved a no-op on device).
+        .presentationDetents([.custom(StudySheetDetent.self)])
+        .environment(\.studySheetHeight, vm.studySheetHeight)
+        // Dismiss only from the non-scrolling top block (gesture above) or the
+        // toolbar Back button. Without this, a downward scroll in the content
+        // randomly dragged the whole sheet (R7 fine-tune).
+        .interactiveDismissDisabled(true)
         // Single editor sheet slot — avoids "only one sheet" warning
         .sheet(item: $activeEditor) { editor in
             switch editor {
