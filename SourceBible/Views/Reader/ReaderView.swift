@@ -17,49 +17,43 @@ struct ReaderView: View {
     @Environment(\.locale) private var locale
     @AppStorage("hideBookCovers") private var hideBookCovers = true
 
-    // Tracks which detent the verse sheet is resting at.
-    // Updated only when the sheet *settles* at a detent (not during drag),
-    // so the background layout doesn't re-evaluate on every animation frame.
-    @State private var selectedDetent: PresentationDetent = .medium
+    // MARK: - Study Mode geometry (spec-study-mode-redesign.md R1–R3)
+    //
+    // In Study Mode (vm.activeSheet == .verse) the selected verse is pinned
+    // 16 pt below the toolbar, reader scrolling is disabled, and the sheet's
+    // single .height detent is computed so its top edge sits ~8 pt below the
+    // pinned verse. Only the sheet's internal content scrolls.
+
+    /// Gap between the nav bar bottom and the top of the pinned verse (R1).
+    private static let pinnedTopGap: CGFloat = 16
+    /// Visual gap between the bottom of the pinned verse and the sheet top (R3).
+    private static let sheetGap: CGFloat = 8
+
+    /// Height of the reader content area (below nav bar, above bottom safe area).
+    /// Captured via onGeometryChange on the root ZStack.
+    @State private var containerHeight: CGFloat = 0
+    /// Measured height of the currently selected (pinned) verse row.
+    /// Updated via onGeometryChange on the selected row; drives studySheetHeight.
+    @State private var pinnedVerseHeight: CGFloat = 0
+
+    /// Single computed detent height for the Study Mode sheet (R3):
+    ///   studySheetHeight = container − pinnedTopGap − pinnedVerseHeight − sheetGap
+    /// Edge case 1: pinnedVerseHeight is capped at 35% of the container, and the
+    /// sheet never shrinks below 30% of the container (very long verses are
+    /// partially covered by the sheet rather than crushing it).
+    private var studySheetHeight: CGFloat {
+        guard containerHeight > 0 else { return 400 }   // pre-layout fallback
+        // Until the pinned verse is measured, approximate with a half-screen sheet
+        // to avoid a full-height flash on first presentation frame.
+        guard pinnedVerseHeight > 0 else { return containerHeight * 0.5 }
+        let cappedVerse = min(pinnedVerseHeight, containerHeight * 0.35)
+        let h = containerHeight - Self.pinnedTopGap - cappedVerse - Self.sheetGap
+        return max(h, containerHeight * 0.30)
+    }
 
     // True when the book cover should be shown (chapter 1 of any book, not hidden).
     private var showsBookCover: Bool {
         !hideBookCovers && vm.currentChapter == 1
-    }
-
-    // Inset to add at the bottom of the scroll view when the verse sheet is open.
-    //
-    // Goal: anchor:.bottom lands verse.bottom exactly 6 pt above the sheet top (T).
-    //
-    // Uses the selected detent (medium/large) rather than the live sheet height so
-    // that the background layout only recalculates when the sheet *settles*, not on
-    // every drag frame. This eliminates the per-frame layout loop that caused lag.
-    //
-    // At .large detent the sheet covers the whole screen; no extra inset is needed.
-    //
-    // @MainActor is required because UIApplication is strictly @MainActor under Swift 6.
-    @MainActor private var verseSheetReservedHeight: CGFloat {
-        guard selectedDetent != .large else { return 0 }
-        let scene       = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }.first
-        let bottomInset = scene?.windows.first?.safeAreaInsets.bottom ?? 34
-        let screenH     = scene?.screen.bounds.height ?? 874
-        // iOS allocates exactly screenH * 0.5 to the medium-detent sheet content view,
-        // so sheetH = screenH / 2 (not minus safeTop). The old fallback used
-        // (screenH - safeTop) / 2 which was ~30 pt too small on Face ID devices.
-        let sheetH      = screenH / 2.0
-        // safeAreaInset stacks on top of the scroll view's existing home-indicator
-        // contentInset (= bottomInset). Subtract it twice to avoid a +34 pt shift.
-        //   insetH = sheetH − 2·bottomInset + 6
-        return max(0, sheetH - 2 * bottomInset + 6)
-    }
-
-    // Height of the medium detent — used for the gesture-blocking overlay.
-    @MainActor private var mediumDetentHeight: CGFloat {
-        let scene   = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }.first
-        let screenH = scene?.screen.bounds.height ?? 874
-        return screenH / 2.0
     }
 
     var body: some View {
@@ -123,6 +117,25 @@ struct ReaderView: View {
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
                                     .id(verse.id)
+                                    // Measure the pinned verse row (R3). The background is
+                                    // attached only on the selected row, so onGeometryChange
+                                    // fires with the initial size whenever selection moves
+                                    // (chevron nav), and on any reflow (translation switch,
+                                    // Dynamic Type). withAnimation keeps the detent resize smooth.
+                                    .background {
+                                        if sheetOpen && vm.selectedVerse?.id == verse.id {
+                                            Color.clear.onGeometryChange(
+                                                for: CGFloat.self,
+                                                of: { $0.size.height }
+                                            ) { newHeight in
+                                                guard newHeight > 0,
+                                                      abs(newHeight - pinnedVerseHeight) > 0.5 else { return }
+                                                withAnimation(.easeInOut(duration: 0.25)) {
+                                                    pinnedVerseHeight = newHeight
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             .padding(.horizontal)
@@ -131,15 +144,23 @@ struct ReaderView: View {
                             // when closed use the original generous bottom padding.
                             .padding(.bottom, sheetOpen ? 16 : 100)
                         }
-                        // Reserve space equal to the medium-detent sheet height so the
-                        // scroll view treats the visible-above-sheet area as its viewport.
-                        // .bottom anchor then lands the selected verse flush above the sheet.
+                        // R2: Study Mode locks user scrolling. Programmatic
+                        // proxy.scrollTo(...) still works — required for chevron
+                        // navigation to re-anchor the newly selected verse.
+                        .scrollDisabled(sheetOpen)
+                        // R1: extra 16 pt top inset in Study Mode so anchor:.top lands
+                        // the pinned verse exactly 16 pt below the nav bar bottom.
                         //
                         // Always returns a concrete Color view (no conditional ViewBuilder) to
                         // avoid type-inference ambiguity with iOS 26 safeAreaInset overloads.
-                        // Height is 0 when the sheet is closed, so there is no visible effect.
+                        .safeAreaInset(edge: .top, spacing: nil) {
+                            Color.clear.frame(height: sheetOpen ? Self.pinnedTopGap : 0)
+                        }
+                        // R3: reserve the sheet-covered area so anchor:.top can pin ANY
+                        // verse (including the chapter's last ones) to the top. The
+                        // effective viewport above the sheet ≈ pinned verse + gap.
                         .safeAreaInset(edge: .bottom, spacing: nil) {
-                            Color.clear.frame(height: sheetOpen ? verseSheetReservedHeight : 0)
+                            Color.clear.frame(height: sheetOpen ? studySheetHeight : 0)
                         }
                         // Observes verseScrollTrigger (not selectedVerse.id) so that
                         // re-tapping the already-selected verse still re-scrolls it
@@ -154,21 +175,13 @@ struct ReaderView: View {
                             let animation: Animation = intent == .chevron
                                 ? .easeInOut(duration: 0.32)
                                 : .snappy
-                            let anchor: UnitPoint = sheetOpen ? .bottom : .center
+                            // Study Mode pins the verse top 16 pt below the nav bar
+                            // (anchor .top within the inset viewport — R1).
+                            let anchor: UnitPoint = sheetOpen ? .top : .center
                             // Defer one RunLoop tick so safeAreaInset is committed to
                             // the UIScrollView before scrollTo uses the extra room.
                             DispatchQueue.main.async {
                                 withAnimation(animation) { proxy.scrollTo(id, anchor: anchor) }
-                            }
-                        }
-                        // Re-anchor scroll when the detent changes (medium ↔ large).
-                        // Fires only when the user releases the drag, not on every frame.
-                        .onChange(of: selectedDetent) { _, newDetent in
-                            guard let id = vm.selectedVerse?.id,
-                                  vm.activeSheet == .verse else { return }
-                            let anchor: UnitPoint = newDetent == .large ? .center : .bottom
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                proxy.scrollTo(id, anchor: anchor)
                             }
                         }
                         // Reset scroll position to top on every chapter change.
@@ -181,76 +194,77 @@ struct ReaderView: View {
                     // Edge swipe gesture for chapter navigation.
                     // UIScreenEdgePanGestureRecognizer fires from the hardware screen
                     // edge regardless of UITextView hit-testing, so it works over all content.
+                    // Chapter change is a no-op in Study Mode (product decision N1) —
+                    // the user must exit to the reader first.
                     EdgeSwipeNavigator(
-                        onPrevChapter: { vm.prevChapter() },
-                        onNextChapter: { vm.nextChapter() }
+                        onPrevChapter: { if vm.activeSheet != .verse { vm.prevChapter() } },
+                        onNextChapter: { if vm.activeSheet != .verse { vm.nextChapter() } }
                     )
                     .ignoresSafeArea()
 
-                    // Gesture-blocking overlay for the sheet-covered region.
-                    //
-                    // Problem: presentationBackgroundInteraction(.enabled) forwards touch
-                    // events from the sheet to the background view hierarchy. When the user
-                    // swipes DOWN inside the sheet's internal ScrollView (to collapse/dismiss),
-                    // that same gesture leaks to the background ScrollView and scrolls it.
-                    //
-                    // Fix: place a transparent, hit-testable view over the sheet-covered area.
-                    // It sits above the ScrollView in the ZStack, so background hit-testing
-                    // stops here instead of reaching the ScrollView. No gesture handlers are
-                    // attached — it simply absorbs the leaked touch.
-                    //
-                    // Coverage: vm.verseSheetHeight (content) + 40 pt (home indicator +
-                    // a small buffer) gives the full sheet-top-to-screen-bottom area.
-                    // The visible area above the sheet top is NOT covered, so intentional
-                    // background scrolling while the sheet is open still works.
-                    if vm.activeSheet == .verse {
-                        let coverHeight = mediumDetentHeight + 40
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .frame(height: coverHeight)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                            .ignoresSafeArea(edges: .bottom)
-                    }
+                    // Note: the old gesture-blocking overlay is gone (R2). Background
+                    // scrolling is now disabled via .scrollDisabled, and the sheet no
+                    // longer forwards touches (presentationBackgroundInteraction removed),
+                    // so there is no swipe leak to absorb.
                 }
+            }
+            // Track the reader content area height for studySheetHeight (R3).
+            .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { newHeight in
+                containerHeight = newHeight
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // R5: trailing <> chevrons retarget by state —
+                //   Reader:                  prev/next chapter
+                //   Study Mode (Verse tab):  prev/next verse  (no cross-chapter, N2)
+                //   Study Mode (Word tab):   prev/next word
+                // Disabled state reads vm.navPrevDisabled / vm.navNextDisabled —
+                // the single source of truth shared with the (removed) sheet chevrons.
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button { vm.prevChapter() } label: {
+                    Button {
+                        if vm.activeSheet == .verse {
+                            if vm.bottomSheetMode == .verse { vm.navigateToPreviousVerse() }
+                            else { vm.navigateToPreviousWord() }
+                        } else {
+                            vm.prevChapter()
+                        }
+                    } label: {
                         Image(systemName: "chevron.left")
                     }
-                    .disabled(vm.currentChapter <= 1)
+                    .disabled(vm.activeSheet == .verse
+                              ? vm.navPrevDisabled
+                              : vm.currentChapter <= 1)
+                    .accessibilityLabel(Text(prevChevronA11yKey))
 
-                    Button { vm.nextChapter() } label: {
+                    Button {
+                        if vm.activeSheet == .verse {
+                            if vm.bottomSheetMode == .verse { vm.navigateToNextVerse() }
+                            else { vm.navigateToNextWord() }
+                        } else {
+                            vm.nextChapter()
+                        }
+                    } label: {
                         Image(systemName: "chevron.right")
                     }
-                    .disabled(vm.currentChapter >= vm.currentBook.chapterCount)
+                    .disabled(vm.activeSheet == .verse
+                              ? vm.navNextDisabled
+                              : vm.currentChapter >= vm.currentBook.chapterCount)
+                    .accessibilityLabel(Text(nextChevronA11yKey))
                 }
 
+                // R4: leading item morphs in place between the book+translation
+                // pickers (reader) and the Back button (Study Mode).
                 ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 8) {
-                        Button { vm.isBookPickerPresented = true } label: {
-                            HStack(spacing: 4) {
-                                Text(vm.chapterTitle)
-                                    .font(.headline).foregroundStyle(.primary)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption.weight(.semibold)).foregroundStyle(.primary)
-                            }
-                        }
-                        Button { vm.isTranslationPickerPresented = true } label: {
-                            HStack(spacing: 4) {
-                                Text(vm.currentTranslation.id)
-                                    .font(.headline).foregroundStyle(.primary)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption.weight(.semibold)).foregroundStyle(.primary)
-                            }
-                        }
-                    }
+                    leadingToolbarContent
                 }
             }
         }
         // Single sheet slot for all presentations — avoids "only one sheet supported" warning
-        .sheet(item: $vm.activeSheet, onDismiss: { vm.clearWordSelection(); selectedDetent = .medium }) { sheet in
+        .sheet(item: $vm.activeSheet, onDismiss: {
+            // R7: shared exit path for Back button and drag-to-dismiss.
+            vm.clearWordSelection()
+            pinnedVerseHeight = 0   // re-measure on next Study Mode entry
+        }) { sheet in
             switch sheet {
             case .bookPicker:
                 BookChapterPickerView().environmentObject(vm)
@@ -258,6 +272,15 @@ struct ReaderView: View {
                 TranslationPickerView().environmentObject(vm)
                     .presentationDetents([.medium])
             case .verse:
+                // R3: single computed detent — the sheet is pressed up under the
+                // pinned verse and resizes dynamically (verse nav, Dynamic Type).
+                // Drag-down on the indicator = dismiss (the only drag gesture left).
+                // presentationBackgroundInteraction is intentionally absent: the
+                // background is locked in Study Mode (R2).
+                //
+                // iOS 18 fallback note: .height detents are reactive on iOS 26;
+                // on iOS 16–18 resizing an open sheet may not shrink correctly
+                // (known UIKit issue) — acceptable until the iOS 18 compat sprint.
                 if let verse = vm.selectedVerse {
                     if #available(iOS 18.0, *) {
                         VerseBottomSheetView(verse: verse)
@@ -265,9 +288,8 @@ struct ReaderView: View {
                             .environmentObject(notesVM)
                             .environmentObject(bookmarksVM)
                             .environmentObject(router)
-                            .presentationDetents([.medium, .large], selection: $selectedDetent)
+                            .presentationDetents([.height(studySheetHeight)])
                             .presentationDragIndicator(.visible)
-                            .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                             .presentationSizing(.page)
                     } else {
                         VerseBottomSheetView(verse: verse)
@@ -275,10 +297,99 @@ struct ReaderView: View {
                             .environmentObject(notesVM)
                             .environmentObject(bookmarksVM)
                             .environmentObject(router)
-                            .presentationDetents([.medium, .large], selection: $selectedDetent)
+                            .presentationDetents([.height(studySheetHeight)])
                             .presentationDragIndicator(.visible)
-                            .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: - Toolbar content (R4/R5)
+
+    /// Dynamic accessibility label for the leading (prev) toolbar chevron.
+    private var prevChevronA11yKey: LocalizedStringKey {
+        if vm.activeSheet == .verse {
+            return vm.bottomSheetMode == .verse ? "a11y.nav.prev_verse" : "a11y.nav.prev_word"
+        }
+        return "a11y.nav.prev_chapter"
+    }
+
+    /// Dynamic accessibility label for the trailing (next) toolbar chevron.
+    private var nextChevronA11yKey: LocalizedStringKey {
+        if vm.activeSheet == .verse {
+            return vm.bottomSheetMode == .verse ? "a11y.nav.next_verse" : "a11y.nav.next_word"
+        }
+        return "a11y.nav.next_chapter"
+    }
+
+    /// R4: in-place morph between the book+translation pickers and the Back button.
+    ///
+    /// Implementation note (research, 2026-06): iOS 26's toolbar morphing APIs
+    /// (matchedTransitionSource + navigationTransition) are designed for
+    /// screen-to-screen / sheet-from-button transitions, not for swapping the
+    /// content of a toolbar item in place. matchedGeometryEffect inside toolbars
+    /// is unreliable (both views coexist during the transition → broken frames).
+    /// The robust in-place morph is a single ToolbarItem whose content swaps with
+    /// a spring-animated transition — on iOS 26 the surrounding glass capsule is
+    /// preserved by the system and morphs automatically; no manual glass (CLAUDE.md).
+    @ViewBuilder
+    private var leadingToolbarContent: some View {
+        ZStack {
+            if vm.activeSheet == .verse {
+                morphing(backButton)
+            } else {
+                morphing(pickerGroup)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85),
+                   value: vm.activeSheet == .verse)
+    }
+
+    /// iOS 17+: blurReplace gives the closest "morph in place" feel;
+    /// pre-17 (not shipped) falls back to a plain fade.
+    @ViewBuilder
+    private func morphing<V: View>(_ view: V) -> some View {
+        if #available(iOS 17.0, *) {
+            view.transition(.blurReplace)
+        } else {
+            view.transition(.opacity)
+        }
+    }
+
+    /// Study Mode Back button — exits to the reader (R7).
+    private var backButton: some View {
+        Button {
+            vm.activeSheet = nil
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.backward")
+                    .font(.body.weight(.semibold))
+                Text("studymode.back")
+                    .font(.headline)
+            }
+            .foregroundStyle(.primary)
+        }
+        .accessibilityLabel(Text("studymode.back"))
+    }
+
+    /// Reader-mode book + translation pickers (unchanged behavior).
+    private var pickerGroup: some View {
+        HStack(spacing: 8) {
+            Button { vm.isBookPickerPresented = true } label: {
+                HStack(spacing: 4) {
+                    Text(vm.chapterTitle)
+                        .font(.headline).foregroundStyle(.primary)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold)).foregroundStyle(.primary)
+                }
+            }
+            Button { vm.isTranslationPickerPresented = true } label: {
+                HStack(spacing: 4) {
+                    Text(vm.currentTranslation.id)
+                        .font(.headline).foregroundStyle(.primary)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold)).foregroundStyle(.primary)
                 }
             }
         }

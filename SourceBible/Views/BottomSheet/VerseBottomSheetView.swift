@@ -1,8 +1,13 @@
 // VerseBottomSheetView.swift
 // SourceBible
 //
-// Контейнер bottom sheet: шапка, mode tabs, pills row, action bar.
+// Контейнер bottom sheet (Study Mode): шапка з контекстним меню, mode tabs, pills row.
 // Вміст вкладок — у VerseTabContent.swift та WordTabContent.swift.
+//
+// Study Mode redesign (spec-study-mode-redesign.md R6):
+//   • Header-шеврони prev/next видалені — навігація живе у toolbar рідера (R5).
+//   • Нижня actionBar видалена — всі дії (highlight/note/bookmark/share)
+//     перенесені в контекстне меню (ellipsis) у шапці.
 
 import SwiftUI
 
@@ -22,8 +27,6 @@ struct VerseBottomSheetView: View {
     @Namespace private var pillNS
     /// Controls which note editor sheet is open on top of this bottom sheet.
     @State private var activeEditor: ActiveEditor? = nil
-    /// Shows the highlight color picker confirmation dialog.
-    @State private var showColorPicker: Bool = false
 
     private enum ActiveEditor: Identifiable {
         case note(NoteWithBlocks)
@@ -57,15 +60,6 @@ struct VerseBottomSheetView: View {
             }
             // Changing id recreates the ScrollView → scroll position always resets to top
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
-            // Reserve space so last content item isn't hidden under the floating pill
-            .contentMargins(.bottom, 64, for: .scrollContent)
-        }
-        .overlay {
-            VStack(spacing: 0) {
-                Spacer()
-                actionBar
-            }
-            .ignoresSafeArea(edges: .bottom)
         }
         .background(Color("sheetBackground"))
         // Single editor sheet slot — avoids "only one sheet" warning
@@ -104,48 +98,98 @@ struct VerseBottomSheetView: View {
 
             Spacer()
 
-            HStack(spacing: 12) {
-                Button {
-                    if vm.bottomSheetMode == .verse { vm.navigateToPreviousVerse() }
-                    else { vm.navigateToPreviousWord() }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 36, height: 36)
-                }
-                .disabled(isPrevDisabled)
-
-                Button {
-                    if vm.bottomSheetMode == .verse { vm.navigateToNextVerse() }
-                    else { vm.navigateToNextWord() }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(width: 36, height: 36)
-                }
-                .disabled(isNextDisabled)
-            }
-            .modifier(CapsuleNavGroupStyle())
+            contextMenu
         }
         .padding(.horizontal, 20).padding(.vertical, 12)
     }
 
-    private var isPrevDisabled: Bool {
-        if vm.bottomSheetMode == .verse {
-            return vm.verses.first?.id == verse.id
-        } else {
-            guard let w = vm.selectedWord else { return true }
-            return vm.translationOrderedClickableWords.first?.id == w.id
+    // MARK: - Context Menu (R6)
+
+    /// Ellipsis capsule button with all verse actions: highlight / note / bookmark / share.
+    private var contextMenu: some View {
+        Menu {
+            highlightPicker
+
+            Button {
+                let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
+                activeEditor = .note(note)
+            } label: {
+                Label("action.note", systemImage: "note.text")
+            }
+
+            Button {
+                bookmarksVM.toggleBookmark(verseId: verse.id)
+            } label: {
+                if bookmarksVM.isBookmarked(verseId: verse.id) {
+                    Label("action.bookmark", systemImage: "bookmark.fill")
+                } else {
+                    Label("action.bookmark", systemImage: "bookmark")
+                }
+            }
+
+            ShareLink(item: VerseShareFormatter.format(
+                verse: verse,
+                bookName: vm.translationBookNames[verse.bookId]?.long
+                    ?? BibleBookNames.full(for: verse.bookId),
+                translationId: vm.currentTranslation.id
+            )) {
+                Label("action.share", systemImage: "square.and.arrow.up")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 36, height: 36)
+        }
+        .modifier(CapsuleNavGroupStyle())
+        .accessibilityLabel(Text("sheet.menu.a11y"))
+    }
+
+    /// Highlight submenu rendered as a checklist (R8):
+    /// None on top, divider (section break), then the 5 palette colors with ✓ on the active one.
+    ///
+    /// Implemented as a nested Menu with an inline Picker — iOS renders an inline-style
+    /// Picker inside a Menu as a native checklist. Sections produce the separator.
+    /// Legacy highlights (yellow/green) are not in pickerCases → the selection value
+    /// matches no tag → no checkmark anywhere, and choosing a new color overwrites (edge case 5).
+    private var highlightPicker: some View {
+        Menu {
+            Picker("action.highlight", selection: highlightSelection) {
+                Section {
+                    Text("highlight.color.none").tag(HighlightColor?.none)
+                }
+                Section {
+                    ForEach(HighlightColor.pickerCases, id: \.self) { c in
+                        Label {
+                            Text(c.label)
+                        } icon: {
+                            // .alwaysOriginal keeps the dot colored inside the menu
+                            // (template symbols are re-tinted monochrome by UIMenu).
+                            Image(uiImage: UIImage(systemName: "circle.fill")!
+                                .withTintColor(c.dotUIColor, renderingMode: .alwaysOriginal))
+                        }
+                        .tag(HighlightColor?.some(c))
+                    }
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label("action.highlight", systemImage: "highlighter")
         }
     }
 
-    private var isNextDisabled: Bool {
-        if vm.bottomSheetMode == .verse {
-            return vm.verses.last?.id == verse.id
-        } else {
-            guard let w = vm.selectedWord else { return true }
-            return vm.translationOrderedClickableWords.last?.id == w.id
-        }
+    /// nil = no highlight (None). Setting nil removes the highlight.
+    /// Getter returns the stored color even when it's a legacy case — see highlightPicker doc.
+    private var highlightSelection: Binding<HighlightColor?> {
+        Binding(
+            get: { vm.currentVerseHighlightColor },
+            set: { newValue in
+                if let color = newValue {
+                    vm.setHighlightColor(color, for: verse)
+                } else {
+                    vm.removeHighlight(for: verse)
+                }
+            }
+        )
     }
 
     // MARK: - Mode Tabs
@@ -207,68 +251,6 @@ struct VerseBottomSheetView: View {
                             .matchedGeometryEffect(id: "pill-bg", in: pillNS)
                     }
                 }
-        }
-    }
-
-    // MARK: - Action Bar
-
-    private var actionBar: some View {
-        HStack(spacing: 0) {
-            iconActionBtn(icon: "highlighter",
-                          isActive: vm.isCurrentVerseHighlighted,
-                          color: vm.currentVerseHighlightColor?.color ?? .yellow) {
-                showColorPicker = true
-            }
-            .confirmationDialog(Text("action.highlight_color_title"),
-                                isPresented: $showColorPicker, titleVisibility: .visible) {
-                ForEach(HighlightColor.allCases, id: \.self) { hColor in
-                    Button(hColor.label) { vm.setHighlightColor(hColor, for: verse) }
-                }
-                if vm.isCurrentVerseHighlighted {
-                    Button("action.remove_highlight", role: .destructive) {
-                        vm.removeHighlight(for: verse)
-                    }
-                }
-                Button("action.cancel", role: .cancel) {}
-            }
-
-            iconActionBtn(icon: "note.text", isActive: false, color: .blue) {
-                let note = notesVM.openNewNote(attachedTo: verse, translation: vm.currentTranslation.id)
-                activeEditor = .note(note)
-            }
-
-            iconActionBtn(icon: "bookmark",
-                          isActive: bookmarksVM.isBookmarked(verseId: verse.id),
-                          color: .blue) {
-                bookmarksVM.toggleBookmark(verseId: verse.id)
-            }
-
-            ShareLink(item: VerseShareFormatter.format(
-                verse: verse,
-                bookName: vm.translationBookNames[verse.bookId]?.long
-                    ?? BibleBookNames.full(for: verse.bookId),
-                translationId: vm.currentTranslation.id
-            )) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.primary)
-                    .frame(width: 52, height: 44)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(Color("sheetBackground"))
-        .overlay(alignment: .top) { Divider() }
-    }
-
-    private func iconActionBtn(icon: String, isActive: Bool, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .symbolVariant(.fill)
-                .font(.system(size: 20))
-                .foregroundStyle(isActive ? color : .primary)
-                .frame(width: 52, height: 44)
         }
     }
 }

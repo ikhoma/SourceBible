@@ -286,6 +286,35 @@ class ReaderViewModel: ObservableObject {
         return highlightColors[v.id] != nil
     }
 
+    // MARK: - Study Mode navigation state
+    //
+    // Single source of truth for the toolbar <> chevrons in Study Mode
+    // (spec-study-mode-redesign.md R5). Mirrors what used to live in
+    // VerseBottomSheetView (isPrevDisabled / isNextDisabled).
+    // No cross-chapter traversal: disabled at chapter boundaries (N2).
+
+    /// True when the toolbar "previous" chevron should be disabled in Study Mode.
+    var navPrevDisabled: Bool {
+        if bottomSheetMode == .verse {
+            guard let v = selectedVerse else { return true }
+            return verses.first?.id == v.id
+        } else {
+            guard let w = selectedWord else { return true }
+            return translationOrderedClickableWords.first?.id == w.id
+        }
+    }
+
+    /// True when the toolbar "next" chevron should be disabled in Study Mode.
+    var navNextDisabled: Bool {
+        if bottomSheetMode == .verse {
+            guard let v = selectedVerse else { return true }
+            return verses.last?.id == v.id
+        } else {
+            guard let w = selectedWord else { return true }
+            return translationOrderedClickableWords.last?.id == w.id
+        }
+    }
+
     var currentVerseHighlightColor: HighlightColor? {
         guard let v = selectedVerse, let raw = highlightColors[v.id] else { return nil }
         return HighlightColor(rawValue: raw)

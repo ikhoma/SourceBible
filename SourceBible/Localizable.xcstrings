@@ -43,6 +43,102 @@
     "%lld%%" : {
 
     },
+    "a11y.nav.next_chapter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next chapter"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наступний розділ"
+          }
+        }
+      }
+    },
+    "a11y.nav.next_verse" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next verse"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наступний вірш"
+          }
+        }
+      }
+    },
+    "a11y.nav.next_word" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next word"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Наступне слово"
+          }
+        }
+      }
+    },
+    "a11y.nav.prev_chapter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous chapter"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попередній розділ"
+          }
+        }
+      }
+    },
+    "a11y.nav.prev_verse" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous verse"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попередній вірш"
+          }
+        }
+      }
+    },
+    "a11y.nav.prev_word" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous word"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попереднє слово"
+          }
+        }
+      }
+    },
     "action.back" : {
       "localizations" : {
         "en" : {
@@ -403,6 +499,54 @@
         }
       }
     },
+    "highlight.color.mint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mint"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "М'ятний"
+          }
+        }
+      }
+    },
+    "highlight.color.none" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Без виділення"
+          }
+        }
+      }
+    },
+    "highlight.color.orange" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orange"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Помаранчевий"
+          }
+        }
+      }
+    },
     "highlight.color.pink" : {
       "localizations" : {
         "en" : {
@@ -415,6 +559,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Рожевий"
+          }
+        }
+      }
+    },
+    "highlight.color.purple" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purple"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фіолетовий"
           }
         }
       }
@@ -2397,6 +2557,22 @@
         }
       }
     },
+    "sheet.menu.a11y" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verse actions"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дії з віршем"
+          }
+        }
+      }
+    },
     "sheet.mode.verse" : {
       "localizations" : {
         "en" : {
@@ -2431,6 +2607,22 @@
     },
     "Source Bible v1.0" : {
 
+    },
+    "studymode.back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Назад"
+          }
+        }
+      }
     },
     "tab.bible" : {
       "localizations" : {

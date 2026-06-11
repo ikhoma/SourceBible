@@ -3,23 +3,42 @@
 //
 // Type-safe highlight color tokens. rawValue is persisted in SQLite.
 // Do NOT pass raw color strings beyond the store layer — use this enum everywhere.
+//
+// Study Mode redesign (spec-study-mode-redesign.md R8):
+// The picker palette is Purple/Pink/Orange/Mint/Blue (`pickerCases`).
+// `yellow` and `green` are legacy cases — they MUST stay in the enum so that
+// highlights already saved in the user DB keep decoding and rendering
+// (user-data invariant: no migration, no data loss). They are simply not
+// offered in the new picker UI.
 
 import UIKit
 import SwiftUI
 
 enum HighlightColor: String, CaseIterable, Codable {
+    // Legacy cases — kept for decoding/rendering saved highlights only.
     case yellow
     case green
-    case blue
+    // Current palette (Study Mode picker).
+    case purple
     case pink
+    case orange
+    case mint
+    case blue
+
+    /// Cases exposed in the highlight color picker UI (Study Mode context menu).
+    /// Intentionally excludes legacy `yellow`/`green` — see header comment.
+    static let pickerCases: [HighlightColor] = [.purple, .pink, .orange, .mint, .blue]
 
     /// Adaptive background color for use in UIKit (VerseTextView).
     var uiColor: UIColor {
         switch self {
         case .yellow: return UIColor.systemYellow.withAlphaComponent(0.40)
         case .green:  return UIColor.systemGreen.withAlphaComponent(0.35)
-        case .blue:   return UIColor.systemBlue.withAlphaComponent(0.28)
+        case .purple: return UIColor.systemPurple.withAlphaComponent(0.30)
         case .pink:   return UIColor.systemPink.withAlphaComponent(0.30)
+        case .orange: return UIColor.systemOrange.withAlphaComponent(0.32)
+        case .mint:   return UIColor.systemMint.withAlphaComponent(0.32)
+        case .blue:   return UIColor.systemBlue.withAlphaComponent(0.28)
         }
     }
 
@@ -28,8 +47,24 @@ enum HighlightColor: String, CaseIterable, Codable {
         switch self {
         case .yellow: return Color.yellow.opacity(0.40)
         case .green:  return Color.green.opacity(0.35)
-        case .blue:   return Color.blue.opacity(0.28)
+        case .purple: return Color.purple.opacity(0.30)
         case .pink:   return Color.pink.opacity(0.30)
+        case .orange: return Color.orange.opacity(0.32)
+        case .mint:   return Color.mint.opacity(0.32)
+        case .blue:   return Color.blue.opacity(0.28)
+        }
+    }
+
+    /// Fully-opaque dot color for menu/picker swatches.
+    var dotUIColor: UIColor {
+        switch self {
+        case .yellow: return .systemYellow
+        case .green:  return .systemGreen
+        case .purple: return .systemPurple
+        case .pink:   return .systemPink
+        case .orange: return .systemOrange
+        case .mint:   return .systemMint
+        case .blue:   return .systemBlue
         }
     }
 
@@ -38,8 +73,11 @@ enum HighlightColor: String, CaseIterable, Codable {
         switch self {
         case .yellow: return String(localized: "highlight.color.yellow")
         case .green:  return String(localized: "highlight.color.green")
-        case .blue:   return String(localized: "highlight.color.blue")
+        case .purple: return String(localized: "highlight.color.purple")
         case .pink:   return String(localized: "highlight.color.pink")
+        case .orange: return String(localized: "highlight.color.orange")
+        case .mint:   return String(localized: "highlight.color.mint")
+        case .blue:   return String(localized: "highlight.color.blue")
         }
     }
 
