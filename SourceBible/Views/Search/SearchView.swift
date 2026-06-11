@@ -2,6 +2,7 @@
 // SourceBible
 
 import SwiftUI
+import UIKit
 
 struct SearchView: View {
 
@@ -12,10 +13,21 @@ struct SearchView: View {
 
     @State private var searchText:       String = ""
     @State private var isSearchActive:   Bool   = false
-    /// Tracks whether the user pressed the Search key (vs. still typing).
-    /// Used to decide whether to show the loading spinner or blank content
-    /// while waiting for results, since the two phases need different layouts.
-    @State private var didCommitSearch:  Bool   = false
+
+    /// The query whose results are currently on screen. Empty until the user *commits*
+    /// (taps a predictive row or presses the Search key). The typing phase shows only
+    /// predictions; results load on commit. When `trimmedQuery != committedQuery` the
+    /// user is editing again → back to predictions.
+    @State private var committedQuery:   String = ""
+
+    /// Trimmed query — single source of truth for "is the user typing something".
+    private var trimmedQuery: String { searchText.trimmingCharacters(in: .whitespaces) }
+
+    /// True while the user is editing a query that hasn't been committed yet.
+    private var isTypingUncommitted: Bool { trimmedQuery != committedQuery }
+
+    /// True when the committed results page is on screen (drives hiding the nav title there).
+    private var isShowingResults: Bool { !committedQuery.isEmpty && !isTypingUncommitted }
 
     // MARK: - Filter state
     enum TestamentFilter { case all, old, new }
@@ -39,27 +51,35 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             content
+                // Large bold "Search" on the home states (hint / Recent / predictions).
+                // On the results page there's already a "Results for …" header, and the
+                // large title there flickered between states — so hide the nav bar there.
                 .navigationTitle("tab.search")
                 .navigationBarTitleDisplayMode(.large)
-                .toolbar(!vm.results.isEmpty && !isSearchActive ? .hidden : .automatic, for: .navigationBar)
+                .toolbar(isShowingResults ? .hidden : .automatic, for: .navigationBar)
                 .background(Color("appBackground"))
         }
+        // No `.searchSuggestions` overlay (removed the iOS 26 width squeeze). Predictions
+        // render inline in `predictiveList`; results load on commit into `resultsList`.
+        // `.searchable` + Tab(role: .search) still drive the bottom bar + morph animation. (ADR-008 §5)
         .searchable(
             text: $searchText,
             isPresented: $isSearchActive,
             placement: .automatic,
             prompt: String(localized: "search.prompt.keyword")
         )
-        .searchSuggestions {
-            searchSuggestionsContent
-        }
         .onSubmit(of: .search) {
-            commitSearch()
+            commit(query: searchText)
         }
         .onChange(of: searchText) { _, newValue in
-            didCommitSearch = false          // typing reset — suppress spinner, show blank
+            // Typing phase only refreshes predictions — it does NOT run the full search.
+            // (That avoids dense results painting behind the predictions + translucent bar,
+            // and the wasted per-keystroke FTS queries.) Results load on commit.
             vm.updateSuggestions(for: newValue)
-            vm.search(query: newValue, translation: readerVM.currentTranslation.id)
+
+            // Clearing the field (cancel ✕ or the in-field clear) drops back out of the
+            // committed/results state so we don't flash stale results.
+            if newValue.trimmingCharacters(in: .whitespaces).isEmpty { committedQuery = "" }
         }
     }
 
@@ -67,24 +87,115 @@ struct SearchView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !vm.results.isEmpty {
+        if isShowingResults {
+            // Committed: full-screen results page (keyboard dismissed on commit).
+            resultsPage
+        } else if isSearchActive && !trimmedQuery.isEmpty {
+            // Typing an uncommitted query: predictions only.
+            predictiveList
+        } else if !vm.recentQueries.isEmpty {
+            recentQueriesSection
+        } else {
+            searchHintView
+        }
+    }
+
+    // MARK: - Results page (after commit)
+
+    @ViewBuilder
+    private var resultsPage: some View {
+        if !filteredResults.isEmpty {
             resultsList
-        } else if vm.hasSearched && !vm.isLoading {
-            emptyResultsView
-        } else if vm.isLoading && didCommitSearch {
-            // User pressed the Search key — show spinner while the query runs.
-            loadingView
-        } else if isSearchActive && !searchText.isEmpty {
-            // iOS 26 bottom search bar: the suggestion overlay shares the same
-            // vertical layout space as this content. While typing (pre-results),
-            // render blank so the overlay doesn't squish a Spacer-based view
-            // into a narrow strip. The suggestions are the UX for this phase.
-            Color.clear
         } else if vm.isLoading {
             loadingView
         } else {
-            emptyStateView
+            emptyResultsView
         }
+    }
+
+    // MARK: - Predictive list (typing phase)
+
+    /// Suggestions minus the term the user has already fully typed, so a completed
+    /// query doesn't echo itself back as a one-row suggestion.
+    private var visibleSuggestions: [String] {
+        let q = trimmedQuery.lowercased()
+        return vm.suggestions.filter { $0 != q }
+    }
+
+    private var predictiveList: some View {
+        List {
+            if !visibleSuggestions.isEmpty {
+                ForEach(visibleSuggestions, id: \.self) { completionRow($0) }
+                    .listRowSeparator(.hidden)
+            } else {
+                // No predictions yet (or "nonsense"): offer a row to search the literal text.
+                literalQueryRow
+                    .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.immediately)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            ProgressView().scaleEffect(1.2)
+            Text("search.loading").font(.callout).foregroundStyle(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// A predictive-completion row: the matched prefix is rendered in the primary
+    /// colour, the predicted remainder in secondary — matching Apple Music's
+    /// "**dak**ooka" treatment. Tapping fills the field and runs the search.
+    /// (`search_terms` are stored lowercase, so the row reflects that casing.)
+    private func completionRow(_ term: String) -> some View {
+        let matchLen = min(trimmedQuery.count, term.count)
+
+        var head = AttributedString(String(term.prefix(matchLen)))
+        var headAttrs = AttributeContainer(); headAttrs.swiftUI.foregroundColor = Color.primary
+        head.mergeAttributes(headAttrs)
+
+        var tail = AttributedString(String(term.dropFirst(matchLen)))
+        var tailAttrs = AttributeContainer(); tailAttrs.swiftUI.foregroundColor = Color.secondary
+        tail.mergeAttributes(tailAttrs)
+
+        return HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            Text(head + tail).lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { complete(with: term) }
+    }
+
+    /// Echoes the raw query (Apple Music shows this when nothing matches). Tapping commits.
+    private var literalQueryRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            Text(verbatim: searchText)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { commit(query: searchText) }
+    }
+
+    private var testamentPicker: some View {
+        Picker("", selection: $testamentFilter) {
+            Text("search.filter.all").tag(TestamentFilter.all)
+            Text("search.filter.old").tag(TestamentFilter.old)
+            Text("search.filter.new").tag(TestamentFilter.new)
+        }
+        .pickerStyle(.segmented)
+        .padding(.vertical, 10)
+        .padding(.top, -8)
     }
 
     // MARK: - Results list
@@ -115,14 +226,7 @@ struct SearchView: View {
                         .onTapGesture { navigate(to: result) }
                 }
             } header: {
-                Picker("", selection: $testamentFilter) {
-                    Text("search.filter.all").tag(TestamentFilter.all)
-                    Text("search.filter.old").tag(TestamentFilter.old)
-                    Text("search.filter.new").tag(TestamentFilter.new)
-                }
-                .pickerStyle(.segmented)
-                .padding(.vertical, 10)
-                .padding(.top, -8)
+                testamentPicker
             }
         }
         .listStyle(.plain)
@@ -131,50 +235,7 @@ struct SearchView: View {
         .scrollDismissesKeyboard(.immediately)
     }
 
-    // MARK: - Autocomplete suggestions
-
-    @ViewBuilder
-    private var searchSuggestionsContent: some View {
-        ForEach(vm.suggestions, id: \.self) { term in
-            // iOS 26 bottom search bar gives suggestion rows a near-zero proposed width,
-            // causing text to wrap character-by-character. Fix: claim full row width and
-            // clamp to a single line. Text(verbatim:) avoids the LocalizedStringKey
-            // overload that triggers a separate mis-render on the same OS version.
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                Text(verbatim: term)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .searchCompletion(term)
-        }
-
-        if !vm.recentQueries.isEmpty && vm.suggestions.count < 4 {
-            Section("search.recent") {
-                ForEach(vm.recentQueries.prefix(4), id: \.self) { recent in
-                    HStack(spacing: 8) {
-                        Image(systemName: "clock").foregroundStyle(.secondary)
-                        Text(verbatim: recent)
-                            .lineLimit(1)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .foregroundStyle(.secondary)
-                    .searchCompletion(recent)
-                }
-            }
-        }
-    }
-
-    // MARK: - Empty / loading states
-
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            ProgressView().scaleEffect(1.2)
-            Text("search.loading").font(.callout).foregroundStyle(.secondary)
-            Spacer()
-        }
-    }
+    // MARK: - Empty states
 
     private var emptyResultsView: some View {
         VStack(spacing: 16) {
@@ -189,17 +250,8 @@ struct SearchView: View {
                 .multilineTextAlignment(.center)
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 32)
-    }
-
-    private var emptyStateView: some View {
-        Group {
-            if !vm.recentQueries.isEmpty && searchText.isEmpty {
-                recentQueriesSection
-            } else {
-                searchHintView
-            }
-        }
     }
 
     private var recentQueriesSection: some View {
@@ -215,7 +267,7 @@ struct SearchView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         searchText = recent
-                        vm.search(query: recent, translation: readerVM.currentTranslation.id)
+                        commit(query: recent)
                     }
                 }
             } header: {
@@ -256,22 +308,40 @@ struct SearchView: View {
                 .multilineTextAlignment(.center)
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 32)
     }
 
     // MARK: - Actions
 
-    private func commitSearch() {
-        let q = searchText.trimmingCharacters(in: .whitespaces)
+    /// Tapping a predictive completion fills the field with the term and commits.
+    private func complete(with term: String) {
+        searchText = term
+        commit(query: term)
+    }
+
+    /// Commit a query → load its results page and dismiss the keyboard.
+    /// Setting `committedQuery == trimmedQuery` flips `content` from predictions to results.
+    /// Recent is saved by the ViewModel only if the query actually returns results,
+    /// so dead queries ("Dhhdhhdh", words absent from this translation) aren't recorded.
+    private func commit(query: String) {
+        let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return }
-        didCommitSearch = true               // explicit submit — show spinner
-        vm.saveRecent(q)
+        committedQuery = q
         vm.search(query: q, translation: readerVM.currentTranslation.id)
+        dismissKeyboard()
     }
 
     private func navigate(to result: SearchResult) {
-        vm.saveRecent(searchText.trimmingCharacters(in: .whitespaces))
         router.requestNavigation(to: result.id)
+    }
+
+    /// Resign first responder without dismissing the whole search presentation,
+    /// so the field keeps showing the query while the keyboard hides (Apple Music behaviour).
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+        )
     }
 }
 

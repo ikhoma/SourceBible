@@ -57,6 +57,10 @@ final class SearchViewModel: ObservableObject {
             resultsCapped = found.count >= 150
             isLoading     = false
             hasSearched   = true
+
+            // Record to Recent only when the query actually matched something —
+            // dead queries (nonsense, or words absent from this translation) are noise.
+            if !found.isEmpty { self.saveRecent(trimmed) }
         }
     }
 
