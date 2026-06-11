@@ -725,10 +725,10 @@ final class DatabaseService: @unchecked Sendable {
 
     // MARK: Autocomplete suggestions
 
-    /// Words from `search_terms` matching a lowercase prefix (≥2 chars), ordered by frequency.
+    /// Words from `search_terms` matching a lowercase prefix (≥1 char), ordered by frequency.
     /// Uses GLOB for index-friendly prefix scan. Terms stored lowercase → caller must lowercase input.
     func suggestTerms(prefix: String, limit: Int = 8) -> [String] {
-        guard isAvailable, prefix.count >= 2 else { return [] }
+        guard isAvailable, prefix.count >= 1 else { return [] }
         var terms: [String] = []
         query("SELECT term FROM search_terms WHERE term GLOB ? ORDER BY freq DESC LIMIT ?",
               bindings: [prefix.lowercased() + "*", limit]) { stmt in

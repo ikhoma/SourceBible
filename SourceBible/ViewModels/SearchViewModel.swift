@@ -67,7 +67,7 @@ final class SearchViewModel: ObservableObject {
         suggestTask?.cancel()
 
         let trimmed = prefix.trimmingCharacters(in: .whitespaces)
-        guard trimmed.count >= 2 else {
+        guard trimmed.count >= 1 else {
             suggestions = []
             return
         }
