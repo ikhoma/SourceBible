@@ -295,9 +295,6 @@ class ReaderViewModel: ObservableObject {
     // closure is not re-evaluated when the presenter's @State changes), while
     // the sheet's own body re-renders on every vm change.
 
-    /// Top inset for the pinned verse. The verse TEXT sits 16 pt below the
-    /// toolbar: 4 pt inset + 12 pt internal row padding (VerseRowView .vertical).
-    static let pinnedTopInset: CGFloat = 4
     /// Desired VISIBLE gap between the bottom of the pinned verse card and the
     /// real (on-screen) top of the sheet.
     static let sheetGap: CGFloat = 16
@@ -311,12 +308,48 @@ class ReaderViewModel: ObservableObject {
     /// rather than being constant, derive it from the bottom inset instead.
     static let detentTopOffset: CGFloat = 16
 
-    /// Global (screen-coordinate) bottom edge of the pinned verse row,
-    /// written by ReaderView while Study Mode is active. Direct geometry:
-    /// no assumptions about nav-bar or container heights — those produced a
-    /// systematic ~50 pt gap (debug session 2026-06-12: ZStack-measured
-    /// container disagreed with the scroll viewport's real top inset).
-    @Published var pinnedVerseGlobalBottom: CGFloat = 0
+    /// Global (window) Y of the navigation bar's BOTTOM edge, read from UIKit.
+    /// The iOS 26 floating toolbar does NOT reduce the SwiftUI safe area, so a
+    /// SwiftUI GeometryReader only ever saw the status bar and the pinned verse
+    /// landed UNDER the toolbar. Reading the real `UINavigationBar` frame is the
+    /// ground truth (mirrors the web prototype's explicit `headerHeight`).
+    @Published var toolbarBottomY: CGFloat = 0
+
+    /// Global (window) Y where the scroll's content area begins (top inset edge).
+    /// ~0 when the cover makes the scroll bleed under the toolbar (ignoresSafeArea),
+    /// ~toolbar bottom otherwise. Measured so the top inset self-adjusts to either.
+    @Published var scrollContentTopY: CGFloat = 0
+
+    /// Where the pinned verse's TOP lands: `sheetGap` below the toolbar bottom.
+    var pinnedTopAnchorY: CGFloat { toolbarBottomY + Self.sheetGap }
+
+    /// Height of the Study-Mode top inset so that `scrollTo(anchor:.top)` lands the
+    /// verse top exactly at `pinnedTopAnchorY`, regardless of where the scroll
+    /// content starts (cover bleed vs normal safe area).
+    var studyTopInset: CGFloat { max(0, pinnedTopAnchorY - scrollContentTopY) }
+
+    /// Measured intrinsic heights of verse rows, keyed by verse id. Each row writes
+    /// its height once (it doesn't change with scroll). Stored PER-ID — not as a
+    /// single "selected height" — because `onGeometryChange` does NOT re-fire when a
+    /// row becomes selected (its height is unchanged), so a selection-gated single
+    /// value never updated on tap and the sheet stayed at the fallback size.
+    /// Plain (not @Published) to avoid a re-render storm on long chapters; the read
+    /// below is driven by `selectedVerse` (which IS @Published) instead.
+    private var verseHeights: [String: CGFloat] = [:]
+
+    /// Record a row's measured height. Cheap, idempotent.
+    func setVerseHeight(_ height: CGFloat, for id: String) {
+        guard height > 0, abs((verseHeights[id] ?? 0) - height) > 0.5 else { return }
+        verseHeights[id] = height
+    }
+
+    /// Intrinsic height of the currently selected verse (0 until measured). Combined
+    /// with `pinnedTopAnchorY` it yields the verse's pinned bottom with NO feedback
+    /// loop, so `studySheetHeight` resolves once to its final value.
+    var pinnedVerseHeight: CGFloat {
+        guard let id = selectedVerse?.id else { return 0 }
+        return verseHeights[id] ?? 0
+    }
 
     /// Full screen height in points.
     private var screenHeight: CGFloat {
@@ -331,9 +364,26 @@ class ReaderViewModel: ObservableObject {
     /// Clamped: never below 30% (very long verse) nor above 85% of the screen.
     var studySheetHeight: CGFloat {
         let screenH = screenHeight
-        guard pinnedVerseGlobalBottom > 0 else { return screenH * 0.45 }  // pre-measurement
-        let h = screenH - pinnedVerseGlobalBottom - Self.sheetGap - Self.detentTopOffset
+        // Intrinsic geometry: pinned verse bottom = fixed top anchor + verse height.
+        // Neither input depends on the live scroll offset, so this resolves ONCE to
+        // its final value — no feedback loop, no chasing a moving target.
+        guard toolbarBottomY > 0, pinnedVerseHeight > 0 else { return screenH * 0.45 }  // pre-measurement
+        let verseBottom = pinnedTopAnchorY + pinnedVerseHeight
+        let h = screenH - verseBottom - Self.sheetGap - Self.detentTopOffset
         return min(max(h, screenH * 0.30), screenH * 0.85)
+    }
+
+    /// Bottom scroll inset for Study Mode — the room reserved BELOW the pin point.
+    /// This is NOT the sheet height: it must be large enough that even the chapter's
+    /// LAST verse (no content beneath it) can scroll up until its top reaches
+    /// `pinnedTopAnchorY`. The whole area below the pin (`screenH − anchor`) is always
+    /// enough; the surplus over the sheet is invisible (scroll is locked and it sits
+    /// behind the sheet). Using `studySheetHeight` here was the bug — roughly half the
+    /// room the last verses need, so they could not reach the top.
+    var studyScrollRoom: CGFloat {
+        let screenH = screenHeight
+        guard toolbarBottomY > 0 else { return screenH }   // generous pre-measurement
+        return screenH - pinnedTopAnchorY
     }
 
     // MARK: - Study Mode navigation state

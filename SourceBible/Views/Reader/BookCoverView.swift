@@ -17,10 +17,9 @@ struct BookCoverView: View {
 
     // Visible cover height (frame). The Figma frame is 402×302.
     private let coverHeight: CGFloat = 302
-    // Extra image height beyond the frame, used as parallax headroom.
-    // Image is rendered at (coverHeight + parallaxRange) and translated within it.
-    private let parallaxRange: CGFloat = 60
     // How much the image lags the scroll. 0 = pinned, 1 = moves with content.
+    // Parallax travel is the FULL extra height (imageHeight − coverHeight): the
+    // square asset renders `width` tall, so the entire image top↔bottom is reachable.
     private let parallaxFactor: CGFloat = 0.35
 
     // #3085CF — brand blue, fallback cover for books without an image asset.
@@ -36,7 +35,6 @@ struct BookCoverView: View {
         // Local copies of layout constants — captured as values by the escaping
         // `visualEffect` closure (Swift 6 forbids implicit `self` capture there).
         let frameHeight = coverHeight
-        let range = parallaxRange
         let factor = parallaxFactor
 
         return ZStack(alignment: .bottomLeading) {
@@ -47,34 +45,34 @@ struct BookCoverView: View {
             // ── Pre-composited cover image, full-bleed + parallax ───────────────
             if let assetName = coverData.imageName,
                UIImage(named: assetName) != nil {
-                Image(assetName)
-                    .resizable()
-                    .scaledToFill()
-                    // Render taller than the visible frame so there is room to
-                    // translate the image as the page scrolls (the parallax gap).
-                    .frame(maxWidth: .infinity)
-                    .frame(height: frameHeight + range)
-                    .clipped()
-                    .visualEffect { effect, geometry in
-                        // minY in scroll space:
-                        //   = 0   at rest (cover top flush with scroll top)
-                        //   > 0   overscroll / pull-down  → gentle zoom
-                        //   < 0   scrolled up (reading)    → parallax shift up
-                        let minY = geometry.frame(in: .scrollView).minY
-                        let shift = minY < 0
-                            ? min(-minY * factor, range)
-                            : 0
-                        let zoom = minY > 0
-                            ? 1 + (minY / max(frameHeight, 1)) * 0.6
-                            : 1
-                        return effect
-                            .scaleEffect(zoom, anchor: .top)
-                            .offset(y: -shift)
-                    }
-                    // Visible window: top-aligned so the parallax shift reveals the
-                    // lower part of the image as the user scrolls.
-                    .frame(height: frameHeight, alignment: .top)
-                    .clipped()
+                GeometryReader { geo in
+                    let w = geo.size.width
+                    let h = geo.size.height                 // = coverHeight (302)
+                    // The square asset renders `w` tall, so the FULL extra height is the
+                    // parallax travel — the entire image top↔bottom is reachable and
+                    // NOTHING is cropped (scaledToFill on a square into w×w = exact fit).
+                    let travel = max(0, w - h)
+                    Image(assetName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: w, height: w)          // natural square — no vertical crop
+                        .visualEffect { effect, g in
+                            // minY in scroll space:
+                            //   = 0   at rest (cover top flush with scroll top)
+                            //   > 0   overscroll / pull-down  → gentle zoom
+                            //   < 0   scrolled up (reading)    → parallax shift down (flipped)
+                            let minY = g.frame(in: .scrollView).minY
+                            let shift = minY < 0 ? min(-minY * factor, travel) : 0
+                            let zoom  = minY > 0 ? 1 + (minY / max(h, 1)) * 0.6 : 1
+                            return effect
+                                .scaleEffect(zoom, anchor: .bottom)
+                                .offset(y: shift)
+                        }
+                        // Visible window: bottom-aligned → at rest you see the BOTTOM of
+                        // the asset; the flipped parallax reveals upward to the very top.
+                        .frame(width: w, height: h, alignment: .bottom)
+                        .clipped()
+                }
             }
 
             // ── Black bottom gradient (Figma: clear → 18.87% → black 50%) ───────

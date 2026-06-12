@@ -24,8 +24,8 @@ struct ReaderView: View {
     // is sized so its top edge sits ~8 pt below the pinned verse. Only the
     // sheet's internal content scrolls.
     //
-    // Geometry state (pinnedVerseGlobalBottom / studySheetHeight) lives in
-    // ReaderViewModel; the height is applied INSIDE VerseBottomSheetView via
+    // Geometry state (pinnedTopAnchorY / pinnedVerseHeight / studySheetHeight)
+    // lives in ReaderViewModel; the height is applied INSIDE VerseBottomSheetView via
     // StudySheetDetentApplier (UIKit). Rationale: presentation-modifier
     // arguments captured in the .sheet content closure here go STALE — the
     // closure is not re-evaluated when the presenter's @State changes — so a
@@ -42,6 +42,15 @@ struct ReaderView: View {
         NavigationStack {
             ZStack {
                 Color("appBackground").ignoresSafeArea()
+                // Read the REAL navigation-bar bottom from UIKit. The floating toolbar
+                // does not reduce the SwiftUI safe area, so this is the only reliable
+                // source for "where the toolbar ends" — the pin target keys off it.
+                NavBarBottomReader { y in
+                    Task { @MainActor in
+                        if abs(vm.toolbarBottomY - y) > 0.5 { vm.toolbarBottomY = y }
+                    }
+                }
+                .allowsHitTesting(false)
                 if vm.isLoading {
                     ProgressView(LocalizedStringKey("reader.loading"))
                 } else if let error = vm.errorMessage {
@@ -58,9 +67,10 @@ struct ReaderView: View {
 
                                 if vm.currentChapter == 1 {
                                     if showsBookCover {
-                                        // Full-bleed book cover extending behind the nav bar.
-                                        // Negative padding cancels VStack's own insets so
-                                        // the cover reaches flush to the scroll view's top edge.
+                                        // Book cover as in-flow content: negative padding
+                                        // cancels the VStack's own insets so the cover sits
+                                        // flush at the scroll's top edge (just below the
+                                        // toolbar) and scrolls away normally when a verse pins.
                                         BookCoverView(
                                             bookId: vm.currentBook.id,
                                             bookName: vm.translationBookNames[vm.currentBook.id]?.long
@@ -99,23 +109,15 @@ struct ReaderView: View {
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
                                     .id(verse.id)
-                                    // R3: track the SELECTED row's bottom edge in screen
-                                    // coordinates — drives studySheetHeight directly
-                                    // (sheet top = verse bottom + gap), with no nav-bar /
-                                    // container assumptions. Fires continuously while the
-                                    // re-anchor scroll animates and settles at the final
-                                    // position; the detent applier animates each step.
-                                    // The published write is deferred one tick: the callback
-                                    // runs during the layout pass, where synchronous
-                                    // objectWillChange writes can be dropped.
-                                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }) { maxY in
-                                        guard vm.activeSheet == .verse,
-                                              vm.selectedVerse?.id == verse.id,
-                                              abs(vm.pinnedVerseGlobalBottom - maxY) > 0.5
-                                        else { return }
-                                        Task { @MainActor in
-                                            vm.pinnedVerseGlobalBottom = maxY
-                                        }
+                                    // Measure EVERY row's INTRINSIC height (stable; unaffected
+                                    // by scroll) into a per-id store. Done for all rows, not
+                                    // just the selected one: onGeometryChange does NOT re-fire
+                                    // when a row becomes selected (its height is unchanged), so
+                                    // a selection-gated measurement never updated on tap — which
+                                    // is why the sheet didn't adapt. The selected verse's height
+                                    // is then a reliable lookup (vm.pinnedVerseHeight).
+                                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { height in
+                                        Task { @MainActor in vm.setVerseHeight(height, for: verse.id) }
                                     }
                                 }
                             }
@@ -129,63 +131,94 @@ struct ReaderView: View {
                         // proxy.scrollTo(...) still works — required for chevron
                         // navigation to re-anchor the newly selected verse.
                         .scrollDisabled(sheetOpen)
-                        // R1: top inset in Study Mode so anchor:.top lands the pinned
-                        // verse TEXT exactly 16 pt below the nav bar (4 pt inset +
-                        // 12 pt internal row padding — see pinnedTopInset doc).
+                        // R1: top inset in Study Mode so anchor:.top lands the pinned verse
+                        // `sheetGap` below the REAL toolbar bottom (UIKit-measured), in both
+                        // the cover-bleed and normal-safe-area cases. studyTopInset =
+                        // pinnedTopAnchorY − scrollContentTopY does the math; we measure the
+                        // inset's own top edge (scrollContentTopY) so it self-adjusts.
                         //
-                        // spacing MUST be 0: `nil` means "system default spacing"
-                        // (~16 pt) between the inset view and the content, which
-                        // silently pushed the pinned verse that much lower.
+                        // spacing MUST be 0: `nil` means "system default spacing" (~16 pt)
+                        // between the inset view and the content, which silently pushed the
+                        // pinned verse that much lower.
                         //
-                        // Always returns a concrete Color view (no conditional ViewBuilder) to
-                        // avoid type-inference ambiguity with iOS 26 safeAreaInset overloads.
+                        // Always a concrete Color view (no conditional ViewBuilder) to avoid
+                        // type-inference ambiguity with iOS 26 safeAreaInset overloads.
                         .safeAreaInset(edge: .top, spacing: 0) {
-                            Color.clear.frame(height: sheetOpen ? ReaderViewModel.pinnedTopInset : 0)
+                            Color.clear
+                                .frame(height: sheetOpen ? vm.studyTopInset : 0)
+                                // The inset's TOP edge is the scroll content origin (~0 when
+                                // the cover bleeds, ~toolbar bottom otherwise). Measuring it
+                                // lets studyTopInset land the verse at pinnedTopAnchorY either way.
+                                .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { y in
+                                    guard abs(vm.scrollContentTopY - y) > 0.5 else { return }
+                                    Task { @MainActor in vm.scrollContentTopY = y }
+                                }
                         }
-                        // R3: reserve the sheet-covered area so anchor:.top can pin ANY
-                        // verse (including the chapter's last ones) to the top. The
-                        // effective viewport above the sheet ≈ pinned verse + gap.
+                        // R3: reserve enough scroll room BELOW the pin that anchor:.top can
+                        // pin ANY verse — including the chapter's last, which have no content
+                        // beneath them. This is studyScrollRoom (the whole area below the pin),
+                        // NOT studySheetHeight: the sheet is sized separately via the detent,
+                        // and tying the inset to the sheet height left the last verses short
+                        // of room to reach the top. Surplus room is invisible (scroll locked,
+                        // behind the sheet).
                         .safeAreaInset(edge: .bottom, spacing: 0) {
-                            Color.clear.frame(height: sheetOpen ? vm.studySheetHeight : 0)
+                            Color.clear.frame(height: sheetOpen ? vm.studyScrollRoom : 0)
                         }
                         // Observes verseScrollTrigger (not selectedVerse.id) so that
                         // re-tapping the already-selected verse still re-scrolls it
                         // above the sheet if the user has manually scrolled away.
                         .onChange(of: vm.verseScrollTrigger) { _, _ in
                             guard let id = vm.selectedVerse?.id else { return }
-                            // Choose animation based on what triggered the verse change:
-                            //   .tap     → .snappy spring — direct manipulation feel.
-                            //   .chevron → .easeInOut    — calm sequential traversal.
+                            // DIAGNOSTIC (remove after verify): all geometry resolved here.
+                            print("[PIN] toolbarBottom=\(vm.toolbarBottomY) contentTop=\(vm.scrollContentTopY) topInset=\(vm.studyTopInset) anchorY=\(vm.pinnedTopAnchorY) verseH=\(vm.pinnedVerseHeight) → sheetH=\(vm.studySheetHeight) room=\(vm.studyScrollRoom)")
                             let intent = vm.verseScrollIntent
                             vm.verseScrollIntent = .tap   // reset for next interaction
+                            // Animation curve:
+                            //   .tap     → .smooth(0.5) — matched to the system sheet's
+                            //              presentation spring so the verse and the sheet
+                            //              travel TOGETHER (no early-arrival lag).
+                            //   .chevron → .easeInOut    — calm sequential traversal.
                             let animation: Animation = intent == .chevron
                                 ? .easeInOut(duration: 0.32)
-                                : .snappy
+                                : .smooth(duration: 0.5)
+                            // Time for the motion above to settle, per intent.
+                            let settle: TimeInterval = intent == .chevron ? 0.32 : 0.5
                             // Study Mode pins the verse top 16 pt below the nav bar
                             // (anchor .top within the inset viewport — R1).
                             let anchor: UnitPoint = sheetOpen ? .top : .center
+
                             // Defer one RunLoop tick so safeAreaInset is committed to
                             // the UIScrollView before scrollTo uses the extra room.
+                            // The live geometry feed stays ON so the sheet height tracks
+                            // the real verse (freezing it made the sheet animate to a
+                            // stale height, then snap back — visible "push back").
                             DispatchQueue.main.async {
                                 withAnimation(animation) { proxy.scrollTo(id, anchor: anchor) }
                             }
-                            // Re-assert the anchor after the sheet presentation /
-                            // detent / inset animations settle — the first pass can
-                            // compute against stale geometry and land the verse a
-                            // few points low. No-ops when already in place.
-                            if sheetOpen {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                                    withAnimation(.easeOut(duration: 0.15)) {
-                                        proxy.scrollTo(id, anchor: anchor)
-                                    }
-                                }
+
+                            guard sheetOpen else { return }
+                            // Single NON-animated correction once the motion has settled —
+                            // absorbs the end-of-chapter "lands a few pt low" case without a
+                            // visible second glide.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + settle + 0.12) {
+                                var t = Transaction(); t.disablesAnimations = true
+                                withTransaction(t) { proxy.scrollTo(id, anchor: anchor) }
                             }
                         }
-                        // Reset scroll position to top on every chapter change.
-                        .id(vm.currentChapter)
-                        // Only extend behind the nav bar when the genesis header image
-                        // is present. Other chapters must render below the nav bar as normal.
-                        .ignoresSafeAreaIf(showsBookCover, edges: .top)
+                        // Reset scroll position to top on every book OR chapter change.
+                        // Keyed on book+chapter (not chapter alone): switching books that
+                        // both open at chapter 1 keeps the same chapter number, so a
+                        // chapter-only id would reuse the scroll view and inherit the
+                        // previous book's scroll offset.
+                        .id("\(vm.currentBook.id)-\(vm.currentChapter)")
+                        // Cover bleeds behind the status bar + toolbar (immersive) yet is
+                        // still ordinary in-flow content that scrolls away when a verse pins.
+                        // Tied to showsBookCover ONLY (never sheetOpen) so it does NOT toggle
+                        // on Study Mode entry — the toggle was the source of the black band /
+                        // mis-position. The Study-Mode top inset above self-adjusts (it measures
+                        // the scroll content origin), so the pinned verse lands `sheetGap` below
+                        // the real toolbar in BOTH cases. (`[]` = ignore nothing.)
+                        .ignoresSafeArea(edges: showsBookCover ? .top : [])
                     }
 
                     // Edge swipe gesture for chapter navigation.
@@ -260,8 +293,8 @@ struct ReaderView: View {
         // Single sheet slot for all presentations — avoids "only one sheet supported" warning
         .sheet(item: $vm.activeSheet, onDismiss: {
             // R7: shared exit path for Back button and header drag-down.
-            // (pinnedVerseGlobalBottom stays as a sane initial value for the
-            // next entry; it is re-measured as soon as the verse re-anchors.)
+            // (pinnedTopAnchorY / pinnedVerseHeight stay as sane initial values for
+            // the next entry; both are re-measured as soon as the verse re-anchors.)
             vm.clearWordSelection()
         }) { sheet in
             switch sheet {
@@ -519,18 +552,39 @@ struct TranslationPickerView: View {
     }
 }
 
-// MARK: - Conditional ignoresSafeArea helper
+// MARK: - Navigation bar bottom reader (UIKit ground truth)
 
-private extension View {
-    /// Applies `.ignoresSafeArea(edges:)` only when `condition` is true.
-    /// Used to extend the scroll view behind the nav bar only on chapters
-    /// that have a full-bleed header image.
-    @ViewBuilder
-    func ignoresSafeAreaIf(_ condition: Bool, edges: Edge.Set) -> some View {
-        if condition {
-            self.ignoresSafeArea(edges: edges)
-        } else {
-            self
+/// Reports the global (window) Y of the navigation bar's BOTTOM edge.
+/// The iOS 26 floating toolbar does not reduce the SwiftUI safe area, so a
+/// GeometryReader can't see it — reading the real `UINavigationBar` frame is the
+/// only reliable source for "where the toolbar ends".
+private struct NavBarBottomReader: UIViewControllerRepresentable {
+    let onResolve: (CGFloat) -> Void
+
+    func makeUIViewController(context: Context) -> Proxy { Proxy() }
+    func updateUIViewController(_ proxy: Proxy, context: Context) {
+        proxy.onResolve = onResolve
+        proxy.resolve()
+    }
+
+    final class Proxy: UIViewController {
+        var onResolve: ((CGFloat) -> Void)?
+
+        override func loadView() {
+            let v = UIView()
+            v.backgroundColor = .clear
+            v.isUserInteractionEnabled = false
+            view = v
+        }
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            resolve()
+        }
+        func resolve() {
+            guard let nav = navigationController?.navigationBar,
+                  let window = view.window else { return }
+            let maxY = nav.convert(nav.bounds, to: window).maxY
+            if maxY > 0 { onResolve?(maxY) }
         }
     }
 }
