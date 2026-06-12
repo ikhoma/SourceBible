@@ -1,12 +1,12 @@
 // BookCoverData.swift
 // SourceBible
 //
-// Static data for book covers: canonical section labels, right-side metadata,
+// Static data for book covers: canonical section labels, subtitle line,
 // and optional Doré engraving image asset names.
 //
 // Adding a new cover image:
-//   1. Export B&W Doré PNG from Figma (≥320×420px @2x)
-//   2. Add to Assets.xcassets as "cover_{bookId_lowercased}" (e.g. cover_exo)
+//   1. Export the pre-composited 402×402 blue cover PNG from Figma (@3x = 1206×1206)
+//   2. Add to Assets.xcassets (e.g. "exodus_header")
 //   3. Add one entry to coverImages below — no other changes needed
 
 import Foundation
@@ -16,11 +16,10 @@ enum BookCoverData {
     // MARK: - Public type
 
     struct CoverInfo {
-        /// Two-line section label, bottom-left (e.g. "THE\nLAW")
-        let sectionText: String
-        /// Right-side metadata, bottom-right (e.g. "50\nCHAPTERS" or "PSALMS\n1–41")
-        let rightMetadata: String
-        /// xcassets name for the Doré engraving, nil = text-only cover (graceful fallback)
+        /// Single subtitle line, e.g. "Wisdom & Poetry · 150 Chapters"
+        let subtitle: String
+        /// xcassets name for the pre-composited cover image,
+        /// nil = brand-blue fallback cover (graceful fallback)
         let imageName: String?
     }
 
@@ -28,64 +27,63 @@ enum BookCoverData {
 
     static func info(for bookId: String, chapterCount: Int) -> CoverInfo {
         CoverInfo(
-            sectionText:   sectionText(for: bookId),
-            rightMetadata: rightMeta(for: bookId, chapterCount: chapterCount),
-            imageName:     coverImages[bookId]
+            subtitle:  subtitle(for: bookId, chapterCount: chapterCount),
+            imageName: coverImages[bookId]
         )
     }
 
     // MARK: - Image assets
-    // Add entries here as new Doré engravings are added to xcassets.
+    // Add entries here as new pre-composited cover images are added to xcassets.
     // Legacy names (genesis_header, psalms_header) kept as-is to avoid asset rename.
 
     private static let coverImages: [String: String] = [
         "GEN": "genesis_header",
         "PSA": "psalms_header",
-        // Uncomment as images are added to xcassets:
-        // "EXO": "cover_exo",
-        // "JOS": "cover_jos",
-        // "AMO": "cover_amo",
+        // Uncomment / add as cover images are added to xcassets:
+        // "EXO": "exodus_header",
+        // "JOS": "joshua_header",
+        // "AMO": "amos_header",
     ]
 
-    // MARK: - Section labels (Protestant canonical groupings per PDR-Book-Covers)
+    // MARK: - Subtitle ("<Section> · <N> Chapters")
 
-    private static func sectionText(for bookId: String) -> String {
+    private static func subtitle(for bookId: String, chapterCount: Int) -> String {
+        let unit    = chapterCount == 1 ? "Chapter" : "Chapters"
+        let chapters = "\(chapterCount) \(unit)"
+        let section = sectionTitle(for: bookId)
+        return section.isEmpty ? chapters : "\(section) · \(chapters)"
+    }
+
+    // MARK: - Section labels (Protestant canonical groupings per PDR-Book-Covers)
+    // Title case, single line — matches the new cover subtitle format.
+
+    private static func sectionTitle(for bookId: String) -> String {
         switch bookId {
         case "GEN", "EXO", "LEV", "NUM", "DEU":
-            return "THE\nLAW"
+            return "The Law"
         case "JOS", "JDG", "RUT", "1SA", "2SA",
              "1KI", "2KI", "1CH", "2CH", "EZR", "NEH", "EST":
-            return "HISTORICAL\nBOOKS"
+            return "Historical Books"
         case "JOB", "PSA", "PRO", "ECC", "SNG":
-            return "POETRY &\nWISDOM"
+            return "Wisdom & Poetry"
         case "ISA", "JER", "LAM", "EZK", "DAN":
-            return "MAJOR\nPROPHETS"
+            return "Major Prophets"
         case "HOS", "JOL", "AMO", "OBA", "JON",
              "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL":
-            return "MINOR\nPROPHETS"
+            return "Minor Prophets"
         case "MAT", "MRK", "LUK", "JHN":
-            return "THE\nGOSPELS"
+            return "The Gospels"
         case "ACT":
-            return "ACTS"
+            return "Acts"
         case "ROM", "1CO", "2CO", "GAL", "EPH",
              "PHP", "COL", "1TH", "2TH", "1TI", "2TI", "TIT", "PHM":
-            return "PAUL'S\nLETTERS"
+            return "Paul's Letters"
         case "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD":
-            return "GENERAL\nLETTERS"
+            return "General Letters"
         case "REV":
-            return "PROPHECY"
+            return "Prophecy"
         default:
             return ""
         }
-    }
-
-    // MARK: - Right-side metadata
-
-    private static func rightMeta(for bookId: String, chapterCount: Int) -> String {
-        // Psalms ch.1 always falls in Book One (Psalms 1–41) per PDR-Book-Covers.
-        // TODO: extend with chapterNumber param when Psalms sub-covers are needed.
-        if bookId == "PSA" { return "PSALMS\n1–41" }
-        let label = chapterCount == 1 ? "CHAPTER" : "CHAPTERS"
-        return "\(chapterCount)\n\(label)"
     }
 }

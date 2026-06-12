@@ -130,8 +130,8 @@ struct ReaderView: View {
                         // navigation to re-anchor the newly selected verse.
                         .scrollDisabled(sheetOpen)
                         // R1: top inset in Study Mode so anchor:.top lands the pinned
-                        // verse TEXT exactly 16 pt below the nav bar (6 pt inset +
-                        // 10 pt internal row padding — see pinnedTopInset doc).
+                        // verse TEXT exactly 16 pt below the nav bar (4 pt inset +
+                        // 12 pt internal row padding — see pinnedTopInset doc).
                         //
                         // spacing MUST be 0: `nil` means "system default spacing"
                         // (~16 pt) between the inset view and the content, which
@@ -413,7 +413,7 @@ struct VerseRowView: View {
                     .font(.caption)
                     .foregroundStyle(isSelected ? Color.blue : Color(UIColor.tertiaryLabel))
                     .frame(width: 24, alignment: .trailing)
-                    .padding(.top, 10)
+                    .padding(.top, 12)
 
                 // Verse text — UITextView renderer when parsed; plain Text fallback
                 if let parsed = verse.parsed {
@@ -426,14 +426,14 @@ struct VerseRowView: View {
                     )
                     .id("\(verse.id)-\(translationId)-\(verse.highlightColor ?? "none")")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 12)
                     .padding(.trailing, 12)
                 } else {
                     Text(verse.text)
                         .font(.body)
                         .lineSpacing(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 12)
                         .padding(.trailing, 12)
                         .background(verse.highlightColor.map {
                             HighlightColor.from($0).color.opacity(0.22)

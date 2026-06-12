@@ -2,81 +2,12 @@
 // SourceBible
 //
 // Full-bleed book cover shown at the top of every book's first chapter.
-// Design: Doré engraving (HARD_LIGHT blend) on blue diamond gradient, typographic overlay.
-// Always blue — identical in light and dark mode.
+// Design (Figma node 982:2471): a pre-composited 402×402 blue Doré cover image,
+// rendered full-bleed in a 402×302 frame. The extra 100pt of image height is the
+// headroom for a parallax effect on scroll. A black bottom gradient keeps the
+// bottom-left title + subtitle legible. Always blue — identical in light/dark mode.
 
 import SwiftUI
-
-// MARK: - Diamond gradient background
-
-/// Faithful recreation of Figma's Diamond gradient (#3085CF center → #25659D edges).
-///
-/// How it works: split the frame into 4 triangles from the center and fill each
-/// with a LinearGradient from its edge midpoint (dark) to the center (light).
-/// Adjacent triangles share the same gradient value along their shared diagonal,
-/// so the join is seamless. The iso-color lines form perfect diamonds (L1 distance).
-private struct DiamondGradientBackground: View {
-
-    // Figma stops: 0% #3085CF (center/light) → 100% #25659D (edges/dark)
-    private let centerColor = Color(red: 0.188, green: 0.522, blue: 0.812) // #3085CF
-    private let edgeColor   = Color(red: 0.145, green: 0.396, blue: 0.616) // #25659D
-
-    var body: some View {
-        Canvas { ctx, size in
-            let w  = size.width
-            let h  = size.height
-            let cx = w / 2
-            let cy = h / 2
-            let c  = CGPoint(x: cx, y: cy)
-
-            // Triangle definitions: (corner A, corner B, gradient start, gradient end)
-            // Gradient start points are pushed 50% of the half-dimension BEYOND the frame edge,
-            // as if the gradient fills a 1.5× larger rectangle masked by this frame.
-            // At each visible edge the gradient sits at t = 1/3 (not fully dark),
-            // so the center light color fills most of the visible area.
-            let triangles: [(CGPoint, CGPoint, CGPoint, CGPoint)] = [
-                // Top
-                (CGPoint(x: 0, y: 0), CGPoint(x: w, y: 0),
-                 CGPoint(x: cx, y: -cy * 0.5), c),
-                // Right
-                (CGPoint(x: w, y: 0), CGPoint(x: w, y: h),
-                 CGPoint(x: w + cx * 0.5, y: cy), c),
-                // Bottom
-                (CGPoint(x: w, y: h), CGPoint(x: 0, y: h),
-                 CGPoint(x: cx, y: h + cy * 0.5), c),
-                // Left
-                (CGPoint(x: 0, y: h), CGPoint(x: 0, y: 0),
-                 CGPoint(x: -cx * 0.5, y: cy), c),
-            ]
-
-            // Non-linear stops: dark holds near edges, center color fills most of the space,
-            // transition is soft (ease-in curve approximated with 4 stops)
-            let gradient = Gradient(stops: [
-                .init(color: edgeColor,                                              location: 0.00),
-                .init(color: Color(red: 0.153, green: 0.420, blue: 0.655),          location: 0.25), // ~20% mixed
-                .init(color: centerColor,                                            location: 0.65), // center reached early
-                .init(color: centerColor,                                            location: 1.00),
-            ])
-
-            for (a, b, gradStart, gradEnd) in triangles {
-                var path = Path()
-                path.move(to: a)
-                path.addLine(to: b)
-                path.addLine(to: c)
-                path.closeSubpath()
-
-                ctx.fill(path, with: .linearGradient(
-                    gradient,
-                    startPoint: gradStart,
-                    endPoint:   gradEnd
-                ))
-            }
-        }
-        .ignoresSafeArea(edges: .top)
-    }
-}
-
-// MARK: - Cover view
 
 struct BookCoverView: View {
 
@@ -84,96 +15,104 @@ struct BookCoverView: View {
     let bookName: String
     let chapterCount: Int
 
+    // Visible cover height (frame). The Figma frame is 402×302.
+    private let coverHeight: CGFloat = 302
+    // Extra image height beyond the frame, used as parallax headroom.
+    // Image is rendered at (coverHeight + parallaxRange) and translated within it.
+    private let parallaxRange: CGFloat = 60
+    // How much the image lags the scroll. 0 = pinned, 1 = moves with content.
+    private let parallaxFactor: CGFloat = 0.35
+
+    // #3085CF — brand blue, fallback cover for books without an image asset.
+    private let brandBlue = Color(red: 0.188, green: 0.522, blue: 0.812)
+    // #FBFAF9 — warm near-white, matches Figma text color.
+    private let textColor = Color(red: 0.984, green: 0.980, blue: 0.973)
+
     private var coverData: BookCoverData.CoverInfo {
         BookCoverData.info(for: bookId, chapterCount: chapterCount)
     }
 
-    // #FBFAF9 — warm near-white, matches Figma text color
-    private let textColor = Color(red: 0.984, green: 0.980, blue: 0.973)
-
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        // Local copies of layout constants — captured as values by the escaping
+        // `visualEffect` closure (Swift 6 forbids implicit `self` capture there).
+        let frameHeight = coverHeight
+        let range = parallaxRange
+        let factor = parallaxFactor
 
-            // ── Diamond gradient background (faithful Figma recreation) ────────
-            DiamondGradientBackground()
+        return ZStack(alignment: .bottomLeading) {
 
-            // ── Doré engraving (HARD_LIGHT blend, gracefully absent if no asset) ─
+            // ── Background fallback (brand blue, shows for image-less books) ─────
+            brandBlue
+
+            // ── Pre-composited cover image, full-bleed + parallax ───────────────
             if let assetName = coverData.imageName,
                UIImage(named: assetName) != nil {
                 Image(assetName)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 168, height: 224) // 1:1 with @3x natural size (504÷3 × 672÷3)
+                    // Render taller than the visible frame so there is room to
+                    // translate the image as the page scrolls (the parallax gap).
+                    .frame(maxWidth: .infinity)
+                    .frame(height: frameHeight + range)
                     .clipped()
-                    .blendMode(.normal)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .padding(.bottom, 16)
+                    .visualEffect { effect, geometry in
+                        // minY in scroll space:
+                        //   = 0   at rest (cover top flush with scroll top)
+                        //   > 0   overscroll / pull-down  → gentle zoom
+                        //   < 0   scrolled up (reading)    → parallax shift up
+                        let minY = geometry.frame(in: .scrollView).minY
+                        let shift = minY < 0
+                            ? min(-minY * factor, range)
+                            : 0
+                        let zoom = minY > 0
+                            ? 1 + (minY / max(frameHeight, 1)) * 0.6
+                            : 1
+                        return effect
+                            .scaleEffect(zoom, anchor: .top)
+                            .offset(y: -shift)
+                    }
+                    // Visible window: top-aligned so the parallax shift reveals the
+                    // lower part of the image as the user scrolls.
+                    .frame(height: frameHeight, alignment: .top)
+                    .clipped()
             }
 
-            // ── Text overlay ──────────────────────────────────────────────────
-            VStack(spacing: 12) {
+            // ── Black bottom gradient (Figma: clear → 18.87% → black 50%) ───────
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0),   location: 0.0),
+                    .init(color: .black.opacity(0),   location: 0.1887),
+                    .init(color: .black.opacity(0.5), location: 1.0),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
 
-                // Inner VStack: "THE BOOK OF" + book name
-                VStack(spacing: 12) {
-                    Text("THE BOOK OF")
-                        .font(.system(size: 32, weight: .bold))
-                        .tracking(10)
-                        .foregroundStyle(textColor)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .capHeightLayout(fontSize: 32)
+            // ── Title + subtitle (bottom-leading) ───────────────────────────────
+            VStack(alignment: .leading, spacing: 8) {
+                Text("The Book of \(bookName)")
+                    .font(.system(size: 34, weight: .bold))
+                    .tracking(0.4)
+                    .lineSpacing(-6)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(textColor)
 
-                    Text(bookName.uppercased())
-                        .font(.system(size: 78, weight: .bold))
-                        .minimumScaleFactor(0.35)
-                        .lineLimit(1)
-                        .foregroundStyle(textColor)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .capHeightLayout(fontSize: 78)
-                }
-
-                // Metadata row — 16pt Bold, tracking −0.43, SPACE_BETWEEN
-                // lineSpacing = (16 × 0.96) − UIFont.lineHeight ≈ 15.36 − 19.09 = −3.73
-                // matches Figma's 96 % line-height for 16 pt bold (San Francisco Text).
-                HStack {
-                    Text(coverData.sectionText)
-                        .multilineTextAlignment(.center)
-                    Spacer()
-                    Text(coverData.rightMetadata)
-                        .multilineTextAlignment(.center)
-                }
-                .font(.system(size: 16, weight: .bold))
-                .tracking(-0.43)
-                .lineSpacing(-3.73)
-                .foregroundStyle(textColor)
+                Text(coverData.subtitle)
+                    .font(.system(size: 12, weight: .regular))
+                    .lineLimit(1)
+                    .foregroundStyle(textColor)
+                    .opacity(0.8)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 37)
-            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
-        .frame(height: 302)
+        .frame(height: frameHeight)
         .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - Cap-height layout helper
-
-private extension View {
-    /// Trims the built-in line-spacing SwiftUI adds around text glyphs so the
-    /// view's layout height matches Figma's cap-height measurement (all-caps text
-    /// has no ascenders above the cap line and no visible descenders).
-    ///
-    /// SwiftUI allocates the full UIFont line height (ascender + descender).
-    /// For all-caps text this means:
-    ///   - top padding   = ascender − capHeight  (space above cap letters)
-    ///   - bottom padding = |descender|           (space below baseline)
-    /// Negative padding on both sides collapses the view to cap height.
-    func capHeightLayout(fontSize: CGFloat) -> some View {
-        let font   = UIFont.systemFont(ofSize: fontSize, weight: .bold)
-        let top    = -(font.ascender - font.capHeight)   // e.g. −18pt at 78pt
-        let bottom = font.descender                      // already negative, e.g. −19pt at 78pt
-        return self
-            .padding(.top,    top)
-            .padding(.bottom, bottom)
+        .clipped()
     }
 }
 
@@ -190,4 +129,5 @@ private extension View {
             BookCoverView(bookId: "SNG", bookName: "Song of Solomon", chapterCount: 8)
         }
     }
+    .ignoresSafeArea(edges: .top)
 }

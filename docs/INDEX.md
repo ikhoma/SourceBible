@@ -48,6 +48,7 @@ Load the full document only when the task is relevant to it.
 | `commentary-system-design.md` | Commentary System — Bug Diagnoses & Architecture | Draft | Henry verse→section mapping bug (Genesis 2:7); Owen Hebrews 1 blank screen; range header display; validation checklist |
 | `plan-word-usage-redesign.md` | Word Usage Tab — Implementation Plan | Draft | 7-step order: model → DB method → ViewModel → MorphKey → strings → View; N per-book queries, chapter*1000+verse encoding, stays on MainActor |
 | `plan-hebrew-translit-rebuild.md` | Hebrew Transliteration — Full DB Rebuild Plan | Approved | New `slot`, `after_char`, `xlit_slot` columns; `fetch_biblehub_translit_hebrew.py` positional scraper; full `build_db.py` rebuild; supersedes `add_after_char.py` migration |
+| `spec-study-mode-redesign.md` | Study Mode Redesign | Draft | Verse pins 16pt below toolbar, reader scroll locked; single dynamic-height sheet anchored under verse; toolbar `<>` repurposed to verse/word nav; book/translation picker morphs to Back button (iOS 26); sheet chevrons + bottom action bar → context menu; highlight palette Purple/Pink/Orange/Mint/Blue+None. Includes Fable autonomous run brief |
 | `proposal_smarter_examples_v1.5.md` | Smarter Example Selection — v1.5 Proposal | Proposal | Pre-compute `rhetorical_weight` in DB (cross_reference votes); Swift picks highest-weight verse per book instead of first occurrence; fallback chain: rhetorical → syntactic centrality → first |
 
 ---

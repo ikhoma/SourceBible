@@ -296,10 +296,20 @@ class ReaderViewModel: ObservableObject {
     // the sheet's own body re-renders on every vm change.
 
     /// Top inset for the pinned verse. The verse TEXT sits 16 pt below the
-    /// toolbar: 6 pt inset + 10 pt internal row padding.
-    static let pinnedTopInset: CGFloat = 6
-    /// Visual gap between the bottom of the pinned verse row and the sheet top.
-    static let sheetGap: CGFloat = 8
+    /// toolbar: 4 pt inset + 12 pt internal row padding (VerseRowView .vertical).
+    static let pinnedTopInset: CGFloat = 4
+    /// Desired VISIBLE gap between the bottom of the pinned verse card and the
+    /// real (on-screen) top of the sheet.
+    static let sheetGap: CGFloat = 16
+    /// Empirical correction. UIKit lays a custom-detent sheet out ~16 pt HIGHER
+    /// than `containerHeight − detentHeight` — i.e. the sheet ends up ~16 pt
+    /// taller than the detent value it's given. Measured on device
+    /// (debug 2026-06-12, iPhone 17 sim): at detent=628, computedTop=246 but
+    /// REAL sheet top=230. Without subtracting this, the sheet's real top lands
+    /// flush on the verse card (visible gap = sheetGap − 16 = 0).
+    /// NOTE: verify on a non–Dynamic-Island device; if it tracks safe area
+    /// rather than being constant, derive it from the bottom inset instead.
+    static let detentTopOffset: CGFloat = 16
 
     /// Global (screen-coordinate) bottom edge of the pinned verse row,
     /// written by ReaderView while Study Mode is active. Direct geometry:
@@ -322,7 +332,7 @@ class ReaderViewModel: ObservableObject {
     var studySheetHeight: CGFloat {
         let screenH = screenHeight
         guard pinnedVerseGlobalBottom > 0 else { return screenH * 0.45 }  // pre-measurement
-        let h = screenH - pinnedVerseGlobalBottom - Self.sheetGap
+        let h = screenH - pinnedVerseGlobalBottom - Self.sheetGap - Self.detentTopOffset
         return min(max(h, screenH * 0.30), screenH * 0.85)
     }
 

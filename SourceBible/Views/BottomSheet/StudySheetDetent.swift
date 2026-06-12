@@ -76,7 +76,22 @@ struct StudySheetDetentApplier: UIViewRepresentable {
             let detent = UISheetPresentationController.Detent.custom(
                 identifier: .init("studySheet")
             ) { context in
-                min(h, context.maximumDetentValue)
+                let resolved = min(h, context.maximumDetentValue)
+                // DIAGNOSTIC (debug session 2026-06-12): trace the ~16 pt gap loss.
+                let screenH = UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }.first?.screen.bounds.height ?? -1
+                let insets = sheet.containerView?.safeAreaInsets
+                let containerH = sheet.containerView?.bounds.height ?? -1
+                // The sheet's ACTUAL view frame in container coords — ground truth
+                // for where the top really lands (vs the computed containerH-resolved).
+                let realTop = sheet.presentedView?.frame.minY ?? -1
+                print("""
+                [SHEET] desiredH=\(h) resolved=\(resolved) maxDetent=\(context.maximumDetentValue) \
+                screenH=\(screenH) containerH=\(containerH) \
+                safeArea top=\(insets?.top ?? -1) bottom=\(insets?.bottom ?? -1) \
+                computedTopY=\(containerH - resolved) REAL_sheetTopY=\(realTop)
+                """)
+                return resolved
             }
             if animated {
                 sheet.animateChanges { sheet.detents = [detent] }
