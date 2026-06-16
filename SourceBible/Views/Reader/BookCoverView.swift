@@ -48,10 +48,11 @@ struct BookCoverView: View {
                 GeometryReader { geo in
                     let w = geo.size.width
                     let h = geo.size.height                 // = coverHeight (302)
-                    // The square asset renders `w` tall, so the FULL extra height is the
-                    // parallax travel — the entire image top↔bottom is reachable and
-                    // NOTHING is cropped (scaledToFill on a square into w×w = exact fit).
-                    let travel = max(0, w - h)
+                    // Center-aligned window: the image sits at rest with the extra height
+                    // split evenly above/below, so the safe parallax travel in one
+                    // direction is HALF the extra height — beyond that the window would
+                    // run off the asset and expose an empty gap at the top.
+                    let travel = max(0, (w - h) / 2)
                     Image(assetName)
                         .resizable()
                         .scaledToFill()
@@ -68,9 +69,10 @@ struct BookCoverView: View {
                                 .scaleEffect(zoom, anchor: .bottom)
                                 .offset(y: shift)
                         }
-                        // Visible window: bottom-aligned → at rest you see the BOTTOM of
-                        // the asset; the flipped parallax reveals upward to the very top.
-                        .frame(width: w, height: h, alignment: .bottom)
+                        // Visible window: center-aligned → at rest the crop is split
+                        // evenly (≈50pt top / 50pt bottom) rather than 100pt off the top;
+                        // the parallax still reveals upward toward the top of the asset.
+                        .frame(width: w, height: h, alignment: .center)
                         .clipped()
                 }
             }
