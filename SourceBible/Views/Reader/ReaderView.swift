@@ -580,6 +580,40 @@ private struct NavBarBottomReader: UIViewControllerRepresentable {
             super.viewDidLayoutSubviews()
             resolve()
         }
+
+        // MARK: iOS 26 ghost-padding workaround
+        //
+        // iOS 26-only framework bug (Apple DevForums "Ghost Padding on
+        // NavigationBarPlatterContainer", thread 803481): on interface rotation the
+        // navigation bar's private platter container keeps a stale LEADING inset.
+        // Rotating back to portrait leaves it stuck (and it accumulates with repeated
+        // rotations), which pushes the whole reader content to the right with a black
+        // band on the left. There is no Apple fix and no official workaround.
+        //
+        // Mitigation: after the rotation transition completes, force the navigation bar
+        // (and its container subtree) to re-run layout from scratch. Deferred one
+        // run-loop tick so it lands AFTER the system's own (buggy) post-rotation pass,
+        // letting the clean pass settle the inset. Side-effect-free — only invalidates
+        // and re-lays-out existing views, never mutates margins or frames directly.
+        // iOS 18 is unaffected by the bug and is left completely untouched.
+        override func viewWillTransition(to size: CGSize,
+                                         with coordinator: UIViewControllerTransitionCoordinator) {
+            super.viewWillTransition(to: size, with: coordinator)
+            guard #available(iOS 26, *) else { return }
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                DispatchQueue.main.async {
+                    guard let nav = self?.navigationController?.navigationBar else { return }
+                    nav.invalidateIntrinsicContentSize()
+                    nav.setNeedsLayout()
+                    nav.subviews.forEach { $0.setNeedsLayout() }
+                    nav.superview?.setNeedsLayout()
+                    nav.layoutIfNeeded()
+                    nav.superview?.layoutIfNeeded()
+                    self?.resolve()
+                }
+            }
+        }
+
         func resolve() {
             guard let nav = navigationController?.navigationBar,
                   let window = view.window else { return }
