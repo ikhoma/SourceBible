@@ -94,11 +94,18 @@ struct StudyPinView: UIViewRepresentable {
                            - scrollView.bounds.height)
             target.y = min(max(target.y, minY), maxY)
 
-            // Critically-damped (no overshoot → no rubber band).
-            UIView.animate(withDuration: 0.5, delay: 0,
-                           usingSpringWithDamping: 1.0, initialSpringVelocity: 0,
-                           options: [.beginFromCurrentState, .allowUserInteraction]) {
-                scrollView.contentOffset = target
+            // Animate on the NEXT runloop, not here: a contentOffset animation
+            // started inside layoutSubviews is swallowed and applies instantly
+            // (the "verse snaps" regression). Scroll is locked in Study Mode, so
+            // the captured target stays valid until this runs. 0.5 s critically-
+            // damped (no overshoot) ≈ the system sheet spring, so verse + sheet
+            // travel together.
+            DispatchQueue.main.async {
+                UIView.animate(withDuration: 0.5, delay: 0,
+                               usingSpringWithDamping: 1.0, initialSpringVelocity: 0,
+                               options: [.beginFromCurrentState, .allowUserInteraction]) {
+                    scrollView.contentOffset = target
+                }
             }
         }
 
