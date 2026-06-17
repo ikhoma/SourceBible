@@ -298,6 +298,15 @@ class ReaderViewModel: ObservableObject {
     /// Desired VISIBLE gap between the bottom of the pinned verse card and the
     /// real (on-screen) top of the sheet.
     static let sheetGap: CGFloat = 16
+    /// Visible gap between the bottom of the toolbar and the pinned verse top.
+    /// Separate from `sheetGap` because the references differ: the sheet's frame
+    /// top is exact, but `toolbarBottomY` (NavBarBottomReader) is the nav-bar
+    /// FRAME bottom, which sits ~4 pt below the visible floating capsule. So a
+    /// 16-below-frame gap reads as ~20 below the visible toolbar. With the
+    /// deterministic StudyScrollApplier this knob now maps 1:1 to on-screen pt.
+    /// (debug 2026-06-16: [SCROLL] confirmed the card lands exactly at
+    /// toolbarBottom+gap; perceived gap was ~4 pt larger → 16−4 = 12.)
+    static let toolbarGap: CGFloat = 12
     /// Empirical correction. UIKit lays a custom-detent sheet out ~16 pt HIGHER
     /// than `containerHeight − detentHeight` — i.e. the sheet ends up ~16 pt
     /// taller than the detent value it's given. Measured on device
@@ -320,8 +329,9 @@ class ReaderViewModel: ObservableObject {
     /// ~toolbar bottom otherwise. Measured so the top inset self-adjusts to either.
     @Published var scrollContentTopY: CGFloat = 0
 
-    /// Where the pinned verse's TOP lands: `sheetGap` below the toolbar bottom.
-    var pinnedTopAnchorY: CGFloat { toolbarBottomY + Self.sheetGap }
+
+    /// Where the pinned verse's TOP lands: `toolbarGap` below the toolbar bottom.
+    var pinnedTopAnchorY: CGFloat { toolbarBottomY + Self.toolbarGap }
 
     /// Height of the Study-Mode top inset so that `scrollTo(anchor:.top)` lands the
     /// verse top exactly at `pinnedTopAnchorY`, regardless of where the scroll

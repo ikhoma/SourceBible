@@ -119,7 +119,26 @@ struct ReaderView: View {
                                     .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { height in
                                         Task { @MainActor in vm.setVerseHeight(height, for: verse.id) }
                                     }
+                                    // Atomic Study-Mode scroll driver: installed as the SELECTED
+                                    // verse's background, so its frame == the verse's frame. It
+                                    // reads its own global top AND the scroll offset in one layout
+                                    // pass (no cross-layer skew) and sets the exact contentOffset.
+                                    // Recreated on every focus → fires for first-tap AND re-select.
+                                    .background {
+                                        if vm.selectedVerse?.id == verse.id && vm.activeSheet == .verse {
+                                            StudyPinView(
+                                                trigger: vm.verseScrollTrigger,
+                                                anchorY: vm.pinnedTopAnchorY,
+                                                active: true
+                                            )
+                                        }
+                                    }
                                 }
+
+                                // On Study-Mode exit, clamp an over-scrolled offset (left over
+                                // from pinning the last verse) so there's no empty gap below it.
+                                StudyScrollClamper(active: sheetOpen)
+                                    .frame(width: 0, height: 0)
                             }
                             .padding(.horizontal)
                             .padding(.top, 12)
@@ -145,7 +164,15 @@ struct ReaderView: View {
                         // type-inference ambiguity with iOS 26 safeAreaInset overloads.
                         .safeAreaInset(edge: .top, spacing: 0) {
                             Color.clear
-                                .frame(height: sheetOpen ? vm.studyTopInset : 0)
+                                // covers-off: a CONSTANT toolbarGap inset (never toggled) so the
+                                // topmost verse has headroom to reach pinnedTopAnchorY AND there is
+                                // no 0→inset commit-race on Study-Mode entry — that toggle was the
+                                // original "verse jumps up then down" jerk. With a stable inset,
+                                // scrollTo(.top) lands the verse at pinnedTopAnchorY in one pass.
+                                // covers-on keeps the existing bleed-aware toggle (Stage 2).
+                                .frame(height: showsBookCover
+                                       ? (sheetOpen ? vm.studyTopInset : 0)
+                                       : ReaderViewModel.toolbarGap)
                                 // The inset's TOP edge is the scroll content origin (~0 when
                                 // the cover bleeds, ~toolbar bottom otherwise). Measuring it
                                 // lets studyTopInset land the verse at pinnedTopAnchorY either way.
@@ -169,40 +196,13 @@ struct ReaderView: View {
                         // above the sheet if the user has manually scrolled away.
                         .onChange(of: vm.verseScrollTrigger) { _, _ in
                             guard let id = vm.selectedVerse?.id else { return }
-                            // DIAGNOSTIC (remove after verify): all geometry resolved here.
-                            print("[PIN] toolbarBottom=\(vm.toolbarBottomY) contentTop=\(vm.scrollContentTopY) topInset=\(vm.studyTopInset) anchorY=\(vm.pinnedTopAnchorY) verseH=\(vm.pinnedVerseHeight) → sheetH=\(vm.studySheetHeight) room=\(vm.studyScrollRoom)")
-                            let intent = vm.verseScrollIntent
                             vm.verseScrollIntent = .tap   // reset for next interaction
-                            // Animation curve:
-                            //   .tap     → .smooth(0.5) — matched to the system sheet's
-                            //              presentation spring so the verse and the sheet
-                            //              travel TOGETHER (no early-arrival lag).
-                            //   .chevron → .easeInOut    — calm sequential traversal.
-                            let animation: Animation = intent == .chevron
-                                ? .easeInOut(duration: 0.32)
-                                : .smooth(duration: 0.5)
-                            // Time for the motion above to settle, per intent.
-                            let settle: TimeInterval = intent == .chevron ? 0.32 : 0.5
-                            // Study Mode pins the verse top 16 pt below the nav bar
-                            // (anchor .top within the inset viewport — R1).
-                            let anchor: UnitPoint = sheetOpen ? .top : .center
-
-                            // Defer one RunLoop tick so safeAreaInset is committed to
-                            // the UIScrollView before scrollTo uses the extra room.
-                            // The live geometry feed stays ON so the sheet height tracks
-                            // the real verse (freezing it made the sheet animate to a
-                            // stale height, then snap back — visible "push back").
+                            // Study-Mode positioning is handled atomically by StudyPinView (the
+                            // selected verse's background). The SwiftUI proxy is kept only for the
+                            // reader-mode (non-study) re-scroll path.
+                            guard !sheetOpen else { return }
                             DispatchQueue.main.async {
-                                withAnimation(animation) { proxy.scrollTo(id, anchor: anchor) }
-                            }
-
-                            guard sheetOpen else { return }
-                            // Single NON-animated correction once the motion has settled —
-                            // absorbs the end-of-chapter "lands a few pt low" case without a
-                            // visible second glide.
-                            DispatchQueue.main.asyncAfter(deadline: .now() + settle + 0.12) {
-                                var t = Transaction(); t.disablesAnimations = true
-                                withTransaction(t) { proxy.scrollTo(id, anchor: anchor) }
+                                withAnimation(.smooth(duration: 0.4)) { proxy.scrollTo(id, anchor: .center) }
                             }
                         }
                         // Reset scroll position to top on every book OR chapter change.

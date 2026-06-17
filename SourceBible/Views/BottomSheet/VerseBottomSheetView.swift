@@ -92,6 +92,17 @@ struct VerseBottomSheetView: View {
         // height from the environment value below on presentation updates,
         // which is the reliable channel for resizing an open sheet
         // (replacing a [.height(x)] set proved a no-op on device).
+        //
+        // ⚠️ INTENTIONAL DUAL MECHANISM — DO NOT "simplify" by deleting one path
+        // without testing on a real device first.
+        // The sheet height is driven by BOTH the SwiftUI custom detent
+        // (StudySheetDetent, fed by \.studySheetHeight) AND the UIKit-level
+        // StudySheetDetentApplier below. Each alone proved unreliable on device
+        // during the Study Mode redesign, so both are kept and they agree on the
+        // same height. This is a known redundancy (code review #3, 2026-06-17),
+        // left in deliberately because it works. If you ever collapse it to one
+        // path, verify the open sheet still resizes per-verse on a physical
+        // device, not just the simulator.
         .presentationDetents([.custom(StudySheetDetent.self)])
         .environment(\.studySheetHeight, vm.studySheetHeight)
         // UIKit-level driver: sets sheet.detents directly with the desired
