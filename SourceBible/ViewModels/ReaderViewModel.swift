@@ -296,8 +296,10 @@ class ReaderViewModel: ObservableObject {
     // the sheet's own body re-renders on every vm change.
 
     /// Desired VISIBLE gap between the bottom of the pinned verse card and the
-    /// real (on-screen) top of the sheet.
-    static let sheetGap: CGFloat = 16
+    /// real (on-screen) top of the sheet. Kept below the next row's top padding
+    /// (~12 pt) so the next verse's number/text is hidden behind the sheet — at
+    /// 16 a ~4 pt sliver peeked and the ±1 px height wobble made it flicker.
+    static let sheetGap: CGFloat = 8
     /// Visible gap between the bottom of the toolbar and the pinned verse top.
     /// Separate from `sheetGap` because the references differ: the sheet's frame
     /// top is exact, but `toolbarBottomY` (NavBarBottomReader) is the nav-bar
@@ -306,7 +308,7 @@ class ReaderViewModel: ObservableObject {
     /// deterministic StudyScrollApplier this knob now maps 1:1 to on-screen pt.
     /// (debug 2026-06-16: [SCROLL] confirmed the card lands exactly at
     /// toolbarBottom+gap; perceived gap was ~4 pt larger → 16−4 = 12.)
-    static let toolbarGap: CGFloat = 12
+    static let toolbarGap: CGFloat = 0
     /// Empirical correction. UIKit lays a custom-detent sheet out ~16 pt HIGHER
     /// than `containerHeight − detentHeight` — i.e. the sheet ends up ~16 pt
     /// taller than the detent value it's given. Measured on device
@@ -324,19 +326,8 @@ class ReaderViewModel: ObservableObject {
     /// ground truth (mirrors the web prototype's explicit `headerHeight`).
     @Published var toolbarBottomY: CGFloat = 0
 
-    /// Global (window) Y where the scroll's content area begins (top inset edge).
-    /// ~0 when the cover makes the scroll bleed under the toolbar (ignoresSafeArea),
-    /// ~toolbar bottom otherwise. Measured so the top inset self-adjusts to either.
-    @Published var scrollContentTopY: CGFloat = 0
-
-
     /// Where the pinned verse's TOP lands: `toolbarGap` below the toolbar bottom.
     var pinnedTopAnchorY: CGFloat { toolbarBottomY + Self.toolbarGap }
-
-    /// Height of the Study-Mode top inset so that `scrollTo(anchor:.top)` lands the
-    /// verse top exactly at `pinnedTopAnchorY`, regardless of where the scroll
-    /// content starts (cover bleed vs normal safe area).
-    var studyTopInset: CGFloat { max(0, pinnedTopAnchorY - scrollContentTopY) }
 
     /// Measured intrinsic heights of verse rows, keyed by verse id. Each row writes
     /// its height once (it doesn't change with scroll). Stored PER-ID — not as a

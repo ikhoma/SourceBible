@@ -45,27 +45,9 @@ struct VerseBottomSheetView: View {
         vm.selectedVerse ?? fallbackVerse
     }
 
-    /// Drag-down on the non-scrolling top block exits Study Mode (R7).
-    /// System interactive dismiss is disabled, so this is the only drag exit.
-    private var dismissDragGesture: some Gesture {
-        DragGesture(minimumDistance: 15, coordinateSpace: .local)
-            .onEnded { value in
-                guard value.translation.height > 40,
-                      value.translation.height > abs(value.translation.width)
-                else { return }
-                vm.activeSheet = nil
-            }
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            // The header row is the drag-to-close zone (plus the grabber strip
-            // overlay below). modeTabs and pillsRow are excluded on purpose:
-            // the segmented control and the horizontal ScrollView swallow
-            // vertical drags, making dismissal feel broken from there.
             sheetHeader
-                .contentShape(Rectangle())
-                .simultaneousGesture(dismissDragGesture)
             modeTabs
             pillsRow        // fixed — does not scroll vertically
             Divider()
@@ -80,14 +62,6 @@ struct VerseBottomSheetView: View {
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
         }
         .background(Color("sheetBackground"))
-        // Grabber strip: drag-to-close also works from the very top of the
-        // sheet (where the system drag indicator is drawn).
-        .overlay(alignment: .top) {
-            Color.clear
-                .frame(height: 24)
-                .contentShape(Rectangle())
-                .simultaneousGesture(dismissDragGesture)
-        }
         // R3: constant detent SET — the system re-resolves StudySheetDetent's
         // height from the environment value below on presentation updates,
         // which is the reliable channel for resizing an open sheet
@@ -112,10 +86,10 @@ struct VerseBottomSheetView: View {
             StudySheetDetentApplier(height: vm.studySheetHeight)
                 .frame(width: 0, height: 0)
         )
-        // Dismiss only from the header / grabber zone (gestures above) or the
-        // toolbar Back button. Without this, a downward scroll in the content
-        // randomly dragged the whole sheet (R7 fine-tune).
-        .interactiveDismissDisabled(true)
+        // Default interactive dismiss: swipe down anywhere on the sheet chrome
+        // (or from the top of the content) closes Study Mode, same as the Back
+        // button. The old custom drag-only-from-header zone was unreliable
+        // ("1 of 5 tries"); the system gesture is the expected behaviour.
         // Single editor sheet slot — avoids "only one sheet" warning
         .sheet(item: $activeEditor) { editor in
             switch editor {

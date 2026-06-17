@@ -148,38 +148,14 @@ struct ReaderView: View {
                         // proxy.scrollTo(...) still works — required for chevron
                         // navigation to re-anchor the newly selected verse.
                         .scrollDisabled(sheetOpen)
-                        // R1: top inset in Study Mode so anchor:.top lands the pinned verse
-                        // `sheetGap` below the REAL toolbar bottom (UIKit-measured), in both
-                        // the cover-bleed and normal-safe-area cases. studyTopInset =
-                        // pinnedTopAnchorY − scrollContentTopY does the math; we measure the
-                        // inset's own top edge (scrollContentTopY) so it self-adjusts.
+                        // No Study-Mode TOP inset: StudyPinView positions the verse via
+                        // contentOffset, and the content above the topmost verse (book cover
+                        // when covers-on, chapter heading when covers-off) already gives the
+                        // headroom to reach pinnedTopAnchorY. A toggled top inset was the
+                        // original entry jerk; a constant one made the first verse's short
+                        // scroll feel like it braked. See ADR-021.
                         //
-                        // spacing MUST be 0: `nil` means "system default spacing" (~16 pt)
-                        // between the inset view and the content, which silently pushed the
-                        // pinned verse that much lower.
-                        //
-                        // Always a concrete Color view (no conditional ViewBuilder) to avoid
-                        // type-inference ambiguity with iOS 26 safeAreaInset overloads.
-                        .safeAreaInset(edge: .top, spacing: 0) {
-                            Color.clear
-                                // covers-off: a CONSTANT toolbarGap inset (never toggled) so the
-                                // topmost verse has headroom to reach pinnedTopAnchorY AND there is
-                                // no 0→inset commit-race on Study-Mode entry — that toggle was the
-                                // original "verse jumps up then down" jerk. With a stable inset,
-                                // scrollTo(.top) lands the verse at pinnedTopAnchorY in one pass.
-                                // covers-on keeps the existing bleed-aware toggle (Stage 2).
-                                .frame(height: showsBookCover
-                                       ? (sheetOpen ? vm.studyTopInset : 0)
-                                       : ReaderViewModel.toolbarGap)
-                                // The inset's TOP edge is the scroll content origin (~0 when
-                                // the cover bleeds, ~toolbar bottom otherwise). Measuring it
-                                // lets studyTopInset land the verse at pinnedTopAnchorY either way.
-                                .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { y in
-                                    guard abs(vm.scrollContentTopY - y) > 0.5 else { return }
-                                    vm.scrollContentTopY = y
-                                }
-                        }
-                        // R3: reserve enough scroll room BELOW the pin that anchor:.top can
+                        // R3: reserve enough scroll room BELOW the pin that the verse can
                         // pin ANY verse — including the chapter's last, which have no content
                         // beneath them. This is studyScrollRoom (the whole area below the pin),
                         // NOT studySheetHeight: the sheet is sized separately via the detent,
