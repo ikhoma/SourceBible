@@ -176,7 +176,22 @@ struct VerseBottomSheetView: View {
             // anywhere, and choosing a new color overwrites (edge case 5).
             Picker("action.highlight", selection: highlightSelection) {
                 Section {
-                    Text("highlight.color.none").tag(HighlightColor?.none)
+                    Label {
+                        Text("highlight.color.none")
+                    } icon: {
+                        // Hollow ring (no fill) for "No Highlight". "circle" is the
+                        // stroke-only system symbol; tint with UIColor.label (Labels
+                        // Primary) so the outline adapts to light/dark mode. Resolve
+                        // via .alwaysOriginal so UIMenu doesn't re-tint it monochrome,
+                        // matching the colored-dot rows below.
+                        if let ring = UIImage(systemName: "circle")?
+                            .withTintColor(.label, renderingMode: .alwaysOriginal) {
+                            Image(uiImage: ring)
+                        } else {
+                            Image(systemName: "circle").foregroundStyle(Color(UIColor.label))
+                        }
+                    }
+                    .tag(HighlightColor?.none)
                 }
                 Section {
                     ForEach(HighlightColor.pickerCases, id: \.self) { c in

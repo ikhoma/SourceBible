@@ -256,7 +256,7 @@ struct VerseTextView: UIViewRepresentable {
         if let wr = wordRange,
            wr.location != NSNotFound,
            NSMaxRange(wr) <= result.length {
-            result.addAttribute(.backgroundColor, value: UIColor.wordHighlight, range: wr)
+            result.addAttribute(.foregroundColor, value: UIColor.wordSelectionTint, range: wr)
             return result
         }
 
@@ -269,7 +269,7 @@ struct VerseTextView: UIViewRepresentable {
         result.enumerateAttribute(.verseSegmentIndex,
                                    in: NSRange(location: 0, length: result.length)) { value, range, _ in
             if let idx = value as? Int, idx == selIdx {
-                result.addAttribute(.backgroundColor, value: UIColor.wordHighlight, range: range)
+                result.addAttribute(.foregroundColor, value: UIColor.wordSelectionTint, range: range)
             }
         }
         return result
@@ -351,24 +351,18 @@ struct VerseTextView: UIViewRepresentable {
             let seg = parsed.segments[segIndex]
             guard !seg.strongs.isEmpty else { return }
 
-            // Find the word boundary around the tapped character.
-            // NSString.enumerateSubstrings(byWords) skips spaces and punctuation,
-            // so tapping "morning," highlights only "morning" (no trailing comma).
-            // Store the result on the coordinator BEFORE calling onWordTap() so
-            // that updateUIView() sees the matching (segmentId, wordRange) pair.
-            var tappedWordRange: NSRange? = nil
-            let nsStr = tv.attributedText.string as NSString
-            nsStr.enumerateSubstrings(
-                in: NSRange(location: 0, length: nsStr.length),
-                options: .byWords
-            ) { _, range, _, stop in
-                if NSLocationInRange(charIdx, range) {
-                    tappedWordRange = range
-                    stop.pointee = true
-                }
-            }
-            selectedWordRange = tappedWordRange
-            selectedSegmentId = seg.id
+            // Highlight the WHOLE segment (phrase), not just the tapped word, so the
+            // selection matches the chevron-nav behaviour and the Sheet title — both of
+            // which show the full phrase (e.g. "In the beginning" for H7225 רֵאשִׁית).
+            // Leaving selectedWordRange nil makes applySelection() fall through to the
+            // full-segment highlight branch.
+            //
+            // We must NOT pre-assign selectedSegmentId here: the redraw in updateUIView()
+            // is driven by `selectionChanged` (coord.selectedSegmentId ≠ new selectedSegment.id).
+            // If we synced the id now, selectionChanged would be false and — with the word
+            // range always nil — nothing would trigger the redraw, so the blue tint would
+            // never get applied. Let onWordTap → selectedSegment update drive the redraw.
+            selectedWordRange = nil
 
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             // Highlight is applied via selectedSegment → applySelection() (SwiftUI re-render)

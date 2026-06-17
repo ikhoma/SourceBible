@@ -58,15 +58,10 @@ struct NoteEditorView: View {
                         }
                     }
 
-                    // Note text bubble — styled to match NoteCardView, auto-sizes to content
+                    // Note text editor — plain, no background; auto-sizes to content
                     NoteTextEditor(text: $textBody, contentHeight: $editorHeight)
                         .frame(height: editorHeight)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(.secondarySystemFill))
-                        )
+                        .padding(.vertical, 4)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -265,12 +260,8 @@ private struct VerseContextCard: View {
                     .foregroundStyle(.primary)
             }
         }
-        .padding(16)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color("cardBackground"))
-        )
     }
 
     private var refLabel: String {

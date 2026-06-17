@@ -7,7 +7,7 @@ struct MenuView: View {
     @EnvironmentObject var readerVM: ReaderViewModel
     @State private var brightness: Double = Double(UIScreen.main.brightness)
     @AppStorage("isDarkMode") private var isDark = false
-    @AppStorage("hideBookCovers") private var hideBookCovers = true
+    @AppStorage("hideBookCovers") private var hideBookCovers = false
     @AppStorage("defaultTranslationId") private var defaultTranslationId: String = "KJV"
     @Environment(\.locale) private var locale
     @AppStorage("appLanguage") private var appLanguage: String = "en"
@@ -30,7 +30,9 @@ struct MenuView: View {
         // the only pushed destination and is where language changes originate), so
         // full NavigationStack reconstruction is safe.
         NavigationStack {
-            Form {
+            ZStack {
+                Color("appBackground").ignoresSafeArea()
+                Form {
                 Section("menu.section.appearance") {
                     VStack(spacing: 8) {
                         HStack {
@@ -72,10 +74,10 @@ struct MenuView: View {
                     }
                 }
                 .listRowBackground(Color("cardBackground"))
+                }
+                .scrollContentBackground(.hidden)
+                .navigationTitle("tab.menu")
             }
-            .scrollContentBackground(.hidden)
-            .background(Color("appBackground"))
-            .navigationTitle("tab.menu")
         }
         .id(locale.identifier)
     }

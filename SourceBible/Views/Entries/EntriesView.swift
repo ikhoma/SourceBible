@@ -13,25 +13,26 @@ struct EntriesView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Picker("", selection: $tab) {
-                    Text("entries.tab.notes").tag(EntriesTab.notes)
-                    Text("entries.tab.bookmarks").tag(EntriesTab.bookmarks)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(Color("appBackground"))
+            ZStack {
+                Color("appBackground").ignoresSafeArea()
+                VStack(spacing: 0) {
+                    Picker("", selection: $tab) {
+                        Text("entries.tab.notes").tag(EntriesTab.notes)
+                        Text("entries.tab.bookmarks").tag(EntriesTab.bookmarks)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16).padding(.vertical, 12)
 
-                if tab == .notes {
-                    NotesListView()
-                        .environmentObject(notesVM)
-                } else {
-                    BookmarksListView()
-                        .environmentObject(bookmarksVM)
+                    if tab == .notes {
+                        NotesListView()
+                            .environmentObject(notesVM)
+                    } else {
+                        BookmarksListView()
+                            .environmentObject(bookmarksVM)
+                    }
                 }
+                .animation(nil, value: tab)
             }
-            .animation(nil, value: tab)
-            .background(Color("appBackground"))
             // .id forces the Picker and list content to reconstruct on locale change.
             // Picker segment labels (LocalizedStringKey) are cached by UISegmentedControl
             // and do not re-evaluate automatically when the SwiftUI locale environment changes.

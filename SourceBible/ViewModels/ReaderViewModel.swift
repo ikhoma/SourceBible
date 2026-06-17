@@ -13,11 +13,11 @@ class ReaderViewModel: ObservableObject {
     // Placeholder until init() Task loads real books from DB.
     // Uses BibleBookNames so the placeholder respects the active locale even before DB loads.
     @Published var currentBook: BibleBook = BibleBook(
-        id: "PSA",
-        name:      BibleBookNames.full(for: "PSA"),
-        nameShort: BibleBookNames.short(for: "PSA"),
+        id: "GEN",
+        name:      BibleBookNames.full(for: "GEN"),
+        nameShort: BibleBookNames.short(for: "GEN"),
         testament: .old,
-        chapterCount: 150
+        chapterCount: 50
     )
     @Published var currentChapter: Int = 1
     @Published var currentTranslation: Translation = .defaultTranslation
@@ -116,7 +116,7 @@ class ReaderViewModel: ObservableObject {
                 self.currentTranslation = match
             }
             self.translationBookNames  = self.db.loadBookNames(for: self.currentTranslation.id)
-            self.currentBook = self.allBooks.first(where: { $0.id == "PSA" })
+            self.currentBook = self.allBooks.first(where: { $0.id == "GEN" })
                             ?? self.allBooks.first
                             ?? self.currentBook
             self.loadChapter()

@@ -105,4 +105,10 @@ extension Color {
 extension UIColor {
     /// UIKit equivalent for word-level highlights (NSAttributedString / UITextView).
     static let wordHighlight = UIColor.systemBlue.withAlphaComponent(0.2)
+
+    /// Accent tint applied to the *text* of the selected word in the reader
+    /// (foregroundColor, not background). systemBlue adapts to a brighter shade
+    /// in dark mode, so the selected word stays clearly visible where the faint
+    /// background highlight was not.
+    static let wordSelectionTint = UIColor.systemBlue
 }

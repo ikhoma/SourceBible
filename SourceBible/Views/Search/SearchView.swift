@@ -50,14 +50,20 @@ struct SearchView: View {
 
     var body: some View {
         NavigationStack {
-            content
-                // Large bold "Search" on the home states (hint / Recent / predictions).
-                // On the results page there's already a "Results for …" header, and the
-                // large title there flickered between states — so hide the nav bar there.
-                .navigationTitle("tab.search")
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar(isShowingResults ? .hidden : .automatic, for: .navigationBar)
-                .background(Color("appBackground"))
+            ZStack {
+                // Full-screen app background behind everything (incl. safe areas and the
+                // floating search field). Matches the ReaderView pattern; a plain
+                // `.background(...)` on `content` left the system black showing through
+                // the safe areas and the empty space below short List content.
+                Color("appBackground").ignoresSafeArea()
+                content
+                    // Large bold "Search" on the home states (hint / Recent / predictions).
+                    // On the results page there's already a "Results for …" header, and the
+                    // large title there flickered between states — so hide the nav bar there.
+                    .navigationTitle("tab.search")
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar(isShowingResults ? .hidden : .automatic, for: .navigationBar)
+            }
         }
         // No `.searchSuggestions` overlay (removed the iOS 26 width squeeze). Predictions
         // render inline in `predictiveList`; results load on commit into `resultsList`.
@@ -123,18 +129,26 @@ struct SearchView: View {
     }
 
     private var predictiveList: some View {
-        List {
-            if !visibleSuggestions.isEmpty {
-                ForEach(visibleSuggestions, id: \.self) { completionRow($0) }
-                    .listRowSeparator(.hidden)
-            } else {
-                // No predictions yet (or "nonsense"): offer a row to search the literal text.
-                literalQueryRow
-                    .listRowSeparator(.hidden)
+        // NOTE: a `List` here renders inside the `.searchable` results host, whose
+        // own `.systemBackground` (black in dark mode) shows through the transparent
+        // list — `scrollContentBackground(.hidden)` and `.background()` can't reach it.
+        // A `ScrollView` has a clear background, so the ZStack appBackground shows.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                if !visibleSuggestions.isEmpty {
+                    ForEach(visibleSuggestions, id: \.self) { term in
+                        completionRow(term)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                    }
+                } else {
+                    // No predictions yet (or "nonsense"): offer a row to search the literal text.
+                    literalQueryRow
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                }
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.immediately)
     }
 
@@ -201,37 +215,43 @@ struct SearchView: View {
     // MARK: - Results list
 
     private var resultsList: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("search.results_header \(searchText.trimmingCharacters(in: .whitespaces))")
-                        .font(.title2).bold()
-                        .foregroundStyle(.primary)
-                    Group {
-                        if vm.resultsCapped {
-                            Text("search.results_count_max \(filteredResults.count)")
-                        } else {
-                            Text("search.results_count \(filteredResults.count)")
+        // ScrollView (not List) so the ZStack appBackground shows through — see note
+        // on `predictiveList`. The testament picker stays pinned via a section header.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                Section {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("search.results_header \(searchText.trimmingCharacters(in: .whitespaces))")
+                            .font(.title2).bold()
+                            .foregroundStyle(.primary)
+                        Group {
+                            if vm.resultsCapped {
+                                Text("search.results_count_max \(filteredResults.count)")
+                            } else {
+                                Text("search.results_count \(filteredResults.count)")
+                            }
                         }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-                .listRowSeparator(.hidden)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
 
-                ForEach(filteredResults) { result in
-                    SearchResultRow(result: result)
-                        .contentShape(Rectangle())
-                        .onTapGesture { navigate(to: result) }
+                    ForEach(filteredResults) { result in
+                        SearchResultRow(result: result)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
+                            .onTapGesture { navigate(to: result) }
+                        Divider()
+                    }
+                } header: {
+                    testamentPicker
+                        .background(Color("appBackground"))
                 }
-            } header: {
-                testamentPicker
             }
+            .padding(.horizontal, 20)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .listSectionSpacing(.compact)
         .scrollDismissesKeyboard(.immediately)
     }
 
@@ -255,8 +275,23 @@ struct SearchView: View {
     }
 
     private var recentQueriesSection: some View {
-        List {
-            Section {
+        // ScrollView (not List) so the ZStack appBackground shows through — see note
+        // on `predictiveList` re: the `.searchable` results host background.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("search.recent")
+                        .font(.title3).bold()
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Button("search.clear") { vm.clearRecent() }
+                        .font(.callout)
+                        .foregroundStyle(.blue)
+                }
+                .padding(.top, 4)
+                .padding(.bottom, 8)
+                Divider()
+
                 ForEach(vm.recentQueries.prefix(8), id: \.self) { recent in
                     HStack {
                         Image(systemName: "clock").foregroundStyle(.tertiary).frame(width: 20)
@@ -264,33 +299,18 @@ struct SearchView: View {
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption).foregroundStyle(.quaternary)
                     }
+                    .padding(.vertical, 12)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         searchText = recent
                         commit(query: recent)
                     }
-                }
-            } header: {
-                VStack(spacing: 0) {
-                    HStack {
-                        Text("search.recent")
-                            .font(.title3).bold()
-                            .foregroundStyle(.primary)
-                            .textCase(nil)
-                        Spacer()
-                        Button("search.clear") { vm.clearRecent() }
-                            .font(.callout)
-                            .foregroundStyle(.blue)
-                            .textCase(nil)
-                    }
-                    .padding(.top, 4)
-                    .padding(.bottom, 8)
                     Divider()
                 }
             }
+            .padding(.horizontal, 20)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.immediately)
     }
 
     private var searchHintView: some View {

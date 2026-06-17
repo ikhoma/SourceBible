@@ -15,7 +15,7 @@ struct ReaderView: View {
     // automatically on translation switch. The locale dependency is still needed
     // for BibleBookNames fallback paths (cross-refs, notes, etc.).
     @Environment(\.locale) private var locale
-    @AppStorage("hideBookCovers") private var hideBookCovers = true
+    @AppStorage("hideBookCovers") private var hideBookCovers = false
 
     // MARK: - Study Mode geometry (spec-study-mode-redesign.md R1–R3)
     //
