@@ -211,8 +211,15 @@ struct VerseBottomSheetView: View {
                         } icon: {
                             // .alwaysOriginal keeps the dot colored inside the menu
                             // (template symbols are re-tinted monochrome by UIMenu).
-                            Image(uiImage: UIImage(systemName: "circle.fill")!
-                                .withTintColor(c.dotUIColor, renderingMode: .alwaysOriginal))
+                            // "circle.fill" is a guaranteed system symbol, but resolve it
+                            // safely anyway — fall back to a SwiftUI-tinted dot rather than
+                            // force-unwrap (code review #5).
+                            if let dot = UIImage(systemName: "circle.fill")?
+                                .withTintColor(c.dotUIColor, renderingMode: .alwaysOriginal) {
+                                Image(uiImage: dot)
+                            } else {
+                                Image(systemName: "circle.fill").foregroundStyle(c.color)
+                            }
                         }
                         .tag(HighlightColor?.some(c))
                     }

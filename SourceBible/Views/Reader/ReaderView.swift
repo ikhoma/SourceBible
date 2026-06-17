@@ -46,9 +46,7 @@ struct ReaderView: View {
                 // does not reduce the SwiftUI safe area, so this is the only reliable
                 // source for "where the toolbar ends" — the pin target keys off it.
                 NavBarBottomReader { y in
-                    Task { @MainActor in
-                        if abs(vm.toolbarBottomY - y) > 0.5 { vm.toolbarBottomY = y }
-                    }
+                    if abs(vm.toolbarBottomY - y) > 0.5 { vm.toolbarBottomY = y }
                 }
                 .allowsHitTesting(false)
                 if vm.isLoading {
@@ -117,7 +115,7 @@ struct ReaderView: View {
                                     // is why the sheet didn't adapt. The selected verse's height
                                     // is then a reliable lookup (vm.pinnedVerseHeight).
                                     .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { height in
-                                        Task { @MainActor in vm.setVerseHeight(height, for: verse.id) }
+                                        vm.setVerseHeight(height, for: verse.id)
                                     }
                                     // Atomic Study-Mode scroll driver: installed as the SELECTED
                                     // verse's background, so its frame == the verse's frame. It
@@ -178,7 +176,7 @@ struct ReaderView: View {
                                 // lets studyTopInset land the verse at pinnedTopAnchorY either way.
                                 .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { y in
                                     guard abs(vm.scrollContentTopY - y) > 0.5 else { return }
-                                    Task { @MainActor in vm.scrollContentTopY = y }
+                                    vm.scrollContentTopY = y
                                 }
                         }
                         // R3: reserve enough scroll room BELOW the pin that anchor:.top can
@@ -313,6 +311,13 @@ struct ReaderView: View {
                 // the system dimming/shadow over the background (it was covering
                 // the pinned verse). The background reader is still locked via
                 // .scrollDisabled, so the old swipe-leak problem cannot return.
+                //
+                // ✅ INTENTIONAL — DO NOT remove or restrict (e.g. .enabled(upThrough:)).
+                // This is by design (code review #7, 2026-06-17): restricting it brings
+                // back the background dimming that overlapped the pinned verse — the exact
+                // bug this replaced. It is unbounded on purpose. The only side effect is
+                // that taps in the area ABOVE the sheet still reach the reader (verified
+                // acceptable: re-tapping a visible verse just re-pins it). Leave as-is.
                 if let verse = vm.selectedVerse {
                     if #available(iOS 18.0, *) {
                         VerseBottomSheetView(verse: verse)
