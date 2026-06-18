@@ -45,7 +45,7 @@ struct LanguageSettingsView: View {
                     Spacer()
                     if appLanguage == lang.code {
                         Image(systemName: "checkmark")
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(.appBlue)
                             .fontWeight(.semibold)
                     }
                 }

@@ -16,6 +16,8 @@ struct ReaderView: View {
     // for BibleBookNames fallback paths (cross-refs, notes, etc.).
     @Environment(\.locale) private var locale
     @AppStorage("hideBookCovers") private var hideBookCovers = false
+    // Red-letter (Jesus' words) rendering — off by default; toggled in Settings ▸ Appearance.
+    @AppStorage("redLetters") private var redLetters = false
 
     // MARK: - Study Mode geometry (spec-study-mode-redesign.md R1–R3)
     //
@@ -101,8 +103,18 @@ struct ReaderView: View {
                                         translationId: vm.currentTranslation.id,
                                         isSelected: vm.selectedVerse?.id == verse.id
                                                     && vm.activeSheet == .verse,
-                                        selectedSegment: vm.selectedVerse?.id == verse.id
+                                        // Gate the word highlight on the sheet being open, not just
+                                        // on selectedSegment. selectedSegment is only cleared in the
+                                        // sheet's onDismiss, which fires when the dismiss ANIMATION
+                                        // COMPLETES — so on the Back button (full slide-down) the blue
+                                        // word lingered for the whole animation. Tying it to activeSheet
+                                        // clears it the instant Back sets activeSheet = nil (frame one),
+                                        // matching the drag-dismiss feel. onDismiss still tidies the
+                                        // underlying selectedSegment state.
+                                        selectedSegment: (vm.activeSheet == .verse
+                                                          && vm.selectedVerse?.id == verse.id)
                                                     ? vm.selectedSegment : nil,
+                                        redLetters: redLetters,
                                         onVerseTap: { vm.tapVerse(verse) },
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
@@ -416,6 +428,7 @@ struct VerseRowView: View {
     var translationId: String = ""
     var isSelected: Bool = false
     var selectedSegment: VerseSegment? = nil
+    var redLetters: Bool = false
     var onVerseTap: () -> Void
     var onWordTap: (VerseSegment) -> Void
 
@@ -425,7 +438,7 @@ struct VerseRowView: View {
                 // Verse number
                 Text("\(verse.number)")
                     .font(.caption)
-                    .foregroundStyle(isSelected ? Color.blue : Color(UIColor.tertiaryLabel))
+                    .foregroundStyle(isSelected ? Color.appBlue : Color(UIColor.tertiaryLabel))
                     .frame(width: 24, alignment: .trailing)
                     .padding(.top, 12)
 
@@ -435,10 +448,13 @@ struct VerseRowView: View {
                         parsed: parsed,
                         highlightColor: verse.highlightColor,
                         selectedSegment: selectedSegment,
+                        redLetters: redLetters,
                         onVerseTap: onVerseTap,
                         onWordTap: onWordTap
                     )
-                    .id("\(verse.id)-\(translationId)-\(verse.highlightColor ?? "none")")
+                    // redLetters in the id() forces the base attributed string to rebuild
+                    // (with/without the red Jesus-words color) when the setting is toggled.
+                    .id("\(verse.id)-\(translationId)-\(verse.highlightColor ?? "none")-\(redLetters ? "rl" : "nrl")")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
                     .padding(.trailing, 12)
@@ -462,12 +478,12 @@ struct VerseRowView: View {
                         // iOS 26: ConcentricRectangle автоматично рахує inner radius
                         // containerShape(r=12) → ConcentricRectangle з padding 2pt → inner r=10
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 12).fill(Color.blue)
+                            RoundedRectangle(cornerRadius: 12).fill(Color.appBlue)
                             ConcentricRectangle()
                                 .fill(Color("appBackground"))
                                 .padding(.leading, 2)
                             ConcentricRectangle()
-                                .fill(Color.blue.opacity(0.1))
+                                .fill(Color.appBlue.opacity(0.1))
                                 .padding(.leading, 2)
                         }
                         .containerShape(RoundedRectangle(cornerRadius: 12))
@@ -475,12 +491,12 @@ struct VerseRowView: View {
                         // iOS 17–25: три шари вручну
                         // 1) синій (акцент-смужка) → 2) grouped bg (ховає синій) → 3) синій тінт
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 12).fill(Color.blue)
+                            RoundedRectangle(cornerRadius: 12).fill(Color.appBlue)
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color("appBackground"))
                                 .padding(.leading, 2)
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.blue.opacity(0.1))
+                                .fill(Color.appBlue.opacity(0.1))
                                 .padding(.leading, 2)
                         }
                     }
@@ -508,7 +524,7 @@ struct TranslationPickerView: View {
                     }
                     Spacer()
                     if vm.currentTranslation.id == t.id {
-                        Image(systemName: "checkmark").foregroundStyle(.blue)
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
                     }
                 }
                 .contentShape(Rectangle())

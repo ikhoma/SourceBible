@@ -490,7 +490,7 @@ private func highlightedVerseText(raw: String, fallback: String, strongsId: Stri
     for seg in segments {
         if seg.numbers.contains(baseNum) {
             var attr = AttributedString(seg.text)
-            attr.foregroundColor = Color.blue
+            attr.foregroundColor = Color.appBlue
             result += attr
         } else {
             result += AttributedString(seg.text)

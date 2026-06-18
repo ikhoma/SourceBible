@@ -214,11 +214,35 @@ struct SearchView: View {
 
     // MARK: - Results list
 
+    @ViewBuilder
     private var resultsList: some View {
+        // The testament picker uses the NATIVE bar treatment — same as the status/tool
+        // bars on the Reader. On iOS 26 it lives in a `.safeAreaBar(edge: .top)`, so the
+        // system renders the Liquid Glass scroll-edge blur behind it automatically as the
+        // results scroll underneath (no manual material). iOS 18 fallback keeps it pinned
+        // as a section header. (iOS 26 rule: #available guard + iOS 18 fallback.)
+        if #available(iOS 26.0, *) {
+            resultsScroll(pinnedPicker: false)
+                .safeAreaBar(edge: .top) {
+                    testamentPicker
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                }
+        } else {
+            resultsScroll(pinnedPicker: true)
+        }
+    }
+
+    /// Scrollable results. When `pinnedPicker` is true (iOS 18 fallback) the testament
+    /// picker is rendered as a pinned section header; on iOS 26 it's hosted by the
+    /// `.safeAreaBar` above instead, so the header is omitted here.
+    @ViewBuilder
+    private func resultsScroll(pinnedPicker: Bool) -> some View {
         // ScrollView (not List) so the ZStack appBackground shows through — see note
-        // on `predictiveList`. The testament picker stays pinned via a section header.
+        // on `predictiveList`.
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+            LazyVStack(alignment: .leading, spacing: 0,
+                       pinnedViews: pinnedPicker ? [.sectionHeaders] : []) {
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("search.results_header \(searchText.trimmingCharacters(in: .whitespaces))")
@@ -246,8 +270,11 @@ struct SearchView: View {
                         Divider()
                     }
                 } header: {
-                    testamentPicker
-                        .background(Color("appBackground"))
+                    if pinnedPicker {
+                        testamentPicker
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial)
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -286,7 +313,7 @@ struct SearchView: View {
                     Spacer()
                     Button("search.clear") { vm.clearRecent() }
                         .font(.callout)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.appBlue)
                 }
                 .padding(.top, 4)
                 .padding(.bottom, 8)
@@ -401,7 +428,7 @@ private struct SearchResultRow: View {
                 let hit = String(remaining[remaining.startIndex ..< close.lowerBound])
                 var highlighted = AttributedString(hit)
                 var container = AttributeContainer()
-                container.swiftUI.foregroundColor = Color.blue
+                container.swiftUI.foregroundColor = Color.appBlue
                 highlighted.mergeAttributes(container)
                 output   += highlighted
                 remaining = remaining[close.upperBound...]

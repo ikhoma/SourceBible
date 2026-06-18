@@ -8,6 +8,7 @@ struct MenuView: View {
     @State private var brightness: Double = Double(UIScreen.main.brightness)
     @AppStorage("isDarkMode") private var isDark = false
     @AppStorage("hideBookCovers") private var hideBookCovers = false
+    @AppStorage("redLetters") private var redLetters = false
     @AppStorage("defaultTranslationId") private var defaultTranslationId: String = "KJV"
     @Environment(\.locale) private var locale
     @AppStorage("appLanguage") private var appLanguage: String = "en"
@@ -46,9 +47,11 @@ struct MenuView: View {
                             }
                     }
                     Toggle("menu.dark_theme", isOn: $isDark)
-                        .tint(.blue)
+                        .tint(.appBlue)
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
-                        .tint(.blue)
+                        .tint(.appBlue)
+                    Toggle("menu.red_letters", isOn: $redLetters)
+                        .tint(.appBlue)
                 }
                 .listRowBackground(Color("cardBackground"))
                 Section("menu.section.translation") {
@@ -101,7 +104,7 @@ struct DefaultTranslationPickerView: View {
                 }
                 Spacer()
                 if t.id == selectedId {
-                    Image(systemName: "checkmark").foregroundStyle(.blue)
+                    Image(systemName: "checkmark").foregroundStyle(.appBlue)
                 }
             }
             .contentShape(Rectangle())

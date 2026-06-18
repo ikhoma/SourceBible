@@ -74,6 +74,8 @@ struct VerseTextView: UIViewRepresentable {
     var highlightColor: String? = nil
     /// Сегмент що зараз виділений (word mode). nil — виділення знято.
     var selectedSegment: VerseSegment? = nil
+    /// When false, Jesus' words render in the normal label color (red-letter mode off).
+    var redLetters: Bool = false
     var onVerseTap: () -> Void
     var onWordTap: (VerseSegment) -> Void
 
@@ -214,7 +216,7 @@ struct VerseTextView: UIViewRepresentable {
             if let anchorId = seg.footnoteAnchorId, seg.text.isEmpty {
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font:            UIFont.preferredFont(forTextStyle: .caption2),
-                    .foregroundColor: UIColor.systemBlue,
+                    .foregroundColor: UIColor.appBlue,
                     .baselineOffset:  NSNumber(value: 5),
                     .verseSegmentIndex: index,
                     NSAttributedString.Key("footnoteAnchorId"): anchorId
@@ -288,7 +290,7 @@ struct VerseTextView: UIViewRepresentable {
     }
 
     private func resolveColor(_ styles: SegmentStyle) -> UIColor {
-        styles.contains(.jesusWords) ? .systemRed : .label
+        (redLetters && styles.contains(.jesusWords)) ? .systemRed : .label
     }
 
     // MARK: Coordinator

@@ -756,6 +756,22 @@
         }
       }
     },
+    "menu.red_letters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Red Letters"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Слова Ісуса червоним"
+          }
+        }
+      }
+    },
     "menu.language" : {
       "localizations" : {
         "en" : {

@@ -56,7 +56,7 @@ struct BookChapterPickerView: View {
             Text(String(format: String(localized: "picker.chapters_count"), book.chapterCount))
                 .font(.caption).foregroundStyle(.secondary)
             if vm.currentBook.id == book.id {
-                Image(systemName: "checkmark").font(.caption).foregroundStyle(.blue)
+                Image(systemName: "checkmark").font(.caption).foregroundStyle(.appBlue)
             }
         }
         .contentShape(Rectangle())

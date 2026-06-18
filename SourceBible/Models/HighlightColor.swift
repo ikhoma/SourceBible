@@ -38,7 +38,7 @@ enum HighlightColor: String, CaseIterable, Codable {
         case .pink:   return UIColor.systemPink.withAlphaComponent(0.30)
         case .orange: return UIColor.systemOrange.withAlphaComponent(0.32)
         case .mint:   return UIColor.systemMint.withAlphaComponent(0.32)
-        case .blue:   return UIColor.systemBlue.withAlphaComponent(0.28)
+        case .blue:   return UIColor.appBlue.withAlphaComponent(0.28)
         }
     }
 
@@ -51,7 +51,7 @@ enum HighlightColor: String, CaseIterable, Codable {
         case .pink:   return Color.pink.opacity(0.30)
         case .orange: return Color.orange.opacity(0.32)
         case .mint:   return Color.mint.opacity(0.32)
-        case .blue:   return Color.blue.opacity(0.28)
+        case .blue:   return Color.appBlue.opacity(0.28)
         }
     }
 
@@ -64,7 +64,7 @@ enum HighlightColor: String, CaseIterable, Codable {
         case .pink:   return .systemPink
         case .orange: return .systemOrange
         case .mint:   return .systemMint
-        case .blue:   return .systemBlue
+        case .blue:   return .appBlue
         }
     }
 
@@ -97,18 +97,31 @@ enum HighlightColor: String, CaseIterable, Codable {
 // Using backgroundColor (not bold) everywhere keeps the three sites visually
 // consistent and avoids line-reflow side-effects from font-weight changes.
 
+// MARK: - Primary brand blue (#3085CF)
+
+extension ShapeStyle where Self == Color {
+    /// Primary brand blue (#3085CF) — the app's accent. Usable anywhere a ShapeStyle
+    /// is expected (`.foregroundStyle`, `.tint`, `.fill`) and as `Color.appBlue`.
+    /// Single source of truth; the AccentColor asset is set to the same hex for
+    /// system chrome (`.tint(.accentColor)`, default control tints).
+    static var appBlue: Color { Color(red: 48 / 255, green: 133 / 255, blue: 207 / 255) }
+}
+
+extension UIColor {
+    /// UIKit equivalent of the primary brand blue (#3085CF).
+    static let appBlue = UIColor(red: 48 / 255, green: 133 / 255, blue: 207 / 255, alpha: 1)
+}
+
 extension Color {
     /// Background tint for word-level highlights (SwiftUI Text / AttributedString).
-    static let wordHighlight = Color.blue.opacity(0.15)
+    static let wordHighlight = Color.appBlue.opacity(0.15)
 }
 
 extension UIColor {
     /// UIKit equivalent for word-level highlights (NSAttributedString / UITextView).
-    static let wordHighlight = UIColor.systemBlue.withAlphaComponent(0.2)
+    static let wordHighlight = UIColor.appBlue.withAlphaComponent(0.2)
 
     /// Accent tint applied to the *text* of the selected word in the reader
-    /// (foregroundColor, not background). systemBlue adapts to a brighter shade
-    /// in dark mode, so the selected word stays clearly visible where the faint
-    /// background highlight was not.
-    static let wordSelectionTint = UIColor.systemBlue
+    /// (foregroundColor, not background).
+    static let wordSelectionTint = UIColor.appBlue
 }
