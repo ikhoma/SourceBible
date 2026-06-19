@@ -2,6 +2,7 @@
 // SourceBible
 
 import SwiftUI
+import Mixpanel
 
 @main
 struct SourceBibleApp: App {
@@ -11,6 +12,18 @@ struct SourceBibleApp: App {
     let authService: AuthServiceProtocol  = LocalAuthService.shared
     let syncEngine:  SyncEngineProtocol   = NoOpSyncEngine.shared
     let store:       UserDataStoreProtocol
+
+    // MARK: - Analytics
+    //
+    // analyticsEnabled is the live source of truth (AppStorage → UserDefaults).
+    // Read once at init; runtime changes handled via .onChange in body.
+    // Consent ON (any build) → MixpanelAnalytics; OFF → NoopAnalytics (zero network).
+    // No #if BETA gating — Mixpanel runs in beta AND prod (PDR-Analytics-Mixpanel D3).
+    @AppStorage("analyticsEnabled") private var analyticsEnabled: Bool = true
+    let analytics: any AnalyticsService
+
+    // MARK: - Session Tracker
+    let sessionTracker: SessionTracker
 
     // MARK: - Language
 
@@ -24,9 +37,32 @@ struct SourceBibleApp: App {
         return AppLanguage.supported.contains(code) ? code : "en"
     }
 
+    // MARK: - Scene phase (for app_opened + session lifecycle)
+    @Environment(\.scenePhase) private var scenePhase
+
     // MARK: - Init
 
     init() {
+        // ── Analytics init ────────────────────────────────────────────────────
+        // Read the persisted toggle value directly from UserDefaults at init
+        // time (AppStorage isn't readable before the body runs).
+        let enabled = UserDefaults.standard.object(forKey: "analyticsEnabled") as? Bool ?? true
+
+        // Consent ON → MixpanelAnalytics (beta and prod); OFF → NoopAnalytics (zero network).
+        if enabled {
+            analytics = MixpanelAnalytics.shared
+            // Identify with stable anonymous ID (ADR-012 PreAuthIdentity).
+            MixpanelAnalytics.shared.identify(distinctId: PreAuthIdentity.stableId)
+        } else {
+            analytics = NoopAnalytics.shared
+        }
+
+        // ── Session tracker init ──────────────────────────────────────────────
+        // Inject the same analytics instance so the tracker uses the correct
+        // service (Mixpanel or Noop) at the time of creation.
+        sessionTracker = SessionTracker(analytics: analytics)
+
+        // ── Localization init ─────────────────────────────────────────────────
         // Install LocalizedBundle swizzle BEFORE any view renders.
         // After this, Text("key") and String(localized: "key") both
         // resolve through the active language automatically.
@@ -57,18 +93,45 @@ struct SourceBibleApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(store: store)
-                // Injects the selected locale into the SwiftUI environment.
-                // Text("key") — LocalizedStringKey — re-evaluates automatically.
-                // String(localized: "key") calls in view bodies also return the
-                // correct language because LocalizedBundle is pre-activated in
-                // LanguageSettingsView before appLanguage is written.
-                // No .id() here — avoids resetting navigation state on language change.
-                // See ADR-006: docs/architecture/ADR-006-localization-translation-provider.md
+                // Analytics: inject service + show one-time consent card.
+                // onChange handles runtime toggle (no restart needed).
+                .environment(\.analytics, analytics)
+                .environment(\.sessionTracker, sessionTracker)
+                .analyticsConsentIfNeeded()
+                // ── Consent runtime toggle ────────────────────────────────────
+                .onChange(of: analyticsEnabled) { _, enabled in
+                    if enabled {
+                        MixpanelAnalytics.shared.identify(distinctId: PreAuthIdentity.stableId)
+                    } else {
+                        // opt out so SDK stops any in-flight batches
+                        Mixpanel.mainInstance().optOutTracking()
+                    }
+                }
+                // ── app_opened + session start on cold launch ─────────────────
+                // `.onChange(of: scenePhase)` does NOT fire for the INITIAL `.active`
+                // state on a cold launch, so the first foreground must be triggered
+                // here. `.task` runs once when the root view first appears.
+                .task {
+                    analytics.track(.appOpened)
+                    sessionTracker.handleForeground()
+                }
+                // ── Session lifecycle via scenePhase ──────────────────────────
+                // Fire `app_opened` only on a REAL return from background
+                // (.background → .active). `.inactive → .active` (Control Center,
+                // notification shade, permission dialogs, app-switcher peek) must NOT
+                // count as an open. Cold launch is handled by `.task` above.
+                .onChange(of: scenePhase) { oldPhase, newPhase in
+                    if oldPhase == .background && newPhase == .active {
+                        analytics.track(.appOpened)
+                        sessionTracker.handleForeground()
+                    } else if newPhase == .background {
+                        sessionTracker.handleBackground()
+                    }
+                }
+                // Localization
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environment(\.locale, Locale(identifier: appLanguage))
                 .onChange(of: appLanguage) { _, lang in
-                    // Keep bundle swizzle in sync for String(localized:) in model code
-                    // and UIKit views (e.g. NoteEditorView placeholder).
                     LocalizedBundle.activate(language: lang)
                 }
         }

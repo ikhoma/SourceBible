@@ -642,6 +642,76 @@
         }
       }
     },
+    "analytics.consent.accept" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "OK" }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Добре" }
+        }
+      }
+    },
+    "analytics.consent.body" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "We collect anonymous usage statistics to improve the app. No personal data, notes, or search queries are ever shared." }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Ми збираємо анонімну статистику використання, щоб покращувати застосунок. Жодних особистих даних, нотаток чи тексту запитів." }
+        }
+      }
+    },
+    "analytics.consent.decline" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Not now" }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Не зараз" }
+        }
+      }
+    },
+    "analytics.consent.privacy_link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Privacy Policy" }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Політика конфіденційності" }
+        }
+      }
+    },
+    "analytics.consent.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Help improve Source Bible" }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Допоможи покращити SourceBible" }
+        }
+      }
+    },
+    "menu.analytics.toggle_subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Anonymous only. No notes or search text." }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Тільки анонімно. Без нотаток і тексту запитів." }
+        }
+      }
+    },
+    "menu.analytics.toggle_title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Share anonymous usage" }
+        },
+        "uk" : {
+          "stringUnit" : { "state" : "translated", "value" : "Ділитися анонімною статистикою" }
+        }
+      }
+    },
     "menu.about" : {
       "localizations" : {
         "en" : {

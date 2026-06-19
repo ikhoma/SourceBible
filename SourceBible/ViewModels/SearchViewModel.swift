@@ -30,11 +30,16 @@ final class SearchViewModel: ObservableObject {
     private var searchTask:  Task<Void, Never>?
     private var suggestTask: Task<Void, Never>?
 
+    /// Analytics service injected from the view layer (via wireAnalytics on appear).
+    var analytics: any AnalyticsService = NoopAnalytics.shared
+    /// Session tracker injected from the view layer.
+    var sessionTracker: SessionTracker = .noop
+
     // MARK: - Search
 
     /// Debounced full-text search (280ms). FTS5 queries run on @MainActor —
     /// same as all other DatabaseService calls; fast enough (~10–30ms) after debounce.
-    func search(query: String, translation: String) {
+    func search(query: String, translation: String, testamentFilter: String? = nil) {
         searchTask?.cancel()
 
         let trimmed = query.trimmingCharacters(in: .whitespaces)
@@ -61,6 +66,22 @@ final class SearchViewModel: ObservableObject {
             // Record to Recent only when the query actually matched something —
             // dead queries (nonsense, or words absent from this translation) are noise.
             if !found.isEmpty { self.saveRecent(trimmed) }
+
+            // Analytics: fire search_committed AFTER results are populated.
+            // Also increment the session search counter.
+            //
+            // resultsCount = RAW search result count (before the view-layer testament
+            // filter; capped at 150 by the query). The active testament filter is sent
+            // separately as `testamentFilter`. NOTE: this differs by design from
+            // `search_result_opened.resultsCount`, which reports the FILTERED count the
+            // user actually sees when tapping — the two events measure different moments.
+            self.analytics.track(.searchCommitted(
+                resultsCount:    found.count,
+                hadZeroResults:  found.isEmpty,
+                translation:     translation,
+                testamentFilter: testamentFilter
+            ))
+            self.sessionTracker.incSearch()
         }
     }
 

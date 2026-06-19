@@ -6,6 +6,9 @@ import UIKit
 
 struct SearchView: View {
 
+    @Environment(\.analytics)      private var analytics
+    @Environment(\.sessionTracker) private var sessionTracker
+
     @StateObject private var vm = SearchViewModel()
 
     @EnvironmentObject private var router:   AppNavigationRouter
@@ -86,6 +89,12 @@ struct SearchView: View {
             // Clearing the field (cancel ✕ or the in-field clear) drops back out of the
             // committed/results state so we don't flash stale results.
             if newValue.trimmingCharacters(in: .whitespaces).isEmpty { committedQuery = "" }
+        }
+        // Wire the live analytics + tracker into the VM on first appear.
+        // Can't be done at @StateObject init time (Environment not available then).
+        .task {
+            vm.analytics      = analytics
+            vm.sessionTracker = sessionTracker
         }
     }
 
@@ -375,11 +384,27 @@ struct SearchView: View {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return }
         committedQuery = q
-        vm.search(query: q, translation: readerVM.currentTranslation.id)
+        // Pass the active testament filter so search_committed includes it.
+        let filterStr: String?
+        switch testamentFilter {
+        case .old:  filterStr = "OT"
+        case .new:  filterStr = "NT"
+        case .all:  filterStr = nil
+        }
+        vm.search(query: q, translation: readerVM.currentTranslation.id,
+                  testamentFilter: filterStr)
         dismissKeyboard()
     }
 
     private func navigate(to result: SearchResult) {
+        // Fire search_result_opened. resultsCount + position are within the FILTERED
+        // list the user actually sees and taps (post testament-filter) — intentionally
+        // different from search_committed.resultsCount, which is the raw search count.
+        let position = filteredResults.firstIndex(where: { $0.id == result.id }) ?? 0
+        analytics.track(.searchResultOpened(
+            resultsCount: filteredResults.count,
+            position:     position
+        ))
         router.requestNavigation(to: result.id)
     }
 

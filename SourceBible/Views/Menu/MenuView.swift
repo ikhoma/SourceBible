@@ -10,6 +10,7 @@ struct MenuView: View {
     @AppStorage("hideBookCovers") private var hideBookCovers = false
     @AppStorage("redLetters") private var redLetters = false
     @AppStorage("defaultTranslationId") private var defaultTranslationId: String = "KJV"
+    @AppStorage("analyticsEnabled") private var analyticsEnabled: Bool = true
     @Environment(\.locale) private var locale
     @AppStorage("appLanguage") private var appLanguage: String = "en"
 
@@ -75,6 +76,18 @@ struct MenuView: View {
                     NavigationLink("menu.about") {
                         Text("Source Bible v1.0")
                     }
+                }
+                .listRowBackground(Color("cardBackground"))
+                Section {
+                    Toggle(isOn: $analyticsEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("menu.analytics.toggle_title")
+                            Text("menu.analytics.toggle_subtitle")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(.appBlue)
                 }
                 .listRowBackground(Color("cardBackground"))
                 }

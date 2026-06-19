@@ -46,6 +46,12 @@ build/
 # Created during APFS sparse-file operations (e.g. DB copy via FUSE).
 .fuse_hidden*
 
+# ── Analytics secrets (never commit real tokens) ──────────────
+Config/Secrets.xcconfig
+
+# ── Generated files (overwritten at build time, never commit) ──
+SourceBible/Generated/AnalyticsConfiguration.swift
+
 # ── Local workflow scripts ─────────────────────────────────────
 commit_all.sh
 SourceBible/Resources/sourcebible-backup.db

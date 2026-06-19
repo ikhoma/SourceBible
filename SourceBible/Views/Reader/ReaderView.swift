@@ -15,6 +15,7 @@ struct ReaderView: View {
     // automatically on translation switch. The locale dependency is still needed
     // for BibleBookNames fallback paths (cross-refs, notes, etc.).
     @Environment(\.locale) private var locale
+    @Environment(\.sessionTracker) private var sessionTracker
     @AppStorage("hideBookCovers") private var hideBookCovers = false
     // Red-letter (Jesus' words) rendering — off by default; toggled in Settings ▸ Appearance.
     @AppStorage("redLetters") private var redLetters = false
@@ -327,6 +328,12 @@ struct ReaderView: View {
                     }
                 }
             }
+        }
+        // Wire the live sessionTracker into the VM so navigation methods can
+        // increment session counters. Cannot be done at VM init time because
+        // Environment is not available then.
+        .task {
+            vm.sessionTracker = sessionTracker
         }
     }
 

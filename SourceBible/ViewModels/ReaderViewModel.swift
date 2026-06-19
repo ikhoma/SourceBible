@@ -76,6 +76,9 @@ class ReaderViewModel: ObservableObject {
     /// verseId → HighlightColor.rawValue for the current chapter + translation.
     @Published var highlightColors: [String: String] = [:]
 
+    // MARK: - Analytics session tracking (injected from view layer on appear)
+    var sessionTracker: SessionTracker = .noop
+
     // MARK: - Data
 
     // Computed — DatabaseService.shared is NOT accessed until first method call,
@@ -496,6 +499,8 @@ class ReaderViewModel: ObservableObject {
             // the scroll view was reset via .id(currentChapter) — defer one RunLoop
             // tick so the new layout is committed before scrollTo fires.
             verseScrollTrigger += 1
+            // Analytics: record unique verse read.
+            sessionTracker.incVersesRead(verseId: verseId)
         }
     }
 
@@ -636,6 +641,8 @@ class ReaderViewModel: ObservableObject {
         activeSheet = .verse
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
+        // Analytics: record unique verse read.
+        sessionTracker.incVersesRead(verseId: verse.id)
     }
 
     /// Called from VerseTextView long press — receives a VerseSegment with strongs: [String].
@@ -700,6 +707,9 @@ class ReaderViewModel: ObservableObject {
         selectedSegment = nil
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
+        // Analytics: verse chevron nav + unique verse read.
+        sessionTracker.incVerseNav()
+        if let newId = selectedVerse?.id { sessionTracker.incVersesRead(verseId: newId) }
     }
 
     func navigateToNextVerse() {
@@ -712,6 +722,9 @@ class ReaderViewModel: ObservableObject {
         selectedSegment = nil
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
+        // Analytics: verse chevron nav + unique verse read.
+        sessionTracker.incVerseNav()
+        if let newId = selectedVerse?.id { sessionTracker.incVersesRead(verseId: newId) }
     }
 
     /// Navigate to the previous meaningful word in the focused verse (translation order).
@@ -724,6 +737,8 @@ class ReaderViewModel: ObservableObject {
         selectedWord = newWord
         syncSegment(for: newWord)
         loadStrongs(for: newWord)
+        // Analytics: word chevron nav.
+        sessionTracker.incWordNav()
     }
 
     /// Navigate to the next meaningful word in the focused verse (translation order).
@@ -736,6 +751,8 @@ class ReaderViewModel: ObservableObject {
         selectedWord = newWord
         syncSegment(for: newWord)
         loadStrongs(for: newWord)
+        // Analytics: word chevron nav.
+        sessionTracker.incWordNav()
     }
 
     /// Finds the VerseSegment whose strongs array contains the word's Strong's base number
