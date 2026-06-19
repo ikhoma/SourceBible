@@ -51,6 +51,7 @@ Load the full document only when the task is relevant to it.
 | `plan-hebrew-translit-rebuild.md` | Hebrew Transliteration — Full DB Rebuild Plan | Approved | New `slot`, `after_char`, `xlit_slot` columns; `fetch_biblehub_translit_hebrew.py` positional scraper; full `build_db.py` rebuild; supersedes `add_after_char.py` migration |
 | `spec-study-mode-redesign.md` | Study Mode Redesign | Draft | Verse pins 16pt below toolbar, reader scroll locked; single dynamic-height sheet anchored under verse; toolbar `<>` repurposed to verse/word nav; book/translation picker morphs to Back button (iOS 26); sheet chevrons + bottom action bar → context menu; highlight palette Purple/Pink/Orange/Mint/Blue+None. Includes Fable autonomous run brief |
 | `proposal_smarter_examples_v1.5.md` | Smarter Example Selection — v1.5 Proposal | Proposal | Pre-compute `rhetorical_weight` in DB (cross_reference votes); Swift picks highest-weight verse per book instead of first occurrence; fallback chain: rhetorical → syntactic centrality → first |
+| `spec-analytics-mixpanel.md` | Analytics (Mixpanel) Integration | Draft | Beta-only Mixpanel via `AnalyticsService` protocol; PreAuthIdentity distinct_id; event taxonomy (engagement/retention, search, feature adoption); per-session `study_session_summary` → MSS as tunable Mixpanel Custom Event; North Star = weekly users with ≥1 MSS; `#if BETA` gating + `PrivacyInfo.xcprivacy`; slice 1 = Fable-test candidate |
 
 ---
 
@@ -59,6 +60,7 @@ Load the full document only when the task is relevant to it.
 | File | Title | Status | Summary |
 |---|---|---|---|
 | `PDR-Auth-Strategy.md` | Trust-First Authentication | Accepted | No login wall; local-first data; sync opt-in |
+| `PDR-Analytics-Mixpanel.md` | Analytics (Mixpanel) for Beta | Proposed | Beta-only, anonymous (PreAuthIdentity), no PII; North Star = Meaningful Study Session; metric defs live in Mixpanel (tunable); open decisions: query-text (rec: don't send), consent, prod fate; reconciles with trust-first |
 | `PDR-Highlights-Bookmarks-Notes.md` | Notes/Highlights/Bookmarks Differentiation | — | Distinct UX roles for three annotation types |
 | `PDR-Book-Covers.md` | Book Cover Design — Doré Engravings | Accepted | Doré engraving + blue bg; Protestant canonical section tag + chapter count per cover; section vocab mirrors browse flow |
 | `PDR-Hebrew-Transliteration-Rules.md` | Hebrew Transliteration Rules for `simplify_xlit()` | Accepted | Grammar rules + 4 bugs fixed: monosyllabic shewa, dagesh doubling, spirant peh (combining char), modifier letter ᵃ |
