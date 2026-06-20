@@ -17,6 +17,11 @@ final class NotesViewModel: ObservableObject {
     private let store:       UserDataStoreProtocol
     private let authService: AuthServiceProtocol
 
+    // Analytics (Slice 3): injected via view .task — default noop so VM is
+    // usable in previews and unit tests without an analytics service wired up.
+    var analytics:      any AnalyticsService = NoopAnalytics.shared
+    var sessionTracker: SessionTracker       = .noop
+
     init(store: UserDataStoreProtocol,
          authService: AuthServiceProtocol) {
         self.store       = store
@@ -100,8 +105,15 @@ final class NotesViewModel: ObservableObject {
     // MARK: - CRUD
 
     func save(note: Note, blocks: [NoteBlock], verseIds: [String]) {
+        // Detect new note BEFORE saving (the ID won't be in the current list yet).
+        let isNew = !notes.contains(where: { $0.note.id == note.id })
         store.saveNote(note, blocks: blocks, verseIds: verseIds)
         refresh()
+        // Analytics: discrete note_created + aggregate annotation counter (Slice 3 §C).
+        if isNew {
+            analytics.track(.noteCreated)
+            sessionTracker.incAnnotation()
+        }
     }
 
     func deleteNote(id: String) {

@@ -2,7 +2,7 @@
 // SourceBible
 //
 // Вміст вкладки "Слово" у VerseBottomSheetView.
-// Типи: WordTabView · WordSubTab · WordMeaningView · WordUsageView ·
+// Типи: WordTabView · WordSubTab · WordMeaningView · ConcordanceView ·
 //       WordCard · MorphologyDecoder
 // Helpers: highlightedVerseText(_:fallback:strongsId:) · stripKJVSegment(_:)
 
@@ -23,7 +23,7 @@ struct WordTabView: View {
                 if subTab == .meaning {
                     WordMeaningView(entry: entry)
                 } else {
-                    WordUsageView(entry: entry)
+                    ConcordanceView(entry: entry)
                 }
             } else {
                 Text(vm.selectedWord != nil || vm.selectedSegment != nil
@@ -151,6 +151,12 @@ enum LexiconParser {
 struct WordMeaningView: View {
     let entry: StrongsEntry
     @EnvironmentObject var vm: ReaderViewModel
+    @Environment(\.sessionTracker) private var tracker
+
+    /// Dedup: track the last entry.id we fired recordFeatureUse for, so
+    /// navigating to a new word fires once but recompose of the same entry
+    /// does not inflate the counter (Slice 3 §E).
+    @State private var lastTrackedEntryId: String = ""
 
     private let t: TranslationProvider = BundleTranslationProvider()
 
@@ -170,6 +176,21 @@ struct WordMeaningView: View {
             }
         }
         .padding(.bottom, 20)
+        // Dedup: fire once per unique entry.id (chevron nav changes the entry → new fire).
+        // .onAppear handles the initial display; .onChange handles subsequent word navigations
+        // while the view stays mounted (no teardown between chevron taps).
+        .onAppear {
+            if lastTrackedEntryId != entry.id {
+                lastTrackedEntryId = entry.id
+                tracker.recordFeatureUse(.lexicon)
+            }
+        }
+        .onChange(of: entry.id) { _, newId in
+            if lastTrackedEntryId != newId {
+                lastTrackedEntryId = newId
+                tracker.recordFeatureUse(.lexicon)
+            }
+        }
     }
 
     // MARK: Header
@@ -364,9 +385,10 @@ private struct InfoGroup: View {
 
 // MARK: - Word Usage
 
-struct WordUsageView: View {
+struct ConcordanceView: View {
     let entry: StrongsEntry
     @EnvironmentObject private var router: AppNavigationRouter
+    @Environment(\.sessionTracker) private var tracker
 
     var body: some View {
         let totalLabel = String(
@@ -391,6 +413,7 @@ struct WordUsageView: View {
             }
         }
         .padding(.bottom, 16)
+        .onAppear { tracker.recordFeatureUse(.concordance) }
     }
 }
 

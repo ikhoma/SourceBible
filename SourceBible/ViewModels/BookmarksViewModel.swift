@@ -15,6 +15,11 @@ final class BookmarksViewModel: ObservableObject {
     private let store:       UserDataStoreProtocol
     private let authService: AuthServiceProtocol
 
+    // Analytics (Slice 3): injected via view .task — default noop so VM is
+    // usable in previews and unit tests without an analytics service wired up.
+    var analytics:      any AnalyticsService = NoopAnalytics.shared
+    var sessionTracker: SessionTracker       = .noop
+
     init(store: UserDataStoreProtocol, authService: AuthServiceProtocol) {
         self.store       = store
         self.authService = authService
@@ -45,6 +50,9 @@ final class BookmarksViewModel: ObservableObject {
         let bwv = BookmarkWithVerses(bookmark: bookmark, verseIds: [verseId])
         store.saveBookmark(bookmark, verseIds: [verseId])
         refresh()
+        // Analytics: discrete bookmark_created + aggregate annotation counter (Slice 3 §C).
+        analytics.track(.bookmarkCreated)
+        sessionTracker.incAnnotation()
         return bwv
     }
 

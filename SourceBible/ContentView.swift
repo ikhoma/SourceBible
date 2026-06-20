@@ -12,6 +12,9 @@ struct ContentView: View {
     @StateObject private var router:       AppNavigationRouter = AppNavigationRouter()
     @State private var selectedTab: AppTab = .bible
 
+    @Environment(\.analytics) private var analytics
+    @Environment(\.sessionTracker) private var sessionTracker
+
     @MainActor
     init(store: UserDataStoreProtocol) {
         let auth     = LocalAuthService.shared
@@ -22,6 +25,14 @@ struct ContentView: View {
 
     var body: some View {
         tabView
+            // Wire analytics + tracker into annotation VMs so note/highlight/bookmark
+            // events fire discrete events and increment the session counter (Slice 3 §D).
+            .task {
+                notesVM.analytics      = analytics
+                notesVM.sessionTracker = sessionTracker
+                bookmarksVM.analytics      = analytics
+                bookmarksVM.sessionTracker = sessionTracker
+            }
             // Cross-tab navigation: any view sets router.pendingVerseId to jump to Reader
             .onChange(of: router.pendingVerseId) { _, verseId in
                 guard let verseId else { return }

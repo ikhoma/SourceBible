@@ -20,13 +20,13 @@ struct StrongsEntry: Identifiable {
     let fullDefinition: String  // BDB / Abbott-Smith (STEPBible)
     var concordance: [ConcordanceEntry]  // kept for DEBUG/Preview only; not used in production UI
     var totalCount: Int = 0              // true occurrence count across the whole Bible
-    var bookGroups: [BookUsageGroup] = [] // per-book breakdown for WordUsageView
+    var bookGroups: [BookUsageGroup] = [] // per-book breakdown for ConcordanceView
 }
 
 // MARK: - Book Usage Group
 
 /// Aggregated concordance data for one Bible book.
-/// Used in WordUsageView to render the per-book breakdown.
+/// Used in ConcordanceView to render the per-book breakdown.
 struct BookUsageGroup: Identifiable {
     /// Stable identifier: the OSIS book ID (e.g. "PSA").
     let id: String

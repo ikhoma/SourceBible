@@ -430,7 +430,7 @@ final class DatabaseService: @unchecked Sendable {
         return entries
     }
 
-    // MARK: - Book Usage Groups (per-book concordance for WordUsageView)
+    // MARK: - Book Usage Groups (per-book concordance for ConcordanceView)
 
     /// Returns the true total occurrence count across the whole Bible plus a
     /// per-book breakdown (count + first-occurrence example verse) for a Strong's ID.

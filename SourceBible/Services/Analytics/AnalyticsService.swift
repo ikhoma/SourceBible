@@ -19,6 +19,21 @@ protocol AnalyticsService: Sendable {
     func flush()
 }
 
+// MARK: - Feature Adoption Taxonomy (ADR-022)
+//
+// Adding a new study tool = one new case here.
+// SessionTracker.recordFeatureUse(_:) and studySessionSummary's
+// per-feature loop both pick it up automatically via allCases.
+
+enum AnalyticsFeature: String, CaseIterable, Sendable {
+    case original                                       // OriginalWordsView — original-language word list
+    case lexicon                                        // WordMeaningView — Strong's definition of a word
+    case concordance                                    // ConcordanceView — word usage across the Bible
+    case commentary
+    case crossReference         = "cross_reference"
+    case parallelTranslation    = "parallel_translation"
+}
+
 // MARK: - Event Taxonomy
 //
 // All events and their properties live here.
@@ -33,14 +48,17 @@ enum AnalyticsEvent: Sendable {
     // ── Session / engagement ─────────────────────────────────────────────────
     case appOpened
 
+    /// Emitted once per session on background + grace (ADR-022 §Depth signals).
+    /// Per-feature view counts are folded in via the AnalyticsFeature.allCases loop
+    /// in SessionTracker.flush() so adding a new feature requires no changes here.
     case studySessionSummary(
-        durationSeconds: Int,
-        versesRead: Int,
-        studyToolOpens: Int,
-        wordNavCount: Int,
-        verseNavCount: Int,
+        durationSeconds:    Int,
+        versesOpened:       Int,
+        wordNavCount:       Int,
+        verseNavCount:      Int,
+        searchesCount:      Int,
         annotationsCreated: Int,
-        searches: Int
+        featureCounts:      [AnalyticsFeature: Int]   // keyed by allCases
     )
 
     // ── Search behaviour ─────────────────────────────────────────────────────
@@ -56,13 +74,11 @@ enum AnalyticsEvent: Sendable {
         position: Int
     )
 
-    // ── Feature adoption ─────────────────────────────────────────────────────
-    case originalOpened(bookId: Int)
-    case studyTabSwitched(tab: String)   // "verse" | "word"
-    case strongsViewed(strongsId: String)
-    case commentaryOpened(author: String)
-    case crossRefOpened
-    case wordUsageOpened
+    // ── Feature adoption (ADR-022: once per session, via SessionTracker) ─────
+    /// Emitted once per feature per session (first use). Name: feature_adopted_<rawValue>.
+    case featureAdopted(AnalyticsFeature)
+
+    // ── Kept discrete (low-volume, high-value) ────────────────────────────────
     case translationSwitched(from: String, to: String)
     case noteCreated
     case highlightCreated(color: String)
@@ -87,16 +103,21 @@ extension AnalyticsEvent {
         case .appOpened:
             return ("app_opened", [:])
 
-        case let .studySessionSummary(dur, verses, tools, wordNav, verseNav, annots, searches):
-            return ("study_session_summary", [
+        case let .studySessionSummary(dur, verses, wordNav, verseNav, searches, annots, featureCounts):
+            var props: [String: Any] = [
                 "duration_s":          dur,
-                "verses_read":         verses,
-                "study_tool_opens":    tools,
+                "verses_opened":       verses,
                 "word_nav_count":      wordNav,
                 "verse_nav_count":     verseNav,
-                "annotations_created": annots,
-                "searches":            searches
-            ])
+                "searches_count":      searches,
+                "annotations_created": annots
+            ]
+            // Per-feature view counts (ADR-022 §Depth signals):
+            // e.g. "lexicon_views_count", "commentary_views_count", …
+            for f in AnalyticsFeature.allCases {
+                props["\(f.rawValue)_views_count"] = featureCounts[f] ?? 0
+            }
+            return ("study_session_summary", props)
 
         case let .searchCommitted(count, zero, translation, filter):
             var props: [String: Any] = [
@@ -113,23 +134,8 @@ extension AnalyticsEvent {
                 "position":      pos
             ])
 
-        case let .originalOpened(bookId):
-            return ("original_opened", ["book_id": bookId])
-
-        case let .studyTabSwitched(tab):
-            return ("study_tab_switched", ["tab": tab])
-
-        case let .strongsViewed(id):
-            return ("strongs_viewed", ["strongs_id": id])
-
-        case let .commentaryOpened(author):
-            return ("commentary_opened", ["author": author])
-
-        case .crossRefOpened:
-            return ("crossref_opened", [:])
-
-        case .wordUsageOpened:
-            return ("word_usage_opened", [:])
+        case let .featureAdopted(feature):
+            return ("feature_adopted_\(feature.rawValue)", [:])
 
         case let .translationSwitched(from, to):
             return ("translation_switched", ["from": from, "to": to])

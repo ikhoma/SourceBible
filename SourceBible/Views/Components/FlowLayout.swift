@@ -2,7 +2,7 @@
 // SourceBible
 //
 // Reusable SwiftUI Layout that wraps children into rows like text (word-wrap).
-// Used in WordUsageView (concordance chips) and any future tag/chip UI.
+// Used in ConcordanceView (concordance chips) and any future tag/chip UI.
 
 import SwiftUI
 

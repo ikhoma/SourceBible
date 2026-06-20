@@ -3,7 +3,7 @@
 //
 // Tracks the current study session and emits `study_session_summary` on background.
 //
-// Design (Slice 2 Work Order):
+// Design (Slice 2 + Slice 3 / ADR-022):
 //   - All public API is @MainActor — counters and session state are only ever
 //     read/written from the main thread.
 //   - Mutable stored properties are nonisolated(unsafe) so the init can run from
@@ -13,8 +13,16 @@
 //   - Injected `any AnalyticsService` — stays behind the abstraction layer.
 //   - Grace period (~30s): quick foreground/background round-trips do NOT start
 //     a new session or emit a duplicate summary.
-//   - verses_read is tracked as a Set<String> of unique verseIds so repeated
+//   - versesOpened is tracked as a Set<String> of unique verseIds so repeated
 //     views of the same verse don't inflate the count.
+//
+// ADR-022 generic model:
+//   - featureCounts: [AnalyticsFeature: Int] — per-feature view counts rolled
+//     into study_session_summary; adding a new AnalyticsFeature case requires
+//     no changes here (allCases loop).
+//   - adopted: Set<AnalyticsFeature> — once-per-session adoption guard; emits
+//     feature_adopted_<raw> on first use, then only counts thereafter.
+//   - recordFeatureUse(_ f:) is the single call site for study-tool views.
 //
 // Lifecycle (driven by SourceBibleApp scenePhase observer):
 //   .active   → handleForeground()  →  cancel pending flush, begin() if not in grace
@@ -40,11 +48,14 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
 
     private nonisolated(unsafe) var _startedAt: Date?
     private nonisolated(unsafe) var _uniqueVerseIds: Set<String> = []
-    private nonisolated(unsafe) var _studyToolOpens:    Int = 0
-    private nonisolated(unsafe) var _wordNavCount:      Int = 0
-    private nonisolated(unsafe) var _verseNavCount:     Int = 0
+    private nonisolated(unsafe) var _wordNavCount:    Int = 0
+    private nonisolated(unsafe) var _verseNavCount:      Int = 0
     private nonisolated(unsafe) var _annotationsCreated: Int = 0
-    private nonisolated(unsafe) var _searches:          Int = 0
+    private nonisolated(unsafe) var _searches:           Int = 0
+
+    // ADR-022: generic feature adoption + depth counters
+    private nonisolated(unsafe) var _featureCounts: [AnalyticsFeature: Int] = [:]
+    private nonisolated(unsafe) var _adopted: Set<AnalyticsFeature> = []
 
     // MARK: - Grace period
 
@@ -129,27 +140,39 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
     @MainActor
     func begin() {
         guard _startedAt == nil else { return }
-        _startedAt         = Date()
-        _uniqueVerseIds    = []
-        _studyToolOpens    = 0
-        _wordNavCount      = 0
-        _verseNavCount     = 0
-        _annotationsCreated = 0
-        _searches          = 0
+        _startedAt          = Date()
+        resetState()
     }
 
     // All counters guard on an active session (`_startedAt != nil`): an increment
     // that arrives before begin() or after flush() is dropped rather than seeding
     // the next session's summary with orphan counts.
 
+    // MARK: ADR-022 Generic Feature Use
+
+    /// Record one view of a study tool (ADR-022 generic model).
+    /// - On first call for a feature this session: emits `feature_adopted_<raw>` discrete event.
+    /// - Every call (including first): increments the per-feature view counter for the summary.
+    /// - No-op when no session is active (guards orphaned counts).
+    @MainActor
+    func recordFeatureUse(_ f: AnalyticsFeature) {
+        guard _startedAt != nil else { return }
+        if _adopted.insert(f).inserted {
+            _analytics.track(.featureAdopted(f))
+        }
+        _featureCounts[f, default: 0] += 1
+    }
+
+    // MARK: Navigation / search counters
+
     /// Record a verse view. Tracks unique verse IDs so repeated views don't inflate count.
     @MainActor
-    func incVersesRead(verseId: String) {
+    func incVersesOpened(verseId: String) {
         guard _startedAt != nil else { return }
         _uniqueVerseIds.insert(verseId)
     }
 
-    /// Increment word navigation counter (chevron between words in Bottom Sheet).
+    /// Increment word navigation counter (chevron between words in the Word tab).
     @MainActor
     func incWordNav() {
         guard _startedAt != nil else { return }
@@ -163,17 +186,8 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
         _verseNavCount += 1
     }
 
-    /// Increment study tool open counter.
-    /// Called by Slice 3 on original_opened / study_tab_switched / strongs_viewed /
-    /// commentary_opened / crossref_opened / word_usage_opened.
-    @MainActor
-    func incStudyToolOpen() {
-        guard _startedAt != nil else { return }
-        _studyToolOpens += 1
-    }
-
     /// Increment annotations counter.
-    /// Called by Slice 3 on note_created / highlight_created / bookmark_created.
+    /// Called alongside discrete note_created / highlight_created / bookmark_created events.
     @MainActor
     func incAnnotation() {
         guard _startedAt != nil else { return }
@@ -187,6 +201,8 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
         _searches += 1
     }
 
+    // MARK: Flush
+
     /// Emit `study_session_summary` and reset session state.
     /// No-op if no session is currently active.
     @MainActor
@@ -195,13 +211,14 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
         let durationSeconds = Int(Date().timeIntervalSince(start))
         _analytics.track(.studySessionSummary(
             durationSeconds:    durationSeconds,
-            versesRead:         _uniqueVerseIds.count,
-            studyToolOpens:     _studyToolOpens,
+            versesOpened:       _uniqueVerseIds.count,
             wordNavCount:       _wordNavCount,
             verseNavCount:      _verseNavCount,
+            searchesCount:      _searches,
             annotationsCreated: _annotationsCreated,
-            searches:           _searches
+            featureCounts:      _featureCounts
         ))
+        _startedAt = nil
         resetState()
     }
 
@@ -209,13 +226,13 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
 
     @MainActor
     private func resetState() {
-        _startedAt          = nil
         _uniqueVerseIds     = []
-        _studyToolOpens     = 0
-        _wordNavCount       = 0
+        _wordNavCount    = 0
         _verseNavCount      = 0
         _annotationsCreated = 0
         _searches           = 0
+        _featureCounts      = [:]
+        _adopted            = []
     }
 
     /// Ends the background-task assertion if one is active. Idempotent.

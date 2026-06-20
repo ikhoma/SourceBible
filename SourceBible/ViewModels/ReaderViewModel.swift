@@ -76,8 +76,10 @@ class ReaderViewModel: ObservableObject {
     /// verseId → HighlightColor.rawValue for the current chapter + translation.
     @Published var highlightColors: [String: String] = [:]
 
-    // MARK: - Analytics session tracking (injected from view layer on appear)
+    // MARK: - Analytics (injected from view layer on appear)
     var sessionTracker: SessionTracker = .noop
+    /// Analytics service — injected in ReaderView .task (Slice 3: translationSwitched, highlights).
+    var analytics: any AnalyticsService = NoopAnalytics.shared
 
     // MARK: - Data
 
@@ -434,6 +436,8 @@ class ReaderViewModel: ObservableObject {
     }
 
     func selectTranslation(_ translation: Translation) {
+        // Capture `from` BEFORE assignment so we can compare (spec §C: fire only if from != to).
+        let fromId = currentTranslation.id
         currentTranslation = translation
         translationBookNames = db.loadBookNames(for: translation.id)
         isTranslationPickerPresented = false
@@ -443,6 +447,10 @@ class ReaderViewModel: ObservableObject {
             loadStrongs(for: word)
         } else if let seg = selectedSegment, let verse = selectedVerse {
             loadStrongs(for: seg, bookId: verse.bookId)
+        }
+        // Analytics: discrete translation_switched (low-volume, high-value; via analytics directly).
+        if fromId != translation.id {
+            analytics.track(.translationSwitched(from: fromId, to: translation.id))
         }
     }
 
@@ -500,7 +508,7 @@ class ReaderViewModel: ObservableObject {
             // tick so the new layout is committed before scrollTo fires.
             verseScrollTrigger += 1
             // Analytics: record unique verse read.
-            sessionTracker.incVersesRead(verseId: verseId)
+            sessionTracker.incVersesOpened(verseId: verseId)
         }
     }
 
@@ -642,7 +650,7 @@ class ReaderViewModel: ObservableObject {
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
         // Analytics: record unique verse read.
-        sessionTracker.incVersesRead(verseId: verse.id)
+        sessionTracker.incVersesOpened(verseId: verse.id)
     }
 
     /// Called from VerseTextView long press — receives a VerseSegment with strongs: [String].
@@ -709,7 +717,7 @@ class ReaderViewModel: ObservableObject {
         loadWordsForSelectedVerse()
         // Analytics: verse chevron nav + unique verse read.
         sessionTracker.incVerseNav()
-        if let newId = selectedVerse?.id { sessionTracker.incVersesRead(verseId: newId) }
+        if let newId = selectedVerse?.id { sessionTracker.incVersesOpened(verseId: newId) }
     }
 
     func navigateToNextVerse() {
@@ -724,7 +732,7 @@ class ReaderViewModel: ObservableObject {
         loadWordsForSelectedVerse()
         // Analytics: verse chevron nav + unique verse read.
         sessionTracker.incVerseNav()
-        if let newId = selectedVerse?.id { sessionTracker.incVersesRead(verseId: newId) }
+        if let newId = selectedVerse?.id { sessionTracker.incVersesOpened(verseId: newId) }
     }
 
     /// Navigate to the previous meaningful word in the focused verse (translation order).
@@ -866,9 +874,12 @@ class ReaderViewModel: ObservableObject {
             }
             // Same color → already applied, no-op
         } else {
+            // no-highlight → highlighted: this is a new annotation (Slice 3 §C).
             store.toggleHighlight(verseId: verse.id,
                                   translation: currentTranslation.id,
                                   color: color.rawValue)
+            analytics.track(.highlightCreated(color: color.rawValue))
+            sessionTracker.incAnnotation()
         }
         refreshHighlightInList(verseId: verse.id)
     }

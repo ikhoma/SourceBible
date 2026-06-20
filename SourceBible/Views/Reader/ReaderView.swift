@@ -16,6 +16,7 @@ struct ReaderView: View {
     // for BibleBookNames fallback paths (cross-refs, notes, etc.).
     @Environment(\.locale) private var locale
     @Environment(\.sessionTracker) private var sessionTracker
+    @Environment(\.analytics) private var analytics
     @AppStorage("hideBookCovers") private var hideBookCovers = false
     // Red-letter (Jesus' words) rendering — off by default; toggled in Settings ▸ Appearance.
     @AppStorage("redLetters") private var redLetters = false
@@ -329,11 +330,12 @@ struct ReaderView: View {
                 }
             }
         }
-        // Wire the live sessionTracker into the VM so navigation methods can
-        // increment session counters. Cannot be done at VM init time because
-        // Environment is not available then.
+        // Wire the live sessionTracker and analytics service into the VM so
+        // navigation methods can increment session counters and fire discrete events.
+        // Cannot be done at VM init time because Environment is not available then.
         .task {
             vm.sessionTracker = sessionTracker
+            vm.analytics = analytics
         }
     }
 

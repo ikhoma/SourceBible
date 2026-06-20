@@ -17,6 +17,7 @@ struct VerseTabView: View {
     let verse: BibleVerse
     let pill: VersePill
     @EnvironmentObject var vm: ReaderViewModel
+    @Environment(\.sessionTracker) private var tracker
 
     @State private var refs: [CrossReference] = []
     @State private var parallels: [VerseTranslation] = []
@@ -24,10 +25,17 @@ struct VerseTabView: View {
     var body: some View {
         Group {
             switch pill {
-            case .crossRefs:    CrossRefsView(refs: refs)
-            case .translations: TranslationsView(parallels: parallels)
-            case .original:     OriginalWordsView().environmentObject(vm)
-            case .commentaries: CommentariesView(verseId: verse.id)
+            case .crossRefs:
+                CrossRefsView(refs: refs)
+                    .onAppear { tracker.recordFeatureUse(.crossReference) }
+            case .translations:
+                TranslationsView(parallels: parallels)
+                    .onAppear { tracker.recordFeatureUse(.parallelTranslation) }
+            case .original:
+                OriginalWordsView().environmentObject(vm)
+                    .onAppear { tracker.recordFeatureUse(.original) }
+            case .commentaries:
+                CommentariesView(verseId: verse.id)
             }
         }
         .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 20)
@@ -365,6 +373,7 @@ struct CommentariesView: View {
 struct CommentaryDetailView: View {
     let theologian: Theologian
     let verseId: String
+    @Environment(\.sessionTracker) private var tracker
 
     /// Parsed from verseId "BOOK|chapter|verse"
     private var verseComponents: (bookId: String, chapter: Int, verse: Int)? {
@@ -435,8 +444,8 @@ struct CommentaryDetailView: View {
             .padding(20)
         }
         .navigationTitle(detailTitle)
-
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { tracker.recordFeatureUse(.commentary) }
         .task(id: verseId) {
             await loadCommentary()
         }
