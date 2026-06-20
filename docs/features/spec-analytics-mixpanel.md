@@ -277,54 +277,71 @@ MSS = study_session_summary WHERE
 
 ---
 
-## Slice 3 — Work Order (Feature adoption + annotations)
+## Slice 3 — Work Order (Feature adoption + annotations) — модель [[ADR-022-analytics-event-collection-strategy]]
 
-**Виконавець:** call-site події — може дешевша модель строго за чеклистом; фінальний diff ревʼю Opus + Ivan.
+> **Перероблено під ADR-022:** замість дискретної події на кожен перегляд — **adoption-подія раз/сесію** + **лічильники в `study_session_summary`**. Це різко знижує обсяг (free-tier). Стара версія цього Work Order (per-tap `strongs_viewed` тощо) скасована.
+
+**Виконавець:** call-site через `SessionTracker.recordX()` — може дешевша модель строго за чеклистом; фінальний diff ревʼю Opus + Ivan.
 
 **Гілка:** `work` (Slice 2 уже в `main`; `work == main`). Гейт = повний diff перед FF-мерджем.
 
-**Передумова:** Slice 2 змерджено. `SessionTracker` уже має `incStudyToolOpen()` / `incAnnotation()` (визначені, поки не викликаються) — Slice 3 їх **підключає**. Інʼєкція: у в'юшках `@Environment(\.analytics)` + `@Environment(\.sessionTracker)`; у VM — settable `analytics`/`sessionTracker`, прокинуті через `.task` на appear (як зроблено для ReaderViewModel/SearchViewModel у Slice 2).
+### A. Зміни в `AnalyticsEvent` (узагальнена форма — ADR-022 Q2)
+- **Новий enum:** `enum AnalyticsFeature: String, CaseIterable { case lexicon, commentary; case crossReference = "cross_reference"; case parallelTranslation = "parallel_translation" }`.
+- **Один adoption-кейс:** `case featureAdopted(AnalyticsFeature)` → ім'я `feature_adopted_\(f.rawValue)` (а не 4 окремі кейси).
+- **Розширити `studySessionSummary`**: фіксовані поля `duration_s`, `verses_opened`, `lexicon_nav_count`, `verse_nav_count`, `searches_count`, `annotations_created` **+** per-feature `\(f.rawValue)_views_count` для кожного `AnalyticsFeature.allCases` (тобто `lexicon_views_count`, `commentary_views_count`, `cross_reference_views_count`, `parallel_translation_views_count`).
+- **Прибрати** дискретні per-tap кейси: `originalOpened`, `studyTabSwitched`, `strongsViewed`, `commentaryOpened`, `crossRefOpened`, `wordUsageOpened`.
+- **Лишити дискретними:** `appOpened`, `searchCommitted`, `searchResultOpened`, `noteCreated`, `highlightCreated(color)`, `bookmarkCreated`, `translationSwitched(from,to)`.
 
-### Scope IN — події + точки виклику
+### B. Зміни в `SessionTracker` (один generic метод)
+- Стан: `featureCounts: [AnalyticsFeature: Int]` + `adopted: Set<AnalyticsFeature>` (обидва чистяться в `begin()`/`resetState()`); плюс наявні `lexiconNav` (перейменувати `wordNav`), `verseNav`, `versesOpened` (Set), `searches`, `annotations`.
+- **Один generic метод** (`@MainActor`, guard на активну сесію):
+  ```swift
+  func recordFeatureUse(_ f: AnalyticsFeature) {
+      guard _startedAt != nil else { return }
+      if adopted.insert(f).inserted { _analytics.track(.featureAdopted(f)) }
+      featureCounts[f, default: 0] += 1
+  }
+  ```
+- Навігаційні/інші інкременти лишаються: `incLexiconNav()`, `incVerseNav()`, `incVersesOpened(verseId:)`, `incSearch()`, `incAnnotation()`.
+- `flush()` будує `study_session_summary`: фіксовані поля + цикл по `AnalyticsFeature.allCases` → `"\(f.rawValue)_views_count": featureCounts[f] ?? 0`.
 
-| Подія | Props | Файл / тригер | tracker-інкремент |
-|---|---|---|---|
-| `study_tab_switched` | `tab` ("verse"\|"word") | `VerseBottomSheetView.swift` — `modeTabs`, `.onChange(of: vm.bottomSheetMode)` | `incStudyToolOpen()` |
-| `original_opened` | `book_id` | `VerseTabContent.swift` — вибір пілюлі `.original` (показ `OriginalWordsView`) | `incStudyToolOpen()` |
-| `crossref_opened` | — | `VerseTabContent.swift` — вибір пілюлі `.crossRefs` **і** `.translations` (parallel passages — спец групує їх під crossref) | `incStudyToolOpen()` |
-| `commentary_opened` | `author` | `VerseTabContent.swift` — відкриття `CommentaryDetailView(theologian:)` (конкретний автор, не список) | `incStudyToolOpen()` |
-| `strongs_viewed` | `strongs_id` | `WordTabContent.swift` — `WordMeaningView` зʼявляється з завантаженим `entry` (strongs_id = `entry.id`). Дедуп по `entry.id` — не фаєрити повторно на recompose | `incStudyToolOpen()` |
-| `word_usage_opened` | — | `WordTabContent.swift` — відкриття суб-вкладки `.usage` (`WordUsageView`) | `incStudyToolOpen()` |
-| `translation_switched` | `from`, `to` | `ReaderViewModel.selectTranslation(_:)` — захопити `from = currentTranslation.id` **до** присвоєння, `to = translation.id`; фаєрити лише якщо `from != to`. **НЕ** study tool (немає `incStudyToolOpen`) | — |
-| `note_created` | — | `NotesViewModel.save(note:blocks:verseIds:)` — **лише для нової** нотатки (id якого не існувало), не для редагування | `incAnnotation()` |
-| `highlight_created` | `color` | `ReaderViewModel` — лише перехід **no-highlight → highlighted** (`setHighlightColor` гілка `else`; `toggleHighlight` гілка додавання). НЕ на зміні кольору й НЕ на знятті | `incAnnotation()` |
-| `bookmark_created` | — | `BookmarksViewModel.addBookmark(verseId:)` / `toggleBookmark` коли результат = додано (`true`) | `incAnnotation()` |
+### C. Точки виклику (роутимо через tracker, НЕ track напряму)
+| Дія | Файл / тригер | Виклик |
+|---|---|---|
+| Перегляд лексикону (Strong's) | `WordTabContent.swift` — `WordMeaningView` зʼявляється з `entry` (на appear, дедуп по `entry.id`) | `tracker.recordFeatureUse(.lexicon)` |
+| Список оригіналу (вхід у word-study) | `VerseTabContent.swift` — пілюля `.original` (`OriginalWordsView`) | `tracker.recordFeatureUse(.lexicon)` |
+| Word usage / конкорданс | `WordTabContent.swift` — суб-вкладка `.usage` (`WordUsageView`) | `tracker.recordFeatureUse(.lexicon)` |
+| Шеврон-навігація слів/значення | `ReaderViewModel.navigateToNext/PreviousWord` | `tracker.incLexiconNav()` |
+| Коментар | `VerseTabContent.swift` — `CommentaryDetailView(theologian:)` | `tracker.recordFeatureUse(.commentary)` |
+| Cross-references | `VerseTabContent.swift` — пілюля `.crossRefs` | `tracker.recordFeatureUse(.crossReference)` |
+| Parallel translations | `VerseTabContent.swift` — пілюля `.translations` | `tracker.recordFeatureUse(.parallelTranslation)` |
+| Зміна перекладу (дискретно) | `ReaderViewModel.selectTranslation` — `from` до присвоєння; фаєрити `translationSwitched(from,to)` лише якщо `from != to` | `analytics.track` (не tracker) |
+| Нотатка / гайлайт / закладка (дискретно) | нова нотатка; no-highlight→highlighted; bookmark додано | `analytics.track(.note/​highlight/​bookmarkCreated)` + `tracker.incAnnotation()` |
 
-### Інʼєкція (де ще нема)
-- `ReaderViewModel` — додати settable `var analytics: any AnalyticsService = NoopAnalytics.shared` (sessionTracker уже є зі Slice 2); прокинути `vm.analytics = analytics` у `ReaderView.task`. Потрібно для `translation_switched` і `highlight_created`.
-- `NotesViewModel`, `BookmarksViewModel` — додати settable `analytics` + `sessionTracker` (дефолт Noop / `.noop`), прокинути через `.task` там, де ці VM створюються/інжектяться.
-- Події з самих в'юшок (пілюлі, суб-вкладки, mode-tabs) читають `@Environment` напряму.
+> `study_tab_switched` (verse↔word) — **прибрано**: сигнал ловиться через `recordFeatureUse(.lexicon)` при появі meaning-в'юшки. `commentary.author` і `strongs_id` більше **не** шлються (свідомо, заради обсягу — ADR-022 Consequences); якщо треба author-breakdown — повернути `commentary_opened` дискретно. **Морфологія** (майбутнє) = новий case `AnalyticsFeature.morphology`, без іншого коду.
 
-### Дедуп / без інфляції (важливо)
-- `strongs_viewed` / `word_usage_opened` / `original_opened` / `crossref_opened` — фаєрити **на відкритті** (поява в'юшки / вибір пілюлі), а не на кожному body-recompose. Де треба — тримати останній відстріляний ключ (напр. `entry.id`, обраний pill) і не дублювати.
-- `study_tab_switched` — лише на фактичній зміні `bottomSheetMode` (onChange це й гарантує).
+### D. Інʼєкція (де ще нема)
+- `ReaderViewModel` — додати settable `var analytics` (sessionTracker уже є); прокинути в `ReaderView.task`. Потрібно для `translation_switched` і `highlight_created`.
+- `NotesViewModel`, `BookmarksViewModel` — settable `analytics` + `sessionTracker` (дефолт `.noop`), прокинути через `.task`.
+- Sub-в'юшки бот-шита (`WordMeaningView`, `WordUsageView`, `CommentaryDetailView`, `CrossRefsView`, `TranslationsView`, `OriginalWordsView`) читають `@Environment(\.sessionTracker)` напряму.
 
-### Scope OUT (не чіпати)
-- Cards/folders/tags (Slice 4) — `verse_card_added` тощо лишаються закоментовані в `AnalyticsEvent`.
-- Зміна визначення MSS / порогів — це окремо в Mixpanel + PDR, не код.
-- Логіка сесій / `study_session_summary` (вже в Slice 2) — лише підключення `incStudyToolOpen`/`incAnnotation` у нових точках.
-- `sourcebible.db`, схема user-data, GRDB.
+### E. Дедуп / без інфляції
+- `recordLexiconView` фаєрити **на appear** конкретного `entry.id`, не на кожен recompose (тримати останній відстріляний `entry.id`).
+- adoption-події гарантовано раз/сесію через `adoptedThisSession`.
+
+### Scope OUT
+- Cards/folders/tags (Slice 4). Зміна порогів MSS — у Mixpanel + PDR, не код. `sourcebible.db`/GRDB/схема user-data.
 
 ### Acceptance criteria
-- Build проходить (iOS 18 min); Swift 6 strict concurrency без помилок.
-- DEBUG-білд: усі 10 подій летять у Mixpanel з коректними props (перевірити вибірково: `commentary_opened.author`, `strongs_viewed.strongs_id`, `translation_switched.from/to`, `highlight_created.color`).
-- `study_session_summary` тепер містить ненульові `study_tool_opens` / `annotations_created`, коли користувач реально юзав інструменти/анотації.
-- Жодних дублів на recompose (перевірити `strongs_viewed` при простому скролі/перемальовці).
-- `translation_switched` не фаєриться, коли вибрано той самий переклад.
+- Build (iOS 18 min), Swift 6 strict concurrency — без помилок.
+- DEBUG-білд: `feature_adopted_*` летять **раз/сесію** на першу взаємодію; повторні перегляди в тій же сесії НЕ плодять adoption-подій (лише ростуть лічильники).
+- `study_session_summary` містить ненульові `*_views_count` / `lexicon_nav_count` / `annotations_created`, коли інструменти реально юзались.
+- Жодних дублів adoption/лічильника на recompose.
+- `translation_switched` не фаєриться на той самий переклад.
 - Release з вимкненою згодою = `NoopAnalytics`, нуль мережі.
 - Повний diff + короткий звіт.
 
-### Hard invariants (завжди чинні)
+### Hard invariants
 Усі ⛔ з CLAUDE.md; iOS 26-only API лише з `#available` + iOS 18 fallback; build має проходити; білдити тільки через Xcode (не читати DB в Linux).
 
 **Exit:** diff + звіт на ревʼю Ivan. FF-мердж `work → main` — після підпису.
