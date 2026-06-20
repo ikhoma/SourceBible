@@ -299,11 +299,13 @@ struct SearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
                 .foregroundStyle(.quaternary)
-            Text("search.no_results.title").font(.headline)
-            Text("search.no_results.body")
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 4) {
+                Text("search.no_results.title").font(.headline).foregroundStyle(.primary)
+                Text("search.no_results.body")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -355,13 +357,15 @@ struct SearchView: View {
             Image(systemName: "text.magnifyingglass")
                 .font(.system(size: 52))
                 .foregroundStyle(.quaternary)
-            Text("search.hint.title")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            Text("search.hint.body \(readerVM.currentTranslation.id)")
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 4) {
+                Text("search.hint.title")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Text("search.hint.body \(readerVM.currentTranslation.id)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

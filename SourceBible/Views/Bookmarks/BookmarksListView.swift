@@ -49,9 +49,11 @@ struct BookmarksListView: View {
             Spacer()
             Image(systemName: "bookmark")
                 .font(.system(size: 48)).foregroundStyle(.quaternary)
-            Text("bookmarks.empty.title").font(.headline).foregroundStyle(.secondary)
-            Text("bookmarks.empty.body")
-                .font(.callout).foregroundStyle(.tertiary).multilineTextAlignment(.center)
+            VStack(spacing: 4) {
+                Text("bookmarks.empty.title").font(.headline).foregroundStyle(.primary)
+                Text("bookmarks.empty.body")
+                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
             Spacer()
         }
     }

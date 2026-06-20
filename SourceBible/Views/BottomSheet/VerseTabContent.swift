@@ -138,12 +138,26 @@ struct CrossRefsView: View {
     let refs: [CrossReference]
 
     var body: some View {
-        PillSection(title: "verse.section.cross_refs") {
-            if refs.isEmpty {
-                Text("verse.cross_refs.empty")
-                    .font(.callout).foregroundStyle(.secondary)
-                    .padding(.top, 4)
-            } else {
+        if refs.isEmpty {
+            // Full-height centered empty state — Spacers need the container to
+            // have a defined height, which .containerRelativeFrame provides by
+            // sizing against the scroll view's visible frame (iOS 17+).
+            VStack(spacing: 16) {
+                Spacer()
+                Image(systemName: "link")
+                    .font(.system(size: 48)).foregroundStyle(.quaternary)
+                VStack(spacing: 4) {
+                    Text("verse.cross_refs.empty")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: 200)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .containerRelativeFrame([.vertical])
+        } else {
+            PillSection(title: "verse.section.cross_refs") {
                 ForEach(refs) { ref in
                     VStack(alignment: .leading, spacing: 6) {
                         ReferenceLabel(ref.targetReference)
@@ -325,13 +339,25 @@ struct CommentariesView: View {
     }
 
     var body: some View {
-        PillSection(title: "verse.section.commentaries") {
+        Group {
             if visibleTheologians.isEmpty {
-                Text("verse.commentaries.none_for_book")
-                    .font(.callout).foregroundStyle(.secondary)
-                    .padding(.top, 4)
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image(systemName: "books.vertical")
+                        .font(.system(size: 48)).foregroundStyle(.quaternary)
+                    VStack(spacing: 4) {
+                        Text("verse.commentaries.none_for_book")
+                            .font(.callout).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: 200)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .containerRelativeFrame([.vertical])
             } else {
-                ForEach(visibleTheologians) { t in
+                PillSection(title: "verse.section.commentaries") {
+                    ForEach(visibleTheologians) { t in
                     Button {
                         selectedTheologian = t
                     } label: {
@@ -356,6 +382,7 @@ struct CommentariesView: View {
                     Divider()
                 }
             }
+        }
         }
         .task(id: bookId) {
             availableSources = DatabaseService.shared.commentarySourcesAvailable(bookId: bookId)
@@ -409,39 +436,49 @@ struct CommentaryDetailView: View {
     @State private var isLoaded = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Theologian header
-                HStack(spacing: 14) {
-                    Image(theologian.imageName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 52, height: 52)
-                        .clipShape(Circle())
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(LocalizedStringKey(theologian.nameKey)).font(.headline)
-                        Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
-                            .font(.caption).foregroundStyle(.secondary)
+        Group {
+            if !isLoaded {
+                // Loading spinner — centered in the full sheet
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let sec = section {
+                // Has commentary — scrollable page with theologian header
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 14) {
+                            Image(theologian.imageName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 52, height: 52)
+                                .clipShape(Circle())
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(LocalizedStringKey(theologian.nameKey)).font(.headline)
+                                Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Divider()
+                        // Use UITextView for commentary body — SwiftUI Text() silently
+                        // fails to render very large strings (Owen sections can exceed
+                        // 230,000 characters). UITextView handles arbitrary length text.
+                        CommentaryTextView(text: sec.text)
                     }
+                    .padding(20)
                 }
-                Divider()
-
-                // Body
-                if !isLoaded {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 24)
-                } else if let sec = section {
-                    // Use UITextView for commentary body — SwiftUI Text() silently
-                    // fails to render very large strings (Owen sections can exceed
-                    // 230,000 characters). UITextView handles arbitrary length text.
-                    CommentaryTextView(text: sec.text)
-                } else {
-                    Text("verse.commentary.unavailable")
-                        .font(.body).foregroundStyle(.secondary).italic()
+            } else {
+                // No commentary for this verse — full-screen centered empty state
+                VStack(spacing: 16) {
+                    Image(systemName: "text.book.closed")
+                        .font(.system(size: 48)).foregroundStyle(.quaternary)
+                    VStack(spacing: 4) {
+                        Text("verse.commentary.unavailable")
+                            .font(.callout).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: 200)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(20)
         }
         .navigationTitle(detailTitle)
         .navigationBarTitleDisplayMode(.inline)

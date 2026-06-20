@@ -3220,13 +3220,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lexicon"
+            "value" : "Original"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Лексикон"
+            "value" : "Оригінал"
           }
         }
       }

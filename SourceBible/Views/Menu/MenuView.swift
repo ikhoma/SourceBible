@@ -80,7 +80,7 @@ struct MenuView: View {
                 .listRowBackground(Color("cardBackground"))
                 Section {
                     Toggle(isOn: $analyticsEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("menu.analytics.toggle_title")
                             Text("menu.analytics.toggle_subtitle")
                                 .font(.caption)

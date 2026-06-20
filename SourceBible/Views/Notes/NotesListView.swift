@@ -54,9 +54,11 @@ struct NotesListView: View {
             Spacer()
             Image(systemName: "note.text")
                 .font(.system(size: 48)).foregroundStyle(.quaternary)
-            Text("notes.empty.title").font(.headline).foregroundStyle(.secondary)
-            Text("notes.empty.body")
-                .font(.callout).foregroundStyle(.tertiary).multilineTextAlignment(.center)
+            VStack(spacing: 4) {
+                Text("notes.empty.title").font(.headline).foregroundStyle(.primary)
+                Text("notes.empty.body")
+                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
             Spacer()
         }
     }

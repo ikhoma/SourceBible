@@ -141,13 +141,13 @@ extension Theologian {
     ) }
     static var all: [Theologian] { [calvin, henry, spurgeon, owen] }
 
-    /// Abbreviated display name for use in compact headers, e.g. "J. Calvin".
+    /// Abbreviated display name for use in compact headers, e.g. "Calvin".
     var shortName: String {
         switch id {
-        case "calvin":   return "J. Calvin"
-        case "henry":    return "M. Henry"
-        case "spurgeon": return "C. Spurgeon"
-        case "owen":     return "J. Owen"
+        case "calvin":   return "Calvin"
+        case "henry":    return "Henry"
+        case "spurgeon": return "Spurgeon"
+        case "owen":     return "Owen"
         default:         return id.capitalized
         }
     }

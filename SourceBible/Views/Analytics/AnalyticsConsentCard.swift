@@ -14,6 +14,15 @@
 
 import SwiftUI
 
+// MARK: - Height measurement
+
+private struct SheetHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 // MARK: - Consent Card
 
 struct AnalyticsConsentCard: View {
@@ -22,23 +31,18 @@ struct AnalyticsConsentCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack(spacing: 12) {
-                Image(systemName: "chart.bar.xaxis")
-                    .font(.title2)
-                    .foregroundStyle(.appBlue)
-                Text("analytics.consent.title")
-                    .font(.headline)
-            }
+            Text("analytics.consent.title")
+                .font(.title2)
+                .fontWeight(.bold)
 
             Text("analytics.consent.body")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            // Privacy link
+            // Privacy link — same size as body text
             if let url = URL(string: "https://sourcebible.app/privacy") {
                 Link("analytics.consent.privacy_link", destination: url)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.appBlue)
             }
 
@@ -53,6 +57,7 @@ struct AnalyticsConsentCard: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(.secondary)
+                .controlSize(.large)
 
                 Button {
                     analyticsEnabled = true
@@ -63,6 +68,7 @@ struct AnalyticsConsentCard: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.appBlue)
+                .controlSize(.large)
             }
         }
         .padding(24)
@@ -74,10 +80,18 @@ struct AnalyticsConsentCard: View {
 //
 // Usage: attach .analyticsConsentIfNeeded() to the root ContentView.
 // Shows the sheet once; never again after that.
+//
+// Sheet sizing: measured dynamically via GeometryReader so the sheet
+// hugs its content. Initial value of 300 avoids a visible jump on first
+// appearance (actual measured height is typically ~260–280 pt).
+//
+// Corner radius: not set — iOS 26 floating partial sheets automatically
+// use the device's rounded-corner radius. Explicit values looked "off".
 
 struct AnalyticsConsentModifier: ViewModifier {
     @AppStorage("analyticsConsentShown") private var consentShown: Bool = false
     @State private var showSheet = false
+    @State private var sheetHeight: CGFloat = 300
 
     func body(content: Content) -> some View {
         content
@@ -89,9 +103,19 @@ struct AnalyticsConsentModifier: ViewModifier {
             }
             .sheet(isPresented: $showSheet) {
                 AnalyticsConsentCard(isPresented: $showSheet)
-                    .presentationDetents([.height(300)])
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(
+                                key: SheetHeightKey.self,
+                                value: geo.size.height
+                            )
+                        }
+                    )
+                    .onPreferenceChange(SheetHeightKey.self) { height in
+                        if height > 0 { sheetHeight = height }
+                    }
+                    .presentationDetents([.height(sheetHeight)])
                     .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(20)
             }
     }
 }

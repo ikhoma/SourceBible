@@ -78,6 +78,8 @@ docs/
 ### Конкретні уроки
 - **Button groups у toolbar** → використовуй `ToolbarItemGroup`, НЕ `HStack` всередині `ToolbarItem`. `ToolbarItemGroup` автоматично застосовує glass capsule, правильні відступи і розміри.
 - **Liquid Glass** → не додавай `.background(.thinMaterial)` або `.glassEffect()` вручну до toolbar кнопок — iOS 26 застосовує glass автоматично через правильний placement і grouping.
+- **Corner radius** → ⛔ не встановлюй `.presentationCornerRadius()` або `.cornerRadius()` / `.clipShape(.rect(cornerRadius:))` якщо це не запитано явно. iOS 26 застосовує правильний радіус автоматично (floating sheets — радіус екрана пристрою, кнопки — system capsule тощо). Хардкодний радіус руйнує системну консистентність.
+- **HIG / iOS 26 UI Kit** → завжди використовуй стандартні системні компоненти та стилі: `.buttonStyle(.borderedProminent)` + `.controlSize(.large)` для primary actions, `List` зі стандартними row styles для налаштувань, нативні `Toggle`, `Label`, `Form` тощо. Не винаходь власні компоненти якщо є системний еквівалент — він автоматично отримує Liquid Glass, Dynamic Type, accessibility і правильні відступи за HIG.
 - Якщо щось не виглядає правильно після першої спроби — **це сигнал що використовується неправильний API**, а не що потрібно більше хаків з padding/frame.
 
 ---
