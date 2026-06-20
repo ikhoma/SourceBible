@@ -150,7 +150,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "#!/bin/bash\nset -e\n\nDIR=\"${SRCROOT}/SourceBible/Generated\"\nmkdir -p \"${DIR}\"\n\nif [ \"${CONFIGURATION}\" = \"Debug\" ]; then\n  TOKEN=\"${MIXPANEL_DEV_TOKEN:-}\"\nelse\n  TOKEN=\"${MIXPANEL_TOKEN:-}\"\nfi\n\ncat > \"${DIR}/AnalyticsConfiguration.swift\" << EOF\n// AnalyticsConfiguration.swift -- Auto-generated. DO NOT EDIT.\n// Built from Config/Secrets.xcconfig by the \"Generate Analytics Token\" build phase.\nenum AnalyticsConfiguration {\n    static let mixpanelToken = \"${TOKEN}\"\n}\nEOF\n";
+			shellScript = "#!/bin/bash\nset -e\n\nDIR=\"${SRCROOT}/SourceBible/Generated\"\nmkdir -p \"${DIR}\"\n\ncat > \"${DIR}/AnalyticsConfiguration.swift\" << EOF\n// AnalyticsConfiguration.swift -- Auto-generated. DO NOT EDIT.\n// Built from Config/Secrets.xcconfig by the \"Generate Analytics Token\" build phase.\n// Dev/Beta/Prod tokens (PDR D5); runtime picks by isTestFlight in MixpanelAnalytics.\nenum AnalyticsConfiguration {\n    static let mixpanelDevToken  = \"${MIXPANEL_DEV_TOKEN:-}\"\n    static let mixpanelBetaToken = \"${MIXPANEL_TOKEN:-}\"\n    static let mixpanelProdToken = \"${MIXPANEL_PROD_TOKEN:-}\"\n}\nEOF\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

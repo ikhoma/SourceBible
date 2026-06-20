@@ -2,7 +2,6 @@
 // SourceBible
 
 import SwiftUI
-import Mixpanel
 
 @main
 struct SourceBibleApp: App {
@@ -44,22 +43,23 @@ struct SourceBibleApp: App {
 
     init() {
         // ── Analytics init ────────────────────────────────────────────────────
-        // Read the persisted toggle value directly from UserDefaults at init
-        // time (AppStorage isn't readable before the body runs).
-        let enabled = UserDefaults.standard.object(forKey: "analyticsEnabled") as? Bool ?? true
+        // Consent default (PDR D4): TestFlight/dev → ON (opt-out); App Store → OFF (opt-in).
+        // Registered as a UserDefaults default so AppStorage + the read below pick it up
+        // before the user has touched the toggle.
+        let defaultConsent = MixpanelAnalytics.isTestFlight
+        UserDefaults.standard.register(defaults: ["analyticsEnabled": defaultConsent])
+        let enabled = UserDefaults.standard.object(forKey: "analyticsEnabled") as? Bool ?? defaultConsent
 
-        // Consent ON → MixpanelAnalytics (beta and prod); OFF → NoopAnalytics (zero network).
+        // Mixpanel is always the injected service but stays inert until enable() (consent).
+        // No SDK is loaded and nothing is sent while consent is OFF (prod opt-in).
+        analytics = MixpanelAnalytics.shared
         if enabled {
-            analytics = MixpanelAnalytics.shared
+            MixpanelAnalytics.shared.enable()
             // Identify with stable anonymous ID (ADR-012 PreAuthIdentity).
             MixpanelAnalytics.shared.identify(distinctId: PreAuthIdentity.stableId)
-        } else {
-            analytics = NoopAnalytics.shared
         }
 
         // ── Session tracker init ──────────────────────────────────────────────
-        // Inject the same analytics instance so the tracker uses the correct
-        // service (Mixpanel or Noop) at the time of creation.
         sessionTracker = SessionTracker(analytics: analytics)
 
         // ── Localization init ─────────────────────────────────────────────────
@@ -101,10 +101,10 @@ struct SourceBibleApp: App {
                 // ── Consent runtime toggle ────────────────────────────────────
                 .onChange(of: analyticsEnabled) { _, enabled in
                     if enabled {
+                        MixpanelAnalytics.shared.enable()
                         MixpanelAnalytics.shared.identify(distinctId: PreAuthIdentity.stableId)
                     } else {
-                        // opt out so SDK stops any in-flight batches
-                        Mixpanel.mainInstance().optOutTracking()
+                        MixpanelAnalytics.shared.disable()
                     }
                 }
                 // ── app_opened + session start on cold launch ─────────────────
