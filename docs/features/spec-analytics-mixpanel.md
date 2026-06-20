@@ -277,6 +277,60 @@ MSS = study_session_summary WHERE
 
 ---
 
+## Slice 3 — Work Order (Feature adoption + annotations)
+
+**Виконавець:** call-site події — може дешевша модель строго за чеклистом; фінальний diff ревʼю Opus + Ivan.
+
+**Гілка:** `work` (Slice 2 уже в `main`; `work == main`). Гейт = повний diff перед FF-мерджем.
+
+**Передумова:** Slice 2 змерджено. `SessionTracker` уже має `incStudyToolOpen()` / `incAnnotation()` (визначені, поки не викликаються) — Slice 3 їх **підключає**. Інʼєкція: у в'юшках `@Environment(\.analytics)` + `@Environment(\.sessionTracker)`; у VM — settable `analytics`/`sessionTracker`, прокинуті через `.task` на appear (як зроблено для ReaderViewModel/SearchViewModel у Slice 2).
+
+### Scope IN — події + точки виклику
+
+| Подія | Props | Файл / тригер | tracker-інкремент |
+|---|---|---|---|
+| `study_tab_switched` | `tab` ("verse"\|"word") | `VerseBottomSheetView.swift` — `modeTabs`, `.onChange(of: vm.bottomSheetMode)` | `incStudyToolOpen()` |
+| `original_opened` | `book_id` | `VerseTabContent.swift` — вибір пілюлі `.original` (показ `OriginalWordsView`) | `incStudyToolOpen()` |
+| `crossref_opened` | — | `VerseTabContent.swift` — вибір пілюлі `.crossRefs` **і** `.translations` (parallel passages — спец групує їх під crossref) | `incStudyToolOpen()` |
+| `commentary_opened` | `author` | `VerseTabContent.swift` — відкриття `CommentaryDetailView(theologian:)` (конкретний автор, не список) | `incStudyToolOpen()` |
+| `strongs_viewed` | `strongs_id` | `WordTabContent.swift` — `WordMeaningView` зʼявляється з завантаженим `entry` (strongs_id = `entry.id`). Дедуп по `entry.id` — не фаєрити повторно на recompose | `incStudyToolOpen()` |
+| `word_usage_opened` | — | `WordTabContent.swift` — відкриття суб-вкладки `.usage` (`WordUsageView`) | `incStudyToolOpen()` |
+| `translation_switched` | `from`, `to` | `ReaderViewModel.selectTranslation(_:)` — захопити `from = currentTranslation.id` **до** присвоєння, `to = translation.id`; фаєрити лише якщо `from != to`. **НЕ** study tool (немає `incStudyToolOpen`) | — |
+| `note_created` | — | `NotesViewModel.save(note:blocks:verseIds:)` — **лише для нової** нотатки (id якого не існувало), не для редагування | `incAnnotation()` |
+| `highlight_created` | `color` | `ReaderViewModel` — лише перехід **no-highlight → highlighted** (`setHighlightColor` гілка `else`; `toggleHighlight` гілка додавання). НЕ на зміні кольору й НЕ на знятті | `incAnnotation()` |
+| `bookmark_created` | — | `BookmarksViewModel.addBookmark(verseId:)` / `toggleBookmark` коли результат = додано (`true`) | `incAnnotation()` |
+
+### Інʼєкція (де ще нема)
+- `ReaderViewModel` — додати settable `var analytics: any AnalyticsService = NoopAnalytics.shared` (sessionTracker уже є зі Slice 2); прокинути `vm.analytics = analytics` у `ReaderView.task`. Потрібно для `translation_switched` і `highlight_created`.
+- `NotesViewModel`, `BookmarksViewModel` — додати settable `analytics` + `sessionTracker` (дефолт Noop / `.noop`), прокинути через `.task` там, де ці VM створюються/інжектяться.
+- Події з самих в'юшок (пілюлі, суб-вкладки, mode-tabs) читають `@Environment` напряму.
+
+### Дедуп / без інфляції (важливо)
+- `strongs_viewed` / `word_usage_opened` / `original_opened` / `crossref_opened` — фаєрити **на відкритті** (поява в'юшки / вибір пілюлі), а не на кожному body-recompose. Де треба — тримати останній відстріляний ключ (напр. `entry.id`, обраний pill) і не дублювати.
+- `study_tab_switched` — лише на фактичній зміні `bottomSheetMode` (onChange це й гарантує).
+
+### Scope OUT (не чіпати)
+- Cards/folders/tags (Slice 4) — `verse_card_added` тощо лишаються закоментовані в `AnalyticsEvent`.
+- Зміна визначення MSS / порогів — це окремо в Mixpanel + PDR, не код.
+- Логіка сесій / `study_session_summary` (вже в Slice 2) — лише підключення `incStudyToolOpen`/`incAnnotation` у нових точках.
+- `sourcebible.db`, схема user-data, GRDB.
+
+### Acceptance criteria
+- Build проходить (iOS 18 min); Swift 6 strict concurrency без помилок.
+- DEBUG-білд: усі 10 подій летять у Mixpanel з коректними props (перевірити вибірково: `commentary_opened.author`, `strongs_viewed.strongs_id`, `translation_switched.from/to`, `highlight_created.color`).
+- `study_session_summary` тепер містить ненульові `study_tool_opens` / `annotations_created`, коли користувач реально юзав інструменти/анотації.
+- Жодних дублів на recompose (перевірити `strongs_viewed` при простому скролі/перемальовці).
+- `translation_switched` не фаєриться, коли вибрано той самий переклад.
+- Release з вимкненою згодою = `NoopAnalytics`, нуль мережі.
+- Повний diff + короткий звіт.
+
+### Hard invariants (завжди чинні)
+Усі ⛔ з CLAUDE.md; iOS 26-only API лише з `#available` + iOS 18 fallback; build має проходити; білдити тільки через Xcode (не читати DB в Linux).
+
+**Exit:** diff + звіт на ревʼю Ivan. FF-мердж `work → main` — після підпису.
+
+---
+
 ## Related
 
 [[PDR-Analytics-Mixpanel]] · [[PDR-Auth-Strategy]] · [[ADR-012-unified-user-data-layer]] · [[ADR-005-highlights-bookmarks-notes]]
