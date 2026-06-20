@@ -85,18 +85,19 @@ protocol AnalyticsService: Sendable {
 - `PrivacyInfo.xcprivacy` з декларацією зібраних типів (device identifiers, product interaction).
 - Жодного raw-тексту нотаток/запитів (D1 — за рекомендацією не слати текст запиту).
 
-## Event Taxonomy (v1)
+## Event Taxonomy
 
 > Іменування: `snake_case`. Спільні super-props: `translation`, `distinct_id` (auto), `app_version`, `is_beta`.
+> **⚠️ Авторитетне джерело таксономії — [[ADR-022-analytics-event-collection-strategy]] + Slice 3 Work Order нижче.** Терміни (original / lexicon / concordance тощо) — у [[glossary]]. Розділ «Feature adoption (v1, СКАСОВАНО)» нижче лишено для історії.
 
 ### Session / engagement
 
 | Event | Props | Коли |
 |---|---|---|
-| `app_opened` | — | foreground (звідси DAU/WAU, retention D1/D7/D30) |
-| `study_session_summary` | `duration_s`, `verses_read`, `study_tool_opens`, `word_nav_count`, `verse_nav_count`, `annotations_created`, `searches` | кінець сесії (background, grace ~30с) |
+| `app_opened` | — | foreground (cold start + повернення з фону; звідси DAU/WAU, retention) |
+| `study_session_summary` | `duration_s`, `verses_opened`, `word_nav_count`, `verse_nav_count`, `searches_count`, `annotations_created`, + per-feature `<feature>_views_count` (×6) | кінець сесії (background, grace ~30с) |
 
-> `word_nav_count` / `verse_nav_count` — шеврон-навігація між словами/віршами при відкритому Bottom Sheet. Лічильники в summary (НЕ події-на-тап) — сигнал глибини без засмічення; годують MSS.
+> `word_nav_count` / `verse_nav_count` — шеврон-навігація між словами/віршами. `<feature>_views_count` — перегляди кожної з 6 фіч (ADR-022). Усе — лічильники в summary (НЕ події-на-тап), сигнал глибини без засмічення; годують MSS.
 
 ### Search behavior
 
@@ -107,23 +108,23 @@ protocol AnalyticsService: Sendable {
 
 > D1: **без** `query` raw-тексту. Якщо D1 зміниться — додається `query`.
 
-### Feature adoption
+### Feature adoption (ADR-022, варіант B — гранулярно)
 
-| Event | Props | Коли |
+Дискретна подія `feature_adopted_<feature>` фаєриться **раз/сесію** на першу взаємодію; деталь — лічильниками в `study_session_summary`. 6 фіч (1:1 з UI-поверхнями):
+
+| Adoption-подія | Поверхня | Лічильник у summary |
 |---|---|---|
-| `original_opened` | `book_id` | відкрито Original/Strong's на слові (вхід у word study) |
-| `study_tab_switched` | `tab` (verse\|word) | перемикання вкладки Verse↔Word у Bottom Sheet |
-| `strongs_viewed` | `strongs_id` | перегляд лексикону Strong's |
-| `commentary_opened` | `author` | відкрито коментар (Calvin/Henry/Spurgeon/Owen) |
-| `crossref_opened` | — | відкрито cross-references / parallel passages |
-| `word_usage_opened` | — | відкрито Word Usage / конкорданс |
-| `translation_switched` | `from`, `to` | зміна перекладу |
-| `note_created` | — | створено нотатку |
-| `highlight_created` | `color` | створено гайлайт |
-| `bookmark_created` | — | створено закладку |
+| `feature_adopted_original` | список оригінальних слів (`OriginalWordsView`) | `original_views_count` |
+| `feature_adopted_lexicon` | визначення слова Strong's (`WordMeaningView`) | `lexicon_views_count` |
+| `feature_adopted_concordance` | вживання слова (`ConcordanceView`) | `concordance_views_count` |
+| `feature_adopted_commentary` | коментар (`CommentaryDetailView`) | `commentary_views_count` |
+| `feature_adopted_cross_reference` | cross-references | `cross_reference_views_count` |
+| `feature_adopted_parallel_translation` | parallel translations | `parallel_translation_views_count` |
 
-> Adoption = distinct-users події ÷ активні за вікно. Рахується **у Mixpanel**.
-> Шеврон-навігація між словами/віршами — не окрема adoption-подія, а лічильники в `study_session_summary` (див. вище).
+Перші три — воронка word-study (original → lexicon → concordance). Дискретні **поза** цією моделлю (бо рідкісні/цінні): `translation_switched(from,to)`, `note_created`, `highlight_created(color)`, `bookmark_created`. Деталі call-sites — у Slice 3 Work Order.
+
+#### ~~Feature adoption (v1, СКАСОВАНО — лишено для історії)~~
+> Початковий per-tap драфт (`original_opened`/`study_tab_switched`/`strongs_viewed`/`commentary_opened`/`crossref_opened`/`word_usage_opened`) **скасовано** на користь моделі ADR-022 вище — занадто великий обсяг подій.
 
 ### Відкладено (інструментувати, коли фічу доробимо в беті — зріз 4)
 
@@ -137,16 +138,22 @@ protocol AnalyticsService: Sendable {
 
 Додаток шле лише `study_session_summary` (лічильники). MSS — **Custom Event** у Mixpanel:
 
+**Провізорна формула** (тюнабельна в Mixpanel без релізу; фінальні пороги — на реальних даних після Slice 3):
+
 ```
+depthSignal = original_views_count + lexicon_views_count + concordance_views_count
+            + commentary_views_count + cross_reference_views_count
+            + parallel_translation_views_count
+            + word_nav_count + annotations_created
+
 MSS = study_session_summary WHERE
-      duration_s >= 120
-  AND verses_read >= 2
-  AND (study_tool_opens >= 1 OR word_nav_count >= 1 OR verse_nav_count >= 1 OR annotations_created >= 1)
+      duration_s >= 60          -- знижено зі 120: глибока сесія на 1 вірш теж MSS
+  AND depthSignal >= 1          -- реальна дія глибини (verses_opened-гейт прибрано)
 ```
 
-- Поріг **тюнабельний у Mixpanel** без релізу.
-- `study_tool_opens` інкрементується додатком на кожен `original_opened` / `study_tab_switched` / `strongs_viewed` / `commentary_opened` / `crossref_opened` / `word_usage_opened` у межах сесії; шеврон-навігація йде окремими лічильниками `word_nav_count` / `verse_nav_count` — теж сигнал глибини.
+- `<feature>_views_count` інкрементується через `SessionTracker.recordFeatureUse(_:)`; шеврон-навігація — `word_nav_count` / `verse_nav_count`.
 - North Star дашборд: % сесій що MSS; % WAU з ≥1 MSS/тиждень.
+- Окрема воронка adoption: `feature_adopted_original` → `_lexicon` → `_concordance`.
 - Adoption-флоу — **воронки** (open → search → open verse → annotate), окремо від MSS.
 
 ## Acceptance Criteria
@@ -173,7 +180,7 @@ MSS = study_session_summary WHERE
 
 1. **Каркас:** `AnalyticsService` + `MixpanelAnalytics` + `NoopAnalytics`, гейтинг (BETA/TestFlight **+ DEBUG для тестів**), distinct_id, картка+тумблер згоди, `PrivacyInfo.xcprivacy`, token через xcconfig (окремі dev/beta токени). (Acceptance: події видно в Mixpanel Live з DEBUG-білда; no-op у release.)
 2. **Engagement + Search:** `app_opened`, `study_session_summary` (вкл. `word_nav_count`/`verse_nav_count`), `search_committed`, `search_result_opened`.
-3. **Feature adoption:** події по існуючих фічах: `original_opened`, `study_tab_switched`, `strongs_viewed`, `commentary_opened`, `crossref_opened`, `word_usage_opened`, `translation_switched`, анотації.
+3. **Feature adoption (ADR-022, варіант B):** `feature_adopted_*` (×6: original/lexicon/concordance/commentary/cross_reference/parallel_translation) раз/сесію + `<feature>_views_count` у summary; дискретні `translation_switched`, `note_created`, `highlight_created`, `bookmark_created`. Деталі — Slice 3 Work Order.
 4. **Нові Нотатки:** `verse_card_added`/`word_card_added`/`folder_created`/`tag_added` — разом із фічею карток/папок.
 
 ## Slice 1 — Work Order (каркас аналітики)
@@ -285,15 +292,15 @@ MSS = study_session_summary WHERE
 
 **Гілка:** `work` (Slice 2 уже в `main`; `work == main`). Гейт = повний diff перед FF-мерджем.
 
-### A. Зміни в `AnalyticsEvent` (узагальнена форма — ADR-022 Q2)
-- **Новий enum:** `enum AnalyticsFeature: String, CaseIterable { case lexicon, commentary; case crossReference = "cross_reference"; case parallelTranslation = "parallel_translation" }`.
-- **Один adoption-кейс:** `case featureAdopted(AnalyticsFeature)` → ім'я `feature_adopted_\(f.rawValue)` (а не 4 окремі кейси).
-- **Розширити `studySessionSummary`**: фіксовані поля `duration_s`, `verses_opened`, `lexicon_nav_count`, `verse_nav_count`, `searches_count`, `annotations_created` **+** per-feature `\(f.rawValue)_views_count` для кожного `AnalyticsFeature.allCases` (тобто `lexicon_views_count`, `commentary_views_count`, `cross_reference_views_count`, `parallel_translation_views_count`).
+### A. Зміни в `AnalyticsEvent` (варіант B — гранулярно, 1:1 з UI-поверхнями)
+- **Новий enum (6 фіч):** `enum AnalyticsFeature: String, CaseIterable { case original, lexicon, concordance, commentary; case crossReference = "cross_reference"; case parallelTranslation = "parallel_translation" }`. (`original` = список оригінальних слів; `lexicon` = визначення Strong's слова; `concordance` = вживання слова — див. [[glossary]].)
+- **Один adoption-кейс:** `case featureAdopted(AnalyticsFeature)` → ім'я `feature_adopted_\(f.rawValue)`.
+- **Розширити `studySessionSummary`**: фіксовані поля `duration_s`, `verses_opened`, `word_nav_count`, `verse_nav_count`, `searches_count`, `annotations_created` **+** per-feature `\(f.rawValue)_views_count` для кожного `AnalyticsFeature.allCases` (`original_views_count`, `lexicon_views_count`, `concordance_views_count`, `commentary_views_count`, `cross_reference_views_count`, `parallel_translation_views_count`).
 - **Прибрати** дискретні per-tap кейси: `originalOpened`, `studyTabSwitched`, `strongsViewed`, `commentaryOpened`, `crossRefOpened`, `wordUsageOpened`.
 - **Лишити дискретними:** `appOpened`, `searchCommitted`, `searchResultOpened`, `noteCreated`, `highlightCreated(color)`, `bookmarkCreated`, `translationSwitched(from,to)`.
 
 ### B. Зміни в `SessionTracker` (один generic метод)
-- Стан: `featureCounts: [AnalyticsFeature: Int]` + `adopted: Set<AnalyticsFeature>` (обидва чистяться в `begin()`/`resetState()`); плюс наявні `lexiconNav` (перейменувати `wordNav`), `verseNav`, `versesOpened` (Set), `searches`, `annotations`.
+- Стан: `featureCounts: [AnalyticsFeature: Int]` + `adopted: Set<AnalyticsFeature>` (обидва чистяться в `resetState()`); плюс `wordNav` (перейменований із `lexiconNav`), `verseNav`, `versesOpened` (Set), `searches`, `annotations`.
 - **Один generic метод** (`@MainActor`, guard на активну сесію):
   ```swift
   func recordFeatureUse(_ f: AnalyticsFeature) {
@@ -302,16 +309,16 @@ MSS = study_session_summary WHERE
       featureCounts[f, default: 0] += 1
   }
   ```
-- Навігаційні/інші інкременти лишаються: `incLexiconNav()`, `incVerseNav()`, `incVersesOpened(verseId:)`, `incSearch()`, `incAnnotation()`.
+- Навігаційні/інші інкременти: `incWordNav()`, `incVerseNav()`, `incVersesOpened(verseId:)`, `incSearch()`, `incAnnotation()`.
 - `flush()` будує `study_session_summary`: фіксовані поля + цикл по `AnalyticsFeature.allCases` → `"\(f.rawValue)_views_count": featureCounts[f] ?? 0`.
 
 ### C. Точки виклику (роутимо через tracker, НЕ track напряму)
 | Дія | Файл / тригер | Виклик |
 |---|---|---|
-| Перегляд лексикону (Strong's) | `WordTabContent.swift` — `WordMeaningView` зʼявляється з `entry` (на appear, дедуп по `entry.id`) | `tracker.recordFeatureUse(.lexicon)` |
-| Список оригіналу (вхід у word-study) | `VerseTabContent.swift` — пілюля `.original` (`OriginalWordsView`) | `tracker.recordFeatureUse(.lexicon)` |
-| Word usage / конкорданс | `WordTabContent.swift` — суб-вкладка `.usage` (`WordUsageView`) | `tracker.recordFeatureUse(.lexicon)` |
-| Шеврон-навігація слів/значення | `ReaderViewModel.navigateToNext/PreviousWord` | `tracker.incLexiconNav()` |
+| Список оригіналу (`OriginalWordsView`) | `VerseTabContent.swift` — пілюля `.original` | `tracker.recordFeatureUse(.original)` |
+| Визначення слова / лексикон | `WordTabContent.swift` — `WordMeaningView` зʼявляється з `entry` (на appear, дедуп по `entry.id`) | `tracker.recordFeatureUse(.lexicon)` |
+| Конкорданс (вживання слова) | `WordTabContent.swift` — `ConcordanceView` (суб-вкладка `.usage`) | `tracker.recordFeatureUse(.concordance)` |
+| Шеврон-навігація слів | `ReaderViewModel.navigateToNext/PreviousWord` | `tracker.incWordNav()` |
 | Коментар | `VerseTabContent.swift` — `CommentaryDetailView(theologian:)` | `tracker.recordFeatureUse(.commentary)` |
 | Cross-references | `VerseTabContent.swift` — пілюля `.crossRefs` | `tracker.recordFeatureUse(.crossReference)` |
 | Parallel translations | `VerseTabContent.swift` — пілюля `.translations` | `tracker.recordFeatureUse(.parallelTranslation)` |
@@ -323,11 +330,11 @@ MSS = study_session_summary WHERE
 ### D. Інʼєкція (де ще нема)
 - `ReaderViewModel` — додати settable `var analytics` (sessionTracker уже є); прокинути в `ReaderView.task`. Потрібно для `translation_switched` і `highlight_created`.
 - `NotesViewModel`, `BookmarksViewModel` — settable `analytics` + `sessionTracker` (дефолт `.noop`), прокинути через `.task`.
-- Sub-в'юшки бот-шита (`WordMeaningView`, `WordUsageView`, `CommentaryDetailView`, `CrossRefsView`, `TranslationsView`, `OriginalWordsView`) читають `@Environment(\.sessionTracker)` напряму.
+- Sub-в'юшки бот-шита (`WordMeaningView`, `ConcordanceView`, `CommentaryDetailView`, `CrossRefsView`, `TranslationsView`, `OriginalWordsView`) читають `@Environment(\.sessionTracker)` напряму.
 
 ### E. Дедуп / без інфляції
-- `recordLexiconView` фаєрити **на appear** конкретного `entry.id`, не на кожен recompose (тримати останній відстріляний `entry.id`).
-- adoption-події гарантовано раз/сесію через `adoptedThisSession`.
+- `recordFeatureUse(.lexicon)` фаєрити **на appear** конкретного `entry.id`, не на кожен recompose (тримати останній відстріляний `entry.id`).
+- adoption-події гарантовано раз/сесію через `adopted` Set.
 
 ### Scope OUT
 - Cards/folders/tags (Slice 4). Зміна порогів MSS — у Mixpanel + PDR, не код. `sourcebible.db`/GRDB/схема user-data.
@@ -335,7 +342,7 @@ MSS = study_session_summary WHERE
 ### Acceptance criteria
 - Build (iOS 18 min), Swift 6 strict concurrency — без помилок.
 - DEBUG-білд: `feature_adopted_*` летять **раз/сесію** на першу взаємодію; повторні перегляди в тій же сесії НЕ плодять adoption-подій (лише ростуть лічильники).
-- `study_session_summary` містить ненульові `*_views_count` / `lexicon_nav_count` / `annotations_created`, коли інструменти реально юзались.
+- `study_session_summary` містить ненульові `*_views_count` / `word_nav_count` / `annotations_created`, коли інструменти реально юзались.
 - Жодних дублів adoption/лічильника на recompose.
 - `translation_switched` не фаєриться на той самий переклад.
 - Release з вимкненою згодою = `NoopAnalytics`, нуль мережі.

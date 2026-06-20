@@ -19,12 +19,12 @@ Forces:
 
 Split signals by what each is for, not by "one event per tap":
 
-1. **Adoption = one discrete event per feature, once per session** (fired on first use that session):
-   `feature_adopted_lexicon`, `feature_adopted_commentary`, `feature_adopted_cross_reference`, `feature_adopted_parallel_translation`.
-   These answer "who adopts what" with at most 4 events/session.
+1. **Adoption = one discrete event per feature, once per session** (fired on first use that session). Features are **granular — one per UI surface** (NOT an umbrella), so each maps 1:1 to what the user actually did and the word-study funnel is visible:
+   `feature_adopted_original` (original-words list) → `feature_adopted_lexicon` (a word's Strong's definition / `WordMeaningView`) → `feature_adopted_concordance` (word usage / `ConcordanceView`), plus `feature_adopted_commentary`, `feature_adopted_cross_reference`, `feature_adopted_parallel_translation`.
+   These answer "who adopts what" with at most 6 events/session, and the first three form the word-study drop-off funnel (open original → drill into lexicon → check concordance). See [[glossary]] for the term distinctions (original ≠ lexicon ≠ concordance — the BibleHub "NASB Lexicon" word-by-word view blurs these).
 
 2. **Depth = counters rolled into `study_session_summary`** (one event per session, on background+grace):
-   `duration_s`, `verses_opened`, `strongs_views_count`, `commentary_views_count`, `cross_reference_views_count`, `parallel_translation_views_count`, `lexicon_nav_count` (chevron moves between words / word↔meaning), `verse_nav_count`, `searches_count`, `annotations_created`.
+   `duration_s`, `verses_opened`, `word_nav_count` (chevron moves between words in the Word tab), `verse_nav_count`, `searches_count`, `annotations_created`, plus per-feature `<raw>_views_count` for each `AnalyticsFeature` (`original_views_count`, `lexicon_views_count`, `concordance_views_count`, `commentary_views_count`, `cross_reference_views_count`, `parallel_translation_views_count`).
 
 3. **Kept discrete (already low-volume, high-value):**
    - `app_opened` (one per foreground).
@@ -34,7 +34,7 @@ Split signals by what each is for, not by "one event per tap":
 
 4. **`SessionTracker` owns the once-per-session logic via a single generic entry point.** Views/VMs call `tracker.recordFeatureUse(.lexicon)` (one method, an `AnalyticsFeature` enum case — NOT a method per feature). The tracker (a) emits `feature_adopted_<raw>` the first time that feature is used in the session, and (b) increments `featureCounts[feature]`. Adding a tool in a future slice = **one new `AnalyticsFeature` case**; the adoption event and the `<raw>_views_count` summary field (iterated over `AnalyticsFeature.allCases`) come for free with no new code. The adoption event is a single `featureAdopted(AnalyticsFeature)` case, not one case per feature.
 
-**Per-session event budget:** ~1 `app_opened` + ≤4 `feature_adopted_*` + a few search/annotation/translation events + 1 `study_session_summary` ≈ **<15 events even for a deep session**, versus 50+ under the per-tap design.
+**Per-session event budget:** ~1 `app_opened` + ≤6 `feature_adopted_*` + a few search/annotation/translation events + 1 `study_session_summary` ≈ **<15 events even for a deep session**, versus 50+ under the per-tap design.
 
 ## Options Considered
 
@@ -71,10 +71,12 @@ The granularity we sacrifice (per-view timestamps) is not used by the North Star
 - **Easier:** staying under free-tier; tuning MSS from the rich summary; reasoning about a session as one record.
 - **Harder:** `SessionTracker` grows (per-feature counters + once-per-session adoption guards); call sites must route through the tracker rather than calling `analytics.track` directly for study-tool views.
 - **Revisit:** if a discrete per-view timeline is ever needed (e.g. dwell-time per Strong's entry), add a sampled or opt-in detailed stream. The `AnalyticsService` abstraction (PDR) makes the eventual backend swap cheap regardless.
+- **Pre-prod tuning (data-driven, Slice 4):** before the public release, review event volume + value on real beta data and trim. Candidates: dedup `lexicon_views_count` to unique Strong's IDs (a Set, like `verses_opened`) if "unique words studied" is wanted rather than raw view count; reassess low-value props like `highlight_created.color`; drop any discrete event that the summary counters already cover. Decide with actual distributions, not upfront. (The original/lexicon/concordance double-count framing is resolved by the granular split — each surface now counts itself.)
 
 ## Action Items
 
-1. [ ] Add `AnalyticsFeature: String, CaseIterable` enum (`lexicon`, `commentary`, `crossReference="cross_reference"`, `parallelTranslation="parallel_translation"`). Update `AnalyticsEvent`: single `featureAdopted(AnalyticsFeature)` case (name `feature_adopted_<raw>`); expand `studySessionSummary` (per-feature `<raw>_views_count` from `allCases` + `lexicon_nav_count`, `verse_nav_count`, `verses_opened`, `searches_count`, `annotations_created`); remove the per-tap `strongsViewed`/`commentaryOpened`/`crossRefOpened`/`wordUsageOpened`/`originalOpened`/`studyTabSwitched` cases.
-2. [ ] `SessionTracker`: `featureCounts: [AnalyticsFeature: Int]` + `adopted: Set<AnalyticsFeature>` + one generic `recordFeatureUse(_ f: AnalyticsFeature)` that emits `feature_adopted_<raw>` once then counts. (`annotations_created` stays an aggregate counter — per-type detail already lives in the discrete `note_created`/`highlight_created`/`bookmark_created` events.)
+1. [x] Add `AnalyticsFeature: String, CaseIterable` enum — **6 granular cases** (`original`, `lexicon`, `concordance`, `commentary`, `crossReference="cross_reference"`, `parallelTranslation="parallel_translation"`). Update `AnalyticsEvent`: single `featureAdopted(AnalyticsFeature)` case (name `feature_adopted_<raw>`); expand `studySessionSummary` (per-feature `<raw>_views_count` from `allCases` + `word_nav_count`, `verse_nav_count`, `verses_opened`, `searches_count`, `annotations_created`); remove the per-tap `strongsViewed`/`commentaryOpened`/`crossRefOpened`/`wordUsageOpened`/`originalOpened`/`studyTabSwitched` cases.
+2. [x] `SessionTracker`: `featureCounts: [AnalyticsFeature: Int]` + `adopted: Set<AnalyticsFeature>` + one generic `recordFeatureUse(_ f: AnalyticsFeature)` that emits `feature_adopted_<raw>` once then counts. (`annotations_created` stays an aggregate counter — per-type detail already lives in the discrete `note_created`/`highlight_created`/`bookmark_created` events.)
+3. [x] Call sites: `.original` pill → `recordFeatureUse(.original)`; `WordMeaningView` → `.lexicon`; `ConcordanceView` (renamed from `WordUsageView`) → `.concordance`; commentary/crossRefs/translations pills → their features. `incWordNav()` (renamed from `incLexiconNav`) on word chevrons.
 3. [ ] Rewire Slice 3 call sites to `tracker.recordX()` (see `spec-analytics-mixpanel` → Slice 3 Work Order).
 4. [ ] Update MSS definition (Mixpanel Custom Event) to use the new counter names.
