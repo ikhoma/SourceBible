@@ -48,9 +48,11 @@ enum BookCoverData {
     // MARK: - Subtitle ("<Section> · <N> Chapters")
 
     private static func subtitle(for bookId: String, chapterCount: Int) -> String {
-        let unit    = chapterCount == 1 ? "Chapter" : "Chapters"
+        let unit     = chapterCount == 1
+            ? String(localized: "cover.chapter")
+            : String(localized: "cover.chapters")
         let chapters = "\(chapterCount) \(unit)"
-        let section = sectionTitle(for: bookId)
+        let section  = sectionTitle(for: bookId)
         return section.isEmpty ? chapters : "\(section) · \(chapters)"
     }
 
@@ -60,28 +62,28 @@ enum BookCoverData {
     private static func sectionTitle(for bookId: String) -> String {
         switch bookId {
         case "GEN", "EXO", "LEV", "NUM", "DEU":
-            return "The Law"
+            return String(localized: "cover.section.law")
         case "JOS", "JDG", "RUT", "1SA", "2SA",
              "1KI", "2KI", "1CH", "2CH", "EZR", "NEH", "EST":
-            return "Historical Books"
+            return String(localized: "cover.section.history")
         case "JOB", "PSA", "PRO", "ECC", "SNG":
-            return "Wisdom & Poetry"
+            return String(localized: "cover.section.wisdom")
         case "ISA", "JER", "LAM", "EZK", "DAN":
-            return "Major Prophets"
+            return String(localized: "cover.section.major_prophets")
         case "HOS", "JOL", "AMO", "OBA", "JON",
              "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL":
-            return "Minor Prophets"
+            return String(localized: "cover.section.minor_prophets")
         case "MAT", "MRK", "LUK", "JHN":
-            return "The Gospels"
+            return String(localized: "cover.section.gospels")
         case "ACT":
-            return "Acts"
+            return String(localized: "cover.section.acts")
         case "ROM", "1CO", "2CO", "GAL", "EPH",
              "PHP", "COL", "1TH", "2TH", "1TI", "2TI", "TIT", "PHM":
-            return "Paul's Letters"
+            return String(localized: "cover.section.paul_letters")
         case "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD":
-            return "General Letters"
+            return String(localized: "cover.section.general_letters")
         case "REV":
-            return "Prophecy"
+            return String(localized: "cover.section.prophecy")
         default:
             return ""
         }

@@ -137,6 +137,8 @@ struct ReferenceLabel: View {
 struct CrossRefsView: View {
     let refs: [CrossReference]
 
+    @EnvironmentObject private var router: AppNavigationRouter
+
     var body: some View {
         if refs.isEmpty {
             // Full-height centered empty state — Spacers need the container to
@@ -159,15 +161,25 @@ struct CrossRefsView: View {
         } else {
             PillSection(title: "verse.section.cross_refs") {
                 ForEach(refs) { ref in
-                    VStack(alignment: .leading, spacing: 6) {
-                        ReferenceLabel(ref.targetReference)
-                        if ref.targetText.isEmpty {
-                            Text("verse.text_unavailable")
-                                .font(.callout).foregroundStyle(.tertiary).italic()
-                        } else {
-                            Text(ref.targetText)
-                                .font(.callout)
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ReferenceLabel(ref.targetReference)
+                            if ref.targetText.isEmpty {
+                                Text("verse.text_unavailable")
+                                    .font(.callout).foregroundStyle(.tertiary).italic()
+                            } else {
+                                Text(ref.targetText)
+                                    .font(.callout)
+                            }
                         }
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.quaternary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        router.requestNavigation(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
                     }
                     .padding(.bottom, 8)
                     Divider()

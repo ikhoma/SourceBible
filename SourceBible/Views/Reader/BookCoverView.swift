@@ -92,7 +92,7 @@ struct BookCoverView: View {
 
             // ── Title + subtitle (bottom-leading) ───────────────────────────────
             VStack(alignment: .leading, spacing: 8) {
-                Text("The Book of \(bookName)")
+                Text(bookName)
                     .font(.system(size: 34, weight: .bold))
                     .tracking(0.4)
                     .lineSpacing(-6)

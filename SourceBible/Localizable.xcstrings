@@ -301,6 +301,86 @@
         }
       }
     },
+    "analytics.consent.accept" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добре"
+          }
+        }
+      }
+    },
+    "analytics.consent.body" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We collect anonymous usage statistics to improve the app. No personal data, notes, or search queries are ever shared."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ми збираємо анонімну статистику використання, щоб покращувати застосунок. Жодних особистих даних, нотаток чи тексту запитів."
+          }
+        }
+      }
+    },
+    "analytics.consent.decline" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not now"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не зараз"
+          }
+        }
+      }
+    },
+    "analytics.consent.privacy_link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy Policy"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Політика конфіденційності"
+          }
+        }
+      }
+    },
+    "analytics.consent.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Help improve Source Bible"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Допоможи покращити SourceBible"
+          }
+        }
+      }
+    },
     "bookmarks.action.delete" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -642,76 +722,6 @@
         }
       }
     },
-    "analytics.consent.accept" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "OK" }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Добре" }
-        }
-      }
-    },
-    "analytics.consent.body" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "We collect anonymous usage statistics to improve the app. No personal data, notes, or search queries are ever shared." }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Ми збираємо анонімну статистику використання, щоб покращувати застосунок. Жодних особистих даних, нотаток чи тексту запитів." }
-        }
-      }
-    },
-    "analytics.consent.decline" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Not now" }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Не зараз" }
-        }
-      }
-    },
-    "analytics.consent.privacy_link" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Privacy Policy" }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Політика конфіденційності" }
-        }
-      }
-    },
-    "analytics.consent.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Help improve Source Bible" }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Допоможи покращити SourceBible" }
-        }
-      }
-    },
-    "menu.analytics.toggle_subtitle" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Anonymous only. No notes or search text." }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Тільки анонімно. Без нотаток і тексту запитів." }
-        }
-      }
-    },
-    "menu.analytics.toggle_title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Share anonymous usage" }
-        },
-        "uk" : {
-          "stringUnit" : { "state" : "translated", "value" : "Ділитися анонімною статистикою" }
-        }
-      }
-    },
     "menu.about" : {
       "localizations" : {
         "en" : {
@@ -724,6 +734,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Про застосунок"
+          }
+        }
+      }
+    },
+    "menu.analytics.toggle_subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anonymous only. No notes or search text."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тільки анонімно. Без нотаток і тексту запитів."
+          }
+        }
+      }
+    },
+    "menu.analytics.toggle_title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share anonymous usage"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ділитися анонімною статистикою"
           }
         }
       }
@@ -826,22 +868,6 @@
         }
       }
     },
-    "menu.red_letters" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Red Letters"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Слова Ісуса червоним"
-          }
-        }
-      }
-    },
     "menu.language" : {
       "localizations" : {
         "en" : {
@@ -854,6 +880,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Мова інтерфейсу"
+          }
+        }
+      }
+    },
+    "menu.red_letters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Red Letters"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Слова Ісуса червоним"
           }
         }
       }
@@ -2822,9 +2864,6 @@
         }
       }
     },
-    "The Book of %@" : {
-
-    },
     "theologian.calvin.era" : {
       "localizations" : {
         "en" : {
@@ -3504,6 +3543,198 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld входжень у Біблії"
+          }
+        }
+      }
+    },
+    "cover.chapter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chapter"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "розділ"
+          }
+        }
+      }
+    },
+    "cover.chapters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chapters"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "розділів"
+          }
+        }
+      }
+    },
+    "cover.section.acts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acts"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дії"
+          }
+        }
+      }
+    },
+    "cover.section.general_letters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General Letters"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соборні листи"
+          }
+        }
+      }
+    },
+    "cover.section.gospels" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Gospels"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Євангелія"
+          }
+        }
+      }
+    },
+    "cover.section.history" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historical Books"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Історичні книги"
+          }
+        }
+      }
+    },
+    "cover.section.law" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Law"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закон"
+          }
+        }
+      }
+    },
+    "cover.section.major_prophets" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Major Prophets"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Великі пророки"
+          }
+        }
+      }
+    },
+    "cover.section.minor_prophets" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minor Prophets"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Малі пророки"
+          }
+        }
+      }
+    },
+    "cover.section.paul_letters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paul's Letters"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Листи Павла"
+          }
+        }
+      }
+    },
+    "cover.section.prophecy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prophecy"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пророцтво"
+          }
+        }
+      }
+    },
+    "cover.section.wisdom" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wisdom & Poetry"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Мудрість і поезія"
           }
         }
       }
