@@ -5,8 +5,9 @@ import SwiftUI
 
 struct NoteEditorView: View {
 
-    @EnvironmentObject private var notesVM: NotesViewModel
-    @EnvironmentObject private var router:  AppNavigationRouter
+    @EnvironmentObject private var notesVM:   NotesViewModel
+    @EnvironmentObject private var router:    AppNavigationRouter
+    @EnvironmentObject private var readerVM:  ReaderViewModel
     @Environment(\.dismiss) private var dismiss
 
     @State private var noteWithBlocks: NoteWithBlocks
@@ -92,7 +93,7 @@ struct NoteEditorView: View {
     private func verseRef(from verseId: String) -> String {
         let parts = verseId.split(separator: "|")
         guard parts.count == 3 else { return verseId }
-        let short = BibleBookNames.short(for: String(parts[0]))
+        let short = readerVM.shortBookName(for: String(parts[0]))
         return "\(short) \(parts[1]):\(parts[2])"
     }
 
@@ -246,6 +247,8 @@ private struct VerseContextCard: View {
     let verseId: String
     let text: String
 
+    @EnvironmentObject private var readerVM: ReaderViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ReferenceLabel(refLabel)
@@ -267,7 +270,7 @@ private struct VerseContextCard: View {
     private var refLabel: String {
         let parts = verseId.split(separator: "|")
         guard parts.count == 3 else { return verseId }
-        let short = BibleBookNames.short(for: String(parts[0]))
+        let short = readerVM.shortBookName(for: String(parts[0]))
         return "\(short) \(parts[1]):\(parts[2])"
     }
 }
@@ -282,4 +285,5 @@ private struct VerseContextCard: View {
     .environmentObject(NotesViewModel(store: InMemoryUserDataStore(),
                                       authService: LocalAuthService.shared))
     .environmentObject(AppNavigationRouter())
+    .environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
 }

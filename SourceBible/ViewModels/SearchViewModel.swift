@@ -39,7 +39,8 @@ final class SearchViewModel: ObservableObject {
 
     /// Debounced full-text search (280ms). FTS5 queries run on @MainActor —
     /// same as all other DatabaseService calls; fast enough (~10–30ms) after debounce.
-    func search(query: String, translation: String, testamentFilter: String? = nil) {
+    func search(query: String, translation: String, testamentFilter: String? = nil,
+                bookShortNames: [String: String] = [:]) {
         searchTask?.cancel()
 
         let trimmed = query.trimmingCharacters(in: .whitespaces)
@@ -55,7 +56,8 @@ final class SearchViewModel: ObservableObject {
             try? await Task.sleep(for: .milliseconds(280))
             guard !Task.isCancelled else { return }
 
-            let found = db.searchByText(query: trimmed, translation: translation)
+            let found = db.searchByText(query: trimmed, translation: translation,
+                                        bookShortNames: bookShortNames)
 
             guard !Task.isCancelled else { return }
             results       = found

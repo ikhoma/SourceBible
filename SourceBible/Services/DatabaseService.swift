@@ -9,6 +9,24 @@ import SQLite3
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+// MARK: - Display normalization (TBESH symbols)
+// TBESH lemma transliteration uses "." as a syllable separator (e.g. "e.rets"),
+// while our surface transliteration uses "-" (e.g. "ḥep̄-ṣōw"). For visual
+// consistency we render lemma xlit with "-" too.
+// TBESH short glosses use ":" to introduce a sense elaboration and "/" to list
+// alternatives (e.g. "land: country/planet"). We render ":" as a middle dot and
+// "/" as a comma for a cleaner reading style ("land · country, planet").
+// These are read-time DISPLAY transforms only — raw DB values stay canonical.
+private func normalizeXlitForDisplay(_ s: String) -> String {
+    s.replacingOccurrences(of: ".", with: "-")
+}
+
+private func normalizeGlossForDisplay(_ s: String) -> String {
+    s.replacingOccurrences(of: #"\s*:\s*"#, with: " · ", options: .regularExpression)
+     .replacingOccurrences(of: #"\s*/\s*"#, with: ", ", options: .regularExpression)
+     .trimmingCharacters(in: .whitespaces)
+}
+
 // MARK: - DatabaseService
 // Book names and short abbreviations are provided by BibleBookNames (locale-aware).
 // DatabaseService no longer maintains its own bookMeta dictionary.
@@ -228,7 +246,7 @@ final class DatabaseService: @unchecked Sendable {
             let xlitSlot     = optString(stmt, 13)  // BibleHub combined slot translit (root token only)
             words.append(BibleWord(id: id, text: surface, strongsId: strongsId,
                                    morphology: morph, gloss: gloss,
-                                   xlitSimple: xlitLex, xlit: xlitCtx,
+                                   xlitSimple: xlitLex.map(normalizeXlitForDisplay), xlit: xlitCtx,
                                    syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong,
                                    afterChar: afterChar, lexicalClass: lexicalClass,
                                    slot: slot, xlitSlot: xlitSlot))
@@ -279,6 +297,8 @@ final class DatabaseService: @unchecked Sendable {
             let pos        = string(stmt, 5)
             let shortDef   = string(stmt, 6)
             let longDef    = string(stmt, 7)
+            // semanticRange is derived from the RAW gloss (split on ";" / ",") before
+            // display normalization, so alternative senses stay intact as separate chips.
             let semanticRange = shortDef
                 .components(separatedBy: CharacterSet(charactersIn: ";,"))
                 .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -289,10 +309,10 @@ final class DatabaseService: @unchecked Sendable {
                 id: sid,
                 originalWord: original,
                 transliteration: xlit.isEmpty ? xlitSimple : xlit,
-                xlitSimple: xlitSimple.isEmpty ? xlit : xlitSimple,
+                xlitSimple: normalizeXlitForDisplay(xlitSimple.isEmpty ? xlit : xlitSimple),
                 pronunciation: pron,
                 partOfSpeech: pos,
-                shortDefinition: shortDef,
+                shortDefinition: normalizeGlossForDisplay(shortDef),
                 semanticRange: semanticRange,
                 fullDefinition: longDef,
                 concordance: []
@@ -442,7 +462,9 @@ final class DatabaseService: @unchecked Sendable {
     func loadBookUsageGroups(
         strongsId: String,
         translation: String,
-        fallbackTranslation: String = DatabaseService.defaultFallbackTranslation
+        fallbackTranslation: String = DatabaseService.defaultFallbackTranslation,
+        bookShortNames: [String: String] = [:],
+        bookLongNames:  [String: String] = [:]
     ) -> (total: Int, groups: [BookUsageGroup]) {
         guard isAvailable else {
             #if DEBUG
@@ -550,7 +572,7 @@ final class DatabaseService: @unchecked Sendable {
             let text = DatabaseService.stripBibleMarkup(rawText)
             guard !text.isEmpty else { continue }
 
-            let short   = BibleBookNames.short(for: row.bookId)
+            let short   = bookShortNames[row.bookId] ?? BibleBookNames.short(for: row.bookId)
             let ref     = "\(short) \(row.chapter):\(displayVerse)"
             let entryId = "\(row.bookId)|\(row.chapter)|\(displayVerse)"
             let example = ConcordanceEntry(id: entryId, reference: ref,
@@ -561,7 +583,7 @@ final class DatabaseService: @unchecked Sendable {
             groups.append(BookUsageGroup(
                 id:       row.bookId,
                 bookId:   row.bookId,
-                bookName: BibleBookNames.full(for: row.bookId),
+                bookName: bookLongNames[row.bookId] ?? BibleBookNames.full(for: row.bookId),
                 count:    row.count,
                 example:  example
             ))
@@ -596,7 +618,8 @@ final class DatabaseService: @unchecked Sendable {
 
     func loadCrossReferences(bookId: String, chapter: Int, verse: Int,
                              translation: String,
-                             fallbackTranslation: String = DatabaseService.defaultFallbackTranslation) -> [CrossReference] {
+                             fallbackTranslation: String = DatabaseService.defaultFallbackTranslation,
+                             bookShortNames: [String: String] = [:]) -> [CrossReference] {
         guard isAvailable else { return [] }
         var refs: [CrossReference] = []
 
@@ -624,7 +647,7 @@ final class DatabaseService: @unchecked Sendable {
             let toVerse    = Int(sqlite3_column_int(stmt, 2))
             let text       = DatabaseService.stripBibleMarkup(optString(stmt, 4) ?? "")
             let isFallback = sqlite3_column_int(stmt, 5) != 0
-            let short      = BibleBookNames.short(for: toBook)
+            let short      = bookShortNames[toBook] ?? BibleBookNames.short(for: toBook)
             let ref        = "\(short) \(toChapter):\(toVerse)"
             let id         = "\(toBook)|\(toChapter)|\(toVerse)"
             refs.append(CrossReference(id: id, targetReference: ref, targetText: text,
@@ -687,7 +710,8 @@ final class DatabaseService: @unchecked Sendable {
     ///
     /// Results are ranked by FTS5 BM25 relevance. The highlight() function returns
     /// the full verse text with matched tokens wrapped in ❮…❯ so the UI can highlight them.
-    func searchByText(query rawQuery: String, translation: String, limit: Int = 150) -> [SearchResult] {
+    func searchByText(query rawQuery: String, translation: String, limit: Int = 150,
+                      bookShortNames: [String: String] = [:]) -> [SearchResult] {
         guard isAvailable else { return [] }
         let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }
@@ -716,7 +740,7 @@ final class DatabaseService: @unchecked Sendable {
             let snip    = string(stmt, 3).strippingBibleMarkup()
             results.append(SearchResult(
                 id: "\(bookId)|\(chapter)|\(verse)",
-                reference: makeRef(bookId, chapter, verse),
+                reference: makeRef(bookId, chapter, verse, bookShortNames),
                 snippet: snip
             ))
         }
@@ -746,9 +770,11 @@ final class DatabaseService: @unchecked Sendable {
         return "\"\(escaped)\"*"
     }
 
-    /// Short reference string — "Бут 1:1" — via BibleBookNames (locale-aware, single source of truth).
-    private func makeRef(_ bookId: String, _ chapter: Int, _ verse: Int) -> String {
-        "\(BibleBookNames.short(for: bookId)) \(chapter):\(verse)"
+    /// Short reference string — "Бут 1:1" — uses translation-native short name when provided.
+    private func makeRef(_ bookId: String, _ chapter: Int, _ verse: Int,
+                         _ bookShortNames: [String: String] = [:]) -> String {
+        let short = bookShortNames[bookId] ?? BibleBookNames.short(for: bookId)
+        return "\(short) \(chapter):\(verse)"
     }
 }
 

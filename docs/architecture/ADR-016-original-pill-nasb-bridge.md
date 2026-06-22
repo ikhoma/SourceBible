@@ -147,3 +147,39 @@ New method `loadNASBStrongs(bookId:chapter:verse:) -> Set<String>`: fetches raw 
 - [x] `OriginalWordsView` — pass `isClickable` to `WordRow`
 - [x] `WordRow` — conditional Button + chevron + gloss
 - [x] `VerseBottomSheetView` — `nasbClickableWords` for disabled states
+
+---
+
+## Amendment 2026-06-22: Per-translation clickability gate + canonical word↔segment mapping
+
+**Status:** Accepted · **Deciders:** Ivan · **Relates to:** P0 lexicon test; supersedes the NASB-set gate of Option A above. Phase 2 spec (cross-translation unification) to follow.
+
+### Context
+
+P0 lexicon testing surfaced three coupled defects, all rooted in the **dual-source** design of Option A — clickability is gated by **NASB**, while highlight and navigation read the **displayed** translation:
+
+1. Words NASB-tags but the displayed translation does not render as **dead clickable rows** (clickable in the Original pill, but no verse highlight and skipped by chevron navigation).
+2. Word `← →` navigation auto-selected the **first word in Hebrew order**, not translation order, and skipped earlier words.
+3. Repeated words (e.g. לֹא…לֹא…לֹא) **jumped to a previous instance**: `tapWord(segment)` resolved the tapped segment to `words.first` by base number, ignoring which occurrence was tapped.
+
+### Measurement (`scripts/measure_strongs_coverage.py`, 2026-06-22)
+
+All four bundled modules are Strong's-tagged with comparable density. **Word-level clickable coverage per gate:** ASV 52.2% · KJV 52.6% · **NASB 51.4%** · RST 53.8%. The premise behind Option A (NASB maximizes tagged words) **does not hold** — NASB is the lowest. Modules are not subsets of one another (each tags 50–69K base-occurrences the others lack; NASB-only 41–53K). → **No coverage cost** to gating per displayed translation; a slight per-module gain.
+
+### Decision (supersedes the NASB-set gate)
+
+Clickability, navigation, highlight, and the Word-tab title are all driven by **one canonical per-verse mapping** (`verseWordSegmentPairs`): tagged segments of the **displayed** translation matched to Macula words, in **translation reading order**, **occurrence-indexed** (consume-in-order by `resolvedMaculaBase`, which still applies `nasbExtendedOverride` so NASB H9000+ numbers resolve to Macula bases).
+
+- A Macula word is **clickable iff it appears in that mapping** (the displayed translation tags it). Particles/affixes fall out naturally (their own Strong's is never tagged by a translation) — the NASB-set + morph fallback (`Td`/`Sp`/`Sd`/`ART-`) is **retired**.
+- **No NASB-union fallback** — measurement shows it is unnecessary.
+
+### Consequences
+
+- Clickable set == navigation set == highlightable set, in translation order → fixes all three defects.
+- `nasbVerseStrongs` / `loadNASBStrongs(for:)` gating path retired. `DatabaseService.loadNASBStrongs` and `NASBExtendedOverride` are **retained** (override still used by `resolvedMaculaBase` for NASB pairing). `nasbClickableWords` removed; `verseWordsWithStrongs` left as legacy.
+- Interim per-module coverage ~52–54% of Macula tokens (rest are particles/affixes/untagged).
+- **Forward link — Phase 2 (separate spec):** unify and normalize Strong's tagging across all four modules (domap missing, bring to one scheme) — the `verse_markup` canonical table — pushing clickable coverage above any single module's ~52%.
+
+### Changed (Swift, `ReaderViewModel.swift` unless noted)
+
+`verseWordSegmentPairs` + `clickableWordIDs` (new) · `isClickable` (mapping-based) · `translationOrderedClickableWords` (= pairs) · `selectedWordDisplayText` (pair lookup) · `syncSegment` (pair lookup) · `tapWord(_ segment:)` (pair-by-segment.id) · `navigateToPrevious/NextWord` (iterate pairs) · `autoSelectFirstWordIfNeeded` (first pair) · removed `nasbVerseStrongs` + `loadNASBStrongs(for:)` + `nasbClickableWords`.

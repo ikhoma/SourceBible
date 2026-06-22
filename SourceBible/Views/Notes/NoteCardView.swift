@@ -10,6 +10,8 @@ import SwiftUI
 struct NoteCardView: View {
     let item: NoteWithBlocks
 
+    @EnvironmentObject private var readerVM: ReaderViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
 
@@ -69,7 +71,7 @@ struct NoteCardView: View {
         let parts = c.verseId.split(separator: "|")
         guard parts.count == 3 else { return c.verseId }
 
-        let ref = "\(BibleBookNames.short(for: String(parts[0]))) \(parts[1]):\(parts[2])"
+        let ref = "\(readerVM.shortBookName(for: String(parts[0]))) \(parts[1]):\(parts[2])"
         return c.translationId.isEmpty ? ref : "\(ref) (\(c.translationId))"
     }
 

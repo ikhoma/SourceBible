@@ -284,6 +284,8 @@ struct ReaderView: View {
             // (pinnedTopAnchorY / pinnedVerseHeight stay as sane initial values for
             // the next entry; both are re-measured as soon as the verse re-anchors.)
             vm.clearWordSelection()
+            // ADR-024: reset the cross-ref back stack so the next sheet entry starts fresh.
+            vm.resetCrossRefStack()
         }) { sheet in
             switch sheet {
             case .bookPicker:
@@ -357,7 +359,10 @@ struct ReaderView: View {
         return "a11y.nav.next_chapter"
     }
 
-    /// R4: in-place morph between the book+translation pickers and the Back button.
+    /// R4 (ADR-024): in-place morph between three states:
+    ///   1. Pickers — sheet closed (reader mode)
+    ///   2. «Закрити» — sheet open, back stack empty
+    ///   3. «‹ Назад» — sheet open, back stack non-empty
     ///
     /// Implementation note (research, 2026-06): iOS 26's toolbar morphing APIs
     /// (matchedTransitionSource + navigationTransition) are designed for
@@ -367,17 +372,26 @@ struct ReaderView: View {
     /// The robust in-place morph is a single ToolbarItem whose content swaps with
     /// a spring-animated transition — on iOS 26 the surrounding glass capsule is
     /// preserved by the system and morphs automatically; no manual glass (CLAUDE.md).
+    ///
+    /// Animation key is a composite string so the morph fires on ALL three transitions:
+    /// reader↔Close, reader↔Back, and Close↔Back (canCrossRefBack toggle).
     @ViewBuilder
     private var leadingToolbarContent: some View {
+        // Composite animation key: fires morph on all three state transitions.
+        let morphKey = "\(vm.activeSheet == .verse)-\(vm.canCrossRefBack)"
         ZStack {
             if vm.activeSheet == .verse {
-                morphing(backButton)
+                if vm.canCrossRefBack {
+                    morphing(backButton)
+                } else {
+                    morphing(closeButton)
+                }
             } else {
                 morphing(pickerGroup)
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85),
-                   value: vm.activeSheet == .verse)
+                   value: morphKey)
     }
 
     /// iOS 17+: blurReplace gives the closest "morph in place" feel;
@@ -391,10 +405,11 @@ struct ReaderView: View {
         }
     }
 
-    /// Study Mode Back button — exits to the reader (R7).
+    /// Study Mode «‹ Назад» button — navigates back one step in the cross-ref stack (ADR-024).
+    /// Appearance is identical to the original back button; action is now vm.crossRefBack().
     private var backButton: some View {
         Button {
-            vm.activeSheet = nil
+            vm.crossRefBack()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.backward")
@@ -405,6 +420,19 @@ struct ReaderView: View {
             .foregroundStyle(.primary)
         }
         .accessibilityLabel(Text("studymode.back"))
+    }
+
+    /// Study Mode «Закрити» button — closes the bottom sheet (ADR-024).
+    /// Shown when the back stack is empty (no cross-ref history in this session).
+    private var closeButton: some View {
+        Button {
+            vm.activeSheet = nil
+        } label: {
+            Text("studymode.close")
+                .font(.headline)
+                .foregroundStyle(.primary)
+        }
+        .accessibilityLabel(Text("studymode.close"))
     }
 
     /// Reader-mode book + translation pickers (unchanged behavior).

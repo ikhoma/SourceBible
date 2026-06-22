@@ -119,7 +119,7 @@ struct VerseBottomSheetView: View {
                         Text("sheet.mode.word").font(.title2).bold()
                     }
                 } else {
-                    Text("\(BibleBookNames.short(for: vm.currentBook.id)) \(verse.chapter):\(verse.number)")
+                    Text("\(vm.currentBookShortName) \(verse.chapter):\(verse.number)")
                         .font(.title2).bold()
                 }
             }

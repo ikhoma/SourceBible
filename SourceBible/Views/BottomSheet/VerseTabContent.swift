@@ -137,6 +137,7 @@ struct ReferenceLabel: View {
 struct CrossRefsView: View {
     let refs: [CrossReference]
 
+    @EnvironmentObject private var vm: ReaderViewModel
     @EnvironmentObject private var router: AppNavigationRouter
 
     var body: some View {
@@ -179,7 +180,9 @@ struct CrossRefsView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        router.requestNavigation(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
+                        // ADR-024: use followCrossReference (direct VM call, pushes back stack)
+                        // instead of router.requestNavigation (cross-tab hop, not needed here).
+                        vm.followCrossReference(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
                     }
                     .padding(.bottom, 8)
                     Divider()
@@ -306,7 +309,11 @@ struct OriginalWordsView: View {
     // MARK: – Body
 
     var body: some View {
-        PillSection(title: sectionTitleKey) {
+        // Compute the clickable-id set ONCE per body evaluation. `clickableWordIDs`
+        // rebuilds the whole verseWordSegmentPairs mapping on each access, so calling
+        // vm.isClickable(word) per row was O(words²·segments) on every re-render.
+        let clickableIDs = vm.clickableWordIDs
+        return PillSection(title: sectionTitleKey) {
             if displayWords.isEmpty {
                 Text("verse.original.empty")
                     .font(.callout).foregroundStyle(.secondary)
@@ -317,7 +324,7 @@ struct OriginalWordsView: View {
                         WordRow(
                             word: word,
                             isSelected: vm.selectedWord?.id == word.id,
-                            isClickable: vm.isClickable(word)
+                            isClickable: clickableIDs.contains(word.id)
                         ) {
                             if let verse = vm.selectedVerse {
                                 vm.tapWord(word, in: verse)
@@ -413,6 +420,7 @@ struct CommentaryDetailView: View {
     let theologian: Theologian
     let verseId: String
     @Environment(\.sessionTracker) private var tracker
+    @EnvironmentObject private var readerVM: ReaderViewModel
 
     /// Parsed from verseId "BOOK|chapter|verse"
     private var verseComponents: (bookId: String, chapter: Int, verse: Int)? {
@@ -426,7 +434,7 @@ struct CommentaryDetailView: View {
     /// "Ps 1:3 — J. Calvin" or "Ps 1:1–3 — J. Calvin" once the section is loaded.
     private var detailTitle: String {
         guard let vc = verseComponents else { return theologian.shortName }
-        let book = BibleBookNames.short(for: vc.bookId)
+        let book = readerVM.shortBookName(for: vc.bookId)
         let ref: String
         if let sec = section {
             if sec.startChapter == sec.endChapter {

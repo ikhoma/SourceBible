@@ -396,7 +396,8 @@ struct SearchView: View {
         case .all:  filterStr = nil
         }
         vm.search(query: q, translation: readerVM.currentTranslation.id,
-                  testamentFilter: filterStr)
+                  testamentFilter: filterStr,
+                  bookShortNames: readerVM.translationBookNames.mapValues { $0.short })
         dismissKeyboard()
     }
 

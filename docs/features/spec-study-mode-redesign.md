@@ -84,6 +84,8 @@
 - Реалізація: `@Namespace` + `matchedGeometryEffect` (або iOS 26 toolbar morph API) між групою пікерів і кнопкою «Назад», анімовано пружиною на зміну `vm.activeSheet`.
 - Тап «Назад» → вихід (R7).
 
+> **АМЕНДМЕНТ (ADR-024, 2026-06-21) — морфінг тепер ТРЬОХстановий.** Leading toolbar item морфиться між **трьома** станами замість двох: `пікери` (рідер) / **«Закрити»** (Sheet відкритий, cross-ref back-стек порожній) / **«‹ Назад»** (стек непорожній). «‹ Назад» зберігає поточний вигляд (`chevron.backward` + `studymode.back`); нова «Закрити» — без шеврона, дія `vm.activeSheet = nil`; «‹ Назад» — дія `vm.crossRefBack()` (крок по cross-ref історії). Ключ морф-анімації перевести з Bool (`vm.activeSheet == .verse`) на 3-станове значення, щоб морф спрацьовував і на Закрити ⇄ Назад. Деталі — ADR-024.
+
 > **iOS 26 research-обов'язок.** Уточнити правильний API морфінгу toolbar-елементів під iOS 26 (matchedGeometry у toolbar vs `.toolbar` content transition vs `matchedTransitionSource`). Не додавати скляні фони вручну — iOS 26 застосовує glass через правильний placement/grouping (CLAUDE.md). iOS 18 fallback: простий fade/slide swap без matchedGeometry за `#available(iOS 26, *)`.
 
 ### R5. Toolbar-шеврони `<>` — verse/word навігація
@@ -121,6 +123,8 @@ Trailing `ToolbarItemGroup` (`ReaderView.swift` рядки 218–228) зміню
 
 Код виходу: `vm.activeSheet = nil` → `onDismiss` (вже є: `vm.clearWordSelection()`); прибрати `selectedDetent = .medium` (detent більше немає). Рідер: `scrollDisabled` знімається, скрол розблоковано, вірш лишається на місці. Toolbar: морфінг «Назад» → пікери (R4).
 
+> **АМЕНДМЕНТ (ADR-024, 2026-06-21).** Вихід (свайп-вниз / «Закрити») доступний лише коли cross-ref back-стек **порожній** — інакше leading-кнопка показує «‹ Назад» і робить крок назад по стеку, а не закриває Sheet (свайп-вниз закриває завжди). `onDismiss` додатково очищає `crossRefBackStack`. Деталі — ADR-024.
+
 ### R8. Highlight: нова палітра як список у меню
 
 - Підменю Highlight рендериться як список (скріншот 3): **None** зверху, розділювач, далі кольорові пункти з точкою + ✓ на активному.
@@ -149,7 +153,7 @@ Trailing `ToolbarItemGroup` (`ReaderView.swift` рядки 218–228) зміню
    |  Back / drag-down → [Reader]
 ```
 
-- Toolbar leading: `[Book ▾][Translation ▾]` ⇄ (morph) ⇄ `[‹ Назад]`.
+- Toolbar leading: `[Book ▾][Translation ▾]` ⇄ (morph) ⇄ `[Закрити]` ⇄ (morph) ⇄ `[‹ Назад]` (3 стани — ADR-024).
 - Toolbar trailing `< >`: chapter nav (Reader) ⇄ verse/word nav (Study Mode).
 
 ## 6. Edge cases
@@ -170,6 +174,7 @@ Trailing `ToolbarItemGroup` (`ReaderView.swift` рядки 218–228) зміню
 - AC4. Шеврони в шапці Sheet і нижня `actionBar` відсутні; усі 4 дії доступні з контекстного меню в шапці.
 - AC5. Highlight-підменю показує None + Purple/Pink/Orange/Mint/Blue з ✓ на активному; вибір застосовується миттєво; None знімає highlight.
 - AC6. Кнопка «Назад» морфиться in-place з пікера книги+перекладу і назад; тап «Назад» і тяг-вниз обидва повертають у рідер з розблокованим скролом.
+- AC6.1 (ADR-024). Leading toolbar морфиться між 3 станами (пікер/Закрити/Назад). При багаторівневому cross-ref переході «‹ Назад» крокує назад по точках входу до кореня; у корені кнопка = «Закрити». Свайп-вниз закриває Sheet з будь-якого рівня й очищає стек.
 - AC7. Вже збережені highlights (включно з legacy `yellow`/`green`) відображаються коректно після оновлення палітри; жодних втрат даних.
 - AC8. Build проходить (Swift 6 strict concurrency, iOS 26 SDK); iOS 26-only API — за `#available(iOS 26, *)` з iOS 18 fallback.
 

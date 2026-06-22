@@ -32,11 +32,6 @@ class ReaderViewModel: ObservableObject {
     @Published var selectedSegment: VerseSegment? = nil // segment from VerseTextView long press
     @Published var bottomSheetMode: BottomSheetMode = .verse
 
-    /// NASB Strong's base numbers for the currently focused verse.
-    /// Loaded once per verse regardless of selected translation, used to gate
-    /// clickability in the Original pill (Option A: NASB-gated).
-    @Published var nasbVerseStrongs: Set<String> = []
-
     /// Set by navigateToPreviousVerse / navigateToNextVerse before changing selectedVerse.
     /// ReaderView reads this to choose the scroll animation:
     ///   .tap      → .snappy spring (direct manipulation feel)
@@ -135,6 +130,11 @@ class ReaderViewModel: ObservableObject {
         translationBookNames[currentBook.id]?.short ?? BibleBookNames.short(for: currentBook.id)
     }
 
+    /// Translation-native short name for any book ID, falling back to BibleBookNames.
+    func shortBookName(for bookId: String) -> String {
+        translationBookNames[bookId]?.short ?? BibleBookNames.short(for: bookId)
+    }
+
     var chapterTitle: String { "\(currentBookShortName) \(currentChapter)" }
 
     /// Full chapter heading shown at the top of the reader — "Psalm 23" for Psalms, "Chapter 5" for everything else.
@@ -158,7 +158,7 @@ class ReaderViewModel: ObservableObject {
     var oldTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .old } }
     var newTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .new } }
 
-    // MARK: - NASB-gated clickability (Option A)
+    // MARK: - Canonical word↔segment mapping & clickability (ADR-016 amendment 2026-06-22)
 
     /// Extracts the numeric part from a Strong's ID: "H835a" → "835", "G2316" → "2316".
     func baseStrongsNumber(_ id: String) -> String {
@@ -174,82 +174,70 @@ class ReaderViewModel: ObservableObject {
         return Self.nasbExtendedOverride[base] ?? base
     }
 
-    /// True when this Macula word should be clickable in the Original pill.
+    /// True when this Macula word is clickable in the Original pill.
     ///
-    /// Primary check: the word's Strong's base number appears in NASB tagging for this verse.
-    /// Extended override: NASB proprietary numbers (H9000+) are resolved via nasbExtendedOverride.
-    /// Fallback (unresolved extended / NASB has no text): allow if word is not a definite article
-    /// or pronominal suffix — the only two categories NASB never tags as standalone lexemes.
+    /// Per-translation gate (ADR-016 amendment 2026-06-22): a word is clickable iff it
+    /// participates in the canonical word↔segment mapping for the DISPLAYED translation,
+    /// i.e. the translation tags its Strong's number. Particles/affixes fall out naturally
+    /// (their own Strong's is never tagged by a translation). Replaces the NASB-set + morph
+    /// fallback gate — measurement showed NASB gives no coverage advantage.
     func isClickable(_ word: BibleWord) -> Bool {
-        guard let sid = word.strongsId else { return false }
-        let base = baseStrongsNumber(sid)
-
-        // Direct match against NASB numbers for this verse
-        if nasbVerseStrongs.contains(base) { return true }
-
-        // nasbVerseStrongs is empty when NASB has no verse text (very rare / NT Aramaic)
-        // or when the verse hasn't loaded yet — fall through to morph fallback below.
-
-        // If NASB is loaded and base not found, check morph fallback:
-        // Definite articles (Td, Greek ART-) and pronominal suffixes (Sp*, Sd)
-        // are the only morphological categories NASB never tags as standalone words.
-        guard let morph = word.morphology else { return nasbVerseStrongs.isEmpty }
-        if morph.hasPrefix("Td") || morph.hasPrefix("Sp") || morph.hasPrefix("Sd") { return false }
-        if morph.hasPrefix("ART-") { return false }   // Greek definite article
-
-        // If NASB is loaded and this word isn't tagged, it's genuinely untagged (e.g. prefix
-        // prepositions H871a, prefix conjunctions H2050b). The old fallback `return true` was
-        // intended for unresolved extended NASB numbers, but those are now fully covered by
-        // nasbExtendedOverride in loadNASBStrongs — so we no longer need the open fallback.
-        return nasbVerseStrongs.isEmpty
+        clickableWordIDs.contains(word.id)
     }
 
-    /// Non-particle Macula words for the focused verse — in original Hebrew/Greek order.
-    var nasbClickableWords: [BibleWord] {
-        selectedVerse?.words.filter { isClickable($0) } ?? []
+    /// One tagged translation segment matched to its Macula word.
+    struct WordSegmentPair {
+        let word: BibleWord
+        let segment: VerseSegment
     }
 
-    /// Clickable words ordered by their position in the translation text (segment order).
-    /// Used for <> navigation so stepping through words follows reading order, not original order.
-    ///
-    /// Algorithm: walk translation segments in order; for each segment with a Strong's match,
-    /// find the Nth occurrence of that Strong's in the Macula word list (consume-in-order).
-    /// Words with no matching segment are skipped (they have no translation highlight anyway).
-    var translationOrderedClickableWords: [BibleWord] {
-        guard let segments = selectedVerse?.parsed?.segments else { return nasbClickableWords }
-        let clickable = nasbClickableWords
+    /// Canonical per-verse mapping — single source of truth for clickability, navigation,
+    /// highlight and the Word-tab title. Tagged segments of the displayed translation matched
+    /// to Macula words, in translation reading order, occurrence-indexed (consume-in-order by
+    /// resolvedMaculaBase, which still applies nasbExtendedOverride so NASB H9000+ numbers
+    /// resolve). Words whose Strong's the translation never tags (particles/affixes) are absent.
+    var verseWordSegmentPairs: [WordSegmentPair] {
+        guard let segments = selectedVerse?.parsed?.segments,
+              let words = selectedVerse?.words else { return [] }
 
-        // Build a base-number → [BibleWord] map preserving Hebrew order for consume-in-order matching
+        // Pool Macula words by base number, preserving original order for consume-in-order.
         var pool: [String: [BibleWord]] = [:]
-        for word in clickable {
+        for word in words {
             guard let sid = word.strongsId else { continue }
-            let base = baseStrongsNumber(sid)
-            pool[base, default: []].append(word)
+            pool[baseStrongsNumber(sid), default: []].append(word)
         }
 
-        // Consumption cursors — how many times we've already consumed each base number
         var cursor: [String: Int] = [:]
-        var ordered: [BibleWord] = []
-        var seen: Set<String> = []  // avoid duplicates if one segment maps to multiple strongs
-
+        var pairs: [WordSegmentPair] = []
+        var seen: Set<String> = []
         for seg in segments where !seg.strongs.isEmpty {
             for rawId in seg.strongs {
                 let base = resolvedMaculaBase(rawId)
                 let idx = cursor[base, default: 0]
-                if let words = pool[base], idx < words.count {
-                    let word = words[idx]
+                if let bucket = pool[base], idx < bucket.count {
+                    let word = bucket[idx]
+                    cursor[base] = idx + 1
                     if !seen.contains(word.id) {
-                        ordered.append(word)
+                        pairs.append(WordSegmentPair(word: word, segment: seg))
                         seen.insert(word.id)
                     }
-                    cursor[base] = idx + 1
                 }
             }
         }
-        return ordered
+        return pairs
     }
 
-    /// Kept for backward compatibility — prefer nasbClickableWords for navigation.
+    /// Ids of clickable words (those present in the canonical mapping).
+    var clickableWordIDs: Set<String> {
+        Set(verseWordSegmentPairs.map { $0.word.id })
+    }
+
+    /// Clickable words in translation reading order — drives <> word navigation.
+    var translationOrderedClickableWords: [BibleWord] {
+        verseWordSegmentPairs.map { $0.word }
+    }
+
+    /// Kept for backward compatibility — prefer translationOrderedClickableWords for navigation.
     var verseWordsWithStrongs: [BibleWord] {
         selectedVerse?.words.filter { $0.strongsId != nil } ?? []
     }
@@ -264,25 +252,9 @@ class ReaderViewModel: ObservableObject {
             if !t.isEmpty { return t }
         }
         if let word = selectedWord,
-           let strongsId = word.strongsId,
-           let parsed = selectedVerse?.parsed {
-            let base = baseStrongsNumber(strongsId)
-            let sameBase = nasbClickableWords.filter {
-                guard let sid = $0.strongsId else { return false }
-                return baseStrongsNumber(sid) == base
-            }
-            let occurrenceIdx = sameBase.firstIndex(where: { $0.id == word.id }) ?? 0
-            var count = 0
-            for seg in parsed.segments {
-                if seg.strongs.contains(where: { resolvedMaculaBase($0) == base }) {
-                    if count == occurrenceIdx {
-                        let t = seg.text.trimmingCharacters(in: .whitespaces)
-                        if !t.isEmpty { return t }
-                        break
-                    }
-                    count += 1
-                }
-            }
+           let seg = verseWordSegmentPairs.first(where: { $0.word.id == word.id })?.segment {
+            let t = seg.text.trimmingCharacters(in: .whitespaces)
+            if !t.isEmpty { return t }
         }
         return selectedWord?.text.trimmingCharacters(in: .whitespaces)
     }
@@ -344,9 +316,28 @@ class ReaderViewModel: ObservableObject {
     private var verseHeights: [String: CGFloat] = [:]
 
     /// Record a row's measured height. Cheap, idempotent.
+    ///
+    /// `verseHeights` is intentionally NOT @Published (avoids a re-render storm on
+    /// long chapters). The design relied on `selectedVerse` (which IS @Published)
+    /// to drive the `studySheetHeight` recompute — which works only when the row is
+    /// already measured BEFORE selection (the in-reader tap and warm cross-ref
+    /// paths). When the verse is selected BEFORE its row is laid out — opening a
+    /// verse from Search in another chapter/book, where a tab switch + deferred
+    /// Task present the sheet before the freshly-loaded rows measure — the late
+    /// height write published nothing, so the sheet stayed stuck at the
+    /// `screenH * 0.45` pre-measurement fallback (the "~50% snap" bug; worst on
+    /// huge chapters like Ps 119 where the layout pass is slow).
+    ///
+    /// Fix: when the row that just measured IS the selected verse, publish once so
+    /// `studySheetHeight` recomputes and the detent applier resizes to the real
+    /// height. Gated to the selected id → at most one extra render per selection,
+    /// so the no-@Published rationale above still holds.
     func setVerseHeight(_ height: CGFloat, for id: String) {
         guard height > 0, abs((verseHeights[id] ?? 0) - height) > 0.5 else { return }
         verseHeights[id] = height
+        if id == selectedVerse?.id {
+            objectWillChange.send()
+        }
     }
 
     /// Intrinsic height of the currently selected verse (0 until measured). Combined
@@ -466,9 +457,43 @@ class ReaderViewModel: ObservableObject {
         loadChapter()
     }
 
+    // MARK: - Cross-Reference Back Stack (ADR-024)
+
+    /// Stack of verse IDs representing the cross-ref navigation history.
+    /// Top of the stack (last element) is the most recent origin.
+    /// Session-scoped: cleared when the sheet is dismissed.
+    @Published private(set) var crossRefBackStack: [String] = []
+
+    /// True when the back stack has at least one entry (i.e. user followed at least one cross-ref).
+    var canCrossRefBack: Bool { !crossRefBackStack.isEmpty }
+
+    /// Follow a cross-reference link from within the open bottom sheet.
+    /// Pushes the current verse onto the back stack before navigating.
+    func followCrossReference(to verseId: String) {
+        navigateToVerse(id: verseId, source: .crossRef)
+    }
+
+    /// Navigate back one step in the cross-ref history.
+    /// Pops the previous verse from the stack and navigates to it.
+    func crossRefBack() {
+        guard let previous = crossRefBackStack.popLast() else { return }
+        navigateToVerse(id: previous, source: .back)
+    }
+
+    /// Clear the back stack — called from onDismiss so the next sheet entry starts fresh.
+    func resetCrossRefStack() {
+        crossRefBackStack.removeAll()
+    }
+
     /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
     /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
     func navigateToVerse(id verseId: String) {
+        navigateToVerse(id: verseId, source: .fresh)
+    }
+
+    /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
+    /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
+    private func navigateToVerse(id verseId: String, source: VerseNavSource) {
         let parts = verseId.split(separator: "|")
         guard parts.count == 3,
               let chapter = Int(parts[1]) else { return }
@@ -496,6 +521,23 @@ class ReaderViewModel: ObservableObject {
         // loadWordsForSelectedVerse() is required here — navigateToVerse() skips
         // the normal tapVerse() path that loads words for the Original tab.
         if let verse = verses.first(where: { $0.id == verseId }) {
+            // ADR-024: manage back stack BEFORE updating selectedVerse, using the
+            // success branch only (so a failed lookup doesn't pollute the stack).
+            switch source {
+            case .fresh:
+                // New entry point — reset the back stack for a clean session.
+                crossRefBackStack.removeAll()
+            case .crossRef:
+                // Push the current verse (if the sheet is open and a verse is selected)
+                // so the user can navigate back to it.
+                if activeSheet == .verse, let current = selectedVerse, current.id != verseId {
+                    crossRefBackStack.append(current.id)
+                }
+            case .back:
+                // Stack was already popped by crossRefBack() — nothing to do here.
+                break
+            }
+
             selectedVerse = verse
             selectedWord = nil
             selectedSegment = nil
@@ -508,7 +550,10 @@ class ReaderViewModel: ObservableObject {
             // tick so the new layout is committed before scrollTo fires.
             verseScrollTrigger += 1
             // Analytics: record unique verse read.
-            sessionTracker.incVersesOpened(verseId: verseId)
+            // Skip incVersesOpened on .back — the verse was already counted when first opened.
+            if source != .back {
+                sessionTracker.incVersesOpened(verseId: verseId)
+            }
         }
     }
 
@@ -553,26 +598,6 @@ class ReaderViewModel: ObservableObject {
                                      highlightColor: v.highlightColor, parsed: v.parsed)
             selectedVerse = verses[idx]
         }
-        // Load NASB Strong's for clickability gating (Option A).
-        // Runs regardless of the currently selected translation.
-        loadNASBStrongs(for: verse)
-    }
-
-    /// Load NASB Strong's base numbers for the given verse into nasbVerseStrongs.
-    /// Applies the extended-number override map so H9238 resolves to "3887" etc.
-    private func loadNASBStrongs(for verse: BibleVerse) {
-        let raw = db.loadNASBStrongs(bookId: verse.bookId,
-                                     chapter: verse.chapter,
-                                     verse: verse.number)
-        var bases = Set<String>()
-        for num in raw {
-            bases.insert(num)
-            // Extended NASB number → add the Macula equivalent base as well
-            if let maculaBase = Self.nasbExtendedOverride[num] {
-                bases.insert(maculaBase)
-            }
-        }
-        nasbVerseStrongs = bases
     }
 
     /// Returns the Macula (MT) verse number for the given translation verse.
@@ -636,7 +661,8 @@ class ReaderViewModel: ObservableObject {
         return db.loadCrossReferences(bookId: verse.bookId,
                                        chapter: verse.chapter,
                                        verse: verse.number,
-                                       translation: currentTranslation.id)
+                                       translation: currentTranslation.id,
+                                       bookShortNames: translationBookNames.mapValues { $0.short })
     }
 
     // MARK: - Bottom Sheet
@@ -664,17 +690,9 @@ class ReaderViewModel: ObservableObject {
         // Ensure Macula words are loaded
         if verse.words.isEmpty { loadWordsForSelectedVerse() }
 
-        // Bridge: find BibleWord by base Strong's number so WordMeaningView gets full data
-        if let raw = segment.strongs.first {
-            let resolved = resolveStrongsId(raw, bookId: verse.bookId)
-            let base = baseStrongsNumber(resolved)
-            selectedWord = selectedVerse?.words.first {
-                guard let sid = $0.strongsId else { return false }
-                return baseStrongsNumber(sid) == base
-            }
-        } else {
-            selectedWord = nil
-        }
+        // Bridge to the exact Macula word paired with THIS segment instance in the canonical
+        // mapping — handles repeated words (e.g. לֹא…לֹא…לֹא) without jumping to a prior instance.
+        selectedWord = verseWordSegmentPairs.first { $0.segment.id == segment.id }?.word
 
         // Prefer the Macula word's strongsId (e.g. H3887a) over the segment ID (e.g. H3887).
         // The strongs table is backfilled from Macula, so bare OpenScriptures IDs like H3887
@@ -737,66 +755,37 @@ class ReaderViewModel: ObservableObject {
 
     /// Navigate to the previous meaningful word in the focused verse (translation order).
     func navigateToPreviousWord() {
-        let words = translationOrderedClickableWords
+        let pairs = verseWordSegmentPairs
         guard let word = selectedWord,
-              let idx = words.firstIndex(where: { $0.id == word.id }),
+              let idx = pairs.firstIndex(where: { $0.word.id == word.id }),
               idx > 0 else { return }
-        let newWord = words[idx - 1]
-        selectedWord = newWord
-        syncSegment(for: newWord)
-        loadStrongs(for: newWord)
+        let prev = pairs[idx - 1]
+        selectedWord = prev.word
+        selectedSegment = prev.segment
+        loadStrongs(for: prev.word)
         // Analytics: word chevron nav.
         sessionTracker.incWordNav()
     }
 
     /// Navigate to the next meaningful word in the focused verse (translation order).
     func navigateToNextWord() {
-        let words = translationOrderedClickableWords
+        let pairs = verseWordSegmentPairs
         guard let word = selectedWord,
-              let idx = words.firstIndex(where: { $0.id == word.id }),
-              idx < words.count - 1 else { return }
-        let newWord = words[idx + 1]
-        selectedWord = newWord
-        syncSegment(for: newWord)
-        loadStrongs(for: newWord)
+              let idx = pairs.firstIndex(where: { $0.word.id == word.id }),
+              idx < pairs.count - 1 else { return }
+        let next = pairs[idx + 1]
+        selectedWord = next.word
+        selectedSegment = next.segment
+        loadStrongs(for: next.word)
         // Analytics: word chevron nav.
         sessionTracker.incWordNav()
     }
 
-    /// Finds the VerseSegment whose strongs array contains the word's Strong's base number
-    /// and sets it as selectedSegment so VerseTextView highlight tracks both chevron navigation
-    /// and Original pill taps.
-    ///
-    /// Handles duplicates (e.g. three H3808 לֹא in Ps 1:1) by finding which occurrence this
-    /// word is among clickable words with the same base (Hebrew order), then picking the Nth
-    /// matching segment — keeping verse highlight in sync with the correct translation word.
+    /// Sets selectedSegment to the segment paired with `word` in the canonical mapping, so the
+    /// verse-text highlight tracks chevron navigation and Original-pill taps — including repeated
+    /// words (each occurrence is a distinct pair, so no jumping to a previous instance).
     private func syncSegment(for word: BibleWord) {
-        guard let strongsId = word.strongsId,
-              let segments = selectedVerse?.parsed?.segments else {
-            selectedSegment = nil
-            return
-        }
-        let base = baseStrongsNumber(strongsId)
-
-        // Which occurrence (0-indexed) is this word among same-base clickable words?
-        let sameBase = nasbClickableWords.filter {
-            guard let sid = $0.strongsId else { return false }
-            return baseStrongsNumber(sid) == base
-        }
-        let occurrenceIdx = sameBase.firstIndex(where: { $0.id == word.id }) ?? 0
-
-        // Pick the Nth segment that matches this base
-        var count = 0
-        for seg in segments {
-            if seg.strongs.contains(where: { resolvedMaculaBase($0) == base }) {
-                if count == occurrenceIdx {
-                    selectedSegment = seg
-                    return
-                }
-                count += 1
-            }
-        }
-        selectedSegment = nil
+        selectedSegment = verseWordSegmentPairs.first { $0.word.id == word.id }?.segment
     }
 
     /// Switch to word mode; if no word is selected, auto-select the first word with a Strong's number.
@@ -810,10 +799,10 @@ class ReaderViewModel: ObservableObject {
     /// Called from the Picker's onChange so the mode is already set — avoids re-triggering the binding.
     func autoSelectFirstWordIfNeeded() {
         guard selectedWord == nil && selectedSegment == nil else { return }
-        if let firstWord = nasbClickableWords.first {
-            selectedWord = firstWord
-            syncSegment(for: firstWord)
-            loadStrongs(for: firstWord)
+        if let first = verseWordSegmentPairs.first {
+            selectedWord = first.word
+            selectedSegment = first.segment
+            loadStrongs(for: first.word)
         }
     }
 
@@ -852,7 +841,9 @@ class ReaderViewModel: ObservableObject {
         var entry = db.loadStrongs(id: strongsId)
         if var e = entry {
             let result = db.loadBookUsageGroups(strongsId: strongsId,
-                                                translation: currentTranslation.id)
+                                                translation: currentTranslation.id,
+                                                bookShortNames: translationBookNames.mapValues { $0.short },
+                                                bookLongNames:  translationBookNames.mapValues { $0.long })
             e.totalCount = result.total
             e.bookGroups = result.groups
             entry = e
@@ -915,6 +906,22 @@ class ReaderViewModel: ObservableObject {
             }
         }
     }
+}
+
+// MARK: - Verse Navigation Source (ADR-024)
+
+/// Describes what triggered a `navigateToVerse(id:source:)` call.
+/// Controls how the cross-ref back stack is updated.
+enum VerseNavSource: Equatable {
+    /// Fresh tap (verse row, search, bookmarks, notes, pendingVerseId).
+    /// Clears the back stack — this is a new entry point.
+    case fresh
+    /// Cross-reference tap from within an open bottom sheet.
+    /// Pushes the current verse onto the back stack before navigating.
+    case crossRef
+    /// «‹ Назад» button — back stack was already popped by the caller.
+    /// No push/clear needed.
+    case back
 }
 
 // MARK: - Bottom Sheet Mode
