@@ -349,9 +349,28 @@ class ReaderViewModel: ObservableObject {
     private var verseHeights: [String: CGFloat] = [:]
 
     /// Record a row's measured height. Cheap, idempotent.
+    ///
+    /// `verseHeights` is intentionally NOT @Published (avoids a re-render storm on
+    /// long chapters). The design relied on `selectedVerse` (which IS @Published)
+    /// to drive the `studySheetHeight` recompute — which works only when the row is
+    /// already measured BEFORE selection (the in-reader tap and warm cross-ref
+    /// paths). When the verse is selected BEFORE its row is laid out — opening a
+    /// verse from Search in another chapter/book, where a tab switch + deferred
+    /// Task present the sheet before the freshly-loaded rows measure — the late
+    /// height write published nothing, so the sheet stayed stuck at the
+    /// `screenH * 0.45` pre-measurement fallback (the "~50% snap" bug; worst on
+    /// huge chapters like Ps 119 where the layout pass is slow).
+    ///
+    /// Fix: when the row that just measured IS the selected verse, publish once so
+    /// `studySheetHeight` recomputes and the detent applier resizes to the real
+    /// height. Gated to the selected id → at most one extra render per selection,
+    /// so the no-@Published rationale above still holds.
     func setVerseHeight(_ height: CGFloat, for id: String) {
         guard height > 0, abs((verseHeights[id] ?? 0) - height) > 0.5 else { return }
         verseHeights[id] = height
+        if id == selectedVerse?.id {
+            objectWillChange.send()
+        }
     }
 
     /// Intrinsic height of the currently selected verse (0 until measured). Combined
