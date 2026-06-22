@@ -11,6 +11,11 @@ import SwiftUI
 
 struct BookCoverView: View {
 
+    // Re-render on in-app language switch: BookCoverData returns an eagerly-resolved
+    // String via NSLocalizedString, so the view must depend on \.locale to recompute
+    // it when the language changes (mirrors EntriesView/MenuView .id(locale.identifier)).
+    @Environment(\.locale) private var locale
+
     let bookId: String
     let bookName: String
     let chapterCount: Int
@@ -113,6 +118,8 @@ struct BookCoverView: View {
         .frame(height: frameHeight)
         .frame(maxWidth: .infinity)
         .clipped()
+        // Force rebuild on language change so BookCoverData re-reads NSLocalizedString.
+        .id(locale.identifier)
     }
 }
 

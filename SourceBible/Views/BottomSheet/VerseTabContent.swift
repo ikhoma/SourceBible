@@ -309,7 +309,11 @@ struct OriginalWordsView: View {
     // MARK: – Body
 
     var body: some View {
-        PillSection(title: sectionTitleKey) {
+        // Compute the clickable-id set ONCE per body evaluation. `clickableWordIDs`
+        // rebuilds the whole verseWordSegmentPairs mapping on each access, so calling
+        // vm.isClickable(word) per row was O(words²·segments) on every re-render.
+        let clickableIDs = vm.clickableWordIDs
+        return PillSection(title: sectionTitleKey) {
             if displayWords.isEmpty {
                 Text("verse.original.empty")
                     .font(.callout).foregroundStyle(.secondary)
@@ -320,7 +324,7 @@ struct OriginalWordsView: View {
                         WordRow(
                             word: word,
                             isSelected: vm.selectedWord?.id == word.id,
-                            isClickable: vm.isClickable(word)
+                            isClickable: clickableIDs.contains(word.id)
                         ) {
                             if let verse = vm.selectedVerse {
                                 vm.tapWord(word, in: verse)

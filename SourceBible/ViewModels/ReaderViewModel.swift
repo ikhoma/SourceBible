@@ -32,11 +32,6 @@ class ReaderViewModel: ObservableObject {
     @Published var selectedSegment: VerseSegment? = nil // segment from VerseTextView long press
     @Published var bottomSheetMode: BottomSheetMode = .verse
 
-    /// NASB Strong's base numbers for the currently focused verse.
-    /// Loaded once per verse regardless of selected translation, used to gate
-    /// clickability in the Original pill (Option A: NASB-gated).
-    @Published var nasbVerseStrongs: Set<String> = []
-
     /// Set by navigateToPreviousVerse / navigateToNextVerse before changing selectedVerse.
     /// ReaderView reads this to choose the scroll animation:
     ///   .tap      → .snappy spring (direct manipulation feel)
@@ -163,7 +158,7 @@ class ReaderViewModel: ObservableObject {
     var oldTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .old } }
     var newTestamentBooks: [BibleBook] { allBooks.filter { $0.testament == .new } }
 
-    // MARK: - NASB-gated clickability (Option A)
+    // MARK: - Canonical word↔segment mapping & clickability (ADR-016 amendment 2026-06-22)
 
     /// Extracts the numeric part from a Strong's ID: "H835a" → "835", "G2316" → "2316".
     func baseStrongsNumber(_ id: String) -> String {
@@ -179,82 +174,70 @@ class ReaderViewModel: ObservableObject {
         return Self.nasbExtendedOverride[base] ?? base
     }
 
-    /// True when this Macula word should be clickable in the Original pill.
+    /// True when this Macula word is clickable in the Original pill.
     ///
-    /// Primary check: the word's Strong's base number appears in NASB tagging for this verse.
-    /// Extended override: NASB proprietary numbers (H9000+) are resolved via nasbExtendedOverride.
-    /// Fallback (unresolved extended / NASB has no text): allow if word is not a definite article
-    /// or pronominal suffix — the only two categories NASB never tags as standalone lexemes.
+    /// Per-translation gate (ADR-016 amendment 2026-06-22): a word is clickable iff it
+    /// participates in the canonical word↔segment mapping for the DISPLAYED translation,
+    /// i.e. the translation tags its Strong's number. Particles/affixes fall out naturally
+    /// (their own Strong's is never tagged by a translation). Replaces the NASB-set + morph
+    /// fallback gate — measurement showed NASB gives no coverage advantage.
     func isClickable(_ word: BibleWord) -> Bool {
-        guard let sid = word.strongsId else { return false }
-        let base = baseStrongsNumber(sid)
-
-        // Direct match against NASB numbers for this verse
-        if nasbVerseStrongs.contains(base) { return true }
-
-        // nasbVerseStrongs is empty when NASB has no verse text (very rare / NT Aramaic)
-        // or when the verse hasn't loaded yet — fall through to morph fallback below.
-
-        // If NASB is loaded and base not found, check morph fallback:
-        // Definite articles (Td, Greek ART-) and pronominal suffixes (Sp*, Sd)
-        // are the only morphological categories NASB never tags as standalone words.
-        guard let morph = word.morphology else { return nasbVerseStrongs.isEmpty }
-        if morph.hasPrefix("Td") || morph.hasPrefix("Sp") || morph.hasPrefix("Sd") { return false }
-        if morph.hasPrefix("ART-") { return false }   // Greek definite article
-
-        // If NASB is loaded and this word isn't tagged, it's genuinely untagged (e.g. prefix
-        // prepositions H871a, prefix conjunctions H2050b). The old fallback `return true` was
-        // intended for unresolved extended NASB numbers, but those are now fully covered by
-        // nasbExtendedOverride in loadNASBStrongs — so we no longer need the open fallback.
-        return nasbVerseStrongs.isEmpty
+        clickableWordIDs.contains(word.id)
     }
 
-    /// Non-particle Macula words for the focused verse — in original Hebrew/Greek order.
-    var nasbClickableWords: [BibleWord] {
-        selectedVerse?.words.filter { isClickable($0) } ?? []
+    /// One tagged translation segment matched to its Macula word.
+    struct WordSegmentPair {
+        let word: BibleWord
+        let segment: VerseSegment
     }
 
-    /// Clickable words ordered by their position in the translation text (segment order).
-    /// Used for <> navigation so stepping through words follows reading order, not original order.
-    ///
-    /// Algorithm: walk translation segments in order; for each segment with a Strong's match,
-    /// find the Nth occurrence of that Strong's in the Macula word list (consume-in-order).
-    /// Words with no matching segment are skipped (they have no translation highlight anyway).
-    var translationOrderedClickableWords: [BibleWord] {
-        guard let segments = selectedVerse?.parsed?.segments else { return nasbClickableWords }
-        let clickable = nasbClickableWords
+    /// Canonical per-verse mapping — single source of truth for clickability, navigation,
+    /// highlight and the Word-tab title. Tagged segments of the displayed translation matched
+    /// to Macula words, in translation reading order, occurrence-indexed (consume-in-order by
+    /// resolvedMaculaBase, which still applies nasbExtendedOverride so NASB H9000+ numbers
+    /// resolve). Words whose Strong's the translation never tags (particles/affixes) are absent.
+    var verseWordSegmentPairs: [WordSegmentPair] {
+        guard let segments = selectedVerse?.parsed?.segments,
+              let words = selectedVerse?.words else { return [] }
 
-        // Build a base-number → [BibleWord] map preserving Hebrew order for consume-in-order matching
+        // Pool Macula words by base number, preserving original order for consume-in-order.
         var pool: [String: [BibleWord]] = [:]
-        for word in clickable {
+        for word in words {
             guard let sid = word.strongsId else { continue }
-            let base = baseStrongsNumber(sid)
-            pool[base, default: []].append(word)
+            pool[baseStrongsNumber(sid), default: []].append(word)
         }
 
-        // Consumption cursors — how many times we've already consumed each base number
         var cursor: [String: Int] = [:]
-        var ordered: [BibleWord] = []
-        var seen: Set<String> = []  // avoid duplicates if one segment maps to multiple strongs
-
+        var pairs: [WordSegmentPair] = []
+        var seen: Set<String> = []
         for seg in segments where !seg.strongs.isEmpty {
             for rawId in seg.strongs {
                 let base = resolvedMaculaBase(rawId)
                 let idx = cursor[base, default: 0]
-                if let words = pool[base], idx < words.count {
-                    let word = words[idx]
+                if let bucket = pool[base], idx < bucket.count {
+                    let word = bucket[idx]
+                    cursor[base] = idx + 1
                     if !seen.contains(word.id) {
-                        ordered.append(word)
+                        pairs.append(WordSegmentPair(word: word, segment: seg))
                         seen.insert(word.id)
                     }
-                    cursor[base] = idx + 1
                 }
             }
         }
-        return ordered
+        return pairs
     }
 
-    /// Kept for backward compatibility — prefer nasbClickableWords for navigation.
+    /// Ids of clickable words (those present in the canonical mapping).
+    var clickableWordIDs: Set<String> {
+        Set(verseWordSegmentPairs.map { $0.word.id })
+    }
+
+    /// Clickable words in translation reading order — drives <> word navigation.
+    var translationOrderedClickableWords: [BibleWord] {
+        verseWordSegmentPairs.map { $0.word }
+    }
+
+    /// Kept for backward compatibility — prefer translationOrderedClickableWords for navigation.
     var verseWordsWithStrongs: [BibleWord] {
         selectedVerse?.words.filter { $0.strongsId != nil } ?? []
     }
@@ -269,25 +252,9 @@ class ReaderViewModel: ObservableObject {
             if !t.isEmpty { return t }
         }
         if let word = selectedWord,
-           let strongsId = word.strongsId,
-           let parsed = selectedVerse?.parsed {
-            let base = baseStrongsNumber(strongsId)
-            let sameBase = nasbClickableWords.filter {
-                guard let sid = $0.strongsId else { return false }
-                return baseStrongsNumber(sid) == base
-            }
-            let occurrenceIdx = sameBase.firstIndex(where: { $0.id == word.id }) ?? 0
-            var count = 0
-            for seg in parsed.segments {
-                if seg.strongs.contains(where: { resolvedMaculaBase($0) == base }) {
-                    if count == occurrenceIdx {
-                        let t = seg.text.trimmingCharacters(in: .whitespaces)
-                        if !t.isEmpty { return t }
-                        break
-                    }
-                    count += 1
-                }
-            }
+           let seg = verseWordSegmentPairs.first(where: { $0.word.id == word.id })?.segment {
+            let t = seg.text.trimmingCharacters(in: .whitespaces)
+            if !t.isEmpty { return t }
         }
         return selectedWord?.text.trimmingCharacters(in: .whitespaces)
     }
@@ -631,26 +598,6 @@ class ReaderViewModel: ObservableObject {
                                      highlightColor: v.highlightColor, parsed: v.parsed)
             selectedVerse = verses[idx]
         }
-        // Load NASB Strong's for clickability gating (Option A).
-        // Runs regardless of the currently selected translation.
-        loadNASBStrongs(for: verse)
-    }
-
-    /// Load NASB Strong's base numbers for the given verse into nasbVerseStrongs.
-    /// Applies the extended-number override map so H9238 resolves to "3887" etc.
-    private func loadNASBStrongs(for verse: BibleVerse) {
-        let raw = db.loadNASBStrongs(bookId: verse.bookId,
-                                     chapter: verse.chapter,
-                                     verse: verse.number)
-        var bases = Set<String>()
-        for num in raw {
-            bases.insert(num)
-            // Extended NASB number → add the Macula equivalent base as well
-            if let maculaBase = Self.nasbExtendedOverride[num] {
-                bases.insert(maculaBase)
-            }
-        }
-        nasbVerseStrongs = bases
     }
 
     /// Returns the Macula (MT) verse number for the given translation verse.
@@ -743,17 +690,9 @@ class ReaderViewModel: ObservableObject {
         // Ensure Macula words are loaded
         if verse.words.isEmpty { loadWordsForSelectedVerse() }
 
-        // Bridge: find BibleWord by base Strong's number so WordMeaningView gets full data
-        if let raw = segment.strongs.first {
-            let resolved = resolveStrongsId(raw, bookId: verse.bookId)
-            let base = baseStrongsNumber(resolved)
-            selectedWord = selectedVerse?.words.first {
-                guard let sid = $0.strongsId else { return false }
-                return baseStrongsNumber(sid) == base
-            }
-        } else {
-            selectedWord = nil
-        }
+        // Bridge to the exact Macula word paired with THIS segment instance in the canonical
+        // mapping — handles repeated words (e.g. לֹא…לֹא…לֹא) without jumping to a prior instance.
+        selectedWord = verseWordSegmentPairs.first { $0.segment.id == segment.id }?.word
 
         // Prefer the Macula word's strongsId (e.g. H3887a) over the segment ID (e.g. H3887).
         // The strongs table is backfilled from Macula, so bare OpenScriptures IDs like H3887
@@ -816,66 +755,37 @@ class ReaderViewModel: ObservableObject {
 
     /// Navigate to the previous meaningful word in the focused verse (translation order).
     func navigateToPreviousWord() {
-        let words = translationOrderedClickableWords
+        let pairs = verseWordSegmentPairs
         guard let word = selectedWord,
-              let idx = words.firstIndex(where: { $0.id == word.id }),
+              let idx = pairs.firstIndex(where: { $0.word.id == word.id }),
               idx > 0 else { return }
-        let newWord = words[idx - 1]
-        selectedWord = newWord
-        syncSegment(for: newWord)
-        loadStrongs(for: newWord)
+        let prev = pairs[idx - 1]
+        selectedWord = prev.word
+        selectedSegment = prev.segment
+        loadStrongs(for: prev.word)
         // Analytics: word chevron nav.
         sessionTracker.incWordNav()
     }
 
     /// Navigate to the next meaningful word in the focused verse (translation order).
     func navigateToNextWord() {
-        let words = translationOrderedClickableWords
+        let pairs = verseWordSegmentPairs
         guard let word = selectedWord,
-              let idx = words.firstIndex(where: { $0.id == word.id }),
-              idx < words.count - 1 else { return }
-        let newWord = words[idx + 1]
-        selectedWord = newWord
-        syncSegment(for: newWord)
-        loadStrongs(for: newWord)
+              let idx = pairs.firstIndex(where: { $0.word.id == word.id }),
+              idx < pairs.count - 1 else { return }
+        let next = pairs[idx + 1]
+        selectedWord = next.word
+        selectedSegment = next.segment
+        loadStrongs(for: next.word)
         // Analytics: word chevron nav.
         sessionTracker.incWordNav()
     }
 
-    /// Finds the VerseSegment whose strongs array contains the word's Strong's base number
-    /// and sets it as selectedSegment so VerseTextView highlight tracks both chevron navigation
-    /// and Original pill taps.
-    ///
-    /// Handles duplicates (e.g. three H3808 לֹא in Ps 1:1) by finding which occurrence this
-    /// word is among clickable words with the same base (Hebrew order), then picking the Nth
-    /// matching segment — keeping verse highlight in sync with the correct translation word.
+    /// Sets selectedSegment to the segment paired with `word` in the canonical mapping, so the
+    /// verse-text highlight tracks chevron navigation and Original-pill taps — including repeated
+    /// words (each occurrence is a distinct pair, so no jumping to a previous instance).
     private func syncSegment(for word: BibleWord) {
-        guard let strongsId = word.strongsId,
-              let segments = selectedVerse?.parsed?.segments else {
-            selectedSegment = nil
-            return
-        }
-        let base = baseStrongsNumber(strongsId)
-
-        // Which occurrence (0-indexed) is this word among same-base clickable words?
-        let sameBase = nasbClickableWords.filter {
-            guard let sid = $0.strongsId else { return false }
-            return baseStrongsNumber(sid) == base
-        }
-        let occurrenceIdx = sameBase.firstIndex(where: { $0.id == word.id }) ?? 0
-
-        // Pick the Nth segment that matches this base
-        var count = 0
-        for seg in segments {
-            if seg.strongs.contains(where: { resolvedMaculaBase($0) == base }) {
-                if count == occurrenceIdx {
-                    selectedSegment = seg
-                    return
-                }
-                count += 1
-            }
-        }
-        selectedSegment = nil
+        selectedSegment = verseWordSegmentPairs.first { $0.word.id == word.id }?.segment
     }
 
     /// Switch to word mode; if no word is selected, auto-select the first word with a Strong's number.
@@ -889,10 +799,10 @@ class ReaderViewModel: ObservableObject {
     /// Called from the Picker's onChange so the mode is already set — avoids re-triggering the binding.
     func autoSelectFirstWordIfNeeded() {
         guard selectedWord == nil && selectedSegment == nil else { return }
-        if let firstWord = nasbClickableWords.first {
-            selectedWord = firstWord
-            syncSegment(for: firstWord)
-            loadStrongs(for: firstWord)
+        if let first = verseWordSegmentPairs.first {
+            selectedWord = first.word
+            selectedSegment = first.segment
+            loadStrongs(for: first.word)
         }
     }
 
