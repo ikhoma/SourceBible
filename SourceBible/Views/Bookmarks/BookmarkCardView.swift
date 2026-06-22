@@ -13,6 +13,8 @@ import SwiftUI
 struct BookmarkCardView: View {
     let item: BookmarkWithVerses
 
+    @EnvironmentObject private var readerVM: ReaderViewModel
+
     @State private var verseText: String?
 
     var body: some View {
@@ -61,7 +63,7 @@ struct BookmarkCardView: View {
         }
         let parts = first.split(separator: "|")
         guard parts.count == 3 else { return first }
-        return "\(BibleBookNames.short(for: String(parts[0]))) \(parts[1]):\(parts[2])"
+        return "\(readerVM.shortBookName(for: String(parts[0]))) \(parts[1]):\(parts[2])"
     }
 
     /// Fetch verse text synchronously from DB using the app's default translation.

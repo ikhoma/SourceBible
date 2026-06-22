@@ -354,7 +354,8 @@ final class DatabaseService: @unchecked Sendable {
     func loadConcordance(strongsId: String,
                          translation: String,
                          fallbackTranslation: String = DatabaseService.defaultFallbackTranslation,
-                         limit: Int = 50) -> [ConcordanceEntry] {
+                         limit: Int = 50,
+                         bookShortNames: [String: String] = [:]) -> [ConcordanceEntry] {
         guard isAvailable else {
             #if DEBUG
             return StrongsEntry.sample.concordance
@@ -420,7 +421,7 @@ final class DatabaseService: @unchecked Sendable {
             let isFallback  = sqlite3_column_int(stmt, 5) != 0
             // Skip entries where neither translation has verse text.
             guard !text.isEmpty else { return }
-            let short = BibleBookNames.short(for: bookId)
+            let short = bookShortNames[bookId] ?? BibleBookNames.short(for: bookId)
             let ref   = "\(short) \(chapter):\(displayVerse)"
             let id    = "\(bookId)|\(chapter)|\(displayVerse)"
             entries.append(ConcordanceEntry(id: id, reference: ref, text: text, rawText: rawText,
@@ -442,7 +443,9 @@ final class DatabaseService: @unchecked Sendable {
     func loadBookUsageGroups(
         strongsId: String,
         translation: String,
-        fallbackTranslation: String = DatabaseService.defaultFallbackTranslation
+        fallbackTranslation: String = DatabaseService.defaultFallbackTranslation,
+        bookShortNames: [String: String] = [:],
+        bookLongNames:  [String: String] = [:]
     ) -> (total: Int, groups: [BookUsageGroup]) {
         guard isAvailable else {
             #if DEBUG
@@ -550,7 +553,7 @@ final class DatabaseService: @unchecked Sendable {
             let text = DatabaseService.stripBibleMarkup(rawText)
             guard !text.isEmpty else { continue }
 
-            let short   = BibleBookNames.short(for: row.bookId)
+            let short   = bookShortNames[row.bookId] ?? BibleBookNames.short(for: row.bookId)
             let ref     = "\(short) \(row.chapter):\(displayVerse)"
             let entryId = "\(row.bookId)|\(row.chapter)|\(displayVerse)"
             let example = ConcordanceEntry(id: entryId, reference: ref,
@@ -561,7 +564,7 @@ final class DatabaseService: @unchecked Sendable {
             groups.append(BookUsageGroup(
                 id:       row.bookId,
                 bookId:   row.bookId,
-                bookName: BibleBookNames.full(for: row.bookId),
+                bookName: bookLongNames[row.bookId] ?? BibleBookNames.full(for: row.bookId),
                 count:    row.count,
                 example:  example
             ))
@@ -596,7 +599,8 @@ final class DatabaseService: @unchecked Sendable {
 
     func loadCrossReferences(bookId: String, chapter: Int, verse: Int,
                              translation: String,
-                             fallbackTranslation: String = DatabaseService.defaultFallbackTranslation) -> [CrossReference] {
+                             fallbackTranslation: String = DatabaseService.defaultFallbackTranslation,
+                             bookShortNames: [String: String] = [:]) -> [CrossReference] {
         guard isAvailable else { return [] }
         var refs: [CrossReference] = []
 
@@ -624,7 +628,7 @@ final class DatabaseService: @unchecked Sendable {
             let toVerse    = Int(sqlite3_column_int(stmt, 2))
             let text       = DatabaseService.stripBibleMarkup(optString(stmt, 4) ?? "")
             let isFallback = sqlite3_column_int(stmt, 5) != 0
-            let short      = BibleBookNames.short(for: toBook)
+            let short      = bookShortNames[toBook] ?? BibleBookNames.short(for: toBook)
             let ref        = "\(short) \(toChapter):\(toVerse)"
             let id         = "\(toBook)|\(toChapter)|\(toVerse)"
             refs.append(CrossReference(id: id, targetReference: ref, targetText: text,
@@ -687,7 +691,8 @@ final class DatabaseService: @unchecked Sendable {
     ///
     /// Results are ranked by FTS5 BM25 relevance. The highlight() function returns
     /// the full verse text with matched tokens wrapped in ❮…❯ so the UI can highlight them.
-    func searchByText(query rawQuery: String, translation: String, limit: Int = 150) -> [SearchResult] {
+    func searchByText(query rawQuery: String, translation: String, limit: Int = 150,
+                      bookShortNames: [String: String] = [:]) -> [SearchResult] {
         guard isAvailable else { return [] }
         let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return [] }
@@ -716,7 +721,7 @@ final class DatabaseService: @unchecked Sendable {
             let snip    = string(stmt, 3).strippingBibleMarkup()
             results.append(SearchResult(
                 id: "\(bookId)|\(chapter)|\(verse)",
-                reference: makeRef(bookId, chapter, verse),
+                reference: makeRef(bookId, chapter, verse, bookShortNames),
                 snippet: snip
             ))
         }
@@ -746,9 +751,11 @@ final class DatabaseService: @unchecked Sendable {
         return "\"\(escaped)\"*"
     }
 
-    /// Short reference string — "Бут 1:1" — via BibleBookNames (locale-aware, single source of truth).
-    private func makeRef(_ bookId: String, _ chapter: Int, _ verse: Int) -> String {
-        "\(BibleBookNames.short(for: bookId)) \(chapter):\(verse)"
+    /// Short reference string — "Бут 1:1" — uses translation-native short name when provided.
+    private func makeRef(_ bookId: String, _ chapter: Int, _ verse: Int,
+                         _ bookShortNames: [String: String] = [:]) -> String {
+        let short = bookShortNames[bookId] ?? BibleBookNames.short(for: bookId)
+        return "\(short) \(chapter):\(verse)"
     }
 }
 

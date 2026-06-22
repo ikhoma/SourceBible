@@ -234,7 +234,7 @@ struct WordMeaningView: View {
         let parts = word.id.split(separator: "|")
         let ch    = parts.count > 1 ? String(parts[1]) : ""
         let v     = parts.count > 2 ? String(parts[2]) : ""
-        let ref   = "\(BibleBookNames.short(for: vm.currentBook.id)) \(ch):\(v)"
+        let ref   = "\(vm.currentBookShortName) \(ch):\(v)"
 
         var rows: [(String, String, Bool)] = [(t.string(for: MorphKey.rowWord), word.text, true)]
         // Use bestXlit: BibleHub combined slot translit → Macula occurrence xlit → TBESH lemma xlit.

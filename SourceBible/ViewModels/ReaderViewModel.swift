@@ -135,6 +135,11 @@ class ReaderViewModel: ObservableObject {
         translationBookNames[currentBook.id]?.short ?? BibleBookNames.short(for: currentBook.id)
     }
 
+    /// Translation-native short name for any book ID, falling back to BibleBookNames.
+    func shortBookName(for bookId: String) -> String {
+        translationBookNames[bookId]?.short ?? BibleBookNames.short(for: bookId)
+    }
+
     var chapterTitle: String { "\(currentBookShortName) \(currentChapter)" }
 
     /// Full chapter heading shown at the top of the reader — "Psalm 23" for Psalms, "Chapter 5" for everything else.
@@ -466,9 +471,43 @@ class ReaderViewModel: ObservableObject {
         loadChapter()
     }
 
+    // MARK: - Cross-Reference Back Stack (ADR-024)
+
+    /// Stack of verse IDs representing the cross-ref navigation history.
+    /// Top of the stack (last element) is the most recent origin.
+    /// Session-scoped: cleared when the sheet is dismissed.
+    @Published private(set) var crossRefBackStack: [String] = []
+
+    /// True when the back stack has at least one entry (i.e. user followed at least one cross-ref).
+    var canCrossRefBack: Bool { !crossRefBackStack.isEmpty }
+
+    /// Follow a cross-reference link from within the open bottom sheet.
+    /// Pushes the current verse onto the back stack before navigating.
+    func followCrossReference(to verseId: String) {
+        navigateToVerse(id: verseId, source: .crossRef)
+    }
+
+    /// Navigate back one step in the cross-ref history.
+    /// Pops the previous verse from the stack and navigates to it.
+    func crossRefBack() {
+        guard let previous = crossRefBackStack.popLast() else { return }
+        navigateToVerse(id: previous, source: .back)
+    }
+
+    /// Clear the back stack — called from onDismiss so the next sheet entry starts fresh.
+    func resetCrossRefStack() {
+        crossRefBackStack.removeAll()
+    }
+
     /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
     /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
     func navigateToVerse(id verseId: String) {
+        navigateToVerse(id: verseId, source: .fresh)
+    }
+
+    /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
+    /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
+    private func navigateToVerse(id verseId: String, source: VerseNavSource) {
         let parts = verseId.split(separator: "|")
         guard parts.count == 3,
               let chapter = Int(parts[1]) else { return }
@@ -496,6 +535,23 @@ class ReaderViewModel: ObservableObject {
         // loadWordsForSelectedVerse() is required here — navigateToVerse() skips
         // the normal tapVerse() path that loads words for the Original tab.
         if let verse = verses.first(where: { $0.id == verseId }) {
+            // ADR-024: manage back stack BEFORE updating selectedVerse, using the
+            // success branch only (so a failed lookup doesn't pollute the stack).
+            switch source {
+            case .fresh:
+                // New entry point — reset the back stack for a clean session.
+                crossRefBackStack.removeAll()
+            case .crossRef:
+                // Push the current verse (if the sheet is open and a verse is selected)
+                // so the user can navigate back to it.
+                if activeSheet == .verse, let current = selectedVerse, current.id != verseId {
+                    crossRefBackStack.append(current.id)
+                }
+            case .back:
+                // Stack was already popped by crossRefBack() — nothing to do here.
+                break
+            }
+
             selectedVerse = verse
             selectedWord = nil
             selectedSegment = nil
@@ -508,7 +564,10 @@ class ReaderViewModel: ObservableObject {
             // tick so the new layout is committed before scrollTo fires.
             verseScrollTrigger += 1
             // Analytics: record unique verse read.
-            sessionTracker.incVersesOpened(verseId: verseId)
+            // Skip incVersesOpened on .back — the verse was already counted when first opened.
+            if source != .back {
+                sessionTracker.incVersesOpened(verseId: verseId)
+            }
         }
     }
 
@@ -636,7 +695,8 @@ class ReaderViewModel: ObservableObject {
         return db.loadCrossReferences(bookId: verse.bookId,
                                        chapter: verse.chapter,
                                        verse: verse.number,
-                                       translation: currentTranslation.id)
+                                       translation: currentTranslation.id,
+                                       bookShortNames: translationBookNames.mapValues { $0.short })
     }
 
     // MARK: - Bottom Sheet
@@ -852,7 +912,9 @@ class ReaderViewModel: ObservableObject {
         var entry = db.loadStrongs(id: strongsId)
         if var e = entry {
             let result = db.loadBookUsageGroups(strongsId: strongsId,
-                                                translation: currentTranslation.id)
+                                                translation: currentTranslation.id,
+                                                bookShortNames: translationBookNames.mapValues { $0.short },
+                                                bookLongNames:  translationBookNames.mapValues { $0.long })
             e.totalCount = result.total
             e.bookGroups = result.groups
             entry = e
@@ -915,6 +977,22 @@ class ReaderViewModel: ObservableObject {
             }
         }
     }
+}
+
+// MARK: - Verse Navigation Source (ADR-024)
+
+/// Describes what triggered a `navigateToVerse(id:source:)` call.
+/// Controls how the cross-ref back stack is updated.
+enum VerseNavSource: Equatable {
+    /// Fresh tap (verse row, search, bookmarks, notes, pendingVerseId).
+    /// Clears the back stack — this is a new entry point.
+    case fresh
+    /// Cross-reference tap from within an open bottom sheet.
+    /// Pushes the current verse onto the back stack before navigating.
+    case crossRef
+    /// «‹ Назад» button — back stack was already popped by the caller.
+    /// No push/clear needed.
+    case back
 }
 
 // MARK: - Bottom Sheet Mode

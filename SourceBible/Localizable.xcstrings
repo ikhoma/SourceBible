@@ -2751,6 +2751,22 @@
         }
       }
     },
+    "studymode.close" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрити"
+          }
+        }
+      }
+    },
     "tab.bible" : {
       "localizations" : {
         "en" : {

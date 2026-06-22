@@ -39,29 +39,31 @@ struct EntriesView: View {
             .id(locale.identifier)
             .navigationTitle("entries.title")
             .toolbar {
+                // "+" directly creates a new note. The folder option is hidden until
+                // the folders feature is implemented (analytics slice 4). When folders
+                // ship, restore the Menu with both "new note" and "new folder" actions
+                // (see createFolder() below).
                 ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button("entries.new_note", systemImage: "note.text.badge.plus") {
-                            notesVM.openNewNote()
-                        }
-                        Button("entries.new_folder", systemImage: "folder.badge.plus") {
-                            createFolder()
-                        }
+                    Button {
+                        notesVM.openNewNote()
                     } label: { Image(systemName: "plus") }
+                    .accessibilityLabel(Text("entries.new_note"))
                 }
             }
         }
     }
 
-    private func createFolder() {
-        let now    = Date()
-        let folder = NoteFolder(
-            id: UUID().uuidString,
-            userId: notesVM.authUserId,
-            name: String(localized: "entries.new_folder"),
-            createdAt: now, updatedAt: now, deletedAt: nil, isDirty: true)
-        notesVM.saveFolder(folder)
-    }
+    // TODO: Re-enable when the folders feature is implemented. Hidden from the
+    // "+" menu for now (no folder UI shipped yet).
+//    private func createFolder() {
+//        let now    = Date()
+//        let folder = NoteFolder(
+//            id: UUID().uuidString,
+//            userId: notesVM.authUserId,
+//            name: String(localized: "entries.new_folder"),
+//            createdAt: now, updatedAt: now, deletedAt: nil, isDirty: true)
+//        notesVM.saveFolder(folder)
+//    }
 
 }
 

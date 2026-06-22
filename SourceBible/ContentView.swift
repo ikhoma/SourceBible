@@ -67,6 +67,7 @@ struct ContentView: View {
                 }
                 Tab("tab.entries", systemImage: "bookmark.fill", value: AppTab.entries) {
                     EntriesView()
+                        .environmentObject(readerVM)
                         .environmentObject(notesVM)
                         .environmentObject(bookmarksVM)
                         .environmentObject(router)
@@ -97,6 +98,7 @@ struct ContentView: View {
                     .tag(AppTab.bible)
 
                 EntriesView()
+                    .environmentObject(readerVM)
                     .environmentObject(notesVM)
                     .environmentObject(bookmarksVM)
                     .environmentObject(router)

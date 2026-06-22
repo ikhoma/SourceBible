@@ -49,8 +49,8 @@ enum BookCoverData {
 
     private static func subtitle(for bookId: String, chapterCount: Int) -> String {
         let unit     = chapterCount == 1
-            ? String(localized: "cover.chapter")
-            : String(localized: "cover.chapters")
+            ? NSLocalizedString("cover.chapter", comment: "")
+            : NSLocalizedString("cover.chapters", comment: "")
         let chapters = "\(chapterCount) \(unit)"
         let section  = sectionTitle(for: bookId)
         return section.isEmpty ? chapters : "\(section) · \(chapters)"
@@ -58,32 +58,37 @@ enum BookCoverData {
 
     // MARK: - Section labels (Protestant canonical groupings per PDR-Book-Covers)
     // Title case, single line — matches the new cover subtitle format.
+    //
+    // NSLocalizedString is used instead of String(localized:) because this is a
+    // static Foundation method (not a SwiftUI View). Swift 5.9's String(localized:)
+    // can bypass ObjC dispatch in non-View contexts, missing the LocalizedBundle swizzle.
+    // NSLocalizedString always goes through Bundle.main.localizedString(forKey:value:table:).
 
     private static func sectionTitle(for bookId: String) -> String {
         switch bookId {
         case "GEN", "EXO", "LEV", "NUM", "DEU":
-            return String(localized: "cover.section.law")
+            return NSLocalizedString("cover.section.law", comment: "")
         case "JOS", "JDG", "RUT", "1SA", "2SA",
              "1KI", "2KI", "1CH", "2CH", "EZR", "NEH", "EST":
-            return String(localized: "cover.section.history")
+            return NSLocalizedString("cover.section.history", comment: "")
         case "JOB", "PSA", "PRO", "ECC", "SNG":
-            return String(localized: "cover.section.wisdom")
+            return NSLocalizedString("cover.section.wisdom", comment: "")
         case "ISA", "JER", "LAM", "EZK", "DAN":
-            return String(localized: "cover.section.major_prophets")
+            return NSLocalizedString("cover.section.major_prophets", comment: "")
         case "HOS", "JOL", "AMO", "OBA", "JON",
              "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL":
-            return String(localized: "cover.section.minor_prophets")
+            return NSLocalizedString("cover.section.minor_prophets", comment: "")
         case "MAT", "MRK", "LUK", "JHN":
-            return String(localized: "cover.section.gospels")
+            return NSLocalizedString("cover.section.gospels", comment: "")
         case "ACT":
-            return String(localized: "cover.section.acts")
+            return NSLocalizedString("cover.section.acts", comment: "")
         case "ROM", "1CO", "2CO", "GAL", "EPH",
              "PHP", "COL", "1TH", "2TH", "1TI", "2TI", "TIT", "PHM":
-            return String(localized: "cover.section.paul_letters")
+            return NSLocalizedString("cover.section.paul_letters", comment: "")
         case "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD":
-            return String(localized: "cover.section.general_letters")
+            return NSLocalizedString("cover.section.general_letters", comment: "")
         case "REV":
-            return String(localized: "cover.section.prophecy")
+            return NSLocalizedString("cover.section.prophecy", comment: "")
         default:
             return ""
         }

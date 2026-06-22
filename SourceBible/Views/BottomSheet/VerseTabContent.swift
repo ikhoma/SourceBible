@@ -137,6 +137,7 @@ struct ReferenceLabel: View {
 struct CrossRefsView: View {
     let refs: [CrossReference]
 
+    @EnvironmentObject private var vm: ReaderViewModel
     @EnvironmentObject private var router: AppNavigationRouter
 
     var body: some View {
@@ -179,7 +180,9 @@ struct CrossRefsView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        router.requestNavigation(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
+                        // ADR-024: use followCrossReference (direct VM call, pushes back stack)
+                        // instead of router.requestNavigation (cross-tab hop, not needed here).
+                        vm.followCrossReference(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
                     }
                     .padding(.bottom, 8)
                     Divider()
@@ -413,6 +416,7 @@ struct CommentaryDetailView: View {
     let theologian: Theologian
     let verseId: String
     @Environment(\.sessionTracker) private var tracker
+    @EnvironmentObject private var readerVM: ReaderViewModel
 
     /// Parsed from verseId "BOOK|chapter|verse"
     private var verseComponents: (bookId: String, chapter: Int, verse: Int)? {
@@ -426,7 +430,7 @@ struct CommentaryDetailView: View {
     /// "Ps 1:3 — J. Calvin" or "Ps 1:1–3 — J. Calvin" once the section is loaded.
     private var detailTitle: String {
         guard let vc = verseComponents else { return theologian.shortName }
-        let book = BibleBookNames.short(for: vc.bookId)
+        let book = readerVM.shortBookName(for: vc.bookId)
         let ref: String
         if let sec = section {
             if sec.startChapter == sec.endChapter {
