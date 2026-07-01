@@ -380,6 +380,7 @@ struct VerseTextView: UIViewRepresentable {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     ScrollView {
         VStack(alignment: .leading, spacing: 0) {
@@ -408,3 +409,4 @@ struct VerseTextView: UIViewRepresentable {
         .padding(.vertical, 12)
     }
 }
+#endif

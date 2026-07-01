@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SourceBible — Issue Board</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --surface:#fff; --ink:#1b1f24; --muted:#6b7280; --line:#e4e7ec;
+    --accent:#3085CF; --accent-soft:#e4eff9; --accent-ink:#1f5e9c;
+    --col:#eef1f4; --shadow:0 1px 2px rgba(16,24,40,.06);
+    --crash:#b42318; --high:#d2691e; --medium:#9a6d00; --low:#3f7d4e;
+    --bug:#b42318; --ux:#7a5af8;
+    --r:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#121417; --surface:#1c2026; --ink:#e8eaed; --muted:#9aa1ab; --line:#2c323a;
+      --accent:#5aa9e6; --accent-soft:#17293a; --accent-ink:#9cc8ef; --col:#171a1f;
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+      --crash:#f97066; --high:#f3a05a; --medium:#e7c34a; --low:#7bbd86;
+      --bug:#f97066; --ux:#a78bfa;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px}
+  header{padding:18px 24px 10px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--line)}
+  .titlerow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px}
+  .seg{display:inline-flex;background:var(--col);border:1px solid var(--line);border-radius:999px;padding:3px;margin-left:auto}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;
+    padding:6px 14px;border-radius:999px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .wrap{padding:16px 24px 60px}
+  .lane-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 2px 8px;display:flex;gap:8px;align-items:center}
+  .board{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px;align-items:flex-start}
+  .col{flex:1 1 0;min-width:240px;background:var(--col);border-radius:var(--r);padding:10px}
+  .col h2{font-size:12.5px;margin:4px 6px 10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);display:flex;justify-content:space-between}
+  .col h2 .n{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--muted);font-weight:600}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 12px;margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow);transition:border-color .12s,transform .06s}
+  .card:hover{border-color:var(--accent)}
+  .card:active{transform:translateY(1px)}
+  .ct{font-weight:600;line-height:1.35;margin:2px 0 8px}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .id{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted)}
+  .chip{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+  .sev{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600}
+  .sev .dot{width:8px;height:8px;border-radius:50%}
+  .tag-bug{color:var(--bug)} .tag-ux{color:var(--ux)}
+  .verdict{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:1px 6px;border-radius:5px}
+  .v-real{background:rgba(180,35,24,.12);color:var(--crash)}
+  .v-design{background:rgba(63,125,78,.14);color:var(--low)}
+  .v-dup{background:rgba(107,114,128,.16);color:var(--muted)}
+  .reporters{color:var(--muted);font-size:11.5px}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(16,24,40,.5);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:20}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--line);border-radius:14px;max-width:720px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .mhead{padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);border-radius:14px 14px 0 0}
+  .mhead h3{margin:6px 0 0;font-size:18px;font-weight:700;line-height:1.3}
+  .mclose{float:right;appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px}
+  .mbody{padding:18px 22px 26px}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 18px;margin:0 0 16px;padding:14px;background:var(--col);border-radius:10px}
+  .meta div span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
+  .meta div b{font-weight:600;font-size:13.5px}
+  .sec{margin:16px 0}
+  .sec h4{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--accent-ink)}
+  .sec p,.sec li{line-height:1.6;margin:0 0 6px}
+  .sec ol{margin:0;padding-left:20px}
+  .fix{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .invest{background:var(--col);border-radius:10px;padding:12px 14px}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--col);padding:1px 5px;border-radius:5px}
+  .approve{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .approve button{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer}
+  .approve button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .scr{font-size:12px;color:var(--muted)}
+  .empty{color:var(--muted);font-size:12px;padding:8px 6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="titlerow">
+    <h1>SourceBible — Issue Board</h1>
+    <span class="sub" id="sub"></span>
+    <div class="seg" role="tablist">
+      <button data-f="bug" aria-pressed="true">🐞 Bugs</button>
+      <button data-f="ux" aria-pressed="false">💡 UX</button>
+      <button data-f="all" aria-pressed="false">All</button>
+    </div>
+  </div>
+</header>
+<div class="wrap" id="wrap"></div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+const ISSUES = [
+  // ---- NEW BUGS (Sprint 1) ----
+  {id:"bug-005",type:"bug",status:"new",title:"RST/UA: Word→Meaning labels & morphology show in English",area:"word-tab/localization",severity:"medium",priority:"P2",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"Ukrainian UI + RST; Gen 1:21, Word → Meaning",source:"https://docs.google.com/document/d/131Qxtg7yofn0or6QNwNOrIJ0Acr3NTjsXhM8oeBwVKM",verdict:"part",confidence:"high (split)",screenshots:["30.jpg","30.1.jpg"],
+   description:"Under Ukrainian UI + RST, the Meaning panel shows English: meaning text, the “Лексичне значення” label, and morphology names (Qal/Niphal/Piel).",
+   steps:["Set UI to Ukrainian, translation to RST","Open Gen 1:21 → tap a word → Meaning"],
+   investigation:"Split: (1) meaning/definition text EN = by design (Strong's long_def/short_def English for MVP, ADR-006). (2) “Лексичне значення” label EN = real bug — MorphKey.sectionLexical resolves via BundleTranslationProvider but the uk row is missing in Localizable.xcstrings. (3) Qal/Niphal/Piel = by-design Latin proper nouns, but inconsistent: decodeHebrew (WordTabContent.swift ~770–776) hardcodes literals while decodeFull routes through MorphKey.stem*.",
+   fix:"Fill missing uk morph.* keys in Localizable.xcstrings (+ implement the deferred MorphKey resolution test). Optionally route WordTabContent.swift ~770–776 through MorphKey for consistency. No fix for EN definition text (by-design)."},
+  {id:"bug-006",type:"bug",status:"new",title:"RST: Verse→Original gloss shown in English",area:"reader/original-localization",severity:"medium",priority:"P2",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"RST; Gen 1:11, Verse → Original; “any book”",source:"https://docs.google.com/document/d/1juQYk66MMAjj5iUWYu0r7OCtuR1tCekGc7p6FzG1bzY",verdict:"design",confidence:"medium",screenshots:["33.jpg"],
+   description:"With RST active, the Verse → Original view shows the original-language gloss in English instead of matching RST. Reporter: any book.",
+   steps:["Switch to RST","Open Gen 1:11 → Verse → Original"],
+   investigation:"Mostly by design: Original tab shows word.gloss = English Macula gloss (DatabaseService.loadWords COALESCE of gloss_display/gloss_macula/gloss, ~219–221); no RST gloss column → English expected for MVP. Section & morphology labels DO localize (same xcstrings path as bug-005).",
+   fix:"No code fix for the gloss (deferred to translated-lexicon stage). Recommend reclassify as by-design + add a known-design note (like the page-turn PDR) so repeat reports dedup. If reporter meant labels → bug-005 xcstrings gap."},
+  {id:"bug-007",type:"bug",status:"new",title:"RST: cross references shown in both English and RST",area:"reader/cross-reference",severity:"medium",priority:"P2",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"RST; 2 Sam 22:51, Cross references",source:"https://docs.google.com/document/d/1n3gZe90wE5YpTyVLjoj1xzZmGCKpYJscndjDVf0h7-w",verdict:"real",confidence:"high",screenshots:["34.jpg"],
+   description:"With RST active, cross references render in both English and RST. Expected: only RST.",
+   steps:["Switch to RST","Open 2Цар 22:51 → Cross references"],
+   investigation:"Real bug. DatabaseService.loadCrossReferences (~619–658) COALESCEs target text to a hardcoded defaultFallbackTranslation = \"KJV\" (line 40). When the RST row is absent it substitutes English; the query sets is_fallback → CrossReference.isFallback, but CrossRefsView (VerseTabContent.swift ~162–189) renders targetText and never reads the flag → mixed list.",
+   fix:"In CrossRefsView, when ref.isFallback is true, suppress the English text and show the existing \"verse.text_unavailable\" placeholder (RST-only)."},
+  {id:"bug-008",type:"bug",status:"new",title:"Word→Usage: inconsistent leading spaces (RST)",area:"reader/text-formatting",severity:"low",priority:"P3",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"RST; 2 Sam 22:51, Word → Usage",source:"https://docs.google.com/document/d/1fTlOrIMWUfbGWmLxPp-Wo0EYNRWNJ2MwkpGDHgZkDqE",verdict:"real",confidence:"high",screenshots:["35.jpg"],
+   description:"In Word → Usage, some lines start with a leading space, some don't.",
+   steps:["Switch to RST","Open 2Цар 22:51 → Word → Usage"],
+   investigation:"Real bug. highlightedVerseText() (WordTabContent.swift ~461–524) builds segments via strippingBibleMarkupKeepingSpaces() (preserves leading spaces for mid-verse separation); the first segment keeps whatever leading space the raw RST text has, and the result is never trimmed. RST raw rows inconsistently start with a space. bug-009 is the same root cause.",
+   fix:"Trim leading whitespace from the first segment (or the final result) in highlightedVerseText; don't change the keep-spaces helper. Merge bug-009 → bug-008."},
+  {id:"bug-009",type:"bug",status:"new",title:"Leading-space inconsistency at Mark 1:29 (dup of bug-008)",area:"reader/text-formatting",severity:"low",priority:"P3",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"RST; Mark 1:29",source:"https://docs.google.com/document/d/1hkyHBz2omK84ZlZXLcDpyvKng6iYDKUSjB8kKjv6lMY",verdict:"dup",confidence:"high",screenshots:["36.jpg"],
+   description:"Same leading-space inconsistency as bug-008, at Mark 1:29 under RST.",
+   steps:["Switch to RST","Open Марк 1:29"],
+   investigation:"Duplicate of bug-008 — same function (highlightedVerseText), same untrimmed leading-space mechanism; only the verse differs.",
+   fix:"Covered by bug-008's fix. On approval, set duplicate_of: bug-008 and move to done."},
+  {id:"bug-010",type:"bug",status:"new",title:"Henry commentary: TOC + nav buttons leak as trailing text",area:"commentaries",severity:"medium",priority:"P2",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"Henry; Esther 3:7 / Judges 21:16–25, scrolled to end",source:"https://docs.google.com/document/d/1K885JiHVIeccronc1tXHVa8YgYmgCW5lcUN-bEedtuM",verdict:"real",confidence:"high",screenshots:["37.jpg","37.1.jpg"],
+   description:"At the end of a Matthew Henry commentary, a table of contents plus Previous/Next/Free Download/Contact Us buttons appear as plain text.",
+   steps:["Open Есф 3:7 → Henry comment (or Суд 21:16–25)","Scroll to the end"],
+   investigation:"Real bug (data/import). In scripts/import_commentaries.py, _henry_extract_sections slices the last section to len(html) (line 281), and _strip_henry_html (215–224) removes only script/style/tags — not the site footer (TOC + Previous/Next/Free Download/Contact Us). Footer text gets stored on the last section.",
+   fix:"Truncate the HTML before the footer <TABLE> (detect nav text) and/or post-strip known boilerplate. Requires re-running import_commentaries.py (rebuilds comments tables; no schema change) then re-bundling the DB — Mac-only per CLAUDE.md."},
+  {id:"bug-011",type:"bug",status:"new",title:"Search: big clear (X) button missing on 2nd word open",area:"search",severity:"low",priority:"P3",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"Search → open words from results repeatedly",source:"https://docs.google.com/document/d/10VjjUR8EU6_D-sonmpo2qvlENdqTsq9u4Ti4nn6UmUA",verdict:"real",confidence:"high",screenshots:["38.jpg","38.1.jpg"],
+   description:"Opening a word from search a second time, the large clear (X) button next to the search field is gone (only inner one remains). Present on first open.",
+   steps:["Open search, search 3 words","Open each word one by one","On 2nd word-open the big clear button is missing"],
+   investigation:"Real bug. SearchView.swift — opening a result switches to the .bible tab; the system flips .searchable's isPresented binding (isSearchActive, line 18) to false on the hidden tab. On return, committedQuery is still set so results render, but the system search bar (with the big X) isn't active. First open still has isSearchActive = true.",
+   fix:"On onAppear (or onChange(of: isSearchActive)) re-assert isSearchActive = true when committedQuery is non-empty."},
+  {id:"bug-003",type:"bug",status:"new",title:"H3887a (last word) not highlighted in Verse text",area:"reader/lexicon",severity:"medium",priority:"P2",reporters:["—"],device:"",ios:"",context:"NASB extended Strong's mapping",source:"",verdict:"",confidence:"",screenshots:["bug-003-1.png"],
+   description:"The last word H3887a, for which we created a mapping from extended NASB Strong's, isn't highlighted in the Verse text.",
+   steps:[],investigation:"Pre-existing card (not from Sprint 1). Not yet investigated.",fix:""},
+  {id:"bug-H341",type:"bug",status:"blocked",title:"H341 (“enemy”) non-clickable under NASB + wrong Strong's on long-tap",area:"translations/nasb",severity:"high",priority:"P1",reporters:["—"],device:"",ios:"",context:"NASB uses H340 where Macula uses H341 (272+ OT verses)",source:"",verdict:"real",confidence:"high",screenshots:[],
+   description:"H341 renders non-clickable in the verse lexicon, and long-tap shows H340 in NASB vs H341 in KJV. Systemic across ~272 OT verses.",
+   steps:[],investigation:"Documented in bug-H341-not-clickable-nasb-gating.md. NASB/Macula Strong's disagreement; needs a standard-number override map + discovery script.",fix:"Option A: nasbStandardOverride map (H340→H341) + discovery script (see the report). Needs a design decision → blocked."},
+  // ---- DONE BUGS ----
+  {id:"bug-001",type:"bug",status:"done",title:"Translation absent for non-clickable particle",area:"word-tab",severity:"medium",priority:"P2",reporters:["—"],verdict:"real",confidence:"",screenshots:["bug-001-1.png"],description:"Gloss hidden for particles with a valid gloss.",steps:[],investigation:"Gloss display in WordRow was gated on isClickable.",fix:"Removed isClickable from the gloss condition. ✓ done."},
+  {id:"bug-002",type:"bug",status:"done",title:"Word nav order should follow translation, not Macula order",area:"reader/navigation",severity:"medium",priority:"P2",reporters:["—"],verdict:"real",confidence:"",screenshots:["bug-002-1.png"],description:"<>/prev-next navigated in Macula Hebrew order instead of translation order.",steps:[],investigation:"navigate funcs iterated nasbClickableWords (Macula order).",fix:"Added translationOrderedClickableWords (occurrence-indexed). ✓ done."},
+  {id:"bug-analytics",type:"bug",status:"done",title:"AnalyticsConfiguration.swift generated with \\\"token\\\"",area:"build/tooling",severity:"crash",priority:"P0",reporters:["—"],verdict:"real",confidence:"",screenshots:[],description:"Build failure: unterminated string literal in generated analytics token file.",steps:[],investigation:"Heredoc escaped quotes as \\\\\\\" in the pbxproj shellScript.",fix:"Replaced \\\\\\\"${TOKEN}\\\\\\\" with \\\"${TOKEN}\\\". ✓ done."},
+  // ---- UX ----
+  {id:"ux-001",type:"ux",status:"new",title:"Swipe paging only works at screen edges (discoverability)",area:"reader/navigation",impact:"medium",effort:"medium",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"Reader, turning pages",source:"https://docs.google.com/document/d/1MDVUwiTZwbAOFH2IseKpcOw9W9UqNEGVVd7HVScaSMU",verdict:"design",confidence:"",screenshots:["1.jpg"],
+   description:"Swipe-to-turn only responds in the edge zones. A tester swiped center, nothing happened, assumed it was broken. Retest: works.",
+   observation:"Users naturally swipe anywhere; center swipe does nothing → feels broken even though edge-swipe works.",
+   investigation:"Reclassified from bug-004. Edge-only is by design (avoids clashing with tappable words / long-press Word tab / selection) — see PDR-Page-Turn-Gesture-Zone. The real issue is discoverability.",
+   fix:"Option 1: widen the swipe-active band (verify no clash with word tap/long-press/selection). Option 2: keep edge-only + add an affordance (page-edge indicator / chevrons / one-time hint). Product decision."},
+  {id:"ux-002",type:"ux",status:"new",title:"Empty space at bottom of Cross Refs / Original / Meaning / Usage",area:"reader/layout",impact:"low",effort:"medium",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"Scrolling to end of those tabs",source:"https://docs.google.com/document/d/1rln8bXtBeR9ILACpAALcURcPntvd-a4GI9TZMlJHzL8",verdict:"",confidence:"",screenshots:["32.jpg","32.1.jpg","32.2.jpg","32.3.jpg"],
+   description:"Scrolling to the end of Verse→Cross Refs / Original and Word→Meaning / Usage leaves a noticeable empty gap below the last item.",
+   observation:"Trailing empty space looks unfinished; tester wants the last item as low as possible toward the footer.",
+   investigation:"Not code-investigated yet.",
+   fix:"Likely reduce the bottom content inset / trailing padding on those scroll views."},
+  {id:"ux-003",type:"ux",status:"new",title:"Make switch-buttons animation smoother",area:"reader/animation",impact:"medium",effort:"low",reporters:["Viacheslav"],device:"iPhone 11",ios:"26.5",context:"Switch buttons (toggle) animation",source:"https://docs.google.com/document/d/1TFg2e9HS4CuqjDyVu906orSJWRa9wmye2wBf4w4DOSw",verdict:"",confidence:"",screenshots:["39.mp4 (video — manual review)"],
+   description:"The switch-buttons animation feels abrupt; tester asks for a smoother transition. Attachment is a video (manual review).",
+   observation:"Smoother motion on a frequently-tapped control reads as more polished.",
+   investigation:"Not code-investigated yet. Attachment 39.mp4 needs manual review.",
+   fix:"Soften the toggle animation easing/duration — small, low-risk polish."}
+];
+
+const COLS = {
+  bug:[["new","New"],["in-progress","In progress"],["blocked","Blocked"],["done","Done"]],
+  ux:[["new","New"],["reviewed","Reviewed"],["done","Done"]]
+};
+const SEVCOL={crash:"var(--crash)",high:"var(--high)",medium:"var(--medium)",low:"var(--low)"};
+const VERD={real:["v-real","Bug"],design:["v-design","By design"],dup:["v-dup","Duplicate"],part:["v-real","Partial"]};
+let filter = localStorage.getItem("sb_board_filter") || "bug";
+
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+function cardHTML(it){
+  const sev = it.type==="bug" && it.severity ? `<span class="sev"><span class="dot" style="background:${SEVCOL[it.severity]||'var(--muted)'}"></span>${it.severity}</span>` : "";
+  const imp = it.type==="ux" && it.impact ? `<span class="chip">impact: ${it.impact}</span>` : "";
+  const v = it.verdict && VERD[it.verdict] ? `<span class="verdict ${VERD[it.verdict][0]}">${VERD[it.verdict][1]}</span>` : "";
+  const rep = it.reporters && it.reporters[0] && it.reporters[0]!=="—" ? `<span class="reporters">· ${esc(it.reporters.join(", "))}</span>` : "";
+  return `<div class="card" onclick="openModal('${it.id}')">
+    <div class="row"><span class="id ${it.type==='bug'?'tag-bug':'tag-ux'}">${it.id}</span>${v}</div>
+    <div class="ct">${esc(it.title)}</div>
+    <div class="row"><span class="chip">${esc(it.area||'')}</span>${sev}${imp}${rep}</div>
+  </div>`;
+}
+
+function boardHTML(type){
+  const cols = COLS[type];
+  const items = ISSUES.filter(i=>i.type===type);
+  return `<div class="board">` + cols.map(([key,label])=>{
+    const list = items.filter(i=>i.status===key);
+    return `<div class="col"><h2>${label}<span class="n">${list.length}</span></h2>${
+      list.length? list.map(cardHTML).join("") : '<div class="empty">—</div>'}</div>`;
+  }).join("") + `</div>`;
+}
+
+function render(){
+  const w = document.getElementById("wrap");
+  const nb = ISSUES.filter(i=>i.type==="bug").length, nu = ISSUES.filter(i=>i.type==="ux").length;
+  document.getElementById("sub").textContent = `${nb} bugs · ${nu} UX`;
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.f===filter));
+  if(filter==="all"){
+    w.innerHTML = `<div class="lane-title">🐞 Bugs</div>${boardHTML("bug")}<div class="lane-title">💡 UX &amp; improvements</div>${boardHTML("ux")}`;
+  } else {
+    w.innerHTML = boardHTML(filter);
+  }
+}
+
+function openModal(id){
+  const it = ISSUES.find(i=>i.id===id); if(!it) return;
+  const m = document.getElementById("modal");
+  const meta = [
+    ["Status", it.status],
+    it.type==="bug"?["Severity", it.severity||"—"]:["Impact", it.impact||"—"],
+    it.type==="bug"?["Priority", it.priority||"—"]:["Effort", it.effort||"—"],
+    ["Area", it.area||"—"],
+    ["Reporters",(it.reporters&&it.reporters.join(", "))||"—"],
+    (it.device?["Device", it.device+(it.ios?" · iOS "+it.ios:"")]:null),
+    (it.context?["Context", it.context]:null),
+    (it.confidence?["Confidence", it.confidence]:null)
+  ].filter(Boolean);
+  const steps = (it.steps&&it.steps.length)?`<div class="sec"><h4>Steps to reproduce</h4><ol>${it.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></div>`:"";
+  const obs = it.observation?`<div class="sec"><h4>Observation</h4><p>${esc(it.observation)}</p></div>`:"";
+  const scr = (it.screenshots&&it.screenshots.length)?`<div class="sec"><h4>Screenshots</h4><p class="scr">Drive mailbox img/: ${it.screenshots.map(esc).join(", ")}</p></div>`:"";
+  const src = it.source?`<div class="sec"><h4>Source</h4><p><a href="${it.source}" target="_blank" rel="noopener">Open original report ↗</a></p></div>`:"";
+  m.innerHTML = `
+    <div class="mhead">
+      <button class="mclose" onclick="closeModal()">✕</button>
+      <span class="id ${it.type==='bug'?'tag-bug':'tag-ux'}">${it.id}</span>
+      <h3>${esc(it.title)}</h3>
+    </div>
+    <div class="mbody">
+      <div class="meta">${meta.map(([k,v])=>`<div><span>${k}</span><b>${esc(String(v))}</b></div>`).join("")}</div>
+      ${it.description?`<div class="sec"><h4>Description</h4><p>${esc(it.description)}</p></div>`:""}
+      ${obs}${steps}
+      ${it.investigation?`<div class="sec"><h4>Investigation</h4><div class="invest">${esc(it.investigation)}</div></div>`:""}
+      ${it.fix?`<div class="sec"><h4>Proposed fix</h4><div class="fix">${esc(it.fix)}</div></div>`:""}
+      ${scr}${src}
+      <div class="approve">
+        <button class="primary" onclick="copyPrompt('Implement ${it.id}: ${esc(it.title).replace(/'/g,"")}')">Copy “approve & fix” prompt</button>
+        <button onclick="copyPrompt('Questions about ${it.id} before I approve')">Copy “ask first” prompt</button>
+      </div>
+      <div class="hint">Approval happens in chat. Click a button to copy a ready prompt, paste it to Claude — then the fix agent runs and the result is verified before merge.</div>
+    </div>`;
+  document.getElementById("overlay").classList.add("open");
+}
+function closeModal(){document.getElementById("overlay").classList.remove("open");}
+function copyPrompt(t){navigator.clipboard&&navigator.clipboard.writeText(t);}
+
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{
+  filter=b.dataset.f; localStorage.setItem("sb_board_filter",filter); render();
+}));
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+render();
+</script>
+</body>
+</html>

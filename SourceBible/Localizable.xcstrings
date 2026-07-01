@@ -4,9 +4,6 @@
     "" : {
 
     },
-    " · " : {
-
-    },
     "%@ · %@" : {
       "localizations" : {
         "en" : {
@@ -655,9 +652,6 @@
         }
       }
     },
-    "English" : {
-
-    },
     "entries.new_folder" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1176,6 +1170,7 @@
       }
     },
     "morph.aspect.cohortative" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1192,6 +1187,7 @@
       }
     },
     "morph.aspect.imperative" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1208,6 +1204,7 @@
       }
     },
     "morph.aspect.imperfect" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1224,6 +1221,7 @@
       }
     },
     "morph.aspect.infinitive_absolute" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1240,6 +1238,7 @@
       }
     },
     "morph.aspect.infinitive_construct" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1256,6 +1255,7 @@
       }
     },
     "morph.aspect.jussive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1272,6 +1272,7 @@
       }
     },
     "morph.aspect.participle_active" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1288,6 +1289,7 @@
       }
     },
     "morph.aspect.participle_passive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1304,6 +1306,7 @@
       }
     },
     "morph.aspect.perfect" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1320,6 +1323,7 @@
       }
     },
     "morph.aspect.wayyiqtol" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1336,6 +1340,7 @@
       }
     },
     "morph.gender.common" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1352,6 +1357,7 @@
       }
     },
     "morph.gender.feminine" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1368,6 +1374,7 @@
       }
     },
     "morph.gender.masculine" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1384,6 +1391,7 @@
       }
     },
     "morph.number.dual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1400,6 +1408,7 @@
       }
     },
     "morph.number.plural" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1416,6 +1425,7 @@
       }
     },
     "morph.number.singular" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1432,6 +1442,7 @@
       }
     },
     "morph.person.1" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1448,6 +1459,7 @@
       }
     },
     "morph.person.2" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1464,6 +1476,7 @@
       }
     },
     "morph.person.3" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1480,6 +1493,7 @@
       }
     },
     "morph.pos.adjective" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1496,6 +1510,7 @@
       }
     },
     "morph.pos.adverb" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1512,6 +1527,7 @@
       }
     },
     "morph.pos.article" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1528,6 +1544,7 @@
       }
     },
     "morph.pos.conjunction" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1544,6 +1561,7 @@
       }
     },
     "morph.pos.direct_object_suffix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1560,6 +1578,7 @@
       }
     },
     "morph.pos.interjection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1576,6 +1595,7 @@
       }
     },
     "morph.pos.interrogative" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1592,6 +1612,7 @@
       }
     },
     "morph.pos.negative_particle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1608,6 +1629,7 @@
       }
     },
     "morph.pos.noun" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1624,6 +1646,7 @@
       }
     },
     "morph.pos.particle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1640,6 +1663,7 @@
       }
     },
     "morph.pos.preposition" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1656,6 +1680,7 @@
       }
     },
     "morph.pos.pronominal_suffix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1672,6 +1697,7 @@
       }
     },
     "morph.pos.pronoun" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1688,6 +1714,7 @@
       }
     },
     "morph.pos.relative_pronoun" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1704,6 +1731,7 @@
       }
     },
     "morph.pos.suffix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1720,6 +1748,7 @@
       }
     },
     "morph.pos.verb" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1736,6 +1765,7 @@
       }
     },
     "morph.row.aspect" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1752,6 +1782,7 @@
       }
     },
     "morph.row.grammatical_form" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1768,6 +1799,7 @@
       }
     },
     "morph.row.part_of_speech" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1784,6 +1816,7 @@
       }
     },
     "morph.row.stem" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1800,6 +1833,7 @@
       }
     },
     "morph.row.strongs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1816,6 +1850,7 @@
       }
     },
     "morph.row.syntax_role" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1832,6 +1867,7 @@
       }
     },
     "morph.row.transliteration" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1848,6 +1884,7 @@
       }
     },
     "morph.row.word" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1864,6 +1901,7 @@
       }
     },
     "morph.section.form_in_context" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1880,6 +1918,7 @@
       }
     },
     "morph.section.greek_equivalent" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1896,6 +1935,7 @@
       }
     },
     "morph.section.lexical" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1912,6 +1952,7 @@
       }
     },
     "morph.section.morphology" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1928,6 +1969,7 @@
       }
     },
     "morph.state.absolute" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1944,6 +1986,7 @@
       }
     },
     "morph.state.construct" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1960,6 +2003,7 @@
       }
     },
     "morph.state.determined" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1976,6 +2020,7 @@
       }
     },
     "morph.stem.hiphil" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1992,6 +2037,7 @@
       }
     },
     "morph.stem.hithpael" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2008,6 +2054,7 @@
       }
     },
     "morph.stem.hophal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2024,6 +2071,7 @@
       }
     },
     "morph.stem.niphal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2040,6 +2088,7 @@
       }
     },
     "morph.stem.piel" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2056,6 +2105,7 @@
       }
     },
     "morph.stem.poel" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2072,6 +2122,7 @@
       }
     },
     "morph.stem.pual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2088,6 +2139,7 @@
       }
     },
     "morph.stem.qal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2104,6 +2156,7 @@
       }
     },
     "morph.syntax.adverb_role" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2120,6 +2173,7 @@
       }
     },
     "morph.syntax.circumstance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2136,6 +2190,7 @@
       }
     },
     "morph.syntax.object" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2152,6 +2207,7 @@
       }
     },
     "morph.syntax.predicate" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2168,6 +2224,7 @@
       }
     },
     "morph.syntax.predicate_nominal" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2184,6 +2241,7 @@
       }
     },
     "morph.syntax.subject" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3074,6 +3132,7 @@
       }
     },
     "theologian.calvin.era" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3090,6 +3149,7 @@
       }
     },
     "theologian.calvin.name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3106,6 +3166,7 @@
       }
     },
     "theologian.calvin.style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3122,6 +3183,7 @@
       }
     },
     "theologian.henry.era" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3138,6 +3200,7 @@
       }
     },
     "theologian.henry.name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3154,6 +3217,7 @@
       }
     },
     "theologian.henry.style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3170,6 +3234,7 @@
       }
     },
     "theologian.owen.era" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3186,6 +3251,7 @@
       }
     },
     "theologian.owen.name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3202,6 +3268,7 @@
       }
     },
     "theologian.owen.style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3218,6 +3285,7 @@
       }
     },
     "theologian.spurgeon.era" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3234,6 +3302,7 @@
       }
     },
     "theologian.spurgeon.name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3250,6 +3319,7 @@
       }
     },
     "theologian.spurgeon.style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3625,6 +3695,7 @@
       }
     },
     "word.empty.no_data" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3641,6 +3712,7 @@
       }
     },
     "word.empty.tap_hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3657,6 +3729,7 @@
       }
     },
     "word.tab.meaning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3673,6 +3746,7 @@
       }
     },
     "word.tab.usage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3689,6 +3763,7 @@
       }
     },
     "word.usage.book_count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -3741,6 +3816,7 @@
       }
     },
     "word.usage.count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3757,6 +3833,7 @@
       }
     },
     "word.usage.total_count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

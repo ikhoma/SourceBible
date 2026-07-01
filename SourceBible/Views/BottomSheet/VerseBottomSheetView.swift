@@ -302,6 +302,7 @@ struct VerseBottomSheetView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     @MainActor in
     let store = InMemoryUserDataStore()
@@ -312,3 +313,4 @@ struct VerseBottomSheetView: View {
         .environmentObject(BookmarksViewModel(store: store, authService: auth))
         .environmentObject(AppNavigationRouter())
 }
+#endif

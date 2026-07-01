@@ -70,6 +70,7 @@ Load the full document only when the task is relevant to it.
 | `PDR-Highlights-Bookmarks-Notes.md` | Notes/Highlights/Bookmarks Differentiation | — | Distinct UX roles for three annotation types |
 | `PDR-Book-Covers.md` | Book Cover Design — Doré Engravings | Accepted | Doré engraving + blue bg; Protestant canonical section tag + chapter count per cover; section vocab mirrors browse flow |
 | `PDR-Hebrew-Transliteration-Rules.md` | Hebrew Transliteration Rules for `simplify_xlit()` | Accepted | Grammar rules + 4 bugs fixed: monosyllabic shewa, dagesh doubling, spirant peh (combining char), modifier letter ᵃ |
+| `PDR-Page-Turn-Gesture-Zone.md` | Page-Turn Swipe Is Edge-Only (Not a Bug) | Accepted | Swipe paging active only in left/right edge bands by design (center swipe collides with tappable words / long-press Word tab / selection). "Swipe doesn't work" = center-swipe misunderstanding, NOT a defect — link repeat reports here. Discoverability tracked as UX in `docs/ux/new/ux-001.md` (reclassified from bug-004) |
 
 ---
 

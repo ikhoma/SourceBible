@@ -213,6 +213,16 @@ H871a (прийменник בְּ) і H871 (місто Атарот) — абс
 **⛔ Після зміни DB завжди робити Clean Build Folder (⇧⌘K).**
 Xcode кешує старий `sourcebible.db`. Без Clean — код бачить стару схему.
 
+**⛔ `#Preview` зі sample-даними завжди під `#if DEBUG … #endif`.**
+Sample-дані (`BibleVerse.sampleVerses`, `BibleVerse.sampleBooks`, `StrongsEntry.sample` тощо) оголошені під `#if DEBUG`. Макрос `#Preview` НЕ загортається в `#if DEBUG` автоматично — його вміст тайп-чекається і компілюється в Release. Тому превʼю, що посилається на DEBUG-only sample, **компілюється в Debug, але валить `Product > Archive` (Release)** з `'BibleVerse' has no member 'sampleVerses'` (+ каскад `Generic parameter 'C' could not be inferred` для `ForEach`).
+→ Будь-який `#Preview`, що споживає sample-дані, обгортати:
+```swift
+#if DEBUG
+#Preview { ... BibleVerse.sampleVerses ... }
+#endif
+```
+Не видно при звичайному ⌘B/⌘R (Debug) — перевіряти тільки через Archive або Release-білд.
+
 **⛔ Python скрипти писати для Python 3.9.**
 Mac має Python 3.9 за замовчуванням. Не використовувати синтаксис 3.10+:
 - `str | None` → `Optional[str]` (з `from typing import Optional`)

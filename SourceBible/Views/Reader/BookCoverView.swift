@@ -2,10 +2,11 @@
 // SourceBible
 //
 // Full-bleed book cover shown at the top of every book's first chapter.
-// Design (Figma node 982:2471): a pre-composited 402×402 blue Doré cover image,
-// rendered full-bleed in a 402×302 frame. The extra 100pt of image height is the
-// headroom for a parallax effect on scroll. A black bottom gradient keeps the
-// bottom-left title + subtitle legible. Always blue — identical in light/dark mode.
+// Design: a pre-composited square (440×440) blue Doré cover image, rendered
+// full-bleed in a PROPORTIONAL 4:3 window (height = width / (4:3), e.g. 440→330).
+// The square asset is drawn `width` tall and center-cropped to the window, so the
+// extra height is the parallax headroom (½ each side). A black bottom gradient keeps
+// the bottom-left title + subtitle legible. Always blue — identical in light/dark mode.
 
 import SwiftUI
 
@@ -20,11 +21,17 @@ struct BookCoverView: View {
     let bookName: String
     let chapterCount: Int
 
-    // Visible cover height (frame). The Figma frame is 402×302.
-    private let coverHeight: CGFloat = 302
+    // Cover aspect ratio (width : height). PROPORTIONAL across devices: the visible
+    // window height = width / coverAspect (440→330, 402→301.5, 375→281), so the art
+    // framing is consistent on every screen. (Previous approach: fixed 302 height.)
+    private let coverAspect: CGFloat = 4.0 / 3.0
+    // Height used only for the first layout pass, before the width is measured.
+    private let fallbackHeight: CGFloat = 302
+    // Measured full-bleed width (= screen width); drives the proportional height.
+    @State private var coverWidth: CGFloat = 0
     // How much the image lags the scroll. 0 = pinned, 1 = moves with content.
-    // Parallax travel is the FULL extra height (imageHeight − coverHeight): the
-    // square asset renders `width` tall, so the entire image top↔bottom is reachable.
+    // Parallax travel is HALF the extra height ((width − windowHeight)/2): the square
+    // asset renders `width` tall, centered, so reachable travel each way is half.
     private let parallaxFactor: CGFloat = 0.35
 
     // #3085CF — brand blue, fallback cover for books without an image asset.
@@ -39,8 +46,8 @@ struct BookCoverView: View {
     var body: some View {
         // Local copies of layout constants — captured as values by the escaping
         // `visualEffect` closure (Swift 6 forbids implicit `self` capture there).
-        let frameHeight = coverHeight
         let factor = parallaxFactor
+        let frameHeight = coverWidth > 0 ? coverWidth / coverAspect : fallbackHeight
 
         return ZStack(alignment: .bottomLeading) {
 
@@ -115,8 +122,11 @@ struct BookCoverView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
-        .frame(height: frameHeight)
         .frame(maxWidth: .infinity)
+        .frame(height: frameHeight)
+        .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { w in
+            if abs(coverWidth - w) > 0.5 { coverWidth = w }
+        }
         .clipped()
         // Force rebuild on language change so BookCoverData re-reads NSLocalizedString.
         .id(locale.identifier)
