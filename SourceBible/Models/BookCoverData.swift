@@ -5,9 +5,11 @@
 // and optional Doré engraving image asset names.
 //
 // Adding a new cover image:
-//   1. Export the pre-composited 402×402 blue cover PNG from Figma (@3x = 1206×1206)
-//   2. Add to Assets.xcassets (e.g. "exodus_header")
+//   1. Export the pre-composited 440×440 blue cover PNG from Figma (@3x = 1320×1320)
+//   2. Add to Assets.xcassets as "<usfmid>_header" (e.g. "exo_header")
 //   3. Add one entry to coverImages below — no other changes needed
+// Some books intentionally SHARE one cover (minor prophets, letter groups): several
+// bookIds map to the same asset (e.g. HOS/JOL/OBA/ZEP/MAL → "hos_header").
 
 import Foundation
 
@@ -37,12 +39,82 @@ enum BookCoverData {
     // Legacy names (genesis_header, psalms_header) kept as-is to avoid asset rename.
 
     private static let coverImages: [String: String] = [
+        // — Law —
         "GEN": "genesis_header",
+        "EXO": "exo_header",
+        "LEV": "lev_header",
+        "NUM": "num_header",
+        "DEU": "deu_header",
+        // — History —
+        "JOS": "jos_header",
+        "JDG": "jdg_header",
+        "RUT": "rut_header",
+        "1SA": "1sa_header",
+        "2SA": "2sa_header",
+        "1KI": "1ki_header",
+        "2KI": "2ki_header",
+        "1CH": "1ch_header",
+        "2CH": "2ch_header",
+        "EZR": "ezr_header",
+        "NEH": "neh_header",
+        "EST": "est_header",
+        // — Wisdom —
+        "JOB": "job_header",
         "PSA": "psalms_header",
-        // Uncomment / add as cover images are added to xcassets:
-        // "EXO": "exodus_header",
-        // "JOS": "joshua_header",
-        // "AMO": "amos_header",
+        "PRO": "pro_header",
+        "ECC": "ecc_header",
+        "SNG": "sng_header",
+        // — Major Prophets —
+        "ISA": "isa_header",
+        "JER": "jer_header",
+        "LAM": "lam_header",
+        "EZK": "ezk_header",
+        "DAN": "dan_header",
+        // — Minor Prophets (HOS/JOL/OBA/ZEP/MAL share hos_header) —
+        "HOS": "hos_header",
+        "JOL": "hos_header",
+        "AMO": "amo_header",
+        "OBA": "hos_header",
+        "JON": "jon_header",
+        "MIC": "mic_header",
+        "NAM": "nam_header",
+        "HAB": "hab_header",
+        "ZEP": "hos_header",
+        "HAG": "hag_header",
+        "ZEC": "zec_header",
+        "MAL": "hos_header",
+        // — Gospels —
+        "MAT": "mat_header",
+        "MRK": "mrk_header",
+        "LUK": "luk_header",
+        "JHN": "jhn_header",
+        // — Acts —
+        "ACT": "act_header",
+        // — Pauline Letters (ROM/1CO/2CO/GAL/EPH → rom_header; PHP…HEB → php_header) —
+        "ROM": "rom_header",
+        "1CO": "rom_header",
+        "2CO": "rom_header",
+        "GAL": "rom_header",
+        "EPH": "rom_header",
+        "PHP": "php_header",
+        "COL": "php_header",
+        "1TH": "php_header",
+        "2TH": "php_header",
+        "1TI": "php_header",
+        "2TI": "php_header",
+        "TIT": "php_header",
+        "PHM": "php_header",
+        "HEB": "php_header",
+        // — General Letters (1PE/2PE → 1pe_header; 1JN/2JN/3JN → 1jn_header) —
+        "JAS": "jas_header",
+        "1PE": "1pe_header",
+        "2PE": "1pe_header",
+        "1JN": "1jn_header",
+        "2JN": "1jn_header",
+        "3JN": "1jn_header",
+        "JUD": "jud_header",
+        // — Prophecy —
+        "REV": "rev_header",
     ]
 
     // MARK: - Subtitle ("<Section> · <N> Chapters")
