@@ -18,7 +18,7 @@
 
 ### Non-functional
 - Identical appearance in **light and dark mode** (cover is always blue — immune to color scheme)
-- No layout jank: cover → chapter content transition must be seamless within the existing `LazyVStack` scroll
+- No layout jank: cover → chapter content transition must be seamless within the existing `VStack` scroll
 - Adding a new Doré image for a book = drop PNG into xcassets, add one line to a dictionary. No code changes elsewhere.
 - iOS 18 minimum; no iOS 26-exclusive APIs used in the cover
 
@@ -33,7 +33,7 @@
 
 ```
 ReaderView (existing)
-  └── LazyVStack (existing)
+  └── VStack (existing — plain, NOT lazy)
        ├── [chapter == 1] BookCoverView          ← NEW
        │     ├── ZStack
        │     │    ├── RadialGradient (blue bg)

@@ -8,4 +8,4 @@ items.
 
 | Sprint folder | Drive id | Processed on | Items |
 |---|---|---|---|
-| Sprint 1 (06/26) Closed | 1Ch4nlUdPquJsn8rWpB3wT6yYxtzkkj9- | 2026-06-26 | 9 → bug-005…011 (7), ux-002…003 (2) |
+| Sprint 1 (06/26) Closed | 1Ch4nlUdPquJsn8rWpB3wT6yYxtzkkj9- | 2026-06-26 | 46 total (29 bug, 17 ux). All on board.html. Fully carded+investigated: bug-005…011, ux-001…003. Remaining 37 surfaced on board, repo cards PENDING. |

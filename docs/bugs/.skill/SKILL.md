@@ -22,6 +22,14 @@ docs/bugs/                       docs/ux/
 **Defect vs UX — the routing rule.**
 - Something is **broken / wrong / crashes** → `docs/bugs/` (defect).
 - It **works but is confusing, awkward, or a wish** → `docs/ux/` (improvement).
+- It **works as intended but confuses users** (usually surfaced during triage) → mark
+  **by-design**: record/confirm a PDR so it's not re-investigated, and add a row to
+  `docs/ux/known-design-friction.md` with a discoverability decision (accept /
+  affordance / tutorial). It is NOT a defect — don't change the behaviour; the fix, if
+  any, is discoverability (hint / onboarding tutorial).
+- It's a **net-new feature the user wants** (app works, just missing a capability) →
+  `docs/ux/feature-requests.md` with a target milestone (e.g. v1.5); board status
+  **planned**. (Small polish/tweaks stay as ordinary `docs/ux/` items.)
 - When unsure, treat it as a defect and note the uncertainty.
 
 **Screenshots live in the `img/` subfolder** of each pipeline and are referenced

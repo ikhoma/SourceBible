@@ -122,7 +122,7 @@ A Settings tab (or Settings section if the tab already exists) contains a "Langu
 - [ ] Language picker shows all supported languages.
 - [ ] Selecting a language immediately re-renders the active view in the new language.
 - [ ] Selected language persists across app launches.
-- [ ] If no language is set, app defaults to system language if supported, otherwise English (see Open Questions).
+- [ ] If no language is set, app defaults to system language if supported, otherwise English. The derived default is not persisted — only a manual pick is stored (OQ1 resolved as B; see P1.1).
 
 **P0.4 — English 100% complete**  
 Every string in the app has an English translation with no missing keys. English is the fallback language — no string ever falls through to an untranslated key.
@@ -250,8 +250,17 @@ enum MorphologyDecoder {
 
 ### P1 — Nice-to-Have
 
-**P1.1 — Default language logic: follow system locale**  
-On first launch, if the device locale is `uk`, default to Ukrainian; otherwise default to English. Store this choice in `UserDefaults` as the explicit preference (so subsequent launches don't re-derive it from system).
+**P1.1 — Default language logic: follow system locale** ✅ Resolved (OQ1 → B)  
+On first launch, if the device locale is supported (`uk`), default to Ukrainian; otherwise default to English.
+
+**Resolved behavior — follow system until manual override:** the derived language is **not** snapshotted to `UserDefaults` on first launch. `appLanguage` is only written once the user explicitly picks a language in Settings. Until then, the default is re-derived from the system locale on every launch.
+
+- Rationale: a user changing their iOS interface language is a rare event, so the "snapshot on first launch" alternative added state for negligible benefit. Following the system is the natural behavior for the common case (system language never changes → identical to snapshot).
+- Consequence (accepted): if a user changes their iOS system language and has **never** opened the in-app picker, the app language follows the system on next launch. Once they pick a language manually, that choice persists in `UserDefaults` and overrides the system permanently.
+
+*Current implementation:* `SourceBibleApp.defaultLanguage` reads `Locale.preferredLanguages.first`, then falls back to `en` if not in `AppLanguage.supported`.
+
+*Recommended refinement (non-blocking):* replace `Locale.preferredLanguages.first` + `.prefix(2)` with `Bundle.main.preferredLocalizations.first`. It negotiates against the user's full ordered language list and the bundle's available `.lproj`, and falls back to the development language automatically — more robust for multilingual users and scales to new locales without code changes.
 
 **P1.2 — Language label in current language**  
 In the language picker, each language is labeled in that language itself: "English", "Українська" — not "Ukrainian" / "Англійська". Standard iOS convention.
@@ -309,7 +318,7 @@ No code changes required for UI strings.
 
 | # | Question | Owner | Blocking? |
 |---|---|---|---|
-| OQ1 | **Default language**: follow system locale (`.preferredLanguages[0]`) or a neutral English default? The system approach is friendlier but could surprise users whose device is set to Ukrainian but who expect English. | Ivan (product) | No — can ship P1.1 after |
+| OQ1 | ~~**Default language**: follow system locale (`.preferredLanguages[0]`) or a neutral English default?~~ **✅ Resolved (B — follow system):** default to the system locale if supported, else English. Do **not** persist the derived value on first launch — only a manual in-app pick is stored; until then the default re-derives from the system each launch. Rationale: changing iOS interface language is rare, so snapshot-and-persist added state for negligible benefit. See P1.1. | Ivan (product) | Resolved |
 | OQ2 | ~~**In-app language switch without restart**~~ **✅ Resolved**: Use custom `Bundle` subclass that overrides `localizedString(forKey:value:table:)` and loads the correct `.lproj` at runtime. Root SwiftUI view re-renders via `@AppStorage("appLanguage")` change — same pattern as Telegram. No restart required. Estimated ~2–3h implementation. | Engineering | Resolved |
 | OQ3 | **Morphology term accuracy**: Ukrainian morphological terminology in `decodeFull()` was written by a developer, not a linguist. Should these terms be reviewed by someone with Hebrew/Greek grammar background before locking the Ukrainian strings? (e.g., "Qal — проста активна" — acceptable?) | Ivan | No — can iterate post-launch |
 | OQ4 | **`gloss` field language**: The `gloss` shown in `WordCard` (e.g., "king", "go") is English from Macula. In Ukrainian UI mode this looks inconsistent. Acceptable for MVP, or should this be hidden in UK mode until P2.2 ships? | Ivan (product) | No |
