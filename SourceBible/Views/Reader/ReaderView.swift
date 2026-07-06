@@ -17,9 +17,16 @@ struct ReaderView: View {
     @Environment(\.locale) private var locale
     @Environment(\.sessionTracker) private var sessionTracker
     @Environment(\.analytics) private var analytics
-    @AppStorage("hideBookCovers") private var hideBookCovers = false
+    @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     // Red-letter (Jesus' words) rendering — off by default; toggled in Settings ▸ Appearance.
-    @AppStorage("redLetters") private var redLetters = false
+    @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
+
+
+    // Reading-position capture is now read-only geometry (spec-reader-resume-position.md):
+    // each verse row reports its global top into the VM (per-row .onGeometryChange below),
+    // and on scroll-idle the VM picks the verse just under the toolbar. This replaced the
+    // earlier bidirectional `.scrollPosition(id:)` binding, which re-drove the scroll on any
+    // relayout (App Switcher snapshot → visible text jump) and anchored to the raw top.
 
     // MARK: - Study Mode geometry (spec-study-mode-redesign.md R1–R3)
     //
@@ -61,169 +68,7 @@ struct ReaderView: View {
                         Button("reader.retry") { vm.loadChapter() }.buttonStyle(.bordered)
                     }.padding()
                 } else {
-                    ScrollViewReader { proxy in
-
-                        let sheetOpen = vm.activeSheet == .verse
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 0) {
-
-                                if vm.currentChapter == 1 {
-                                    if showsBookCover {
-                                        // Book cover as in-flow content: negative padding
-                                        // cancels the VStack's own insets so the cover sits
-                                        // flush at the scroll's top edge (just below the
-                                        // toolbar) and scrolls away normally when a verse pins.
-                                        BookCoverView(
-                                            bookId: vm.currentBook.id,
-                                            bookName: vm.translationBookNames[vm.currentBook.id]?.long
-                                                ?? BibleBookNames.full(for: vm.currentBook.id),
-                                            chapterCount: vm.currentBook.chapterCount
-                                        )
-                                        .padding(.top, -12)
-                                        .padding(.horizontal, -16)
-                                        .padding(.bottom, 20)
-                                    } else {
-                                        // Cover hidden: regular Large Title (original layout)
-                                        Text(vm.translationBookNames[vm.currentBook.id]?.long
-                                             ?? BibleBookNames.full(for: vm.currentBook.id))
-                                            .font(.largeTitle)
-                                            .bold()
-                                            .frame(maxWidth: .infinity, alignment: .center)
-                                            .padding(.bottom, 16)
-                                    }
-                                }
-
-                                Text(vm.chapterHeading)
-                                    .font(.title)
-                                    .bold()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.bottom, 16)
-
-                                ForEach(vm.verses) { verse in
-                                    VerseRowView(
-                                        verse: verse,
-                                        translationId: vm.currentTranslation.id,
-                                        isSelected: vm.selectedVerse?.id == verse.id
-                                                    && vm.activeSheet == .verse,
-                                        // Gate the word highlight on the sheet being open, not just
-                                        // on selectedSegment. selectedSegment is only cleared in the
-                                        // sheet's onDismiss, which fires when the dismiss ANIMATION
-                                        // COMPLETES — so on the Back button (full slide-down) the blue
-                                        // word lingered for the whole animation. Tying it to activeSheet
-                                        // clears it the instant Back sets activeSheet = nil (frame one),
-                                        // matching the drag-dismiss feel. onDismiss still tidies the
-                                        // underlying selectedSegment state.
-                                        selectedSegment: (vm.activeSheet == .verse
-                                                          && vm.selectedVerse?.id == verse.id)
-                                                    ? vm.selectedSegment : nil,
-                                        redLetters: redLetters,
-                                        onVerseTap: { vm.tapVerse(verse) },
-                                        onWordTap:  { seg in vm.tapWord(seg, in: verse) }
-                                    )
-                                    .id(verse.id)
-                                    // Measure EVERY row's INTRINSIC height (stable; unaffected
-                                    // by scroll) into a per-id store. Done for all rows, not
-                                    // just the selected one: onGeometryChange does NOT re-fire
-                                    // when a row becomes selected (its height is unchanged), so
-                                    // a selection-gated measurement never updated on tap — which
-                                    // is why the sheet didn't adapt. The selected verse's height
-                                    // is then a reliable lookup (vm.pinnedVerseHeight).
-                                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { height in
-                                        vm.setVerseHeight(height, for: verse.id)
-                                    }
-                                    // Atomic Study-Mode scroll driver: installed as the SELECTED
-                                    // verse's background, so its frame == the verse's frame. It
-                                    // reads its own global top AND the scroll offset in one layout
-                                    // pass (no cross-layer skew) and sets the exact contentOffset.
-                                    // Recreated on every focus → fires for first-tap AND re-select.
-                                    .background {
-                                        if vm.selectedVerse?.id == verse.id && vm.activeSheet == .verse {
-                                            StudyPinView(
-                                                trigger: vm.verseScrollTrigger,
-                                                anchorY: vm.pinnedTopAnchorY,
-                                                active: true
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // On Study-Mode exit, clamp an over-scrolled offset (left over
-                                // from pinning the last verse) so there's no empty gap below it.
-                                StudyScrollClamper(active: sheetOpen)
-                                    .frame(width: 0, height: 0)
-                            }
-                            .padding(.horizontal)
-                            .padding(.top, 12)
-                            // When the sheet is open keep a small margin above the sheet;
-                            // when closed use the original generous bottom padding.
-                            .padding(.bottom, sheetOpen ? 16 : 100)
-                        }
-                        // R2: Study Mode locks user scrolling. Programmatic
-                        // proxy.scrollTo(...) still works — required for chevron
-                        // navigation to re-anchor the newly selected verse.
-                        .scrollDisabled(sheetOpen)
-                        // No Study-Mode TOP inset: StudyPinView positions the verse via
-                        // contentOffset, and the content above the topmost verse (book cover
-                        // when covers-on, chapter heading when covers-off) already gives the
-                        // headroom to reach pinnedTopAnchorY. A toggled top inset was the
-                        // original entry jerk; a constant one made the first verse's short
-                        // scroll feel like it braked. See ADR-021.
-                        //
-                        // R3: reserve enough scroll room BELOW the pin that the verse can
-                        // pin ANY verse — including the chapter's last, which have no content
-                        // beneath them. This is studyScrollRoom (the whole area below the pin),
-                        // NOT studySheetHeight: the sheet is sized separately via the detent,
-                        // and tying the inset to the sheet height left the last verses short
-                        // of room to reach the top. Surplus room is invisible (scroll locked,
-                        // behind the sheet).
-                        .safeAreaInset(edge: .bottom, spacing: 0) {
-                            Color.clear.frame(height: sheetOpen ? vm.studyScrollRoom : 0)
-                        }
-                        // Observes verseScrollTrigger (not selectedVerse.id) so that
-                        // re-tapping the already-selected verse still re-scrolls it
-                        // above the sheet if the user has manually scrolled away.
-                        .onChange(of: vm.verseScrollTrigger) { _, _ in
-                            guard let id = vm.selectedVerse?.id else { return }
-                            vm.verseScrollIntent = .tap   // reset for next interaction
-                            // Study-Mode positioning is handled atomically by StudyPinView (the
-                            // selected verse's background). The SwiftUI proxy is kept only for the
-                            // reader-mode (non-study) re-scroll path.
-                            guard !sheetOpen else { return }
-                            DispatchQueue.main.async {
-                                withAnimation(.smooth(duration: 0.4)) { proxy.scrollTo(id, anchor: .center) }
-                            }
-                        }
-                        // Reset scroll position to top on every book OR chapter change.
-                        // Keyed on book+chapter (not chapter alone): switching books that
-                        // both open at chapter 1 keeps the same chapter number, so a
-                        // chapter-only id would reuse the scroll view and inherit the
-                        // previous book's scroll offset.
-                        .id("\(vm.currentBook.id)-\(vm.currentChapter)")
-                        // Cover bleeds behind the status bar + toolbar (immersive) yet is
-                        // still ordinary in-flow content that scrolls away when a verse pins.
-                        // Tied to showsBookCover ONLY (never sheetOpen) so it does NOT toggle
-                        // on Study Mode entry — the toggle was the source of the black band /
-                        // mis-position. The Study-Mode top inset above self-adjusts (it measures
-                        // the scroll content origin), so the pinned verse lands `sheetGap` below
-                        // the real toolbar in BOTH cases. (`[]` = ignore nothing.)
-                        .ignoresSafeArea(edges: showsBookCover ? .top : [])
-                    }
-
-                    // Edge swipe gesture for chapter navigation.
-                    // UIScreenEdgePanGestureRecognizer fires from the hardware screen
-                    // edge regardless of UITextView hit-testing, so it works over all content.
-                    // Chapter change is a no-op in Study Mode (product decision N1) —
-                    // the user must exit to the reader first.
-                    EdgeSwipeNavigator(
-                        onPrevChapter: { if vm.activeSheet != .verse { vm.prevChapter() } },
-                        onNextChapter: { if vm.activeSheet != .verse { vm.nextChapter() } }
-                    )
-                    .ignoresSafeArea()
-
-                    // Note: the old gesture-blocking overlay is gone (R2). Background
-                    // scrolling is now disabled via .scrollDisabled, and the sheet no
-                    // longer forwards touches (presentationBackgroundInteraction removed),
-                    // so there is no swipe leak to absorb.
+                    classicReader
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -341,6 +186,219 @@ struct ReaderView: View {
         }
     }
 
+    // MARK: - Reader content
+    @ViewBuilder
+    private var classicReader: some View {
+        ScrollViewReader { proxy in
+
+            let sheetOpen = vm.activeSheet == .verse
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 0) {
+
+                                if vm.currentChapter == 1 {
+                                    if showsBookCover {
+                                        // Book cover as in-flow content: negative padding
+                                        // cancels the VStack's own insets so the cover sits
+                                        // flush at the scroll's top edge (just below the
+                                        // toolbar) and scrolls away normally when a verse pins.
+                                        BookCoverView(
+                                            bookId: vm.currentBook.id,
+                                            bookName: vm.translationBookNames[vm.currentBook.id]?.long
+                                                ?? BibleBookNames.full(for: vm.currentBook.id),
+                                            chapterCount: vm.currentBook.chapterCount
+                                        )
+                                        .padding(.top, -12)
+                                        .padding(.horizontal, -16)
+                                        .padding(.bottom, 20)
+                                    } else {
+                                        // Cover hidden: regular Large Title (original layout)
+                                        Text(vm.translationBookNames[vm.currentBook.id]?.long
+                                             ?? BibleBookNames.full(for: vm.currentBook.id))
+                                            .font(.largeTitle)
+                                            .bold()
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                            .padding(.bottom, 16)
+                                    }
+                                }
+
+                                Text(vm.chapterHeading)
+                                    .font(.title)
+                                    .bold()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.bottom, 16)
+
+                                ForEach(vm.verses) { verse in
+                                    VerseRowView(
+                                        verse: verse,
+                                        translationId: vm.currentTranslation.id,
+                                        isSelected: vm.selectedVerse?.id == verse.id
+                                                    && vm.activeSheet == .verse,
+                                        // Gate the word highlight on the sheet being open, not just
+                                        // on selectedSegment. selectedSegment is only cleared in the
+                                        // sheet's onDismiss, which fires when the dismiss ANIMATION
+                                        // COMPLETES — so on the Back button (full slide-down) the blue
+                                        // word lingered for the whole animation. Tying it to activeSheet
+                                        // clears it the instant Back sets activeSheet = nil (frame one),
+                                        // matching the drag-dismiss feel. onDismiss still tidies the
+                                        // underlying selectedSegment state.
+                                        selectedSegment: (vm.activeSheet == .verse
+                                                          && vm.selectedVerse?.id == verse.id)
+                                                    ? vm.selectedSegment : nil,
+                                        redLetters: redLetters,
+                                        onVerseTap: { vm.tapVerse(verse) },
+                                        onWordTap:  { seg in vm.tapWord(seg, in: verse) }
+                                    )
+                                    .id(verse.id)
+                                    // Measure EVERY row's INTRINSIC height (stable; unaffected
+                                    // by scroll) into a per-id store. Done for all rows, not
+                                    // just the selected one: onGeometryChange does NOT re-fire
+                                    // when a row becomes selected (its height is unchanged), so
+                                    // a selection-gated measurement never updated on tap — which
+                                    // is why the sheet didn't adapt. The selected verse's height
+                                    // is then a reliable lookup (vm.pinnedVerseHeight).
+                                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { height in
+                                        vm.setVerseHeight(height, for: verse.id)
+                                    }
+                                    // Report this row's GLOBAL top (window Y) for resume-position
+                                    // capture. Read-only: it only writes into a plain VM dict (no
+                                    // @Published, no body invalidation); the reduction to the verse
+                                    // under the toolbar runs on scroll-idle. Same window-coordinate
+                                    // reference as StudyPin/RestorePin (convert(_,to: window)), so
+                                    // capture and restore agree on which verse is "under the toolbar".
+                                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { minY in
+                                        vm.noteVerseTopFrame(minY, for: verse.id)
+                                    }
+                                    // Atomic Study-Mode scroll driver: installed as the SELECTED
+                                    // verse's background, so its frame == the verse's frame. It
+                                    // reads its own global top AND the scroll offset in one layout
+                                    // pass (no cross-layer skew) and sets the exact contentOffset.
+                                    // Recreated on every focus → fires for first-tap AND re-select.
+                                    //
+                                    // The else-if installs the one-shot resume-position restore pin
+                                    // on the verse being restored at launch (reading mode, sheet
+                                    // closed → selectedVerse is nil, so the two branches never
+                                    // collide). It lands that verse just under the toolbar — the
+                                    // same line as a Focus verse — then clears the pending flag.
+                                    .background {
+                                        if vm.selectedVerse?.id == verse.id && vm.activeSheet == .verse {
+                                            StudyPinView(
+                                                trigger: vm.verseScrollTrigger,
+                                                anchorY: vm.pinnedTopAnchorY,
+                                                active: true
+                                            )
+                                        } else if vm.pendingRestoreAnchorId == verse.id {
+                                            RestorePinView(anchorY: vm.pinnedTopAnchorY) {
+                                                vm.pendingRestoreAnchorId = nil
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // On Study-Mode exit, clamp an over-scrolled offset (left over
+                                // from pinning the last verse) so there's no empty gap below it.
+                                StudyScrollClamper(active: sheetOpen)
+                                    .frame(width: 0, height: 0)
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 12)
+                            // When the sheet is open keep a small margin above the sheet;
+                            // when closed use the original generous bottom padding.
+                            .padding(.bottom, sheetOpen ? 16 : 100)
+                        }
+                        // R2: Study Mode locks user scrolling. Programmatic
+                        // proxy.scrollTo(...) still works — required for chevron
+                        // navigation to re-anchor the newly selected verse.
+                        .scrollDisabled(sheetOpen)
+                        // Resume-position capture (spec-reader-resume-position.md): when scrolling
+                        // settles, the VM reduces the per-row global tops (reported above) to the
+                        // verse just under the toolbar and persists it (debounced). Read-only — no
+                        // scroll is driven here, so an App Switcher relayout can't cause a jump.
+                        .onScrollPhaseChange { _, newPhase in
+                            if newPhase == .idle { vm.captureTopVerseUnderToolbar() }
+                        }
+                        // Restore is performed by RestorePinView (installed as the saved verse's
+                        // background above), which lands it just under the toolbar — NOT
+                        // proxy.scrollTo(.top), which lands under the floating toolbar. These hooks
+                        // only clear a pending restore whose verse is ABSENT from the (possibly
+                        // re-numbered) chapter, so capture isn't blocked forever waiting on a pin
+                        // that can never fire.
+                        .onChange(of: vm.verses.count) { _, count in
+                            guard count > 0, let anchor = vm.pendingRestoreAnchorId else { return }
+                            if !vm.verses.contains(where: { $0.id == anchor }) {
+                                vm.pendingRestoreAnchorId = nil   // verse gone → stay at chapter top
+                            }
+                        }
+                        .task {
+                            guard let anchor = vm.pendingRestoreAnchorId,
+                                  !vm.verses.isEmpty,
+                                  !vm.verses.contains(where: { $0.id == anchor }) else { return }
+                            vm.pendingRestoreAnchorId = nil
+                        }
+                        // No Study-Mode TOP inset: StudyPinView positions the verse via
+                        // contentOffset, and the content above the topmost verse (book cover
+                        // when covers-on, chapter heading when covers-off) already gives the
+                        // headroom to reach pinnedTopAnchorY. A toggled top inset was the
+                        // original entry jerk; a constant one made the first verse's short
+                        // scroll feel like it braked. See ADR-021.
+                        //
+                        // R3: reserve enough scroll room BELOW the pin that the verse can
+                        // pin ANY verse — including the chapter's last, which have no content
+                        // beneath them. This is studyScrollRoom (the whole area below the pin),
+                        // NOT studySheetHeight: the sheet is sized separately via the detent,
+                        // and tying the inset to the sheet height left the last verses short
+                        // of room to reach the top. Surplus room is invisible (scroll locked,
+                        // behind the sheet).
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            Color.clear.frame(height: sheetOpen ? vm.studyScrollRoom : 0)
+                        }
+                        // Observes verseScrollTrigger (not selectedVerse.id) so that
+                        // re-tapping the already-selected verse still re-scrolls it
+                        // above the sheet if the user has manually scrolled away.
+                        .onChange(of: vm.verseScrollTrigger) { _, _ in
+                            guard let id = vm.selectedVerse?.id else { return }
+                            vm.verseScrollIntent = .tap   // reset for next interaction
+                            // Study-Mode positioning is handled atomically by StudyPinView (the
+                            // selected verse's background). The SwiftUI proxy is kept only for the
+                            // reader-mode (non-study) re-scroll path.
+                            guard !sheetOpen else { return }
+                            DispatchQueue.main.async {
+                                withAnimation(.smooth(duration: 0.4)) { proxy.scrollTo(id, anchor: .center) }
+                            }
+                        }
+                        // Reset scroll position to top on every book OR chapter change.
+                        // Keyed on book+chapter (not chapter alone): switching books that
+                        // both open at chapter 1 keeps the same chapter number, so a
+                        // chapter-only id would reuse the scroll view and inherit the
+                        // previous book's scroll offset.
+                        .id("\(vm.currentBook.id)-\(vm.currentChapter)")
+                        // Cover bleeds behind the status bar + toolbar (immersive) yet is
+                        // still ordinary in-flow content that scrolls away when a verse pins.
+                        // Tied to showsBookCover ONLY (never sheetOpen) so it does NOT toggle
+                        // on Study Mode entry — the toggle was the source of the black band /
+                        // mis-position. The Study-Mode top inset above self-adjusts (it measures
+                        // the scroll content origin), so the pinned verse lands `sheetGap` below
+                        // the real toolbar in BOTH cases. (`[]` = ignore nothing.)
+                        .ignoresSafeArea(edges: showsBookCover ? .top : [])
+                    }
+
+            // Edge swipe gesture for chapter navigation.
+            // UIScreenEdgePanGestureRecognizer fires from the hardware screen
+            // edge regardless of UITextView hit-testing, so it works over all content.
+            // Chapter change is a no-op in Study Mode (product decision N1) —
+            // the user must exit to the reader first.
+            //
+            EdgeSwipeNavigator(
+                onPrevChapter: { if vm.activeSheet != .verse { vm.prevChapter() } },
+                onNextChapter: { if vm.activeSheet != .verse { vm.nextChapter() } }
+            )
+            .ignoresSafeArea()
+
+            // Note: the old gesture-blocking overlay is gone (R2). Background
+            // scrolling is now disabled via .scrollDisabled, and the sheet no
+            // longer forwards touches (presentationBackgroundInteraction removed),
+            // so there is no swipe leak to absorb.
+        }
+
     // MARK: - Toolbar content (R4/R5)
 
     /// Dynamic accessibility label for the leading (prev) toolbar chevron.
@@ -437,7 +495,7 @@ struct ReaderView: View {
 
     /// Reader-mode book + translation pickers (unchanged behavior).
     private var pickerGroup: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             Button { vm.isBookPickerPresented = true } label: {
                 HStack(spacing: 4) {
                     Text(vm.chapterTitle)

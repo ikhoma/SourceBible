@@ -6,19 +6,25 @@ import SwiftUI
 struct MenuView: View {
     @EnvironmentObject var readerVM: ReaderViewModel
     @State private var brightness: Double = Double(UIScreen.main.brightness)
-    @AppStorage("isDarkMode") private var isDark = false
-    @AppStorage("hideBookCovers") private var hideBookCovers = false
-    @AppStorage("redLetters") private var redLetters = false
-    @AppStorage("defaultTranslationId") private var defaultTranslationId: String = "KJV"
-    @AppStorage("analyticsEnabled") private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.isDarkMode) private var isDark = false
+    @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
+    @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
+    @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = "KJV"
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
     @Environment(\.locale) private var locale
-    @AppStorage("appLanguage") private var appLanguage: String = "en"
+    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
+    @AppStorage(AppStorageKeys.launchBehavior) private var launchBehaviorRaw = LaunchBehavior.resume.rawValue
 
     private var currentLanguageLabel: String {
         switch appLanguage {
         case "uk": return "Українська"
         default:   return "English"
         }
+    }
+
+    private var launchBehaviorLabel: LocalizedStringKey {
+        LaunchBehavior(rawValue: launchBehaviorRaw) == .lastBookmark
+            ? "menu.launch.last_bookmark" : "menu.launch.resume"
     }
 
     var body: some View {
@@ -67,6 +73,16 @@ struct MenuView: View {
                     }
                 }
                 .listRowBackground(Color("cardBackground"))
+                Section("menu.section.reading") {
+                    NavigationLink {
+                        LaunchBehaviorPickerView(selectedRaw: $launchBehaviorRaw)
+                    } label: {
+                        LabeledContent("menu.launch_behavior") {
+                            Text(launchBehaviorLabel)
+                        }
+                    }
+                }
+                .listRowBackground(Color("cardBackground"))
                 Section("menu.section.app") {
                     NavigationLink {
                         LanguageSettingsView()
@@ -96,6 +112,53 @@ struct MenuView: View {
             }
         }
         .id(locale.identifier)
+    }
+}
+
+// MARK: - LaunchBehaviorPickerView
+
+struct LaunchBehaviorPickerView: View {
+    @Binding var selectedRaw: String
+    @Environment(\.dismiss) private var dismiss
+
+    private struct Option: Identifiable {
+        let behavior: LaunchBehavior
+        let titleKey: LocalizedStringKey
+        let subtitleKey: LocalizedStringKey
+        var id: String { behavior.rawValue }
+    }
+
+    private let options: [Option] = [
+        Option(behavior: .resume,
+               titleKey: "menu.launch.resume",
+               subtitleKey: "menu.launch.resume.subtitle"),
+        Option(behavior: .lastBookmark,
+               titleKey: "menu.launch.last_bookmark",
+               subtitleKey: "menu.launch.last_bookmark.subtitle"),
+    ]
+
+    var body: some View {
+        List(options) { opt in
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(opt.titleKey).font(.body)
+                    Text(opt.subtitleKey)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if opt.behavior.rawValue == selectedRaw {
+                    Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedRaw = opt.behavior.rawValue
+                dismiss()
+            }
+        }
+        .navigationTitle("menu.launch_behavior")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

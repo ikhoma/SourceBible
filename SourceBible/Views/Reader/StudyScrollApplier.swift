@@ -120,6 +120,111 @@ struct StudyPinView: UIViewRepresentable {
     }
 }
 
+// MARK: - Resume-position restore pin
+
+/// One-shot restore positioner for resume-position (spec-reader-resume-position.md).
+///
+/// Installed as the `.background` of the verse being restored on launch (only while
+/// `pendingRestoreAnchorId` matches that row). It lands the verse's TOP exactly at
+/// `anchorY` — which the caller passes as `pinnedTopAnchorY`, i.e. just below the
+/// floating iOS 26 toolbar — using the SAME offset math as `StudyPinView`, so a
+/// restored verse sits on the identical line as a Focus (Study Mode) verse.
+///
+/// Two deliberate differences from `StudyPinView`:
+///  1. It sets `contentOffset` WITHOUT animation — the verse must already be in
+///     place on the first paint after relaunch, not slide in.
+///  2. It fires `onPinned` once after applying, so the caller can clear the
+///     pending-restore flag (which removes this view — it is truly one-shot).
+///
+/// Why not `proxy.scrollTo(anchor, anchor: .top)`: SwiftUI's `.top` aligns to the
+/// scroll view's raw top, which sits UNDER the floating toolbar (the toolbar does
+/// not reduce the SwiftUI safe area — the very reason `toolbarBottomY` is read from
+/// UIKit). `.top` therefore lands the restored verse behind the toolbar/status bar.
+struct RestorePinView: UIViewRepresentable {
+    /// Global (window) Y where the verse top should land — pass `pinnedTopAnchorY`.
+    let anchorY: CGFloat
+    /// Called once, after the offset is applied, so the caller clears the pending flag.
+    let onPinned: () -> Void
+
+    func makeUIView(context: Context) -> PinView {
+        let v = PinView()
+        v.isUserInteractionEnabled = false
+        v.backgroundColor = .clear
+        return v
+    }
+
+    func updateUIView(_ uiView: PinView, context: Context) {
+        uiView.configure(anchorY: anchorY, onPinned: onPinned)
+    }
+
+    @MainActor
+    final class PinView: UIView {
+        private var anchorY: CGFloat = 0
+        private var onPinned: (() -> Void)?
+        private var done = false
+
+        func configure(anchorY: CGFloat, onPinned: @escaping () -> Void) {
+            self.anchorY = anchorY
+            self.onPinned = onPinned
+            setNeedsLayout()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            pinIfNeeded()
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            pinIfNeeded()
+        }
+
+        private func pinIfNeeded() {
+            // anchorY == 0 means toolbarBottomY hasn't been measured yet on cold launch;
+            // stay armed (done == false) — a later layout pass, once the nav bar publishes
+            // its frame, re-runs this and pins correctly.
+            guard !done,
+                  anchorY > 0,
+                  let window = window,
+                  let scrollView = enclosingScrollView()
+            else { return }
+
+            // self is the target verse row's background → self.frame IS the verse frame.
+            // Read the verse's global top AND the scroll offset in the same pass (no skew).
+            let verseGlobalMinY = convert(bounds, to: window).minY
+            guard verseGlobalMinY > 0 else { return }   // not laid out yet
+
+            done = true
+
+            let delta = verseGlobalMinY - anchorY
+            var target = scrollView.contentOffset
+            target.y += delta
+
+            // Clamp to the valid range so the offset survives a later layout pass.
+            let minY = -scrollView.adjustedContentInset.top
+            let maxY = max(minY,
+                           scrollView.contentSize.height
+                           + scrollView.adjustedContentInset.bottom
+                           - scrollView.bounds.height)
+            target.y = min(max(target.y, minY), maxY)
+
+            scrollView.contentOffset = target   // instant — no animation on restore
+
+            let callback = onPinned
+            DispatchQueue.main.async { callback?() }   // clear pending after this pass
+        }
+
+        private func enclosingScrollView() -> UIScrollView? {
+            var v: UIView? = superview
+            while let cur = v {
+                if let sv = cur as? UIScrollView { return sv }
+                v = cur.superview
+            }
+            return nil
+        }
+    }
+}
+
 // MARK: - Exit clamp
 
 /// Pinning the LAST verse(s) over-scrolls the content (the pin offset relies on

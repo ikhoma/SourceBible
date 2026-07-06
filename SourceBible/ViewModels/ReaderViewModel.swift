@@ -71,6 +71,21 @@ class ReaderViewModel: ObservableObject {
     /// verseId → HighlightColor.rawValue for the current chapter + translation.
     @Published var highlightColors: [String: String] = [:]
 
+    // Reading-position persistence (spec-reader-resume-position.md).
+    private let positionStore: ReadingPositionStore
+    /// Armed by init() on launch when a saved position / last bookmark should be
+    /// restored. ReaderView scrolls the matching verse to the top once verses load,
+    /// then clears it. nil → no restore pending (scroll stays at chapter top).
+    @Published var pendingRestoreAnchorId: String?
+    /// Last verse recorded as the reading anchor; flushed to positionStore (debounced).
+    private var lastReadingAnchorId: String?
+    /// Reading-mode capture sink: each verse row reports its GLOBAL top (window Y) here as
+    /// the user scrolls. Plain (NOT @Published) so continuous scroll never re-evaluates the
+    /// heavy reader body. `captureTopVerseUnderToolbar()` reduces this to the single verse
+    /// sitting just under the toolbar when scrolling settles.
+    private var verseGlobalTops: [String: CGFloat] = [:]
+    private var positionSaveTask: Task<Void, Never>?
+
     // MARK: - Analytics (injected from view layer on appear)
     var sessionTracker: SessionTracker = .noop
     /// Analytics service — injected in ReaderView .task (Slice 3: translationSwitched, highlights).
@@ -89,8 +104,10 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(store: UserDataStoreProtocol) {
-        self.store   = store
+    init(store: UserDataStoreProtocol,
+         positionStore: ReadingPositionStore = UserDefaultsReadingPositionStore()) {
+        self.store         = store
+        self.positionStore = positionStore
         self.highlightColors = store.highlightColors(translation: Translation.defaultTranslation.id)
 
         // Previews: use sample data instantly, no DB access
@@ -111,28 +128,161 @@ class ReaderViewModel: ObservableObject {
             self.allBooks              = self.db.loadBooks()
             self.availableTranslations = self.db.loadTranslations()
             // Restore persisted default translation (set from Menu settings)
-            if let savedId = UserDefaults.standard.string(forKey: "defaultTranslationId"),
+            if let savedId = UserDefaults.standard.string(forKey: AppStorageKeys.defaultTranslationId),
                let match = self.availableTranslations.first(where: { $0.id == savedId }) {
                 self.currentTranslation = match
             }
             self.translationBookNames  = self.db.loadBookNames(for: self.currentTranslation.id)
-            self.currentBook = self.allBooks.first(where: { $0.id == "GEN" })
-                            ?? self.allBooks.first
-                            ?? self.currentBook
+            self.restoreLaunchPosition()
             self.loadChapter()
         }
+    }
+
+    // MARK: - Reading position (resume)
+
+    /// Resolves the launch target from the saved behavior and applies it to
+    /// currentBook/currentChapter, arming pendingRestoreAnchorId. Falls back to
+    /// Genesis 1:1 when there is nothing to restore. Runs inside init on MainActor.
+    private func restoreLaunchPosition() {
+        func genesis() {
+            currentBook = allBooks.first { $0.id == "GEN" } ?? allBooks.first ?? currentBook
+            currentChapter = 1
+            pendingRestoreAnchorId = nil
+        }
+
+        let target: ReadingPosition?
+        switch positionStore.launchBehavior {
+        case .resume:       target = positionStore.load()
+        case .lastBookmark: target = mostRecentBookmarkPosition() ?? positionStore.load()
+        }
+
+        guard let t = target,
+              let book = allBooks.first(where: { $0.id == t.bookId }) else {
+            genesis(); return
+        }
+        currentBook = book
+        currentChapter = max(1, min(t.chapter, book.chapterCount))
+        // Restore the anchor only if it belongs to the (possibly clamped) chapter.
+        if let anchor = t.verseAnchorId, anchor.hasPrefix("\(book.id)|\(currentChapter)|") {
+            // Cover exception: if the target is the very top of a chapter that shows a
+            // book cover (chapter 1, covers enabled), resume like a fresh chapter open —
+            // leave the scroll at the natural top so the cover is shown, rather than
+            // pinning verse 1 under the toolbar. Only verse 1 triggers this; any deeper
+            // verse still pins under the toolbar as usual.
+            let coverShown = currentChapter == 1
+                && !UserDefaults.standard.bool(forKey: AppStorageKeys.hideBookCovers)
+            if coverShown && anchor == "\(book.id)|1|1" {
+                pendingRestoreAnchorId = nil
+            } else {
+                pendingRestoreAnchorId = anchor
+            }
+        } else {
+            pendingRestoreAnchorId = nil
+        }
+    }
+
+    /// Most-recently-created bookmark → its first verse as a ReadingPosition.
+    /// `store.bookmarks()` is ordered created_at DESC, so `.first` is the newest.
+    private func mostRecentBookmarkPosition() -> ReadingPosition? {
+        guard let bm = store.bookmarks().first,
+              let vid = bm.verseIds.first,
+              let parsed = Self.parseVerseId(vid) else { return nil }
+        return ReadingPosition(bookId: parsed.bookId, chapter: parsed.chapter, verseAnchorId: vid)
+    }
+
+    /// Parse a compound verse ID "BOOK|chapter|verse" → (bookId, chapter).
+    static func parseVerseId(_ id: String) -> (bookId: String, chapter: Int)? {
+        let parts = id.split(separator: "|")
+        guard parts.count == 3, let ch = Int(parts[1]) else { return nil }
+        return (String(parts[0]), ch)
+    }
+
+    /// Record the reading anchor (top-visible verse in reading mode, or the focused
+    /// verse in Study Mode) and persist it (debounced). No-ops for a verse outside the
+    /// current chapter — guards stale scroll callbacks fired during a chapter switch.
+    func noteReadingAnchor(_ verseId: String) {
+        guard verseId.hasPrefix("\(currentBook.id)|\(currentChapter)|") else { return }
+        lastReadingAnchorId = verseId
+        let book = currentBook.id, chapter = currentChapter
+        positionSaveTask?.cancel()
+        positionSaveTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.positionStore.save(ReadingPosition(bookId: book, chapter: chapter, verseAnchorId: verseId))
+        }
+    }
+
+    /// Reading-mode row-top sink. Cheap by design: it only stores the row's global top.
+    /// The reduction to a single anchor happens on scroll-idle (or flush), NOT per frame,
+    /// so the heavy reader body is never re-evaluated by scrolling.
+    func noteVerseTopFrame(_ minY: CGFloat, for verseId: String) {
+        verseGlobalTops[verseId] = minY
+    }
+
+    /// Record the verse the reader currently sees at the top and persist it.
+    /// Winner = the verse CROSSING the toolbar line (top at/above the line, bottom still
+    /// below it) — i.e. the verse still visible at the top stays "current" until it has
+    /// scrolled off entirely, at which point the next one takes over. Falls back to the
+    /// first verse below the line when none crosses it (e.g. at the very top, where the
+    /// cover/heading occupies the line). Restore then pins that verse's TOP to the same
+    /// line, so a slightly-scrolled verse comes back as itself, not the next one.
+    /// No-ops in Study Mode (anchor there is `selectedVerse`) and while a restore is pending.
+    func captureTopVerseUnderToolbar() {
+        guard activeSheet != .verse,
+              pendingRestoreAnchorId == nil,
+              toolbarBottomY > 0 else { return }
+        let line = toolbarBottomY
+        var bestId: String?
+
+        // Preferred: the verse straddling the toolbar line. Among any straddlers pick the
+        // lowest one (largest top) — the verse actually at the top of the reading area.
+        var straddleTop = -CGFloat.greatestFiniteMagnitude
+        for verse in verses {
+            guard let minY = verseGlobalTops[verse.id] else { continue }
+            let bottom = minY + (verseHeights[verse.id] ?? 0)
+            if minY <= line, bottom > line, minY > straddleTop {
+                straddleTop = minY
+                bestId = verse.id
+            }
+        }
+
+        // Fallback: nothing crosses the line → first verse below it.
+        if bestId == nil {
+            var bestMinY = CGFloat.greatestFiniteMagnitude
+            for verse in verses {
+                guard let minY = verseGlobalTops[verse.id], minY >= line, minY < bestMinY else { continue }
+                bestMinY = minY
+                bestId = verse.id
+            }
+        }
+
+        if let id = bestId { noteReadingAnchor(id) }
+    }
+
+    /// Immediately persist the last known reading position (e.g. on scenePhase
+    /// background), bypassing the debounce so a background kill doesn't lose it.
+    func flushReadingPosition() {
+        captureTopVerseUnderToolbar()   // fold in the current on-screen top before saving
+        positionSaveTask?.cancel()
+        positionStore.save(ReadingPosition(bookId: currentBook.id,
+                                           chapter: currentChapter,
+                                           verseAnchorId: lastReadingAnchorId))
     }
 
     // MARK: - Computed
 
     /// Short book abbreviation for the toolbar pill — uses translation-native short name when available.
     var currentBookShortName: String {
-        translationBookNames[currentBook.id]?.short ?? BibleBookNames.short(for: currentBook.id)
+        BibleBookNames.spacedShort(
+            translationBookNames[currentBook.id]?.short ?? BibleBookNames.short(for: currentBook.id)
+        )
     }
 
     /// Translation-native short name for any book ID, falling back to BibleBookNames.
     func shortBookName(for bookId: String) -> String {
-        translationBookNames[bookId]?.short ?? BibleBookNames.short(for: bookId)
+        BibleBookNames.spacedShort(
+            translationBookNames[bookId]?.short ?? BibleBookNames.short(for: bookId)
+        )
     }
 
     var chapterTitle: String { "\(currentBookShortName) \(currentChapter)" }
@@ -543,6 +693,7 @@ class ReaderViewModel: ObservableObject {
             selectedSegment = nil
             bottomSheetMode = .verse
             loadWordsForSelectedVerse()
+            noteReadingAnchor(verse.id)   // Study Mode anchor = focused verse
             isBottomSheetPresented = true
             // Trigger scroll-above-sheet so the selected verse is visible when
             // navigating from search. When the chapter changed (needsLoad = true)
@@ -675,6 +826,7 @@ class ReaderViewModel: ObservableObject {
         activeSheet = .verse
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
+        noteReadingAnchor(verse.id)   // Study Mode anchor = focused verse
         // Analytics: record unique verse read.
         sessionTracker.incVersesOpened(verseId: verse.id)
     }

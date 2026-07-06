@@ -1,8 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "" : {
-
+    "" : {},
+    "%@ %lld:%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld:%3$lld"
+          }
+        }
+      }
     },
     "%@ · %@" : {
       "localizations" : {
@@ -14,19 +22,8 @@
         }
       }
     },
-    "%@ %lld:%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld:%3$lld"
-          }
-        }
-      }
-    },
-    "%lld" : {
-
-    },
+    "%lld" : {},
+    "%lld%%" : {},
     "%lld. %@" : {
       "localizations" : {
         "en" : {
@@ -37,9 +34,7 @@
         }
       }
     },
-    "%lld%%" : {
-
-    },
+    "Source Bible v1.0" : {},
     "a11y.nav.next_chapter" : {
       "localizations" : {
         "en" : {
@@ -1071,6 +1066,86 @@
         }
       }
     },
+    "menu.launch.last_bookmark" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last bookmark"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остання закладка"
+          }
+        }
+      }
+    },
+    "menu.launch.last_bookmark.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your most recent bookmark"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ваша найновіша закладка"
+          }
+        }
+      }
+    },
+    "menu.launch.resume" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue reading"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продовжити читання"
+          }
+        }
+      }
+    },
+    "menu.launch.resume.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where you left off"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "З місця, де ви зупинились"
+          }
+        }
+      }
+    },
+    "menu.launch_behavior" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On launch open"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При відкритті показувати"
+          }
+        }
+      }
+    },
     "menu.red_letters" : {
       "localizations" : {
         "en" : {
@@ -1120,7 +1195,6 @@
       }
     },
     "menu.section.reading" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2983,9 +3057,6 @@
         }
       }
     },
-    "Source Bible v1.0" : {
-
-    },
     "studymode.back" : {
       "localizations" : {
         "en" : {
@@ -3351,23 +3422,6 @@
         }
       }
     },
-    "verse.commentary_notice" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
-          }
-        }
-      }
-    },
     "verse.commentary.placeholder" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3397,6 +3451,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Коментар для цього вірша відсутній."
+          }
+        }
+      }
+    },
+    "verse.commentary_notice" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
           }
         }
       }

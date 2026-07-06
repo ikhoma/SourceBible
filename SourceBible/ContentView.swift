@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var router:       AppNavigationRouter = AppNavigationRouter()
     @State private var selectedTab: AppTab = .bible
 
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.analytics) private var analytics
     @Environment(\.sessionTracker) private var sessionTracker
 
@@ -42,6 +43,13 @@ struct ContentView: View {
                 Task { @MainActor in
                     readerVM.navigateToVerse(id: verseId)
                     router.pendingVerseId = nil
+                }
+            }
+            // Persist reading position immediately when leaving the foreground so a
+            // background kill doesn't lose the last position (spec-reader-resume-position).
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background || phase == .inactive {
+                    readerVM.flushReadingPosition()
                 }
             }
     }
