@@ -27,7 +27,7 @@ private struct SheetHeightKey: PreferenceKey {
 
 struct AnalyticsConsentCard: View {
     @Binding var isPresented: Bool
-    @AppStorage("analyticsEnabled") private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -89,7 +89,7 @@ struct AnalyticsConsentCard: View {
 // use the device's rounded-corner radius. Explicit values looked "off".
 
 struct AnalyticsConsentModifier: ViewModifier {
-    @AppStorage("analyticsConsentShown") private var consentShown: Bool = false
+    @AppStorage(AppStorageKeys.analyticsConsentShown) private var consentShown: Bool = false
     @State private var showSheet = false
     @State private var sheetHeight: CGFloat = 300
 

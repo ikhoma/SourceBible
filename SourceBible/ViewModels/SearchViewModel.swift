@@ -18,7 +18,7 @@ final class SearchViewModel: ObservableObject {
 
     // MARK: - Recent queries (persisted)
 
-    @AppStorage("searchRecentQueries") private var recentRaw: String = ""
+    @AppStorage(AppStorageKeys.searchRecentQueries) private var recentRaw: String = ""
 
     var recentQueries: [String] {
         recentRaw.components(separatedBy: "\n").filter { !$0.isEmpty }

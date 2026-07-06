@@ -18,7 +18,7 @@ struct SourceBibleApp: App {
     // Read once at init; runtime changes handled via .onChange in body.
     // Consent ON (any build) → MixpanelAnalytics; OFF → NoopAnalytics (zero network).
     // No #if BETA gating — Mixpanel runs in beta AND prod (PDR-Analytics-Mixpanel D3).
-    @AppStorage("analyticsEnabled") private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
     let analytics: any AnalyticsService
 
     // MARK: - Session Tracker
@@ -27,8 +27,8 @@ struct SourceBibleApp: App {
     // MARK: - Language
 
     /// Persisted language code ("en" | "uk"). Drives locale environment on change.
-    @AppStorage("appLanguage") private var appLanguage: String = Self.defaultLanguage
-    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = Self.defaultLanguage
+    @AppStorage(AppStorageKeys.isDarkMode) private var isDarkMode: Bool = false
 
     /// On first launch: follow system locale if supported, else "en".
     private static var defaultLanguage: String {
@@ -47,8 +47,8 @@ struct SourceBibleApp: App {
         // Registered as a UserDefaults default so AppStorage + the read below pick it up
         // before the user has touched the toggle.
         let defaultConsent = MixpanelAnalytics.isTestFlight
-        UserDefaults.standard.register(defaults: ["analyticsEnabled": defaultConsent])
-        let enabled = UserDefaults.standard.object(forKey: "analyticsEnabled") as? Bool ?? defaultConsent
+        UserDefaults.standard.register(defaults: [AppStorageKeys.analyticsEnabled: defaultConsent])
+        let enabled = UserDefaults.standard.object(forKey: AppStorageKeys.analyticsEnabled) as? Bool ?? defaultConsent
 
         // Mixpanel is always the injected service but stays inert until enable() (consent).
         // No SDK is loaded and nothing is sent while consent is OFF (prod opt-in).
@@ -67,7 +67,7 @@ struct SourceBibleApp: App {
         // After this, Text("key") and String(localized: "key") both
         // resolve through the active language automatically.
         // See ADR-006: docs/architecture/ADR-006-localization-translation-provider.md
-        let lang = UserDefaults.standard.string(forKey: "appLanguage") ?? Self.defaultLanguage
+        let lang = UserDefaults.standard.string(forKey: AppStorageKeys.appLanguage) ?? Self.defaultLanguage
         LocalizedBundle.install(language: lang)
 
         // Build the GRDB store — crashes on failure are intentional at init time

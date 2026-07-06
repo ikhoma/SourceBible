@@ -12,7 +12,7 @@ import SwiftUI
 
 struct LanguageSettingsView: View {
 
-    @AppStorage("appLanguage") private var appLanguage: String = "en"
+    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
 
     private struct Language: Identifiable {
         let code: String

@@ -21,10 +21,10 @@ final class MigrationService {
     ///
     /// - Parameter defaultTranslationId: Translation ID to assign migrated highlights (e.g. "KJV").
     func migrateHighlightsIfNeeded(defaultTranslationId: String) {
-        let doneKey = "sourcebible.migration.v1.highlights.done"
+        let doneKey = AppStorageKeys.migrationHighlightsDone
         guard !UserDefaults.standard.bool(forKey: doneKey) else { return }
 
-        let legacyKey = "source_bible.highlighted_verse_ids"
+        let legacyKey = AppStorageKeys.legacyHighlightedVerseIds
         let ids = UserDefaults.standard.stringArray(forKey: legacyKey) ?? []
 
         for verseId in ids {

@@ -32,10 +32,25 @@ enum BibleBookNames {
         testamentMap[bookId] ?? .old
     }
 
+    /// Normalizes a short abbreviation so a leading book number is separated from
+    /// the name by a single space: "1Cor" → "1 Cor", "1Кор" → "1 Кор".
+    /// Idempotent — values that already have the space (or no leading digit) are
+    /// returned unchanged. Applied at display time so it fixes both DB-sourced
+    /// and fallback-sourced short names regardless of how they were stored.
+    static func spacedShort(_ short: String) -> String {
+        guard let first = short.first, first.isNumber else { return short }
+        var end = short.startIndex
+        while end < short.endIndex, short[end].isNumber {
+            end = short.index(after: end)
+        }
+        guard end < short.endIndex, short[end] != " " else { return short }
+        return short[..<end] + " " + short[end...]
+    }
+
     // MARK: - Locale helper
 
     private static var isUkrainian: Bool {
-        UserDefaults.standard.string(forKey: "appLanguage") == "uk"
+        UserDefaults.standard.string(forKey: AppStorageKeys.appLanguage) == "uk"
     }
 
     // MARK: - Testament map (66 books)
