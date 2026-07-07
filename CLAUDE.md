@@ -113,9 +113,11 @@ if #available(iOS 26, *) {
 someIOS26OnlyAPI()
 ```
 
-Відомі iOS 26-only речі що вже є в коді без guards (фіксувати в compatibility спринті):
-- `LocalizedBundle` — `Bundle` `@MainActor` є тільки в iOS 26 SDK
-- `TabView` value-based tab selection
+Раніше відомі iOS 26-only діри — **закрито** (compiler-oracle аудит 2026-07-06, Phase A, target=18.0 → 0 unguarded викликів, див. `docs/features/plan-ios18-compat.md`):
+- `TabView` value-based tab selection — ✅ покрито iOS 18 split у `ContentView.swift` (legacy fallback); компілятор на 18.0 підтвердив.
+- `LocalizedBundle` — це SDK-concurrency (`Bundle` `@MainActor` в iOS 26 SDK), **не** runtime-availability; вирішено через `nonisolated`. Зниження target його не чіпає.
+
+Стан: під target=18.0 кодова база компілюється чисто (Debug+Release+Archive). Лишається на Phase B (окремий спринт): власне flip target 26.4→18.0 + повний iOS 18 runtime/візуальний QA.
 
 Swift 6 strict concurrency — це налаштування компілятора, не залежить від deployment target. Залишається без змін.
 

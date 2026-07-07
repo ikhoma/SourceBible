@@ -1,6 +1,8 @@
 # plan-ios18-compat: iOS 18 Compatibility Refactor — Safe Half (Fable) + Deferred Sprint
 
-**Status:** Accepted (Ivan, 2026-07-06) — autonomous-gate entry надано для Phase A
+**Status:** Phase A — DONE ✅ (2026-07-06) | Phase B — deferred to compat sprint
+
+> **Вердикт Phase A (2026-07-06).** Compiler-oracle аудит (target=18.0) → **0 unguarded iOS 26 викликів**; guard-покриття вже 100%. Фінальний diff **порожній**, target лишається 26.4. Debug + Release + **Archive** зелені; iOS 18 sim smoke-run OK (1 екран); iOS 26 sim без змін. Незалежно підтверджено: чистий git-tree, жодних `#if BETA`/device сліпих зон. **Компіляційний** ризик Phase B знято повністю; **runtime/QA** ризик лишається на Phase B. Fable-звіт: `report-ios18-compat-phase-a.md`.
 **Date:** 2026-07-06
 **Deciders:** Ivan
 **Related:** ADR-001 (Platform Stack — iOS 18 min target, compat sprint deferred), CLAUDE.md (Autonomous mode / Swift 6 / ⛔-інваріанти)
@@ -138,12 +140,12 @@ Default = Sonnet; ескалація на Opus тільки для fallback-рі
 
 ## Action items
 
-1. [ ] Ivan: **approve** цей план (autonomous-gate entry).
-2. [ ] Створити worktree/гілку від робочої.
-3. [ ] Fable: scratch-set target = 18.0 → зібрати всі availability-errors.
-4. [ ] Fable: загорнути кожен виклик у `#available(iOS 26, *)` + iOS 18 fallback.
-5. [ ] Fable: **реверт target → 26.4**.
-6. [ ] Fable: Debug + **Archive** зелені; run на iOS 26 sim (без змін поведінки); (доказ) run на iOS 18 sim — скріншот.
-7. [ ] Fable: підготувати diff + короткий звіт.
-8. [ ] Ivan: ревʼю diff → merge.
-9. [ ] Phase B → у compat-спринт; більше нічого в A не додавати.
+1. [x] Ivan: **approve** цей план (autonomous-gate entry). — 2026-07-06
+2. [x] Створити worktree/гілку. — прогін у `work` за вказівкою Ivan; git-tree лишився чистим.
+3. [x] Fable: scratch-set target = 18.0 → зібрати всі availability-errors. — **0 errors**.
+4. [x] Fable: загорнути кожен виклик у `#available(iOS 26, *)` + iOS 18 fallback. — н/д, чіпати не було чого.
+5. [x] Fable: **реверт target → 26.4**. — diff порожній, реверт точний.
+6. [x] Fable: Debug + **Archive** зелені; run на iOS 26 sim; (доказ) run на iOS 18 sim. — Archive зібрано (Ivan, 2026-07-06).
+7. [x] Fable: підготувати diff + короткий звіт. — `report-ios18-compat-phase-a.md`.
+8. [x] Ivan: ревʼю. — merge н/д (diff порожній).
+9. [ ] **Phase B → compat-спринт:** flip target 26.4→18.0 + повний iOS 18 runtime/QA + SPM min-target check + реліз. Більше нічого в A не додавати.
