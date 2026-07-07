@@ -1,12 +1,12 @@
 # ADR-008: Search Architecture — MVP
 
-**Status:** Accepted (amended 2026-06-11)  
+**Status:** Accepted (amended 2026-06-11, 2026-07-07)  
 **Date:** 2026-05-23  
 **Deciders:** Ivan
 
 ## Context
 
-iOS offline-first Bible app. Потрібен пошук по тексту перекладу, Strong's номерах, леммах і морфології. DB — SQLite bundle (read-only, `immutable=1`). Existing: `word` table (Macula, lemma/morph/strongs_id), `verse` table, `strongs` table.
+iOS offline-first Bible app. Потрібен пошук по тексту перекладу. DB — SQLite bundle (read-only, `immutable=1`). Existing: `word` table (Macula, lemma/morph/strongs_id), `verse` table, `strongs` table.
 
 ## Decision
 
@@ -14,9 +14,10 @@ iOS offline-first Bible app. Потрібен пошук по тексту пе�
 
 1. `verse_fts` — FTS5 virtual table (`content='verse'`, `tokenize='unicode61 remove_diacritics 2'`). Будується в `build_db.py` один раз.
 2. `search_terms` — deduplicated word list з verse text для autocomplete (GLOB prefix scan).
-3. Strong's/lemma/morph — прямі SQL SELECT на `word` table (дані вже є).
-4. `SearchViewModel` — debounce 280ms, `Task.detached` для DB queries off main thread.
-5. `SearchView` — `.searchable` (нативний iOS API) + `Tab(role: .search)`. Предіктів і результати рендеряться **inline** в основному `List` (Apple Music pattern). **Без `.searchSuggestions`** — див. amendment 2026-06-11.
+3. `SearchViewModel` — debounce 280ms, `Task.detached` для DB queries off main thread.
+4. `SearchView` — `.searchable` (нативний iOS API) + `Tab(role: .search)`. Предіктів і результати рендеряться **inline** в основному `List` (Apple Music pattern). **Без `.searchSuggestions`** — див. amendment 2026-06-11.
+
+**Out of scope (amendment 2026-07-07):** Strong's/lemma/morph пошук у search-барі **виключено** — сценарій "ввести номер стронга в пошук" нереалістичний для цільового користувача. Доступ до Strong's/lemma вже реалізовано природним шляхом: тап по слову → Word page → лексикон/конкорданс (ADR-013, ADR-016). Не реалізовувати.
 
 ## Amendment 2026-06-11 — drop `.searchSuggestions`, predictions→results model
 
@@ -33,6 +34,22 @@ iOS offline-first Bible app. Потрібен пошук по тексту пе�
 
 **Відомий борг (крок B, окремий спринт):** `search_terms` будується з усіх перекладів (`build_db.py` → `build_search_terms`, `SELECT text FROM verse`), а `searchByText` фільтрує по `v.translation`. Тому предіктів може пропонувати слово, якого нема в активному перекладі (напр. "bloodshed" у KJV) → коміт дає "Nothing found". Фікс: зробити `search_terms` по-перекладним (колонка `translation`, `suggestTerms(prefix:translation:)`). Потребує ребілду бази.
 
+## Amendment 2026-07-07 — infinite scroll + YouVersion-style filters (Translation / Testament / Book)
+
+**Контекст:** `searchByText` мав жорсткий `LIMIT 150` — для частих слів користувач бачив довільні 150 результатів без можливості дійти до конкретного вірша. Фільтр Testament був клієнтським (фільтрував уже обрізаний список), segmented control All/OT/NT — замалий для розширення.
+
+**Рішення:**
+
+1. **Пагінація в SQL (infinite scroll).** `searchByText` отримав `limit`/`offset` (сторінка = 50) + `bookIds: [String]?` фільтр (`AND v.book_id IN (…)`). `ORDER BY rank, verse_fts.rowid` — rowid-tiebreak робить LIMIT/OFFSET детермінованим при рівних BM25 rank. Нові методи: `searchResultCount()` (COUNT для хедера, без кепа) і `searchBookCounts()` (GROUP BY book_id ORDER BY count DESC — для Book sheet). `SearchViewModel.loadMore()` довантажує сторінку, коли на екран виходить один з останніх 10 рядів (prefetch, синхронний виклик на MainActor — той самий бюджет ~ms).
+2. **Фільтри переїхали в SQL** — клієнтський `filteredResults` видалено (з пагінацією він не працює). Зміна будь-якого фільтра на сторінці результатів перезапускає committed query.
+3. **Chip-бар замість segmented control** (патерн YouVersion): три капсули над результатами — Translation / Testament (СЗ⁄НЗ) / Book — кожна відкриває sheet. Активний (не-дефолтний) фільтр = `.borderedProminent`. Розміщення успадковане: iOS 26 `.safeAreaBar(edge: .top)`, iOS 18 pinned section header; бар видимий і на порожньому стані (щоб можна було послабити фільтри).
+4. **Translation-фільтр — локальний для пошуку.** Дефолт = переклад рідера (`selectedTranslationId == nil` → follow reader); вибір у пошуку рідер НЕ перемикає. Реюз `DefaultTranslationPickerView` (MenuView) через Binding + новий параметр `titleKey`. ViewModel сам вантажить `loadBookNames(for:)` пошукового перекладу — референси й назви книг у Book sheet йдуть у нативних іменах перекладу пошуку, не рідера.
+5. **Book-фільтр залежить від Testament:** sheet показує книги лише вибраного заповіту, впорядковані за кількістю збігів (YouVersion), з count поруч; зміна заповіту скидає несумісну вибрану книгу.
+
+**Аналітика:** `search_committed.resultsCount` тепер = повний COUNT (без кепа 150); `search_result_opened.resultsCount` = той самий фільтрований total з хедера, `position` = індекс у довантаженому списку. `resultsCapped` видалено.
+
+**Не змінюється:** FTS5 схема, `search_terms`, предіктів-модель (amendment 2026-06-11), debounce 280ms. Борг per-translation `search_terms` (крок B) лишається відкритим.
+
 ## Rejected Options
 
 - **ObjectBox** — міграція ORM без ROI для read-only bundle.
@@ -47,7 +64,7 @@ iOS offline-first Bible app. Потрібен пошук по тексту пе�
 | Working search за 4 год | Semantic search "смуток → Йов" |
 | Zero нових залежностей | Морфологічний стемінг для укр. |
 | 100% offline | — |
-| Strong's/lemma — точний match | — |
+| Strong's/lemma через word tap (ADR-013/016) | Strong's/lemma у search-барі — виключено, не буде |
 
 ## Upgrade Path (V1.5)
 

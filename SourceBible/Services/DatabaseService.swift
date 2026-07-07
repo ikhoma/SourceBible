@@ -708,9 +708,16 @@ final class DatabaseService: @unchecked Sendable {
     ///   "love" → MATCH '"love"*'  finds "love", "loved", "lovely" etc.
     ///   "God is" → MATCH '"God is"*' finds exact phrase prefix.
     ///
-    /// Results are ranked by FTS5 BM25 relevance. The highlight() function returns
-    /// the full verse text with matched tokens wrapped in ❮…❯ so the UI can highlight them.
-    func searchByText(query rawQuery: String, translation: String, limit: Int = 150,
+    /// Results are ranked by FTS5 BM25 relevance (rowid tiebreak keeps LIMIT/OFFSET
+    /// pagination deterministic — BM25 rank ties would otherwise reshuffle between
+    /// pages). The highlight() function returns the full verse text with matched
+    /// tokens wrapped in ❮…❯ so the UI can highlight them.
+    ///
+    /// `bookIds` (optional) restricts results to a set of books — used by the search
+    /// Testament/Book filters. `limit`/`offset` page through the full result set.
+    func searchByText(query rawQuery: String, translation: String,
+                      bookIds: [String]? = nil,
+                      limit: Int = 50, offset: Int = 0,
                       bookShortNames: [String: String] = [:]) -> [SearchResult] {
         guard isAvailable else { return [] }
         let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
@@ -718,6 +725,11 @@ final class DatabaseService: @unchecked Sendable {
 
         var results: [SearchResult] = []
         let ftsExpr = makeFTSQuery(trimmed)
+
+        var bindings: [Any] = [ftsExpr, translation]
+        let bookClause = makeBookFilterClause(bookIds, appendingTo: &bindings)
+        bindings.append(limit)
+        bindings.append(offset)
 
         // highlight(verse_fts, col=0, open, close) — full verse text, matches wrapped in ❮…❯
         let sql = """
@@ -727,10 +739,11 @@ final class DatabaseService: @unchecked Sendable {
             JOIN verse v ON v.rowid = verse_fts.rowid
             WHERE verse_fts MATCH ?
               AND v.translation = ?
-            ORDER BY rank
-            LIMIT ?
+              \(bookClause)
+            ORDER BY rank, verse_fts.rowid
+            LIMIT ? OFFSET ?
             """
-        query(sql, bindings: [ftsExpr, translation, limit]) { stmt in
+        query(sql, bindings: bindings) { stmt in
             let bookId  = string(stmt, 0)
             let chapter = Int(sqlite3_column_int(stmt, 1))
             let verse   = Int(sqlite3_column_int(stmt, 2))
@@ -745,6 +758,59 @@ final class DatabaseService: @unchecked Sendable {
             ))
         }
         return results
+    }
+
+    /// Total number of matches for a search query (before pagination).
+    /// Same MATCH + translation + optional book filter as `searchByText`.
+    func searchResultCount(query rawQuery: String, translation: String,
+                           bookIds: [String]? = nil) -> Int {
+        guard isAvailable else { return 0 }
+        let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return 0 }
+
+        var bindings: [Any] = [makeFTSQuery(trimmed), translation]
+        let bookClause = makeBookFilterClause(bookIds, appendingTo: &bindings)
+
+        var count = 0
+        let sql = """
+            SELECT COUNT(*)
+            FROM verse_fts
+            JOIN verse v ON v.rowid = verse_fts.rowid
+            WHERE verse_fts MATCH ?
+              AND v.translation = ?
+              \(bookClause)
+            """
+        query(sql, bindings: bindings) { stmt in
+            count = Int(sqlite3_column_int(stmt, 0))
+        }
+        return count
+    }
+
+    /// Per-book match counts for a search query, ordered by count descending
+    /// (YouVersion-style Book filter: books with the most hits first).
+    /// Not restricted by book filter — the Book sheet always shows the full spread.
+    func searchBookCounts(query rawQuery: String, translation: String) -> [SearchBookCount] {
+        guard isAvailable else { return [] }
+        let trimmed = rawQuery.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return [] }
+
+        var counts: [SearchBookCount] = []
+        let sql = """
+            SELECT v.book_id, COUNT(*) AS cnt
+            FROM verse_fts
+            JOIN verse v ON v.rowid = verse_fts.rowid
+            WHERE verse_fts MATCH ?
+              AND v.translation = ?
+            GROUP BY v.book_id
+            ORDER BY cnt DESC
+            """
+        query(sql, bindings: [makeFTSQuery(trimmed), translation]) { stmt in
+            counts.append(SearchBookCount(
+                bookId: string(stmt, 0),
+                count:  Int(sqlite3_column_int(stmt, 1))
+            ))
+        }
+        return counts
     }
 
     // MARK: Autocomplete suggestions
@@ -762,6 +828,16 @@ final class DatabaseService: @unchecked Sendable {
     }
 
     // MARK: Private search helpers
+
+    /// Builds an optional `AND v.book_id IN (?,…)` clause for the search book filter.
+    /// Appends the book ids to `bindings`; returns "" when no filter is active.
+    private func makeBookFilterClause(_ bookIds: [String]?,
+                                      appendingTo bindings: inout [Any]) -> String {
+        guard let bookIds, !bookIds.isEmpty else { return "" }
+        bindings.append(contentsOf: bookIds)
+        let placeholders = Array(repeating: "?", count: bookIds.count).joined(separator: ",")
+        return "AND v.book_id IN (\(placeholders))"
+    }
 
     /// Builds a safe FTS5 MATCH expression with prefix matching.
     /// Phrase (multi-word) and single-word inputs both handled; quotes are escaped.

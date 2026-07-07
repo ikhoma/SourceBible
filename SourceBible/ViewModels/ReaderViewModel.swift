@@ -988,20 +988,29 @@ class ReaderViewModel: ObservableObject {
     private func loadStrongs(strongsId: String) {
         isLoadingStrongs = true
         // Strong's lookups are fast indexed reads — stay on MainActor.
-        // loadBookUsageGroups runs Queries A+B+C (total count, per-book group-by,
-        // N per-book verse fetches). Total < 50ms even for יהוה (6 512 occurrences).
-        var entry = db.loadStrongs(id: strongsId)
-        if var e = entry {
-            let result = db.loadBookUsageGroups(strongsId: strongsId,
-                                                translation: currentTranslation.id,
-                                                bookShortNames: translationBookNames.mapValues { $0.short },
-                                                bookLongNames:  translationBookNames.mapValues { $0.long })
-            e.totalCount = result.total
-            e.bookGroups = result.groups
-            entry = e
-        }
-        strongsEntry = entry
+        // Usage (concordance) data is NOT loaded here anymore: loadBookUsageGroups
+        // (Queries A+B+C, incl. N per-book verse fetches) was the heavy part of the
+        // Word-tab switch lag, and it feeds only the Usage sub-tab while the default
+        // sub-tab is Meaning. It loads lazily via loadUsageIfNeeded().
+        strongsEntry = db.loadStrongs(id: strongsId)
         isLoadingStrongs = false
+    }
+
+    /// Lazily loads Usage (concordance) data into the current Strong's entry.
+    /// Called from ConcordanceView on appear and on entry change — the first open
+    /// of the Usage sub-tab per word pays the cost (Queries A+B+C: total count,
+    /// per-book group-by, N per-book verse fetches; < 50ms even for יהוה with
+    /// 6 512 occurrences). Repeat visits are free (usageLoaded guard).
+    func loadUsageIfNeeded() {
+        guard var entry = strongsEntry, !entry.usageLoaded else { return }
+        let result = db.loadBookUsageGroups(strongsId: entry.id,
+                                            translation: currentTranslation.id,
+                                            bookShortNames: translationBookNames.mapValues { $0.short },
+                                            bookLongNames:  translationBookNames.mapValues { $0.long })
+        entry.totalCount  = result.total
+        entry.bookGroups  = result.groups
+        entry.usageLoaded = true
+        strongsEntry = entry
     }
 
     // MARK: - Highlights

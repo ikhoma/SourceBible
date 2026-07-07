@@ -167,6 +167,9 @@ struct LaunchBehaviorPickerView: View {
 struct DefaultTranslationPickerView: View {
     let translations: [Translation]
     @Binding var selectedId: String
+    /// Navigation title — default fits the Settings entry point; the search
+    /// Translation filter passes its own key when reusing this picker in a sheet.
+    var titleKey: LocalizedStringKey = "menu.default_translation"
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -189,7 +192,7 @@ struct DefaultTranslationPickerView: View {
                 dismiss()
             }
         }
-        .navigationTitle("menu.default_translation")
+        .navigationTitle(titleKey)
         .navigationBarTitleDisplayMode(.inline)
     }
 

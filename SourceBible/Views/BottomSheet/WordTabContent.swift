@@ -56,6 +56,17 @@ struct LexiconSection: Identifiable {
     let id = UUID()
     let stemName: String      // "Qal", "Piel", etc. (empty = flat / no stems)
     let definitions: [String]
+    /// Abbott-Smith outline (Greek TBESG). Non-empty ⇒ `definitions` is empty and
+    /// the view renders these as an indented outline WITHOUT auto-numbering
+    /// (the numbering — "1.", "(a)", "(α)" — is part of the source text).
+    var outline: [LexiconLine] = []
+}
+
+/// One line of an Abbott-Smith outline with its indent level.
+struct LexiconLine: Identifiable {
+    let id = UUID()
+    let text: String
+    let indent: Int   // 0 = intro / "1." senses, 1 = "(a)" sub-points, 2 = "(α)" deeper
 }
 
 enum LexiconParser {
@@ -132,6 +143,17 @@ enum LexiconParser {
             sections.append(LexiconSection(stemName: currentStem, definitions: currentDefs))
         }
 
+        // Abbott-Smith (Greek TBESG): BDB "1)" patterns don't match — the source marks
+        // hierarchy with literal "__" at sub-entry starts ("__1.", "__(a)", "__(α)").
+        // Previously this fell into the flat fallback below, which joined all lines
+        // with "; " — destroying the outline and leaving ";;" + "__" artefacts inline.
+        if sections.isEmpty, normalized.contains("__") {
+            let outline = parseAbbottSmith(normalized)
+            if !outline.isEmpty {
+                return [LexiconSection(stemName: "", definitions: [], outline: outline)]
+            }
+        }
+
         // Fallback: if no numbered entries matched (e.g. short gloss like "counsel, advice, purpose"),
         // present the content as a single flat definition so something always renders.
         if sections.isEmpty {
@@ -143,6 +165,51 @@ enum LexiconParser {
         }
 
         return sections
+    }
+
+    // MARK: Abbott-Smith (TBESG) outline
+
+    /// Parses an Abbott-Smith definition into outline lines. In the source, each
+    /// nested sub-entry begins with "__" (after a <br> → \n from the DB build):
+    /// "__1." / "__2." = numbered senses, "__(a)" = sub-points, "__(α)" = deeper.
+    /// Real newlines are preserved; indent is derived from the marker shape.
+    private static func parseAbbottSmith(_ normalized: String) -> [LexiconLine] {
+        // Safety net: if a "__" marker survived mid-line (no <br> before it in the
+        // source), force it onto its own line before splitting.
+        let broken = normalized.replacingOccurrences(of: "__", with: "\n__")
+
+        var result: [LexiconLine] = []
+        for rawLine in broken.components(separatedBy: "\n") {
+            var line = rawLine.trimmingCharacters(in: .whitespaces)
+            // Same ": gloss" prefix-line artefact as the BDB path.
+            guard !line.isEmpty, !line.hasPrefix(":") else { continue }
+
+            var isMarked = false
+            while line.hasPrefix("_") {
+                line = String(line.dropFirst())
+                isMarked = true
+            }
+
+            line = cleanDef(line)
+            // Source doubles like ";;" read as noise once the outline is restored.
+            line = line.replacingOccurrences(of: ";;", with: ";")
+            guard !line.isEmpty else { continue }
+
+            result.append(LexiconLine(text: line,
+                                      indent: indentLevel(for: line, marked: isMarked)))
+        }
+        return result
+    }
+
+    /// Indent from the marker shape: "1." senses stay at the top level (like the
+    /// intro), latin "(a)" one step in, greek "(α)" two. Unrecognized markers
+    /// default to one step (they are always sub-entries of something).
+    private static func indentLevel(for line: String, marked: Bool) -> Int {
+        guard marked else { return 0 }
+        if line.range(of: #"^\d+\."#,     options: .regularExpression) != nil { return 0 }
+        if line.range(of: #"^\([a-z]\)"#, options: .regularExpression) != nil { return 1 }
+        if line.range(of: #"^\([α-ω]\)"#, options: .regularExpression) != nil { return 2 }
+        return 1
     }
 }
 
@@ -292,6 +359,21 @@ struct WordMeaningView: View {
                                     .foregroundStyle(.secondary)
                                     .padding(.top, 10).padding(.bottom, 4)
                             }
+                            // Abbott-Smith outline (Greek): indented lines, source's own
+                            // numbering ("1.", "(a)", "(α)") — no auto-numbers, no row
+                            // separators (it's one entry's outline, not a list of senses).
+                            if !sec.outline.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(sec.outline) { line in
+                                        Text(line.text)
+                                            .font(.callout)
+                                            .lineSpacing(3)
+                                            .padding(.leading, CGFloat(line.indent) * 16)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                                .padding(.vertical, 10)
+                            }
                             ForEach(Array(sec.definitions.enumerated()), id: \.offset) { i, def in
                                 HStack(alignment: .top, spacing: 8) {
                                     Text("\(i + 1). \(def)")
@@ -387,6 +469,7 @@ private struct InfoGroup: View {
 
 struct ConcordanceView: View {
     let entry: StrongsEntry
+    @EnvironmentObject private var vm:     ReaderViewModel
     @EnvironmentObject private var router: AppNavigationRouter
     @Environment(\.sessionTracker) private var tracker
 
@@ -396,7 +479,12 @@ struct ConcordanceView: View {
             entry.totalCount
         )
         return PillSection(verbatimTitle: totalLabel) {
-            if entry.bookGroups.isEmpty {
+            // Usage data loads lazily HERE (not in loadStrongs) — see loadUsageIfNeeded.
+            // Until it lands, show a spinner instead of a false "no data" flash.
+            // The bookGroups check keeps DEBUG previews (pre-populated samples) working.
+            if !entry.usageLoaded && entry.bookGroups.isEmpty {
+                HStack { Spacer(); ProgressView().padding(.vertical, 16); Spacer() }
+            } else if entry.bookGroups.isEmpty {
                 Text(LocalizedStringKey(MorphKey.emptyNoData))
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -413,7 +501,16 @@ struct ConcordanceView: View {
             }
         }
         .padding(.bottom, 16)
-        .onAppear { tracker.recordFeatureUse(.concordance) }
+        .onAppear {
+            tracker.recordFeatureUse(.concordance)
+            vm.loadUsageIfNeeded()
+        }
+        // Chevron word-nav replaces the entry while this view stays mounted —
+        // onAppear won't refire, so reload on the id change. Filling the usage
+        // fields keeps the same entry.id, so this doesn't loop.
+        .onChange(of: entry.id) { _, _ in
+            vm.loadUsageIfNeeded()
+        }
     }
 }
 

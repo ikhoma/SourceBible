@@ -32,20 +32,38 @@ struct SearchView: View {
     /// True when the committed results page is on screen (drives hiding the nav title there).
     private var isShowingResults: Bool { !committedQuery.isEmpty && !isTypingUncommitted }
 
-    // MARK: - Filter state
+    // MARK: - Filter state (YouVersion-style: Translation / Testament / Book chips)
+
     enum TestamentFilter { case all, old, new }
     @State private var testamentFilter: TestamentFilter = .all
 
-    /// Results after applying the active testament filter.
-    private var filteredResults: [SearchResult] {
-        vm.results.filter { result in
-            let parts  = result.id.split(separator: "|")
-            let bookId = parts.isEmpty ? "" : String(parts[0])
-            switch testamentFilter {
-            case .old where BibleBookNames.testament(for: bookId) != .old: return false
-            case .new where BibleBookNames.testament(for: bookId) != .new: return false
-            default: return true
-            }
+    /// Search-only translation override; nil → follow the reader's translation.
+    /// Picking a translation here never changes the reader (filter-local by design).
+    @State private var selectedTranslationId: String? = nil
+
+    /// Book restriction (OSIS id); nil → all books (within the testament filter).
+    @State private var selectedBookId: String? = nil
+
+    private enum FilterSheet: String, Identifiable {
+        case translation, testament, book
+        var id: String { rawValue }
+    }
+    @State private var activeFilterSheet: FilterSheet? = nil
+
+    /// Translation the search actually runs against.
+    private var effectiveTranslationId: String {
+        selectedTranslationId ?? readerVM.currentTranslation.id
+    }
+
+    /// Book-id restriction pushed into the SQL query (nil = no restriction).
+    /// A selected book wins over the testament filter (the book is always
+    /// inside the selected testament — enforced in onChange).
+    private var effectiveBookIds: [String]? {
+        if let bookId = selectedBookId { return [bookId] }
+        switch testamentFilter {
+        case .all: return nil
+        case .old: return readerVM.oldTestamentBooks.map(\.id)
+        case .new: return readerVM.newTestamentBooks.map(\.id)
         }
     }
 
@@ -90,6 +108,23 @@ struct SearchView: View {
             // committed/results state so we don't flash stale results.
             if newValue.trimmingCharacters(in: .whitespaces).isEmpty { committedQuery = "" }
         }
+        // Filter changes re-run the committed query against the DB (filters live in
+        // SQL now — the result set is paginated, so client-side filtering can't work).
+        .onChange(of: testamentFilter) { _, newValue in
+            // Book selection must stay inside the chosen testament.
+            if let bookId = selectedBookId {
+                let t = BibleBookNames.testament(for: bookId)
+                if (newValue == .old && t != .old) || (newValue == .new && t != .new) {
+                    selectedBookId = nil
+                }
+            }
+            rerunSearchIfNeeded()
+        }
+        .onChange(of: selectedBookId)        { _, _ in rerunSearchIfNeeded() }
+        .onChange(of: selectedTranslationId) { _, _ in rerunSearchIfNeeded() }
+        .sheet(item: $activeFilterSheet) { sheet in
+            filterSheet(sheet)
+        }
         // Wire the live analytics + tracker into the VM on first appear.
         // Can't be done at @StateObject init time (Environment not available then).
         .task {
@@ -117,12 +152,41 @@ struct SearchView: View {
 
     // MARK: - Results page (after commit)
 
+    /// The filter chip bar uses the NATIVE bar treatment — same as the status/tool
+    /// bars on the Reader. On iOS 26 it lives in a `.safeAreaBar(edge: .top)`, so the
+    /// system renders the Liquid Glass scroll-edge blur behind it automatically as the
+    /// results scroll underneath (no manual material). iOS 18 fallback keeps it pinned
+    /// as a section header. (iOS 26 rule: #available guard + iOS 18 fallback.)
+    /// The bar stays visible on the empty state too, so over-narrowed filters can be
+    /// loosened without retyping the query.
     @ViewBuilder
     private var resultsPage: some View {
-        if !filteredResults.isEmpty {
-            resultsList
+        if #available(iOS 26.0, *) {
+            resultsBody(pinnedFilterBar: false)
+                .safeAreaBar(edge: .top) {
+                    filterBar
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                }
+        } else {
+            resultsBody(pinnedFilterBar: true)
+        }
+    }
+
+    @ViewBuilder
+    private func resultsBody(pinnedFilterBar: Bool) -> some View {
+        if !vm.results.isEmpty {
+            resultsScroll(pinnedFilterBar: pinnedFilterBar)
         } else if vm.isLoading {
             loadingView
+        } else if pinnedFilterBar {
+            // iOS 18: no safeAreaBar — keep the chips above the empty state manually.
+            VStack(spacing: 0) {
+                filterBar
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                emptyResultsView
+            }
         } else {
             emptyResultsView
         }
@@ -210,77 +274,224 @@ struct SearchView: View {
         .onTapGesture { commit(query: searchText) }
     }
 
-    private var testamentPicker: some View {
-        Picker("", selection: $testamentFilter) {
-            Text("search.filter.all").tag(TestamentFilter.all)
-            Text("search.filter.old").tag(TestamentFilter.old)
-            Text("search.filter.new").tag(TestamentFilter.new)
+    // MARK: - Filter bar (Translation / Testament / Book chips)
+
+    private var testamentChipKey: LocalizedStringKey {
+        switch testamentFilter {
+        case .all: return "search.filter.testament_all"
+        case .old: return "search.filter.ot"
+        case .new: return "search.filter.nt"
         }
-        .pickerStyle(.segmented)
-        .padding(.vertical, 10)
-        .padding(.top, -8)
+    }
+
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                filterChip(action: { activeFilterSheet = .translation }) {
+                    Text(effectiveTranslationId)
+                }
+                filterChip(action: { activeFilterSheet = .testament }) {
+                    Text(testamentChipKey)
+                }
+                filterChip(action: { activeFilterSheet = .book }) {
+                    if let bookId = selectedBookId {
+                        Text(bookDisplayName(bookId))
+                    } else {
+                        Text("search.filter.all_books")
+                    }
+                }
+            }
+        }
+    }
+
+    /// Filter chip styled like the Reader's toolbar pickers (`pickerGroup`):
+    /// headline text + caption chevron.down in `.primary`, glass capsule around it.
+    /// The Reader gets the capsule for free from the iOS 26 toolbar; outside a
+    /// toolbar the equivalent is `.buttonStyle(.glass)`. iOS 18 fallback keeps the
+    /// system bordered capsule (no manual corner radius per iOS 26 rules).
+    @ViewBuilder
+    private func filterChip(action: @escaping () -> Void,
+                            @ViewBuilder label: () -> some View) -> some View {
+        let content = HStack(spacing: 4) {
+            label()
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+                // NOTE: the Reader's toolbar renders this same .caption chevron at
+                // .large image scale (iOS 26 toolbar default — don't override there).
+                // Here, outside a toolbar, the .medium default looks better and is
+                // kept deliberately (sign-off 2026-07-08).
+                .foregroundStyle(.primary)
+        }
+        if #available(iOS 26.0, *) {
+            Button(action: action) { content }
+                .buttonStyle(.glass)
+        } else {
+            Button(action: action) { content }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+        }
+    }
+
+    // MARK: - Filter sheets
+
+    @ViewBuilder
+    private func filterSheet(_ sheet: FilterSheet) -> some View {
+        switch sheet {
+        case .translation:
+            // Reuses the settings translation picker (Binding-based — selection is
+            // local to search and does NOT touch the reader's translation).
+            NavigationStack {
+                DefaultTranslationPickerView(
+                    translations: readerVM.availableTranslations,
+                    selectedId: Binding(
+                        get: { effectiveTranslationId },
+                        set: { selectedTranslationId = $0 }
+                    ),
+                    titleKey: "search.filter.translation.title"
+                )
+            }
+            .presentationDetents([.medium, .large])
+        case .testament:
+            testamentSheet
+        case .book:
+            bookSheet
+        }
+    }
+
+    private var testamentSheet: some View {
+        NavigationStack {
+            List {
+                testamentRow("search.filter.all", .all)
+                testamentRow("search.filter.old", .old)
+                testamentRow("search.filter.new", .new)
+            }
+            .navigationTitle("search.filter.testament.title")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func testamentRow(_ key: LocalizedStringKey,
+                              _ value: TestamentFilter) -> some View {
+        HStack {
+            Text(key)
+            Spacer()
+            if testamentFilter == value {
+                Image(systemName: "checkmark").foregroundStyle(.appBlue)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            testamentFilter   = value
+            activeFilterSheet = nil
+        }
+    }
+
+    /// Books shown in the Book sheet: per-book result counts for the current query,
+    /// ordered by count desc (YouVersion style), restricted to the testament filter.
+    private var bookSheetCounts: [SearchBookCount] {
+        vm.bookCounts.filter { entry in
+            switch testamentFilter {
+            case .all: return true
+            case .old: return BibleBookNames.testament(for: entry.bookId) == .old
+            case .new: return BibleBookNames.testament(for: entry.bookId) == .new
+            }
+        }
+    }
+
+    private var bookSheet: some View {
+        NavigationStack {
+            List {
+                HStack {
+                    Text("search.filter.all")
+                    Spacer()
+                    if selectedBookId == nil {
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedBookId    = nil
+                    activeFilterSheet = nil
+                }
+
+                ForEach(bookSheetCounts) { entry in
+                    HStack {
+                        Text(bookDisplayName(entry.bookId))
+                        Spacer()
+                        Text("\(entry.count)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if selectedBookId == entry.bookId {
+                            Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedBookId    = entry.bookId
+                        activeFilterSheet = nil
+                    }
+                }
+            }
+            .navigationTitle("search.filter.book.title")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// Book display name in the SEARCH translation's native naming, with the
+    /// locale-aware static table as fallback.
+    private func bookDisplayName(_ bookId: String) -> String {
+        vm.bookNames[bookId]?.long ?? BibleBookNames.full(for: bookId)
     }
 
     // MARK: - Results list
 
+    /// Scrollable results with infinite scroll. When `pinnedFilterBar` is true
+    /// (iOS 18 fallback) the chip bar is rendered as a pinned section header; on
+    /// iOS 26 it's hosted by the `.safeAreaBar` in `resultsPage` instead.
     @ViewBuilder
-    private var resultsList: some View {
-        // The testament picker uses the NATIVE bar treatment — same as the status/tool
-        // bars on the Reader. On iOS 26 it lives in a `.safeAreaBar(edge: .top)`, so the
-        // system renders the Liquid Glass scroll-edge blur behind it automatically as the
-        // results scroll underneath (no manual material). iOS 18 fallback keeps it pinned
-        // as a section header. (iOS 26 rule: #available guard + iOS 18 fallback.)
-        if #available(iOS 26.0, *) {
-            resultsScroll(pinnedPicker: false)
-                .safeAreaBar(edge: .top) {
-                    testamentPicker
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                }
-        } else {
-            resultsScroll(pinnedPicker: true)
-        }
-    }
-
-    /// Scrollable results. When `pinnedPicker` is true (iOS 18 fallback) the testament
-    /// picker is rendered as a pinned section header; on iOS 26 it's hosted by the
-    /// `.safeAreaBar` above instead, so the header is omitted here.
-    @ViewBuilder
-    private func resultsScroll(pinnedPicker: Bool) -> some View {
+    private func resultsScroll(pinnedFilterBar: Bool) -> some View {
         // ScrollView (not List) so the ZStack appBackground shows through — see note
         // on `predictiveList`.
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0,
-                       pinnedViews: pinnedPicker ? [.sectionHeaders] : []) {
+                       pinnedViews: pinnedFilterBar ? [.sectionHeaders] : []) {
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("search.results_header \(searchText.trimmingCharacters(in: .whitespaces))")
                             .font(.title2).bold()
                             .foregroundStyle(.primary)
-                        Group {
-                            if vm.resultsCapped {
-                                Text("search.results_count_max \(filteredResults.count)")
-                            } else {
-                                Text("search.results_count \(filteredResults.count)")
-                            }
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        Text("search.results_count \(vm.totalCount)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
 
-                    ForEach(filteredResults) { result in
+                    ForEach(vm.results) { result in
                         SearchResultRow(result: result)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 10)
                             .contentShape(Rectangle())
                             .onTapGesture { navigate(to: result) }
+                            // Infinite scroll: prefetch the next page as the tail
+                            // of the loaded window comes into view.
+                            .onAppear { prefetchIfNeeded(after: result) }
                         Divider()
                     }
+
+                    if vm.canLoadMore {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                    }
                 } header: {
-                    if pinnedPicker {
-                        testamentPicker
+                    if pinnedFilterBar {
+                        filterBar
                             .padding(.vertical, 8)
                             .background(.ultraThinMaterial)
                     }
@@ -289,6 +500,15 @@ struct SearchView: View {
             .padding(.horizontal, 20)
         }
         .scrollDismissesKeyboard(.immediately)
+    }
+
+    /// Loads the next page when the appearing row is within the last 10 of the
+    /// loaded window (smooth scroll — the page lands before the spinner is reached).
+    private func prefetchIfNeeded(after result: SearchResult) {
+        guard vm.canLoadMore,
+              let idx = vm.results.firstIndex(where: { $0.id == result.id }),
+              idx >= vm.results.count - 10 else { return }
+        vm.loadMore()
     }
 
     // MARK: - Empty states
@@ -388,6 +608,13 @@ struct SearchView: View {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return }
         committedQuery = q
+        runSearch(q)
+        dismissKeyboard()
+    }
+
+    /// (Re)runs a query with the current filter set. Filters live in SQL — the
+    /// ViewModel loads page 0 + total count; further pages via infinite scroll.
+    private func runSearch(_ q: String) {
         // Pass the active testament filter so search_committed includes it.
         let filterStr: String?
         switch testamentFilter {
@@ -395,19 +622,24 @@ struct SearchView: View {
         case .new:  filterStr = "NT"
         case .all:  filterStr = nil
         }
-        vm.search(query: q, translation: readerVM.currentTranslation.id,
-                  testamentFilter: filterStr,
-                  bookShortNames: readerVM.translationBookNames.mapValues { $0.short })
-        dismissKeyboard()
+        vm.search(query: q, translation: effectiveTranslationId,
+                  bookIds: effectiveBookIds,
+                  testamentFilter: filterStr)
+    }
+
+    /// Filter changed while results are on screen → re-query with the same text.
+    private func rerunSearchIfNeeded() {
+        guard isShowingResults else { return }
+        runSearch(committedQuery)
     }
 
     private func navigate(to result: SearchResult) {
-        // Fire search_result_opened. resultsCount + position are within the FILTERED
-        // list the user actually sees and taps (post testament-filter) — intentionally
-        // different from search_committed.resultsCount, which is the raw search count.
-        let position = filteredResults.firstIndex(where: { $0.id == result.id }) ?? 0
+        // Fire search_result_opened. Filters are applied in SQL now, so resultsCount
+        // is the TOTAL filtered match count the header shows; position is the index
+        // within the loaded (paginated) list the user actually tapped.
+        let position = vm.results.firstIndex(where: { $0.id == result.id }) ?? 0
         analytics.track(.searchResultOpened(
-            resultsCount: filteredResults.count,
+            resultsCount: vm.totalCount,
             position:     position
         ))
         router.requestNavigation(to: result.id)

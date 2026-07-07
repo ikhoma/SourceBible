@@ -21,6 +21,10 @@ struct StrongsEntry: Identifiable {
     var concordance: [ConcordanceEntry]  // kept for DEBUG/Preview only; not used in production UI
     var totalCount: Int = 0              // true occurrence count across the whole Bible
     var bookGroups: [BookUsageGroup] = [] // per-book breakdown for ConcordanceView
+    /// Usage (concordance) data loads LAZILY on first open of the Usage sub-tab —
+    /// not in loadStrongs — so switching to the Word tab stays fast (Meaning is the
+    /// default sub-tab and doesn't need it). False = Queries A+B+C not run yet.
+    var usageLoaded: Bool = false
 }
 
 // MARK: - Book Usage Group

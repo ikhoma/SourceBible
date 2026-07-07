@@ -1,16 +1,8 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "" : {},
-    "%@ %lld:%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld:%3$lld"
-          }
-        }
-      }
+    "" : {
+
     },
     "%@ · %@" : {
       "localizations" : {
@@ -22,8 +14,19 @@
         }
       }
     },
-    "%lld" : {},
-    "%lld%%" : {},
+    "%@ %lld:%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld:%3$lld"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
     "%lld. %@" : {
       "localizations" : {
         "en" : {
@@ -34,7 +37,9 @@
         }
       }
     },
-    "Source Bible v1.0" : {},
+    "%lld%%" : {
+
+    },
     "a11y.nav.next_chapter" : {
       "localizations" : {
         "en" : {
@@ -1066,6 +1071,22 @@
         }
       }
     },
+    "menu.launch_behavior" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On launch open"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При відкритті показувати"
+          }
+        }
+      }
+    },
     "menu.launch.last_bookmark" : {
       "localizations" : {
         "en" : {
@@ -1126,22 +1147,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "З місця, де ви зупинились"
-          }
-        }
-      }
-    },
-    "menu.launch_behavior" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On launch open"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "При відкритті показувати"
           }
         }
       }
@@ -2675,6 +2680,38 @@
         }
       }
     },
+    "search.filter.all_books" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All books"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всі книги"
+          }
+        }
+      }
+    },
+    "search.filter.book.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Book"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Книга"
+          }
+        }
+      }
+    },
     "search.filter.new" : {
       "localizations" : {
         "en" : {
@@ -2691,6 +2728,22 @@
         }
       }
     },
+    "search.filter.nt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NT"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "НЗ"
+          }
+        }
+      }
+    },
     "search.filter.old" : {
       "localizations" : {
         "en" : {
@@ -2703,6 +2756,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Старий Заповіт"
+          }
+        }
+      }
+    },
+    "search.filter.ot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OT"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "СЗ"
+          }
+        }
+      }
+    },
+    "search.filter.testament_all" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OT / NT"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "СЗ / НЗ"
+          }
+        }
+      }
+    },
+    "search.filter.testament.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Testament"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заповіт"
+          }
+        }
+      }
+    },
+    "search.filter.translation.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Translation"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переклад"
           }
         }
       }
@@ -2892,6 +3009,7 @@
     },
     "search.results_count_max %lld" : {
       "comment" : "%lld = capped result count (search hit the 150-result limit)",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3056,6 +3174,9 @@
           }
         }
       }
+    },
+    "Source Bible v1.0" : {
+
     },
     "studymode.back" : {
       "localizations" : {
@@ -3422,6 +3543,23 @@
         }
       }
     },
+    "verse.commentary_notice" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+          }
+        }
+      }
+    },
     "verse.commentary.placeholder" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3451,23 +3589,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Коментар для цього вірша відсутній."
-          }
-        }
-      }
-    },
-    "verse.commentary_notice" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
           }
         }
       }
