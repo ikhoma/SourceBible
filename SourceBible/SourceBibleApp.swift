@@ -39,6 +39,11 @@ struct SourceBibleApp: App {
     // MARK: - Scene phase (for app_opened + session lifecycle)
     @Environment(\.scenePhase) private var scenePhase
 
+    /// True while the app is in the background. Gates `app_opened` on return so
+    /// `.inactive → .active` blips (Control Center, notification shade, permission
+    /// dialogs) don't count as an open. See the scenePhase onChange below.
+    @State private var wasBackgrounded = false
+
     // MARK: - Init
 
     init() {
@@ -114,17 +119,36 @@ struct SourceBibleApp: App {
                 .task {
                     analytics.track(.appOpened)
                     sessionTracker.handleForeground()
+                    // Keyboard pre-warm: boots the system keyboard process so the
+                    // first Note editor open doesn't pay the spin-up lag. Delayed
+                    // off the first-frame render path; runs once per process.
+                    try? await Task.sleep(for: .milliseconds(500))
+                    KeyboardPrewarm.run()
                 }
                 // ── Session lifecycle via scenePhase ──────────────────────────
-                // Fire `app_opened` only on a REAL return from background
-                // (.background → .active). `.inactive → .active` (Control Center,
-                // notification shade, permission dialogs, app-switcher peek) must NOT
-                // count as an open. Cold launch is handled by `.task` above.
-                .onChange(of: scenePhase) { oldPhase, newPhase in
-                    if oldPhase == .background && newPhase == .active {
-                        analytics.track(.appOpened)
+                // iOS NEVER transitions .background → .active directly — resume always
+                // passes through .inactive (.background → .inactive → .active), so
+                // matching on `oldPhase == .background` never fires. That bug meant
+                // handleForeground() only ever ran at cold launch: the pending session
+                // flush was never cancelled, the session died 30s after the first
+                // backgrounding, and every counter afterwards was silently dropped
+                // (study_session_summary undercount found in beta Mixpanel data).
+                //
+                // Fix: react to every `.active`, gate `app_opened` on wasBackgrounded
+                // so `.inactive → .active` blips (Control Center, notification shade,
+                // permission dialogs, app-switcher peek) do NOT count as an open.
+                // handleForeground() is idempotent: it cancels the pending flush, and
+                // begin() no-ops while a session is active (grace logic lives inside
+                // SessionTracker). Cold launch is handled by `.task` above.
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        if wasBackgrounded {
+                            analytics.track(.appOpened)
+                            wasBackgrounded = false
+                        }
                         sessionTracker.handleForeground()
                     } else if newPhase == .background {
+                        wasBackgrounded = true
                         sessionTracker.handleBackground()
                     }
                 }
