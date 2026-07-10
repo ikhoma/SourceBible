@@ -57,7 +57,9 @@ Translation uses a proprietary `H9000+` number; Macula uses a standard one. Pure
 | H2416 חַיִּים | H9132 | 264× | life / життя |
 | H3519 כָּבוֹד | H9202 | 198× | glory / слава |
 
-This is exactly what `NASBExtendedOverride.swift` hand-maps (391/603 = 64.8%, rest on morph fallback). **STEPBible eStrong already publishes the complete, authoritative version of this table** (`data/TBESH…`, field `eStrong#`, mapped to BDB via OpenScriptures).
+This is what `NASBExtendedOverride.swift` hand-maps (391/603 = 64.8%, rest on morph fallback).
+
+> **⚠️ Spike correction (2026-07-10):** An earlier draft of this doc claimed STEPBible eStrong "already publishes the complete version of this table." **That is wrong** — see Spike Results below. STEPBible's `H9000+` numbers are *non-lexical prefixes/suffixes* (Tyndale House), a **different numbering universe** from NASB's proprietary `H9000+` lexical numbers. STEPBible does **not** contain NASB's extended numbers, so it cannot replace the override. STEPBible eStrong *does* fix a different problem — the NULL `short_def`/`long_def` lexicon gap (`db_build.md` TBESH suffix bug) — but that is lexicon population, not NASB gating. Keep the two separate.
 
 ## Type 3 — Name-spelling variants (fixable by unification / uStrong)
 
@@ -107,5 +109,53 @@ TBESH / TBESG lexicon id   ─┘
 
 ### Next step
 If accepted, this becomes **ADR-028: `mStrong` canonical Strong's key + `verse_markup` build-time table**, superseding the runtime `resolvedMaculaBase` path and folding in the BSB "auto-generate override" option from the BSB analysis.
+
+---
+
+## Spike Results (2026-07-10) — how much does STEPBible dStrong/uStrong actually replace?
+
+Read-only measurement from raw sources (`/tmp/spike.py`): STEPBible TBESH+TBESG (19,570 eStrong bases, union-find over dStrong/uStrong links) vs `NASBExtendedOverride.swift` (391 entries) vs the empirical OT mismatch pairs (NASB+.zip ↔ macula-hebrew TSV).
+
+### Measure 1 — can STEPBible replace the 391 manual override entries? **No.**
+
+| Check | Result |
+|---|---|
+| NASB extended key exists as a STEPBible eStrong | **28 / 391 (7.2%)** |
+| STEPBible links that key to our Macula target | **0 / 391 (0.0%)** |
+
+STEPBible's `H9000+` (non-lexical affixes) ≠ NASB's `H9000+` (proprietary lexemes). **STEPBible cannot generate the NASB↔Macula override.** To auto-generate/retire those 391 hand entries, the source must be the **BibleHub-lineage BSB `display` interlinear** (the "tactical" path in `bsb-publishing-dataset-analysis.md`) — not STEPBible.
+
+### Measure 2 — does STEPBible unify the standard-number mismatch pairs?
+
+71 systematic pairs found (21 standard, 50 NASB-extended). STEPBible auto-unifies **8 / 21 standard** pairs; **0 / 50 extended** (same reason as Measure 1).
+
+The 8 it *does* unify are almost all **Type 3 name variants** + a couple form-variants — exactly uStrong's job:
+
+| Unified by STEPBible (uStrong) | Not unified (stays a decision) |
+|---|---|
+| Joash H3101/H3060, Hezekiah H3169/H2396, Jonathan H3129/H3083, Jeshua/Joshua H3442/H3091, Levi H3881/H3878, Gershon H1647/H1648, Yahweh-qere H3069/H3068, shepherd H7473/H7462 | **enemy H341/H340 (noun/verb)**, fearing H3373/H3372 (adj/verb), this H2063/H2088 (fem/masc), prostitute H2185/H2181, porch H361/H197, fortified H1208/H1219, clothed H3830/H3847, creditor H5378/H5383 (+ a few co-occurrence-noise rows) |
+
+### Bottom line for `mStrong`
+- **STEPBible dStrong/uStrong is worth adopting** — but its real contribution is the **name/sense unification layer** (Type 3), which seeds `mStrong` cleanly. ~6 proper-name mismatch families close for free.
+- It does **NOT** reduce the `NASBExtendedOverride` burden (0/391). That burden needs the **BSB `display` interlinear** auto-generation path instead.
+- **Type 1 (noun/verb) correctly stays unmerged** even in STEPBible — empirical confirmation that these are genuine editorial disagreements, resolvable only by picking a canonical (Macula). No table fixes them.
+- Therefore `mStrong` = **Macula canonical**, seeded from **STEPBible (names/senses)** + a **BibleHub/BSB-derived NASB bridge** (extended numbers). Two different source families, two different jobs.
+
+---
+
+## Spike 2 (2026-07-10) — is BSB/BibleHub a clean drop-in? **Inconclusive from local data — needs the real BSB `display` dataset.**
+
+Ran against the local BibleHub OT interlinear cache (`data/bh_cache_hebrew`, 23,213 verses — same lineage as BSB) vs Macula vs NASB (`/tmp/spike2.py`, `/tmp/spike2b.py`).
+
+**What is solid:**
+- BibleHub OT interlinear uses **standard Strong's** numbers (`hebrew/NNNN.htm`) — overwhelmingly, not NASB's proprietary `H9000+`. So a BSB-as-clickable-translation would largely avoid the extended-override problem *in principle*.
+- **NASB genuinely disagrees with Macula** on the contested lexical calls (clean signal from `<S>` tags): for the 273 verses where Macula tags enemy as the **noun H341**, NASB tags the **verb H340** in 218 and never 341. Same pattern for shepherd (65/72 → H7462 verb), fearing, "this". Type 1 is real and reconfirmed.
+
+**What is NOT reliable (methodological limit):**
+- The cached BibleHub **HTML is not clean per-word tagging** — a page carries *extra* Strong's links (footers, related-word/concordance sections). Symptoms: 2,427 stray `9000+` hits across the cache, and the semantic probe shows BibleHub pages contain **both** numbers of a mismatch pair (enemy: 167 pages have H341 **and** 166 have H340). So per-word BSB coverage (measured 52.1% here) and BSB-vs-Macula agreement **cannot be trusted from this cache**.
+- ⚠️ **Correction of an in-conversation claim:** an intermediate result suggested "BibleHub agrees with Macula (H341) and thus refutes the BSB doc's inherited-mismatch assumption." The deeper probe shows that was an **extraction artifact** (pages contain both numbers). The BSB doc's caveat is therefore **neither confirmed nor refuted** — it stays open.
+- A couple of the "Type 1" pairs are themselves noisy (e.g. "how" H349/H351: NASB actually sides with Macula 54/16 — likely a variant, not a true semantic split). The empirical co-occurrence list has some false members; treat individual low-count rows with caution.
+
+**Conclusion:** the local HTML cache **cannot** settle whether BSB is a clean clickable drop-in. That requires the actual **BSB `display` JSONL** (per-word English↔Strong's↔original tuples) from `bsb-data-output` — the source the BSB analysis already named. Until then: STEPBible's contribution (Spike 1) is quantified and clear; the BSB path remains **blocked on downloading the real dataset**, not evaluable from scraped interlinear pages.
 
 **Sources:** `data/NASB+.zip`, `data/macula-hebrew-main.zip` (WLC TSV), `data/TBESH … STEPBible.org CC BY.txt`; cross-refs `docs/architecture/ADR-016-original-pill-nasb-bridge.md`, `docs/bsb-publishing-dataset-analysis.md`.
