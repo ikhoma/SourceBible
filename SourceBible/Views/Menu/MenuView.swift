@@ -94,7 +94,7 @@ struct MenuView: View {
                     }
                 }
                 .listRowBackground(Color("cardBackground"))
-                Section {
+                Section("menu.section.statistics") {
                     Toggle(isOn: $analyticsEnabled) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("menu.analytics.toggle_title")

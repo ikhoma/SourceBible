@@ -289,18 +289,22 @@ class ReaderViewModel: ObservableObject {
 
     /// Full chapter heading shown at the top of the reader — "Psalm 23" for Psalms, "Chapter 5" for everything else.
     /// Derives the heading word from the current translation's language so it's always native to the translation.
-    var chapterHeading: String {
+    var chapterHeading: String { chapterHeading(for: currentChapter) }
+
+    /// Heading for an arbitrary chapter of the current book. Needed by the ADR-026
+    /// chapter-paging spikes, where a prefetched adjacent page renders its own heading.
+    func chapterHeading(for chapter: Int) -> String {
         let lang = currentTranslation.language
         if currentBook.id == "PSA" {
             switch lang {
-            case "ru", "uk": return "Псалом \(currentChapter)"
-            default:         return "Psalm \(currentChapter)"
+            case "ru", "uk": return "Псалом \(chapter)"
+            default:         return "Psalm \(chapter)"
             }
         } else {
             switch lang {
-            case "ru": return "Глава \(currentChapter)"
-            case "uk": return "Розділ \(currentChapter)"
-            default:   return "Chapter \(currentChapter)"
+            case "ru": return "Глава \(chapter)"
+            case "uk": return "Розділ \(chapter)"
+            default:   return "Chapter \(chapter)"
             }
         }
     }
@@ -716,9 +720,48 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Load Data
 
+    /// ADR-026 spike prefetch cache: verses for adjacent pager pages, keyed
+    /// "book|chapter|translation". Intentionally NOT @Published — pages read it
+    /// during body evaluation; a publish would re-render the heavy reader body.
+    /// Cleared by loadChapter() so highlights/translation changes re-derive it.
+    private var pageVersesCache: [String: [BibleVerse]] = [:]
+
+    /// Verses for one pager page WITHOUT touching @Published state (ADR-026 hard
+    /// rule: no loadChapter()/@Published re-map during the page transition).
+    /// The current chapter returns the live `verses` (so highlight changes render);
+    /// adjacent pages get a cached direct DB read.
+    func versesForPage(_ chapter: Int) -> [BibleVerse] {
+        if chapter == currentChapter,
+           let first = verses.first, first.bookId == currentBook.id, first.chapter == chapter {
+            return verses
+        }
+        #if DEBUG
+        // Previews run on sample data — never touch DatabaseService for adjacent pages.
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            return chapter == currentChapter ? verses : []
+        }
+        #endif
+        let key = "\(currentBook.id)|\(chapter)|\(currentTranslation.id)"
+        if let cached = pageVersesCache[key] { return cached }
+        let loaded = db.loadChapter(bookId: currentBook.id,
+                                    chapter: chapter,
+                                    translation: currentTranslation.id)
+            .map { v in
+                BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
+                           number: v.number, text: v.text, words: v.words,
+                           highlightColor: highlightColors[v.id],
+                           parsed: v.parsed)
+            }
+        pageVersesCache[key] = loaded
+        return loaded
+    }
+
     func loadChapter() {
         isLoading = true
         errorMessage = nil
+        // ADR-026: chapter/translation/highlight state is changing — drop the pager
+        // prefetch cache so adjacent pages re-derive from the fresh state.
+        pageVersesCache.removeAll()
         // SQLite reads with in-memory cache take <1ms — no background thread needed.
         // Avoids all Swift 6 actor-isolation issues with Task.detached.
         highlightColors = store.highlightColors(translation: currentTranslation.id)

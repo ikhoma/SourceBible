@@ -1215,6 +1215,22 @@
         }
       }
     },
+    "menu.section.statistics" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statistics"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статистика"
+          }
+        }
+      }
+    },
     "menu.section.translation" : {
       "localizations" : {
         "en" : {

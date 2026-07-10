@@ -186,16 +186,76 @@ struct ReaderView: View {
         }
     }
 
-    // MARK: - Reader content
+    // MARK: - Reader content (ADR-026 Phase 2 — chapter paging)
+
+    /// ADR-026 Phase 2: on iOS 26 chapters page in a UIPageViewController(.scroll)
+    /// container (ChapterPagerView) — chevron tap AND full-surface swipe get the
+    /// native interactive slide (PDR-Page-Turn-Gesture-Zone, amended → full-surface;
+    /// device gesture-check passed 2026-07-10). The UIKit container is required:
+    /// TabView(.page) clips pages to its safe-area frame, which kills the ch-1
+    /// cover bleed AND the navigation bar's scroll-edge blur (see ADR-026
+    /// implementation notes). iOS 18 fallback = the previous reader path
+    /// (single chapter scroll + edge-only swipe), per the deployment-target rule;
+    /// a single UIKit-pager path for both versions is possible after Phase-B
+    /// iOS 18 QA (UIPageViewController needs nothing iOS 26-specific).
     @ViewBuilder
     private var classicReader: some View {
+        if #available(iOS 26, *) {
+            ChapterPagerView()
+                .ignoresSafeArea()
+        } else {
+            legacyReader
+        }
+    }
+
+    /// The pre-ADR-026 reader (iOS 18 fallback): one chapter scroll + edge-only swipe.
+    @ViewBuilder
+    private var legacyReader: some View {
+        ChapterScrollContent(chapter: vm.currentChapter)
+
+        // Edge swipe gesture for chapter navigation.
+        // UIScreenEdgePanGestureRecognizer fires from the hardware screen
+        // edge regardless of UITextView hit-testing, so it works over all content.
+        // Chapter change is a no-op in Study Mode (product decision N1) —
+        // the user must exit to the reader first.
+        EdgeSwipeNavigator(
+            onPrevChapter: { if vm.activeSheet != .verse { vm.prevChapter() } },
+            onNextChapter: { if vm.activeSheet != .verse { vm.nextChapter() } }
+        )
+        .ignoresSafeArea()
+    }
+}
+
+// MARK: - Chapter scroll content (the REAL chapter view)
+
+/// Verbatim extraction of the pre-spike classicReader scroll block (ADR-026:
+/// the container above may change, THIS view must not), parameterized by
+/// `chapter` so pager containers can host adjacent pages. Verses come from
+/// vm.versesForPage — the live vm.verses for the current chapter, a
+/// non-published prefetch for neighbors.
+struct ChapterScrollContent: View {
+    @EnvironmentObject var vm: ReaderViewModel
+    // Locale dependency kept for BibleBookNames fallback paths (see ReaderView).
+    @Environment(\.locale) private var locale
+    @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
+    @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
+
+    let chapter: Int
+
+    // True when the book cover should be shown (chapter 1 of any book, not hidden).
+    private var showsBookCover: Bool {
+        !hideBookCovers && chapter == 1
+    }
+
+    var body: some View {
+        let verses = vm.versesForPage(chapter)
         ScrollViewReader { proxy in
 
             let sheetOpen = vm.activeSheet == .verse
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
 
-                                if vm.currentChapter == 1 {
+                                if chapter == 1 {
                                     if showsBookCover {
                                         // Book cover as in-flow content: negative padding
                                         // cancels the VStack's own insets so the cover sits
@@ -221,13 +281,13 @@ struct ReaderView: View {
                                     }
                                 }
 
-                                Text(vm.chapterHeading)
+                                Text(vm.chapterHeading(for: chapter))
                                     .font(.title)
                                     .bold()
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.bottom, 16)
 
-                                ForEach(vm.verses) { verse in
+                                ForEach(verses) { verse in
                                     VerseRowView(
                                         verse: verse,
                                         translationId: vm.currentTranslation.id,
@@ -370,7 +430,7 @@ struct ReaderView: View {
                         // both open at chapter 1 keeps the same chapter number, so a
                         // chapter-only id would reuse the scroll view and inherit the
                         // previous book's scroll offset.
-                        .id("\(vm.currentBook.id)-\(vm.currentChapter)")
+                        .id("\(vm.currentBook.id)-\(chapter)")
                         // Cover bleeds behind the status bar + toolbar (immersive) yet is
                         // still ordinary in-flow content that scrolls away when a verse pins.
                         // Tied to showsBookCover ONLY (never sheetOpen) so it does NOT toggle
@@ -381,25 +441,16 @@ struct ReaderView: View {
                         .ignoresSafeArea(edges: showsBookCover ? .top : [])
                     }
 
-            // Edge swipe gesture for chapter navigation.
-            // UIScreenEdgePanGestureRecognizer fires from the hardware screen
-            // edge regardless of UITextView hit-testing, so it works over all content.
-            // Chapter change is a no-op in Study Mode (product decision N1) —
-            // the user must exit to the reader first.
-            //
-            EdgeSwipeNavigator(
-                onPrevChapter: { if vm.activeSheet != .verse { vm.prevChapter() } },
-                onNextChapter: { if vm.activeSheet != .verse { vm.nextChapter() } }
-            )
-            .ignoresSafeArea()
-
             // Note: the old gesture-blocking overlay is gone (R2). Background
             // scrolling is now disabled via .scrollDisabled, and the sheet no
             // longer forwards touches (presentationBackgroundInteraction removed),
             // so there is no swipe leak to absorb.
-        }
+    }
+}
 
-    // MARK: - Toolbar content (R4/R5)
+// MARK: - Toolbar content (R4/R5)
+
+extension ReaderView {
 
     /// Dynamic accessibility label for the leading (prev) toolbar chevron.
     private var prevChevronA11yKey: LocalizedStringKey {

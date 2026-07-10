@@ -1,7 +1,9 @@
-# ADR-026: Reader Chapter Paging via `TabView(.page)`
+# ADR-026: Reader Chapter Paging via `TabView(.page)` → `UIPageViewController`
 
-**Status:** Deferred to V1.5 (Phase-1 spike validated the feel, 2026-07-03)
-**Date:** 2026-07-03
+**Status:** IMPLEMENTED (Phase 2, 2026-07-10) — via `UIPageViewController(.scroll)`,
+NOT TabView; TabView was tried and rejected empirically (see Phase-2 outcome below).
+iOS 26 path only; iOS 18 keeps the legacy reader until Phase B.
+**Date:** 2026-07-03 (decision) · 2026-07-10 (implementation)
 **Related:** ux-003 (smooth chapter transition), ux-001 (edge-only swipe / PDR-Page-Turn-Gesture-Zone), ADR-021 (Study-Mode scroll pinning), ADR-014 (VerseTextView cache invalidation), ADR-016 (word tagging)
 
 ## Context
@@ -153,7 +155,89 @@ pulls in a lot of work and regression surface, not justified before V1.5.
 2. Study-Mode coexistence per ADR-021 (pinning/sizing/clamp) — the pager must not
    perturb it; in-sheet ‹ › still do prev/next verse/word.
 3. Lazy **current ± 1** prewarming to kill the first-transition cold UITextView layout.
-4. Explicit decision on full-surface vs edge swipe → reconcile with / supersede
-   PDR-Page-Turn-Gesture-Zone; validate the gesture-conflict finding properly on device.
+4. Full-surface vs edge swipe — **DECIDED 2026-07-10: full-surface.**
+   PDR-Page-Turn-Gesture-Zone amended to full-surface (supersedes edge-only) with a
+   **rollback clause**: revert to edge-only (`EdgeSwipeNavigator`) if the device
+   gesture-conflict check (word tap / long-press / selection vs swipe) shows a real
+   regression. This Phase-2 device validation is now the gate that confirms or rolls
+   back the decision — it is no longer an open product question, but the rollback
+   trigger must still be checked on device before ship.
 5. iOS 26 value-based `TabView` selection behind `#available` + iOS 18 fallback.
 6. Swift 6 clean; builds **and Archives** (Release); Clean Build before verifying.
+
+---
+
+## Phase-2 outcome (2026-07-10) — IMPLEMENTED via `UIPageViewController`, TabView REJECTED
+
+Fable autonomous run per `fable-brief-adr026-paging.md`; user reviewed two spikes
+side-by-side on device and picked the UIKit pager.
+
+### Why TabView(.page) was rejected (empirical, sim iOS 26.5)
+
+A full TabView implementation was built first and REVERTED. Two fatal, inherent
+problems (the container clips pages to its safe-area frame):
+
+1. **Cover bleed dead** — per-page `.ignoresSafeArea(.top)` cannot escape the
+   pager's clip: the ch-1 Doré cover rendered *below* the toolbar (the exact
+   Phase-1-spike regression, this time at container level).
+2. **Toolbar scroll-edge blur dead** — the navigation bar never sees a vertical
+   scroll view nested inside the SwiftUI pager, so the Liquid Glass
+   scroll-edge effect doesn't engage: opaque bar, hard content clip.
+   `scrollEdgeEffectStyle` only styles an effect; it cannot force detection.
+
+Secondary TabView findings (cost hours; do not re-discover):
+- A sliding `[current±1]` ForEach window mutates identity mid-settle → pager
+  froze between pages. Full-book identity + `Color.clear` placeholders fixed
+  it but the two fatal issues above stood.
+- `.scrollDisabled` does NOT stop `.page` swipes; a guard-refusing selection
+  binding strands the pager on the wrong page visually.
+- Collapsing the window to one page for Study Mode re-mounted the current page
+  on exit (scroll reset to top, first swipe swallowed).
+
+### What shipped (files: `ChapterPagerView.swift`, `ReaderView.swift`, `ReaderViewModel.swift`)
+
+- **Container:** `UIPageViewController(.scroll)` in a `UIViewControllerRepresentable`
+  (`ChapterPagerView`), one `UIHostingController` page per chapter hosting the
+  REAL chapter view — `ChapterScrollContent`, a verbatim, chapter-parameterized
+  extraction of the old classicReader scroll block (no reimplementation).
+  UIKit pages lay out edge-to-edge → per-page cover bleed works as before.
+- **Toolbar blur:** `setContentScrollView(_:for: .top)` on the VC directly under
+  the `UINavigationController`, re-pointed to the current page's vertical scroll
+  view on every settle — Liquid Glass scroll-edge effect verified identical to
+  the pre-pager baseline.
+- **Swipe commit:** chapter committed in `didFinishAnimating`; `loadChapter()`
+  (the `@Published` re-map) deferred one runloop tick (hard rule). Pages render
+  via `ReaderViewModel.versesForPage(_:)` — live `verses` for the current
+  chapter, a non-published prefetch cache for neighbors (cleared by
+  `loadChapter`). Lazy current±1 comes free from the pageVC dataSource.
+- **Chapter always opens at top:** `willTransitionTo` resets the pending page's
+  scroll offset — UIPageVC otherwise hands back a cached neighbor with its old
+  offset (device-caught on Ps 119). Product note: deleting that hook gives
+  "peek forward, come back to your place" semantics instead.
+- **Study Mode (N1):** pager's internal scroll view `isScrollEnabled = false`
+  while the verse sheet is open. ADR-021 pinning/sizing verified inside pages.
+- **Chevrons** unchanged (`prev/nextChapter`); the pager animates ±1 selection
+  changes itself in `updateUIViewController`; far jumps (picker/cross-ref) snap.
+- **iOS 18 fallback** = legacy reader (single scroll + `EdgeSwipeNavigator`,
+  edge-only). `UIPageViewController` needs nothing iOS 26-specific, so a single
+  pager path for both versions is an option for Phase B.
+- **Spike B** (animated `.transition(.push)` swap, no container change) was also
+  built and reviewed: rejected — non-interactive, and full-surface via SwiftUI
+  gestures inherently fights vertical scroll over UITextView. Removed.
+  (Incidental finding: `.transition(.asymmetric(.move))` rendered incoming
+  UITextView rows at zero height on forward steps; `.push(from:)` works.)
+
+### Verification
+
+Sim (iOS 26.5): cover bleed, toolbar blur vs baseline, full-surface swipe incl.
+over text, chevron slides, Study-Mode pin/sheet/lock/unlock with scroll
+preserved on exit, long-press Word tab, Ps 119/120, book-picker jumps.
+Device (Ivan, 2026-07-10): gesture-check PASSED — full-surface swipe does not
+clash with word tap / long-press / selection → PDR rollback clause not
+triggered; Ps 119 scroll-position issue found and fixed (see above); ux-001
+closed. Debug + Release sim builds green; **Product ▸ Archive on the user.**
+
+Note: the "Related" line above references ux-003 as "smooth chapter transition" —
+the item actually filed as `docs/ux/new/ux-003.md` is about switch-button
+animation. The chapter-transition tester request is covered by this ADR
+directly; ux-003 stays open (unrelated).

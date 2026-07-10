@@ -22,7 +22,7 @@ stop tripping). This doc is the single feed for the **onboarding tutorial / FAQ*
 
 | Item | Confusion | Why (by design) | Reporters | Decision | Refs |
 |---|---|---|---|---|---|
-| ux-001 | Swipe over the center of the page doesn't turn pages; feels broken | Paging is edge-only to avoid clashing with tappable words / long-press Word tab / text selection | 1 | **Tutorial** + consider **Affordance** (edge indicator/chevrons) | PDR-Page-Turn-Gesture-Zone; `docs/ux/…/ux-001.md` |
+| ~~ux-001~~ **RESOLVED 2026-07-10** | Swipe over the center of the page doesn't turn pages; feels broken | Was: edge-only paging. Superseded by ADR-026 Phase 2 — full-surface swipe via UIPageViewController; no gesture clash on device | 1 | **Resolved by design change** (tutorial item dropped) | PDR-Page-Turn-Gesture-Zone (amended); `docs/ux/done/ux-001.md` |
 | bug-006 *(candidate)* | Original-tab gloss shows in English under RST | Lexical glosses are English-only for MVP (ADR-006; translated lexicon is a later stage) | 1 | Pending — confirm reporter meant the gloss (by-design) vs labels (real bug) | ADR-006; memory "Dataset language strategy" |
 
 ## Tutorial backlog
@@ -30,7 +30,8 @@ stop tripping). This doc is the single feed for the **onboarding tutorial / FAQ*
 Items flagged **Tutorial** above, gathered for the onboarding walkthrough / FAQ.
 This ties into ux-005 (FAQ / first-user guide) and ux-016 (starting screen).
 
-- **Swipe from the edges to turn pages** (ux-001) — show the edge zones on first run.
+- ~~**Swipe from the edges to turn pages** (ux-001)~~ — dropped 2026-07-10: swipe is
+  now full-surface (ADR-026 Phase 2), nothing to teach.
 
 _When 2–3 items accumulate here, that's the trigger to actually build the tutorial
 (one coherent onboarding pass beats scattered one-off hints)._

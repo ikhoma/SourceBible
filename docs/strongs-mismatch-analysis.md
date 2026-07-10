@@ -156,6 +156,49 @@ Ran against the local BibleHub OT interlinear cache (`data/bh_cache_hebrew`, 23,
 - ⚠️ **Correction of an in-conversation claim:** an intermediate result suggested "BibleHub agrees with Macula (H341) and thus refutes the BSB doc's inherited-mismatch assumption." The deeper probe shows that was an **extraction artifact** (pages contain both numbers). The BSB doc's caveat is therefore **neither confirmed nor refuted** — it stays open.
 - A couple of the "Type 1" pairs are themselves noisy (e.g. "how" H349/H351: NASB actually sides with Macula 54/16 — likely a variant, not a true semantic split). The empirical co-occurrence list has some false members; treat individual low-count rows with caution.
 
-**Conclusion:** the local HTML cache **cannot** settle whether BSB is a clean clickable drop-in. That requires the actual **BSB `display` JSONL** (per-word English↔Strong's↔original tuples) from `bsb-data-output` — the source the BSB analysis already named. Until then: STEPBible's contribution (Spike 1) is quantified and clear; the BSB path remains **blocked on downloading the real dataset**, not evaluable from scraped interlinear pages.
+**Conclusion (superseded below):** the local HTML cache cannot settle this — it needs the real BSB `display` JSONL. **That dataset has since been downloaded** (`BSB-publishing/bsb-data-output` → `data/bsb-data-output-main/base/display/*.jsonl`), and Spike 2b re-ran on clean per-word data.
+
+---
+
+## Spike 2b (2026-07-10) — clean BSB `display` data. **Result: BSB is the strongest path.**
+
+Real per-word BSB (`base/display/*.jsonl`, 30,969 verses, 436,224 tagged words) vs Macula vs NASB, identical method (`/tmp/spike2clean.py`), 22,894 OT verses in common.
+
+### Finding 1 — BSB uses zero proprietary numbers
+**`9000+` occurrences in all of BSB: 0.** BSB tags entirely in standard Strong's. → A BSB-gated clickability path needs **no extended-override table at all**. The whole `NASBExtendedOverride` apparatus (391 hand entries + morph fallback) exists only because NASB uses proprietary `H9000+`; BSB doesn't have them.
+
+### Finding 2 — BSB aligns to Macula *better* than NASB
+Content-word coverage vs Macula, identical verses:
+
+| Source | Coverage of Macula content words |
+|---|---|
+| **BSB** | **249,036 / 363,021 = 68.6%** |
+| NASB | 217,203 / 363,021 = 59.8% |
+
+(The earlier HTML-cache number of 52% was scraping noise; clean data reverses it — BSB is **+8.8 pts over NASB**.)
+
+### Finding 3 — on contested lexical calls, BSB sides with Macula more than NASB does
+Verses where Macula tags the LEFT number; counts = how often each source carries Macula's number (L) vs NASB's (R):
+
+| Pair | verses | BSB L / R | NASB L / R | Verdict |
+|---|---|---|---|---|
+| enemy H341/H340 (noun/verb) | 271 | **220 / 1** | 0 / 217 | **BSB = Macula**, NASB disagrees |
+| this H2063/H2088 (fem/masc) | 568 | **535 / 41** | 0 / 378 | **BSB = Macula**, NASB disagrees |
+| fearing H3373/H3372 (adj/verb) | 60 | **51 / 2** | 0 / 50 | **BSB = Macula**, NASB disagrees |
+| shepherd H7473/H7462 (noun/verb) | 71 | 0 / 69 | 1 / 64 | BSB sides with NASB (verb) |
+| prostitute H2185/H2181 | 32 | 0 / 31 | 0 / 28 | BSB sides with NASB |
+
+BSB agrees with Macula on 3 of 5 (decisively on the flagship "enemy"), NASB on 0 of 5. **This refutes the BSB doc's central caveat** ("BSB inherits NASB's mismatch, same BibleHub lineage") — for the extended-number problem BSB dissolves it entirely (0 proprietary numbers), and on the semantic calls BSB is *closer* to Macula than NASB. BSB is not a Macula clone (shepherd/prostitute go the other way), but it is clearly the better-aligned, override-free, public-domain (CC0) option.
+
+### Strategy context (Ivan, 2026-07-10) — BSB is NOT a NASB replacement
+Product intent: **keep NASB** (license it from Lockman — chosen for popularity + authority) and **expand to multiple licensed translations: LSB, ESV, NASB, CSB.** BSB is an *option*, not a substitute. The spike numbers below describe BSB's value as a **technical alignment layer**, not as a product replacement for NASB. Read them in that light.
+
+### Revised recommendation (under the multi-translation strategy)
+- **A multi-translation reader breaks the per-translation-override model.** ADR-016 gates on the *displayed* translation. That works because all four current modules are Strong's-tagged. Adding ESV/CSB/LSB raises a new, blocking question: **do those translations even ship with word-level Strong's tags?** Many licensed translations do not. If ESV/CSB arrive untagged, there is nothing to gate longtap on under ADR-016.
+- **LSB is Lockman/NASB-lineage** (a NASB revision). It will likely **inherit the same Macula mismatches** found in NASB (enemy verb, "this" masc, etc.) — the problem multiplies with each NASB-family module, it does not go away.
+- **Therefore `mStrong` / `verse_markup` becomes *necessary*, not optional.** It is the only scalable way to gate N translations: each translation maps to one canonical key **once at build time**, instead of N pairwise override tables (or no data at all for untagged modules). The earlier "mStrong is optional" note held only for the discarded "gate on BSB" scenario.
+- **BSB's role flips: public-domain *alignment backbone*, not a replacement translation.** Because BSB is CC0 with clean per-word English↔Strong's↔original, it can serve as the reference interlinear to **align untagged licensed translations (ESV/CSB) to Macula**, and/or as a free tier / fallback. Its better-than-NASB Macula alignment (68.6% vs 59.8%) matters precisely because it makes a good *anchor* layer.
+- **`NASBExtendedOverride` stays** (NASB is retained), but does not scale to new modules — another reason to move reconciliation into the `mStrong` build-time layer.
+- **Open question that gates the expansion:** availability + licensing of **Strong's word-tagging** (not text) for ESV / CSB / LSB from Crossway / Holman / Lockman. This determines whether longtap is even possible on those modules and whether a BSB alignment bridge is required. Needs research before ADR-028.
 
 **Sources:** `data/NASB+.zip`, `data/macula-hebrew-main.zip` (WLC TSV), `data/TBESH … STEPBible.org CC BY.txt`; cross-refs `docs/architecture/ADR-016-original-pill-nasb-bridge.md`, `docs/bsb-publishing-dataset-analysis.md`.

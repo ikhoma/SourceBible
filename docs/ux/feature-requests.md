@@ -14,7 +14,6 @@ Distinct from:
 | id | Request | Reporters | Impact / Effort | Target | Source |
 |---|---|---|---|---|---|
 | ux-017 | Browse & sort commentaries by theme/tags (heart, relationships, temptation…) as an independent feature, like the Plans-tab tags | Viacheslav | low / high | **v1.5** | [UX review 16](https://docs.google.com/document/d/1mS_fVVAlaM3BsKHlW5q84kFV3n8R5JJLOktVQgGbACo) |
-| ux-003 | Smooth chapter transition (native paged slide via TabView) — see ADR-026 | Viacheslav | medium / high | **v1.5** | [UX review 18](https://docs.google.com/document/d/1TFg2e9HS4CuqjDyVu906orSJWRa9wmye2wBf4w4DOSw) |
 
 ## Unscheduled candidates (from Sprint 1, decide milestone later)
 
@@ -24,3 +23,9 @@ you're ready to schedule:
 - **ux-005** — FAQ / first-user guide (impact: big)
 - **ux-016** — starting / splash screen (impact: medium)
 - **ux-011** — empty state for invalid book search (impact: low)
+
+## Completed
+
+| id | Request | Reporters | Resolved | Source |
+|---|---|---|---|---|
+| ux-003 | Smooth chapter transition (native paged slide via TabView) — see ADR-026 | Viacheslav | v1.0 (ADR-026) | [UX review 18](https://docs.google.com/document/d/1TFg2e9HS4CuqjDyVu906orSJWRa9wmye2wBf4w4DOSw) |
