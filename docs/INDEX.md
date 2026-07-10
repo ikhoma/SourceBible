@@ -89,6 +89,8 @@ Load the full document only when the task is relevant to it.
 | `db_build.md` | Full SQLite build process, known errors, verse_map details |
 | `xlit_subentry_system_design.md` | Transliteration sub-entry handling (H871a, H1886d, etc.) — implemented |
 | `verse_offset_system_design.md` | Verse offset/numbering system design — implemented (findBestMaculaVerse, Strong's overlap) |
+| `bsb-publishing-dataset-analysis.md` | BSB/Berean (BSB-publishing) datasets — CC0 text, STEPBible TBESH/TBESG lexicon, UBS versification; BSB won't dissolve NASB↔Macula semantic mismatch (same BibleHub lineage); two paths (BSB-as-clickable-translation vs override auto-gen); 3 next steps open |
+| `strongs-mismatch-analysis.md` | Empirical NASB/BibleHub↔Macula Strong's mismatch (whole OT), FOR the longtap gate (ADR-016) + BSB decision. 3 types: (1) semantic noun/verb — unfixable by any table (H341/H340 "enemy" 280×); (2) namespace H9000+ — fixable, = `NASBExtendedOverride`/eStrong; (3) name-variants — fixable via uStrong. Evaluates `mStrong` canonical key = key column of ADR-016 Phase 2 `verse_markup`; recommend Macula-anchored, seeded from STEPBible dStrong/uStrong → future ADR-028 |
 
 ## Product Docs (`BRD/`)
 
