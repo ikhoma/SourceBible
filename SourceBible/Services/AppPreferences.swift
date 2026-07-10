@@ -26,6 +26,8 @@ enum AppStorageKeys {
     static let redLetters           = "redLetters"
     static let defaultTranslationId = "defaultTranslationId"
     static let appLanguage          = "appLanguage"
+    /// Book picker books-step layout: "list" (default) or "tiles".
+    static let bookPickerBooksViewMode = "bookPickerBooksViewMode"
 
     // ── Launch preference ─────────────────────────────────────────────────────
     static let launchBehavior       = "launchBehavior"
@@ -68,7 +70,8 @@ enum AppPreferences {
          AppStorageKeys.hideBookCovers,
          AppStorageKeys.redLetters,
          AppStorageKeys.defaultTranslationId,
-         AppStorageKeys.appLanguage]
+         AppStorageKeys.appLanguage,
+         AppStorageKeys.bookPickerBooksViewMode]
             .forEach { defaults.removeObject(forKey: $0) }
     }
 }

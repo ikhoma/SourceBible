@@ -13,13 +13,23 @@ struct BookChapterPickerView: View {
     @State private var selectedBook: BibleBook? = nil
     @State private var searchText = ""
 
+    /// Books-step layout, persisted (ADR-025 key).
+    @AppStorage(AppStorageKeys.bookPickerBooksViewMode)
+    private var booksViewMode: BooksViewMode = .list
+
     enum Step { case book, chapter }
+
+    enum BooksViewMode: String { case list, tiles }
 
     var body: some View {
         NavigationStack {
             Group {
                 if step == .book {
-                    bookList
+                    if booksViewMode == .tiles {
+                        bookTiles
+                    } else {
+                        bookList
+                    }
                 } else if let book = selectedBook {
                     chapterGrid(for: book)
                 }
@@ -29,6 +39,16 @@ struct BookChapterPickerView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(step == .chapter ? "action.back" : "action.close") {
                         if step == .chapter { step = .book } else { dismiss() }
+                    }
+                }
+                if step == .book {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            booksViewMode = (booksViewMode == .list) ? .tiles : .list
+                        } label: {
+                            Label(booksViewMode == .list ? "picker.view_tiles" : "picker.view_list",
+                                  systemImage: booksViewMode == .list ? "square.grid.2x2" : "list.bullet")
+                        }
                     }
                 }
             }
@@ -63,14 +83,55 @@ struct BookChapterPickerView: View {
         .onTapGesture { selectedBook = book; step = .chapter }
     }
 
-    private func filtered(_ testament: Testament) -> [BibleBook] {
-        let books = vm.allBooks
+    // MARK: - Tile mode
+
+    /// Flat grid of all 66 books — short names, OT/NT color coded.
+    /// OT = secondarySystemFill, NT = appBlue (existing brand accent).
+    private var bookTiles: some View {
+        ScrollView {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                ForEach(sortedBooks(.old) + sortedBooks(.new)) { book in
+                    bookTile(book)
+                }
+            }
+            .padding(16)
+        }
+        .navigationTitle("picker.title_book")
+    }
+
+    private func bookTile(_ book: BibleBook) -> some View {
+        let isNT = book.testament == .new
+        let isCurrent = vm.currentBook.id == book.id
+        return Button {
+            selectedBook = book
+            step = .chapter
+        } label: {
+            Text(vm.shortBookName(for: book.id))
+                .font(.callout).fontWeight(.medium)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(height: 44).frame(maxWidth: .infinity)
+                .background(isCurrent ? Color.primary : (isNT ? Color.appBlue : Color(UIColor.secondarySystemFill)))
+                .foregroundStyle(isCurrent ? Color(UIColor.systemBackground) : (isNT ? .white : .primary))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(translationName(for: book.id))
+    }
+
+    /// Testament's books in translation order, unfiltered (tile mode has no search).
+    private func sortedBooks(_ testament: Testament) -> [BibleBook] {
+        vm.allBooks
             .filter { $0.testament == testament }
             .sorted {
                 let a = vm.translationBookNames[$0.id]?.order ?? Int.max
                 let b = vm.translationBookNames[$1.id]?.order ?? Int.max
                 return a < b
             }
+    }
+
+    private func filtered(_ testament: Testament) -> [BibleBook] {
+        let books = sortedBooks(testament)
         guard !searchText.isEmpty else { return books }
         return books.filter {
             translationName(for: $0.id).localizedCaseInsensitiveContains(searchText)
@@ -93,6 +154,8 @@ struct BookChapterPickerView: View {
                     } label: {
                         Text("\(ch)")
                             .font(.callout).fontWeight(.medium)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                             .frame(height: 44).frame(maxWidth: .infinity)
                             .background(isActive ? Color.primary : Color(UIColor.secondarySystemFill))
                             .foregroundStyle(isActive ? Color(UIColor.systemBackground) : .primary)

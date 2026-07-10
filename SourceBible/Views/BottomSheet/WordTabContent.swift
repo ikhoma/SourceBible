@@ -230,6 +230,7 @@ struct WordMeaningView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            sectionLabel(t.string(for: MorphKey.sectionLemma), topPadding: 0)
             headerSection
             if let word = vm.selectedWord {
                 contextSection(word)
@@ -293,6 +294,9 @@ struct WordMeaningView: View {
                 .background(Color(UIColor.secondarySystemFill))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+        // Match section title→content rhythm: 4pt label bottom + 10pt here = 14pt,
+        // same as InfoGroup's first-row top inset used by the other sections.
+        .padding(.top, 10)
         .padding(.bottom, 16)
     }
 
@@ -415,11 +419,11 @@ struct WordMeaningView: View {
 
     // MARK: Helpers
 
-    private func sectionLabel(_ title: String) -> some View {
+    private func sectionLabel(_ title: String, topPadding: CGFloat = 20) -> some View {
         Text(title.uppercased())
             .font(.caption).fontWeight(.medium)
             .foregroundStyle(.secondary)
-            .padding(.top, 20).padding(.bottom, 4).padding(.horizontal, 2)
+            .padding(.top, topPadding).padding(.bottom, 4).padding(.horizontal, 2)
     }
 
     private func syntaxRoleLabel(_ role: String) -> String? {

@@ -80,6 +80,7 @@ enum MorphKey {
 
     // MARK: - Section labels (WordMeaningView)
 
+    static let sectionLemma           = "morph.section.lemma"
     static let sectionMorphology      = "morph.section.morphology"
     static let sectionLexical         = "morph.section.lexical"
     /// Interpolated: "Form in Gen 1:1" — use string(for:_:) with ref argument

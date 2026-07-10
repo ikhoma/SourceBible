@@ -27,6 +27,16 @@
     "%lld" : {
 
     },
+    "%lld. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld. %2$@"
+          }
+        }
+      }
+    },
     "%lld%%" : {
 
     },
@@ -2003,6 +2013,23 @@
         }
       }
     },
+    "morph.section.lemma" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lemma (dictionary form)"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лема (словникова форма)"
+          }
+        }
+      }
+    },
     "morph.section.lexical" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2518,6 +2545,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Книга"
+          }
+        }
+      }
+    },
+    "picker.view_list" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "List view"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Список"
+          }
+        }
+      }
+    },
+    "picker.view_tiles" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tile view"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Плитки"
           }
         }
       }
