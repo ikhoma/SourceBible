@@ -21,7 +21,15 @@ import Foundation
 enum AppStorageKeys {
 
     // ── Appearance / preference (user-set; reset = restore defaults) ──────────
+    /// Legacy Bool key — superseded by `appearanceMode`. Kept for one-time
+    /// migration (AppearanceMode.migrateFromLegacyDarkMode) and downgrade safety.
     static let isDarkMode           = "isDarkMode"
+    /// AppearanceMode rawValue: "light" | "dark" | "matchDevice".
+    static let appearanceMode       = "appearanceMode"
+    /// ColorTheme rawValue: "paper" | "incunable".
+    static let colorTheme           = "colorTheme"
+    /// TitleFontStyle rawValue: "modern" | "antique".
+    static let titleFontStyle       = "titleFontStyle"
     static let hideBookCovers       = "hideBookCovers"
     static let redLetters           = "redLetters"
     static let defaultTranslationId = "defaultTranslationId"
@@ -67,6 +75,9 @@ enum AppPreferences {
     /// Leaves launchBehavior, consent and migration flags untouched.
     static func resetAppearanceToDefaults(_ defaults: UserDefaults = .standard) {
         [AppStorageKeys.isDarkMode,
+         AppStorageKeys.appearanceMode,
+         AppStorageKeys.colorTheme,
+         AppStorageKeys.titleFontStyle,
          AppStorageKeys.hideBookCovers,
          AppStorageKeys.redLetters,
          AppStorageKeys.defaultTranslationId,

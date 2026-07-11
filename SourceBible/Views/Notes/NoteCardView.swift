@@ -11,6 +11,7 @@ struct NoteCardView: View {
     let item: NoteWithBlocks
 
     @EnvironmentObject private var readerVM: ReaderViewModel
+    @Environment(\.colorTheme) private var colorTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -54,7 +55,7 @@ struct NoteCardView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color("cardBackground"))
+                .fill(colorTheme.cardBackground)
         )
     }
 

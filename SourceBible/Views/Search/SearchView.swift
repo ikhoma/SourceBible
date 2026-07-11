@@ -8,6 +8,7 @@ struct SearchView: View {
 
     @Environment(\.analytics)      private var analytics
     @Environment(\.sessionTracker) private var sessionTracker
+    @Environment(\.colorTheme)     private var colorTheme
 
     @StateObject private var vm = SearchViewModel()
 
@@ -76,7 +77,7 @@ struct SearchView: View {
                 // floating search field). Matches the ReaderView pattern; a plain
                 // `.background(...)` on `content` left the system black showing through
                 // the safe areas and the empty space below short List content.
-                Color("appBackground").ignoresSafeArea()
+                colorTheme.appBackground.ignoresSafeArea()
                 content
                     // Large bold "Search" on the home states (hint / Recent / predictions).
                     // On the results page there's already a "Results for …" header, and the

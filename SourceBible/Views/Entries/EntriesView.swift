@@ -10,11 +10,12 @@ struct EntriesView: View {
 
     @State private var tab: EntriesTab = .notes
     @Environment(\.locale) private var locale
+    @Environment(\.colorTheme) private var colorTheme
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("appBackground").ignoresSafeArea()
+                colorTheme.appBackground.ignoresSafeArea()
                 VStack(spacing: 0) {
                     Picker("", selection: $tab) {
                         Text("entries.tab.notes").tag(EntriesTab.notes)

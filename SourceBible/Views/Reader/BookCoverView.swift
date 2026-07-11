@@ -16,6 +16,7 @@ struct BookCoverView: View {
     // String via NSLocalizedString, so the view must depend on \.locale to recompute
     // it when the language changes (mirrors EntriesView/MenuView .id(locale.identifier)).
     @Environment(\.locale) private var locale
+    @Environment(\.titleFontStyle) private var titleFontStyle
 
     let bookId: String
     let bookName: String
@@ -105,7 +106,7 @@ struct BookCoverView: View {
             // ── Title + subtitle (bottom-leading) ───────────────────────────────
             VStack(alignment: .leading, spacing: 8) {
                 Text(bookName)
-                    .font(.system(size: 34, weight: .bold))
+                    .font(titleFontStyle.coverTitleFont)
                     .tracking(0.4)
                     .lineSpacing(-6)
                     .lineLimit(2)

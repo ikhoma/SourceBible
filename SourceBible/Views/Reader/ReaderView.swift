@@ -17,6 +17,7 @@ struct ReaderView: View {
     @Environment(\.locale) private var locale
     @Environment(\.sessionTracker) private var sessionTracker
     @Environment(\.analytics) private var analytics
+    @Environment(\.colorTheme) private var colorTheme
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     // Red-letter (Jesus' words) rendering — off by default; toggled in Settings ▸ Appearance.
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
@@ -52,7 +53,7 @@ struct ReaderView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("appBackground").ignoresSafeArea()
+                colorTheme.appBackground.ignoresSafeArea()
                 // Read the REAL navigation-bar bottom from UIKit. The floating toolbar
                 // does not reduce the SwiftUI safe area, so this is the only reliable
                 // source for "where the toolbar ends" — the pin target keys off it.
@@ -237,6 +238,7 @@ struct ChapterScrollContent: View {
     @EnvironmentObject var vm: ReaderViewModel
     // Locale dependency kept for BibleBookNames fallback paths (see ReaderView).
     @Environment(\.locale) private var locale
+    @Environment(\.titleFontStyle) private var titleFontStyle
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
 
@@ -274,16 +276,14 @@ struct ChapterScrollContent: View {
                                         // Cover hidden: regular Large Title (original layout)
                                         Text(vm.translationBookNames[vm.currentBook.id]?.long
                                              ?? BibleBookNames.full(for: vm.currentBook.id))
-                                            .font(.largeTitle)
-                                            .bold()
+                                            .font(titleFontStyle.bookLargeTitleFont)
                                             .frame(maxWidth: .infinity, alignment: .center)
                                             .padding(.bottom, 16)
                                     }
                                 }
 
                                 Text(vm.chapterHeading(for: chapter))
-                                    .font(.title)
-                                    .bold()
+                                    .font(titleFontStyle.chapterHeadingFont)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.bottom, 16)
 
@@ -573,6 +573,7 @@ extension ReaderView {
 // MARK: - Verse Row
 
 struct VerseRowView: View {
+    @Environment(\.colorTheme) private var colorTheme
     let verse: BibleVerse
     var translationId: String = ""
     var isSelected: Bool = false
@@ -629,7 +630,7 @@ struct VerseRowView: View {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12).fill(Color.appBlue)
                             ConcentricRectangle()
-                                .fill(Color("appBackground"))
+                                .fill(colorTheme.appBackground)
                                 .padding(.leading, 2)
                             ConcentricRectangle()
                                 .fill(Color.appBlue.opacity(0.1))
@@ -642,7 +643,7 @@ struct VerseRowView: View {
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 12).fill(Color.appBlue)
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color("appBackground"))
+                                .fill(colorTheme.appBackground)
                                 .padding(.leading, 2)
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.appBlue.opacity(0.1))

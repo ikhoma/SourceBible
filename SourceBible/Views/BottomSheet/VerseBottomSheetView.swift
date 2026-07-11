@@ -20,6 +20,7 @@ struct VerseBottomSheetView: View {
     @EnvironmentObject var notesVM:     NotesViewModel
     @EnvironmentObject var bookmarksVM: BookmarksViewModel
     @EnvironmentObject var router:      AppNavigationRouter
+    @Environment(\.colorTheme) private var colorTheme
 
     /// Lifted here so the selected pill survives switching to/from word mode.
     @State private var versePill: VersePill = .crossRefs
@@ -61,7 +62,7 @@ struct VerseBottomSheetView: View {
             // Changing id recreates the ScrollView → scroll position always resets to top
             .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
         }
-        .background(Color("sheetBackground"))
+        .background(colorTheme.sheetBackground)
         // R3: constant detent SET — the system re-resolves StudySheetDetent's
         // height from the environment value below on presentation updates,
         // which is the reliable channel for resizing an open sheet
@@ -290,7 +291,7 @@ struct VerseBottomSheetView: View {
                 .font(.footnote.weight(.medium))
                 .padding(.horizontal, 12)
                 .frame(height: 28)
-                .foregroundStyle(isActive ? Color("sheetBackground") : Color(UIColor.label))
+                .foregroundStyle(isActive ? colorTheme.sheetBackground : Color(UIColor.label))
                 .background {
                     if isActive {
                         Capsule()

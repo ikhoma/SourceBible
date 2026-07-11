@@ -6,7 +6,9 @@ import SwiftUI
 struct MenuView: View {
     @EnvironmentObject var readerVM: ReaderViewModel
     @State private var brightness: Double = Double(UIScreen.main.brightness)
-    @AppStorage(AppStorageKeys.isDarkMode) private var isDark = false
+    @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.light.rawValue
+    @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
+    @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
     @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = "KJV"
@@ -21,6 +23,12 @@ struct MenuView: View {
         default:   return "English"
         }
     }
+
+    // Typed views over the raw @AppStorage values (single source of truth stays
+    // in UserDefaults; the environment re-injects from SourceBibleApp).
+    private var colorTheme: ColorTheme { ColorTheme(rawValue: colorThemeRaw) ?? .paper }
+    private var titleFontStyle: TitleFontStyle { TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern }
+    private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .light }
 
     private var launchBehaviorLabel: LocalizedStringKey {
         LaunchBehavior(rawValue: launchBehaviorRaw) == .lastBookmark
@@ -39,7 +47,7 @@ struct MenuView: View {
         // full NavigationStack reconstruction is safe.
         NavigationStack {
             ZStack {
-                Color("appBackground").ignoresSafeArea()
+                colorTheme.appBackground.ignoresSafeArea()
                 Form {
                 Section("menu.section.appearance") {
                     VStack(spacing: 8) {
@@ -53,14 +61,91 @@ struct MenuView: View {
                                 UIScreen.main.brightness = newValue
                             }
                     }
-                    Toggle("menu.dark_theme", isOn: $isDark)
-                        .tint(.appBlue)
+                    // Color theme cards (Apple Books style). The Aa preview renders
+                    // in the CURRENT title font style, so switching Modern/Antique
+                    // below updates the cards live.
+                    HStack(spacing: 12) {
+                        ForEach(ColorTheme.allCases) { theme in
+                            ThemeCardButton(
+                                theme: theme,
+                                isSelected: theme == colorTheme,
+                                titleFontStyle: titleFontStyle
+                            ) {
+                                colorThemeRaw = theme.rawValue
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    // Full-width row separator: without this the system aligns the
+                    // separator to the first text inside the row (card captions),
+                    // producing a short indented divider.
+                    .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+                    // Menu + custom collapsed label instead of a bare Picker: the
+                    // default menu-picker renders the selected Label (icon glued to
+                    // text) in the primary color. Secondary + explicit spacing keeps
+                    // the value column consistent with the LabeledContent rows below.
+                    // Row = plain HStack, Menu wraps ONLY the trailing value cluster:
+                    // • menu anchors at the trailing edge (not centered over the row),
+                    // • the row title stays visible while the menu is up (iOS "lifts"
+                    //   the menu source view — wrapping the whole row left it empty),
+                    // • no LabeledContent → nothing clips "Match Device" on device.
+                    // .font(.body) is explicit: a Menu label does not inherit the
+                    // Form row text style and rendered smaller than sibling rows.
+                    HStack {
+                        Text("menu.appearance_mode")
+                        Spacer()
+                        Menu {
+                            Picker("", selection: $appearanceModeRaw) {
+                                ForEach(AppearanceMode.allCases) { mode in
+                                    Label(mode.labelKey, systemImage: mode.systemImage)
+                                        .tag(mode.rawValue)
+                                }
+                            }
+                            .pickerStyle(.inline)
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: appearanceMode.systemImage)
+                                Text(appearanceMode.labelKey)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption2)
+                            }
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            // Menu proposes its label LESS than intrinsic width on
+                            // device (larger Dynamic Type) and Text CLIPS without an
+                            // ellipsis ("Модерний" → "одерний"). fixedSize makes the
+                            // content dictate its own width. Values are short and
+                            // known — the row cannot overflow.
+                            .fixedSize()
+                        }
+                    }
+                    HStack {
+                        Text("menu.title_font")
+                        Spacer()
+                        Menu {
+                            Picker("", selection: $titleFontStyleRaw) {
+                                ForEach(TitleFontStyle.allCases) { style in
+                                    Text(style.labelKey).tag(style.rawValue)
+                                }
+                            }
+                            .pickerStyle(.inline)
+                        } label: {
+                            HStack(spacing: 5) {
+                                Text(titleFontStyle.labelKey)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption2)
+                            }
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize() // see comment on the Mode row above
+                        }
+                    }
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
                         .tint(.appBlue)
                     Toggle("menu.red_letters", isOn: $redLetters)
                         .tint(.appBlue)
                 }
-                .listRowBackground(Color("cardBackground"))
+                .listRowBackground(colorTheme.cardBackground)
                 Section("menu.section.translation") {
                     NavigationLink {
                         DefaultTranslationPickerView(
@@ -72,7 +157,7 @@ struct MenuView: View {
                                        value: defaultTranslationId)
                     }
                 }
-                .listRowBackground(Color("cardBackground"))
+                .listRowBackground(colorTheme.cardBackground)
                 Section("menu.section.reading") {
                     NavigationLink {
                         LaunchBehaviorPickerView(selectedRaw: $launchBehaviorRaw)
@@ -82,7 +167,7 @@ struct MenuView: View {
                         }
                     }
                 }
-                .listRowBackground(Color("cardBackground"))
+                .listRowBackground(colorTheme.cardBackground)
                 Section("menu.section.app") {
                     NavigationLink {
                         LanguageSettingsView()
@@ -93,7 +178,7 @@ struct MenuView: View {
                         Text("Source Bible v1.0")
                     }
                 }
-                .listRowBackground(Color("cardBackground"))
+                .listRowBackground(colorTheme.cardBackground)
                 Section("menu.section.statistics") {
                     Toggle(isOn: $analyticsEnabled) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -105,13 +190,60 @@ struct MenuView: View {
                     }
                     .tint(.appBlue)
                 }
-                .listRowBackground(Color("cardBackground"))
+                .listRowBackground(colorTheme.cardBackground)
                 }
                 .scrollContentBackground(.hidden)
                 .navigationTitle("tab.menu")
             }
         }
         .id(locale.identifier)
+    }
+}
+
+// MARK: - ThemeCardButton
+
+/// Apple Books-style theme preview card: a swatch of the theme's reader
+/// background with an "Aa" sample rendered in the active title font style.
+private struct ThemeCardButton: View {
+    let theme: ColorTheme
+    let isSelected: Bool
+    let titleFontStyle: TitleFontStyle
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(theme.appBackground)
+                    Text(verbatim: "Aa")
+                        .font(sampleFont)
+                        .foregroundStyle(.primary)
+                }
+                .frame(height: 64)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(
+                            isSelected ? Color.appBlue : Color(.separator).opacity(0.5),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                }
+                Text(theme.labelKey)
+                    .font(.footnote.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.appBlue : Color.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.15), value: isSelected)
+    }
+
+    private var sampleFont: Font {
+        switch titleFontStyle {
+        case .modern:  return .system(size: 26, weight: .bold)
+        case .antique: return .custom(TitleFontStyle.antiqueFontName, fixedSize: 28)
+        }
     }
 }
 

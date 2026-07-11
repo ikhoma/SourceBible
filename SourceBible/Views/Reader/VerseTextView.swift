@@ -188,7 +188,18 @@ struct VerseTextView: UIViewRepresentable {
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width > 0, width < .infinity else { return nil }
         let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: size.height)
+        // +1pt slack — ⚠️ DO NOT REMOVE.
+        //
+        // SwiftUI pixel-aligns the final frame: with any fractional content offset
+        // above this view (e.g. Cormorant/Antique titles have non-integral line
+        // heights) the assigned height can come out up to ~2/3 pt SHORT of what we
+        // return (measured: sizeThatFits 66.0 → frame 65.667 on 3x). TextKit 2
+        // (iOS 16+ UITextView) then drops the ENTIRE last line fragment that no
+        // longer fully fits the text container — the verse renders with its last
+        // line missing and a phantom gap below (bug: 2026-07-11, "порожні рядки в
+        // рідері"). One extra point absorbs the worst-case rounding on any scale;
+        // visually invisible between verses.
+        return CGSize(width: width, height: size.height + 1)
     }
 
     // MARK: NSAttributedString builders

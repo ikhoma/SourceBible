@@ -14,6 +14,7 @@ struct BookmarkCardView: View {
     let item: BookmarkWithVerses
 
     @EnvironmentObject private var readerVM: ReaderViewModel
+    @Environment(\.colorTheme) private var colorTheme
 
     @State private var verseText: String?
 
@@ -45,7 +46,7 @@ struct BookmarkCardView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color("cardBackground"))
+                .fill(colorTheme.cardBackground)
         )
         .onAppear {
             guard verseText == nil else { return }

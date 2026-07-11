@@ -28,7 +28,17 @@ struct SourceBibleApp: App {
 
     /// Persisted language code ("en" | "uk"). Drives locale environment on change.
     @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = Self.defaultLanguage
-    @AppStorage(AppStorageKeys.isDarkMode) private var isDarkMode: Bool = false
+
+    // MARK: - Appearance
+    //
+    // appearanceMode replaces the legacy isDarkMode Bool (migrated in init).
+    // colorTheme + titleFontStyle are injected into the environment so views
+    // re-render immediately when the user switches them in Menu.
+    @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.light.rawValue
+    @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
+    @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
+
+    private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .light }
 
     /// On first launch: follow system locale if supported, else "en".
     private static var defaultLanguage: String {
@@ -74,6 +84,13 @@ struct SourceBibleApp: App {
         // See ADR-006: docs/architecture/ADR-006-localization-translation-provider.md
         let lang = UserDefaults.standard.string(forKey: AppStorageKeys.appLanguage) ?? Self.defaultLanguage
         LocalizedBundle.install(language: lang)
+
+        // ── Appearance init ───────────────────────────────────────────────────
+        // Register the bundled Cormorant face (Antique title style) with Core
+        // Text — process scope, no Info.plist UIAppFonts entry required.
+        TitleFontStyle.registerBundledFonts()
+        // One-time migration: legacy isDarkMode Bool → appearanceMode enum.
+        AppearanceMode.migrateFromLegacyDarkMode()
 
         // Build the GRDB store — crashes on failure are intentional at init time
         // (a corrupted DB is unrecoverable; better to surface it immediately).
@@ -152,8 +169,11 @@ struct SourceBibleApp: App {
                         sessionTracker.handleBackground()
                     }
                 }
+                // Appearance: nil = Match Device (follow system)
+                .preferredColorScheme(appearanceMode.colorScheme)
+                .environment(\.colorTheme, ColorTheme(rawValue: colorThemeRaw) ?? .paper)
+                .environment(\.titleFontStyle, TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern)
                 // Localization
-                .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environment(\.locale, Locale(identifier: appLanguage))
                 .onChange(of: appLanguage) { _, lang in
                     LocalizedBundle.activate(language: lang)
