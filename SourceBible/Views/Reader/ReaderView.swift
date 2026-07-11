@@ -361,9 +361,12 @@ struct ChapterScrollContent: View {
                             }
                             .padding(.horizontal)
                             .padding(.top, 12)
-                            // When the sheet is open keep a small margin above the sheet;
-                            // when closed use the original generous bottom padding.
-                            .padding(.bottom, sheetOpen ? 16 : 100)
+                            // ux-013: last verse ends near the footer — small constant margin
+                            // in BOTH states. Reading mode: the ScrollView already respects the
+                            // bottom safe area, so 16pt is pure breathing room (was 100pt).
+                            // Study Mode room comes from the studyScrollRoom inset below, NOT
+                            // from this padding (ADR-021).
+                            .padding(.bottom, 16)
                         }
                         // R2: Study Mode locks user scrolling. Programmatic
                         // proxy.scrollTo(...) still works — required for chevron

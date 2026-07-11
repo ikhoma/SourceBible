@@ -498,6 +498,8 @@ struct SearchView: View {
                 }
             }
             .padding(.horizontal, 20)
+            // ux-013: consistent 16pt end-of-content margin (matches reader chapter end).
+            .padding(.bottom, 16)
         }
         .scrollDismissesKeyboard(.immediately)
     }
