@@ -1,0 +1,132 @@
+{
+  "identifier": "A64C2BDD-52CD-421A-B73B-005F1CCECDC9",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "1.00",
+      "familyShareable": false,
+      "internalID": "98CDC0F0-5475-435C-B978-67B7A3499EFD",
+      "localizations": [
+        {
+          "description": "Support SourceBible development",
+          "displayName": "Donate $1",
+          "locale": "en_US"
+        },
+        {
+          "description": "Підтримка розробки SourceBible",
+          "displayName": "Пожертва $1",
+          "locale": "uk"
+        }
+      ],
+      "productID": "com.ivankhoma.SourceBible.donation.1",
+      "referenceName": "Donation $1",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "5.00",
+      "familyShareable": false,
+      "internalID": "D53156EA-E789-4F7A-90BB-445A70E88908",
+      "localizations": [
+        {
+          "description": "Support SourceBible development",
+          "displayName": "Donate $5",
+          "locale": "en_US"
+        },
+        {
+          "description": "Підтримка розробки SourceBible",
+          "displayName": "Пожертва $5",
+          "locale": "uk"
+        }
+      ],
+      "productID": "com.ivankhoma.SourceBible.donation.5",
+      "referenceName": "Donation $5",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "10.00",
+      "familyShareable": false,
+      "internalID": "C57BEBFE-7198-4994-A44C-56F626BCCE4F",
+      "localizations": [
+        {
+          "description": "Support SourceBible development",
+          "displayName": "Donate $10",
+          "locale": "en_US"
+        },
+        {
+          "description": "Підтримка розробки SourceBible",
+          "displayName": "Пожертва $10",
+          "locale": "uk"
+        }
+      ],
+      "productID": "com.ivankhoma.SourceBible.donation.10",
+      "referenceName": "Donation $10",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "25.00",
+      "familyShareable": false,
+      "internalID": "DFDCD743-A45E-4F75-886A-C3783FBE3921",
+      "localizations": [
+        {
+          "description": "Support SourceBible development",
+          "displayName": "Donate $25",
+          "locale": "en_US"
+        },
+        {
+          "description": "Підтримка розробки SourceBible",
+          "displayName": "Пожертва $25",
+          "locale": "uk"
+        }
+      ],
+      "productID": "com.ivankhoma.SourceBible.donation.25",
+      "referenceName": "Donation $25",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "50.00",
+      "familyShareable": false,
+      "internalID": "4D06916C-C225-491B-9761-21DB0E97E07D",
+      "localizations": [
+        {
+          "description": "Support SourceBible development",
+          "displayName": "Donate $50",
+          "locale": "en_US"
+        },
+        {
+          "description": "Підтримка розробки SourceBible",
+          "displayName": "Пожертва $50",
+          "locale": "uk"
+        }
+      ],
+      "productID": "com.ivankhoma.SourceBible.donation.50",
+      "referenceName": "Donation $50",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "100.00",
+      "familyShareable": false,
+      "internalID": "88F03256-EEEA-4299-9C88-DAB7F5BA1A80",
+      "localizations": [
+        {
+          "description": "Support SourceBible development",
+          "displayName": "Donate $100",
+          "locale": "en_US"
+        },
+        {
+          "description": "Підтримка розробки SourceBible",
+          "displayName": "Пожертва $100",
+          "locale": "uk"
+        }
+      ],
+      "productID": "com.ivankhoma.SourceBible.donation.100",
+      "referenceName": "Donation $100",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

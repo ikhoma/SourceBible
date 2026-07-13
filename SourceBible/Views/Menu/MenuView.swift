@@ -179,6 +179,14 @@ struct MenuView: View {
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
+                Section("menu.section.support") {
+                    NavigationLink {
+                        DonationView()
+                    } label: {
+                        Label("menu.donation", systemImage: "heart")
+                    }
+                }
+                .listRowBackground(colorTheme.cardBackground)
                 Section("menu.section.statistics") {
                     Toggle(isOn: $analyticsEnabled) {
                         VStack(alignment: .leading, spacing: 4) {

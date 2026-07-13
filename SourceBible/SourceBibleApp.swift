@@ -136,6 +136,10 @@ struct SourceBibleApp: App {
                 .task {
                     analytics.track(.appOpened)
                     sessionTracker.handleForeground()
+                    // Start the StoreKit Transaction.updates listener at launch —
+                    // StoreKit re-delivers unfinished donation transactions from
+                    // the moment the listener starts (DonationService.init).
+                    _ = DonationService.shared
                     // Keyboard pre-warm: boots the system keyboard process so the
                     // first Note editor open doesn't pay the spin-up lag. Delayed
                     // off the first-frame render path; runs once per process.
