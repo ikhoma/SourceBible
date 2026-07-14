@@ -13,6 +13,7 @@ import SwiftUI
 struct LanguageSettingsView: View {
 
     @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
+    @Environment(\.colorTheme) private var colorTheme
 
     private struct Language: Identifiable {
         let code: String
@@ -51,7 +52,9 @@ struct LanguageSettingsView: View {
                 }
             }
             .buttonStyle(.plain)
+            .themedRow(colorTheme)
         }
+        .themedList(colorTheme)
         .navigationTitle("menu.language")
         .navigationBarTitleDisplayMode(.inline)
     }

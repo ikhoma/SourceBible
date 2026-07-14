@@ -602,9 +602,12 @@ struct VerseRowView: View {
                         onVerseTap: onVerseTap,
                         onWordTap: onWordTap
                     )
-                    // redLetters in the id() forces the base attributed string to rebuild
-                    // (with/without the red Jesus-words color) when the setting is toggled.
-                    .id("\(verse.id)-\(translationId)-\(verse.highlightColor ?? "none")-\(redLetters ? "rl" : "nrl")")
+                    // ⛔ Do NOT add redLetters (or any other global setting) back into this
+                    // id(). It changes the identity of every row at once → SwiftUI destroys
+                    // and recreates all UITextViews in the chapter (coordinator + gestures +
+                    // full TextKit layout ×N) → ~1s freeze on toggle. VerseTextView.updateUIView
+                    // already detects the redLetters change and rebuilds in place.
+                    .id("\(verse.id)-\(translationId)-\(verse.highlightColor ?? "none")")
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
                     .padding(.trailing, 12)
@@ -663,6 +666,7 @@ struct VerseRowView: View {
 struct TranslationPickerView: View {
     @EnvironmentObject var vm: ReaderViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorTheme) private var colorTheme
 
     var body: some View {
         NavigationStack {
@@ -679,7 +683,9 @@ struct TranslationPickerView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { vm.selectTranslation(t); dismiss() }
+                .themedRow(colorTheme)
             }
+            .themedList(colorTheme)
             .navigationTitle("reader.translation_picker.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -688,6 +694,7 @@ struct TranslationPickerView: View {
                 }
             }
         }
+        .themedSheet(colorTheme)
     }
 
     private func languageLabel(for code: String) -> LocalizedStringKey {

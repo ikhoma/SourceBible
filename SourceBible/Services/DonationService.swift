@@ -103,7 +103,7 @@ final class DonationService: ObservableObject {
                 // Finish it anyway so StoreKit stops re-delivering, but don't
                 // present it as a completed donation.
                 await transaction.finish()
-                purchaseState = .failed(String(localized: "donation.error.unverified"))
+                purchaseState = .failed(NSLocalizedString("donation.error.unverified", comment: ""))
             }
         case .pending:
             // Ask to Buy / SCA — the transaction arrives later via

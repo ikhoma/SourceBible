@@ -34,11 +34,11 @@ struct SourceBibleApp: App {
     // appearanceMode replaces the legacy isDarkMode Bool (migrated in init).
     // colorTheme + titleFontStyle are injected into the environment so views
     // re-render immediately when the user switches them in Menu.
-    @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.light.rawValue
+    @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.matchDevice.rawValue
     @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
     @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
 
-    private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .light }
+    private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .matchDevice }
 
     /// On first launch: follow system locale if supported, else "en".
     private static var defaultLanguage: String {

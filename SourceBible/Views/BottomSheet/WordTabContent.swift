@@ -610,6 +610,23 @@ private func highlightedVerseText(raw: String, fallback: String, strongsId: Stri
         }
     }
 
+    // bug-008/009: stripKJVSegment preserves leading/trailing spaces because the
+    // source encodes inter-word spacing as a *leading* space on each segment.
+    // That is correct BETWEEN segments, but at the edges of the verse it leaks out
+    // as a stray indent — visible as inconsistent leading spaces in the Usage list
+    // (a verse whose first segment starts with a space renders indented, one that
+    // doesn't renders flush). Trim the outer edges only; inner spacing is untouched.
+    if !segments.isEmpty {
+        segments[0].text = String(
+            segments[0].text.drop(while: { $0 == " " })
+        )
+        let lastIdx = segments.count - 1
+        while segments[lastIdx].text.hasSuffix(" ") {
+            segments[lastIdx].text.removeLast()
+        }
+        segments.removeAll { $0.text.isEmpty }
+    }
+
     // Render: highlight any segment whose number set contains our target.
     var result = AttributedString()
     for seg in segments {

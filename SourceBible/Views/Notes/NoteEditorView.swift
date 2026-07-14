@@ -9,6 +9,7 @@ struct NoteEditorView: View {
     @EnvironmentObject private var router:    AppNavigationRouter
     @EnvironmentObject private var readerVM:  ReaderViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorTheme) private var colorTheme
 
     @State private var noteWithBlocks: NoteWithBlocks
     @State private var textBody: String
@@ -69,6 +70,10 @@ struct NoteEditorView: View {
                 .padding(.bottom, 16)
             }
         }
+        // Applied HERE, not at the call sites: this editor is presented from both
+        // NotesListView and VerseBottomSheetView, so a call-site fix would only
+        // theme one of them. The inner UITextView is already .clear.
+        .themedSheet(colorTheme)
     }
 
     // MARK: - Helpers
@@ -82,7 +87,7 @@ struct NoteEditorView: View {
            let content = decodeVerseBlock(block) {
             return verseRef(from: content.verseId)
         }
-        return String(localized: "action.note")
+        return NSLocalizedString("action.note", comment: "")
     }
 
     private func decodeVerseBlock(_ block: NoteBlock) -> VerseBlockContent? {
@@ -166,7 +171,7 @@ private struct NoteTextEditor: UIViewControllerRepresentable {
         func textViewDidEndEditing(_ textView: UITextView) {
             isEditing = false
             if textView.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                textView.text      = String(localized: "notes.editor.placeholder")
+                textView.text      = NSLocalizedString("notes.editor.placeholder", comment: "")
                 textView.textColor = .tertiaryLabel
             }
         }
@@ -211,7 +216,7 @@ private final class NoteEditorHostController: UIViewController {
         tv.translatesAutoresizingMaskIntoConstraints = false
 
         if initialText.isEmpty {
-            tv.text      = String(localized: "notes.editor.placeholder")
+            tv.text      = NSLocalizedString("notes.editor.placeholder", comment: "")
             tv.textColor = .tertiaryLabel
         } else {
             tv.text = initialText

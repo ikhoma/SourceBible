@@ -3567,6 +3567,23 @@
         }
       }
     },
+    "theologian.calvin.short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calvin"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Кальвін"
+          }
+        }
+      }
+    },
     "theologian.calvin.style" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3614,6 +3631,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Меттью Генрі"
+          }
+        }
+      }
+    },
+    "theologian.henry.short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henry"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Генрі"
           }
         }
       }
@@ -3669,6 +3703,23 @@
         }
       }
     },
+    "theologian.owen.short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Owen"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оуен"
+          }
+        }
+      }
+    },
     "theologian.owen.style" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3716,6 +3767,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Чарльз Сперджен"
+          }
+        }
+      }
+    },
+    "theologian.spurgeon.short" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spurgeon"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сперджен"
           }
         }
       }

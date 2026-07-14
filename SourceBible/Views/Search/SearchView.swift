@@ -94,7 +94,10 @@ struct SearchView: View {
             text: $searchText,
             isPresented: $isSearchActive,
             placement: .automatic,
-            prompt: String(localized: "search.prompt.keyword")
+            // bug-018: String(localized:) bypasses the LocalizedBundle swizzle and
+            // resolves against the system locale (always EN). Text(_:) resolves the
+            // key through Bundle.main at render time → follows the in-app language.
+            prompt: Text("search.prompt.keyword")
         )
         .onSubmit(of: .search) {
             commit(query: searchText)
@@ -165,9 +168,7 @@ struct SearchView: View {
         if #available(iOS 26.0, *) {
             resultsBody(pinnedFilterBar: false)
                 .safeAreaBar(edge: .top) {
-                    filterBar
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
+                    filterBar   // padding is inside filterBar — see note there
                 }
         } else {
             resultsBody(pinnedFilterBar: true)
@@ -184,8 +185,6 @@ struct SearchView: View {
             // iOS 18: no safeAreaBar — keep the chips above the empty state manually.
             VStack(spacing: 0) {
                 filterBar
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
                 emptyResultsView
             }
         } else {
@@ -285,6 +284,14 @@ struct SearchView: View {
         }
     }
 
+    /// ⚠️ The padding lives INSIDE the ScrollView, on the HStack — do not move it back
+    /// out to the call sites. A horizontal ScrollView clips to its bounds, and the
+    /// `.glass` chips draw their Liquid Glass shadow OUTSIDE the capsule: with the
+    /// padding outside the scroll view there was no room inside the clip rect and the
+    /// shadow was sliced off flat on all four sides (bug: "shadow behind filters looks
+    /// cut off", 2026-07-14). Padding the content gives the shadow room within the clip
+    /// AND lets the bar span the full width, so the scroll-edge blur reaches the screen
+    /// edges instead of stopping at a 20pt inset.
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -302,7 +309,16 @@ struct SearchView: View {
                     }
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
         }
+        // The .glass chips' shadow blur is wider than any padding we'd want to add
+        // (padding alone just pushes the pills around and still clips at the bottom).
+        // scrollClipDisabled lets the shadow render outside the scroll view's bounds.
+        // Safe here: the content only overflows HORIZONTALLY when the chips are wider
+        // than the screen, and that overflow lands in the 20pt side margins — there is
+        // no vertical overflow to leak over the results list.
+        .scrollClipDisabled()
     }
 
     /// Filter chip styled like the Reader's toolbar pickers (`pickerGroup`):
@@ -365,13 +381,15 @@ struct SearchView: View {
     private var testamentSheet: some View {
         NavigationStack {
             List {
-                testamentRow("search.filter.all", .all)
-                testamentRow("search.filter.old", .old)
-                testamentRow("search.filter.new", .new)
+                testamentRow("search.filter.all", .all).themedRow(colorTheme)
+                testamentRow("search.filter.old", .old).themedRow(colorTheme)
+                testamentRow("search.filter.new", .new).themedRow(colorTheme)
             }
+            .themedList(colorTheme)
             .navigationTitle("search.filter.testament.title")
             .navigationBarTitleDisplayMode(.inline)
         }
+        .themedSheet(colorTheme)
         .presentationDetents([.medium])
     }
 
@@ -418,6 +436,7 @@ struct SearchView: View {
                     selectedBookId    = nil
                     activeFilterSheet = nil
                 }
+                .themedRow(colorTheme)
 
                 ForEach(bookSheetCounts) { entry in
                     HStack {
@@ -435,11 +454,14 @@ struct SearchView: View {
                         selectedBookId    = entry.bookId
                         activeFilterSheet = nil
                     }
+                    .themedRow(colorTheme)
                 }
             }
+            .themedList(colorTheme)
             .navigationTitle("search.filter.book.title")
             .navigationBarTitleDisplayMode(.inline)
         }
+        .themedSheet(colorTheme)
         .presentationDetents([.medium, .large])
     }
 
@@ -493,8 +515,12 @@ struct SearchView: View {
                 } header: {
                     if pinnedFilterBar {
                         filterBar
-                            .padding(.vertical, 8)
                             .background(.ultraThinMaterial)
+                            // Cancel the LazyVStack's 20pt horizontal padding for the
+                            // header only: the material band must reach the screen edges,
+                            // otherwise it ends in a hard vertical cut 20pt in from each
+                            // side. filterBar re-applies the 20pt inset to the chips.
+                            .padding(.horizontal, -20)
                     }
                 }
             }

@@ -145,15 +145,15 @@ extension Theologian {
     ) }
     static var all: [Theologian] { [calvin, henry, spurgeon, owen] }
 
-    /// Abbreviated display name for use in compact headers, e.g. "Calvin".
+    /// Abbreviated display name for use in compact headers, e.g. "Calvin" / "Кальвін".
+    ///
+    /// bug-028: these were hardcoded English literals, so the commentary detail title
+    /// showed "Calvin" while the list (which uses Text(LocalizedStringKey(nameKey)))
+    /// correctly showed "Кальвін". NSLocalizedString — NOT String(localized:) — because
+    /// only the former goes through Bundle.main.localizedString(forKey:value:table:),
+    /// which is what the LocalizedBundle swizzle overrides.
     var shortName: String {
-        switch id {
-        case "calvin":   return "Calvin"
-        case "henry":    return "Henry"
-        case "spurgeon": return "Spurgeon"
-        case "owen":     return "Owen"
-        default:         return id.capitalized
-        }
+        NSLocalizedString("theologian.\(id).short", value: id.capitalized, comment: "")
     }
 }
 

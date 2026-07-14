@@ -140,9 +140,15 @@ struct VerseTextView: UIViewRepresentable {
             }
         }()
 
-        // Rebuild attributed string only when verse content or highlight colour changed.
+        // Rebuild attributed string only when verse content, highlight colour, or the
+        // red-letter setting changed. redLetters is deliberately handled HERE and not
+        // via .id() in VerseRowView: putting a global setting in the row identity makes
+        // SwiftUI destroy + recreate every UITextView in the chapter on each toggle
+        // (new coordinator, new gesture recognizers, full TextKit layout ×N verses),
+        // which froze the reader for ~1s. Updating in place is an order cheaper.
         let contentChanged = coord.parsed.verseId != parsed.verseId
                           || coord.highlightColor  != highlightColor
+                          || coord.redLetters      != redLetters
         if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
             coord.baseAttributedString = buildBaseAttributedString()
         }
@@ -172,6 +178,7 @@ struct VerseTextView: UIViewRepresentable {
 
         coord.parsed         = parsed
         coord.highlightColor = highlightColor
+        coord.redLetters     = redLetters
         coord.onVerseTap     = onVerseTap
         coord.onWordTap      = onWordTap
     }
@@ -179,6 +186,7 @@ struct VerseTextView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator {
         let coord = Coordinator(parsed: parsed, highlightColor: highlightColor,
                                 onVerseTap: onVerseTap, onWordTap: onWordTap)
+        coord.redLetters = redLetters
         coord.baseAttributedString = buildBaseAttributedString()
         return coord
     }
@@ -301,7 +309,7 @@ struct VerseTextView: UIViewRepresentable {
     }
 
     private func resolveColor(_ styles: SegmentStyle) -> UIColor {
-        (redLetters && styles.contains(.jesusWords)) ? .systemRed : .label
+        (redLetters && styles.contains(.jesusWords)) ? .redLetterText : .label
     }
 
     // MARK: Coordinator
@@ -310,6 +318,9 @@ struct VerseTextView: UIViewRepresentable {
 
         var parsed:               ParsedVerse
         var highlightColor:       String?
+        /// Last-rendered red-letter setting; compared in updateUIView to know when the
+        /// base attributed string must be rebuilt with/without the Jesus-words colour.
+        var redLetters:           Bool = false
         var onVerseTap:           () -> Void
         var onWordTap:            (VerseSegment) -> Void
         /// Cached base string (text + styles + highlight). Rebuilt only when content changes.

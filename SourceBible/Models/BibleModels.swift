@@ -21,8 +21,8 @@ enum Testament: String, CaseIterable {
     /// rawValues are stored in the DB and must not change.
     var localizedName: String {
         switch self {
-        case .old: return String(localized: "testament.old")
-        case .new: return String(localized: "testament.new")
+        case .old: return NSLocalizedString("testament.old", comment: "")
+        case .new: return NSLocalizedString("testament.new", comment: "")
         }
     }
 }

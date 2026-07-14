@@ -90,6 +90,10 @@ struct AnalyticsConsentCard: View {
 
 struct AnalyticsConsentModifier: ViewModifier {
     @AppStorage(AppStorageKeys.analyticsConsentShown) private var consentShown: Bool = false
+    // Reaches this modifier even though .analyticsConsentIfNeeded() is applied before
+    // .environment(\.colorTheme) in SourceBibleApp: the later modifier wraps the chain,
+    // so it is an ancestor and the value flows down.
+    @Environment(\.colorTheme) private var colorTheme
     @State private var showSheet = false
     @State private var sheetHeight: CGFloat = 300
 
@@ -116,6 +120,7 @@ struct AnalyticsConsentModifier: ViewModifier {
                     }
                     .presentationDetents([.height(sheetHeight)])
                     .presentationDragIndicator(.visible)
+                    .themedSheet(colorTheme)
             }
     }
 }

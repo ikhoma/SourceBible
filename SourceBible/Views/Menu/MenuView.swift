@@ -6,7 +6,7 @@ import SwiftUI
 struct MenuView: View {
     @EnvironmentObject var readerVM: ReaderViewModel
     @State private var brightness: Double = Double(UIScreen.main.brightness)
-    @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.light.rawValue
+    @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.matchDevice.rawValue
     @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
     @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
@@ -28,7 +28,7 @@ struct MenuView: View {
     // in UserDefaults; the environment re-injects from SourceBibleApp).
     private var colorTheme: ColorTheme { ColorTheme(rawValue: colorThemeRaw) ?? .paper }
     private var titleFontStyle: TitleFontStyle { TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern }
-    private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .light }
+    private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .matchDevice }
 
     private var launchBehaviorLabel: LocalizedStringKey {
         LaunchBehavior(rawValue: launchBehaviorRaw) == .lastBookmark
@@ -174,8 +174,16 @@ struct MenuView: View {
                     } label: {
                         LabeledContent("menu.language", value: currentLanguageLabel)
                     }
+                    // bug-023: the About destination had no navigation title.
+                    // bug-022: the only text here is the version string, which is a
+                    // proper noun and not translatable — real About copy still TBD.
                     NavigationLink("menu.about") {
-                        Text("Source Bible v1.0")
+                        ZStack {
+                            colorTheme.appBackground.ignoresSafeArea()
+                            Text("Source Bible v1.0")
+                        }
+                        .navigationTitle("menu.about")
+                        .navigationBarTitleDisplayMode(.inline)
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
@@ -232,13 +240,20 @@ private struct ThemeCardButton: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .strokeBorder(
-                            isSelected ? Color.appBlue : Color(.separator).opacity(0.5),
+                            // Selection indicator follows the primary label colour
+                            // (black in light, white in dark) rather than the brand
+                            // blue: the blue read as a third accent competing with
+                            // the theme swatches themselves.
+                            isSelected ? Color.primary : Color(.separator).opacity(0.5),
                             lineWidth: isSelected ? 2 : 1
                         )
                 }
                 Text(theme.labelKey)
-                    .font(.footnote.weight(isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? Color.appBlue : Color.secondary)
+                    // Same weight in both states — selection is carried by the border
+                    // and label colour alone. A weight change also shifted the caption
+                    // width between states.
+                    .font(.footnote)
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
@@ -260,6 +275,7 @@ private struct ThemeCardButton: View {
 struct LaunchBehaviorPickerView: View {
     @Binding var selectedRaw: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorTheme) private var colorTheme
 
     private struct Option: Identifiable {
         let behavior: LaunchBehavior
@@ -296,7 +312,9 @@ struct LaunchBehaviorPickerView: View {
                 selectedRaw = opt.behavior.rawValue
                 dismiss()
             }
+            .themedRow(colorTheme)
         }
+        .themedList(colorTheme)
         .navigationTitle("menu.launch_behavior")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -311,6 +329,7 @@ struct DefaultTranslationPickerView: View {
     /// Translation filter passes its own key when reusing this picker in a sheet.
     var titleKey: LocalizedStringKey = "menu.default_translation"
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorTheme) private var colorTheme
 
     var body: some View {
         List(translations) { t in
@@ -331,7 +350,9 @@ struct DefaultTranslationPickerView: View {
                 selectedId = t.id
                 dismiss()
             }
+            .themedRow(colorTheme)
         }
+        .themedList(colorTheme)
         .navigationTitle(titleKey)
         .navigationBarTitleDisplayMode(.inline)
     }

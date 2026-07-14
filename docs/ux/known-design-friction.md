@@ -23,7 +23,7 @@ stop tripping). This doc is the single feed for the **onboarding tutorial / FAQ*
 | Item | Confusion | Why (by design) | Reporters | Decision | Refs |
 |---|---|---|---|---|---|
 | ~~ux-001~~ **RESOLVED 2026-07-10** | Swipe over the center of the page doesn't turn pages; feels broken | Was: edge-only paging. Superseded by ADR-026 Phase 2 — full-surface swipe via UIPageViewController; no gesture clash on device | 1 | **Resolved by design change** (tutorial item dropped) | PDR-Page-Turn-Gesture-Zone (amended); `docs/ux/done/ux-001.md` |
-| bug-006 *(candidate)* | Original-tab gloss shows in English under RST | Lexical glosses are English-only for MVP (ADR-006; translated lexicon is a later stage) | 1 | Pending — confirm reporter meant the gloss (by-design) vs labels (real bug) | ADR-006; memory "Dataset language strategy" |
+| **bug-006** *(+ bug-027 data half)* | Original / Meaning shows English gloss + English Strong's definitions under a Ukrainian UI + RST | Lexical **data** is English-only for MVP — the dataset (Macula, TBESH/TBESG, BDB, Thayer's) is human-authored English and there is no RST/UA gloss column; machine translation of definitions is rejected on trust grounds | 1 | **Accept** — no in-UI affordance for now; revisit at ~3 distinct reporters (then add a small "English lexicon" note on the panels) | PDR-Lexicon-Language; ADR-006; memory "Dataset language strategy", "LLM-generated content trust hypothesis" |
 
 ## Tutorial backlog
 

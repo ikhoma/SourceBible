@@ -8,6 +8,7 @@ struct BookChapterPickerView: View {
     @EnvironmentObject var vm: ReaderViewModel
     @Environment(\.dismiss) var dismiss
     @Environment(\.locale) private var locale
+    @Environment(\.colorTheme) private var colorTheme
 
     @State private var step: Step = .book
     @State private var selectedBook: BibleBook? = nil
@@ -53,17 +54,21 @@ struct BookChapterPickerView: View {
                 }
             }
         }
+        // Covers all three steps: bookList (themed below), bookTiles and chapterGrid
+        // are plain ScrollViews and render straight onto the sheet surface.
+        .themedSheet(colorTheme)
     }
 
     private var bookList: some View {
         List {
             Section(header: Text("testament.old")) {
-                ForEach(filtered(.old)) { book in bookRow(book) }
+                ForEach(filtered(.old)) { book in bookRow(book).themedRow(colorTheme) }
             }
             Section(header: Text("testament.new")) {
-                ForEach(filtered(.new)) { book in bookRow(book) }
+                ForEach(filtered(.new)) { book in bookRow(book).themedRow(colorTheme) }
             }
         }
+        .themedList(colorTheme)
         .searchable(text: $searchText, prompt: Text("picker.search_book"))
         .navigationTitle("picker.title_book")
     }
@@ -73,7 +78,11 @@ struct BookChapterPickerView: View {
         return HStack {
             Text(displayName)
             Spacer()
-            Text(String(format: String(localized: "picker.chapters_count"), book.chapterCount))
+            // bug-025: String(localized:) bypasses the LocalizedBundle swizzle → always "ch.".
+            // NSLocalizedString goes through Bundle.main.localizedString(forKey:value:table:)
+            // which IS swizzled, so this now follows the in-app language ("гл.").
+            Text(String(format: NSLocalizedString("picker.chapters_count", comment: ""),
+                        book.chapterCount))
                 .font(.caption).foregroundStyle(.secondary)
             if vm.currentBook.id == book.id {
                 Image(systemName: "checkmark").font(.caption).foregroundStyle(.appBlue)
@@ -107,9 +116,12 @@ struct BookChapterPickerView: View {
             step = .chapter
         } label: {
             Text(vm.shortBookName(for: book.id))
-                .font(.callout).fontWeight(.medium)
+                // Same type as the list rows: .body, regular weight, and NO
+                // minimumScaleFactor — the 0.7 factor was silently shrinking the
+                // longer abbreviations, so the tiles rendered smaller than the list
+                // even once the font matched. Names here are short-form already.
+                .font(.body)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
                 .frame(height: 44).frame(maxWidth: .infinity)
                 .background(isCurrent ? Color.primary : (isNT ? Color.appBlue : Color(UIColor.secondarySystemFill)))
                 .foregroundStyle(isCurrent ? Color(UIColor.systemBackground) : (isNT ? .white : .primary))
@@ -153,9 +165,8 @@ struct BookChapterPickerView: View {
                         dismiss()
                     } label: {
                         Text("\(ch)")
-                            .font(.callout).fontWeight(.medium)
+                            .font(.body)   // matches the book tiles / list rows
                             .lineLimit(1)
-                            .minimumScaleFactor(0.7)
                             .frame(height: 44).frame(maxWidth: .infinity)
                             .background(isActive ? Color.primary : Color(UIColor.secondarySystemFill))
                             .foregroundStyle(isActive ? Color(UIColor.systemBackground) : .primary)

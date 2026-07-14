@@ -67,7 +67,7 @@ struct NoteCardView: View {
             let block = item.blocks.first(where: { $0.type == .verse }),
             let c = try? JSONDecoder().decode(
                 VerseBlockContent.self, from: Data(block.content.utf8))
-        else { return String(localized: "notes.row.default_title") }
+        else { return NSLocalizedString("notes.row.default_title", comment: "") }
 
         let parts = c.verseId.split(separator: "|")
         guard parts.count == 3 else { return c.verseId }

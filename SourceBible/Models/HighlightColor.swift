@@ -71,13 +71,13 @@ enum HighlightColor: String, CaseIterable, Codable {
     /// Localized display name for the color picker.
     var label: String {
         switch self {
-        case .yellow: return String(localized: "highlight.color.yellow")
-        case .green:  return String(localized: "highlight.color.green")
-        case .purple: return String(localized: "highlight.color.purple")
-        case .pink:   return String(localized: "highlight.color.pink")
-        case .orange: return String(localized: "highlight.color.orange")
-        case .mint:   return String(localized: "highlight.color.mint")
-        case .blue:   return String(localized: "highlight.color.blue")
+        case .yellow: return NSLocalizedString("highlight.color.yellow", comment: "")
+        case .green:  return NSLocalizedString("highlight.color.green", comment: "")
+        case .purple: return NSLocalizedString("highlight.color.purple", comment: "")
+        case .pink:   return NSLocalizedString("highlight.color.pink", comment: "")
+        case .orange: return NSLocalizedString("highlight.color.orange", comment: "")
+        case .mint:   return NSLocalizedString("highlight.color.mint", comment: "")
+        case .blue:   return NSLocalizedString("highlight.color.blue", comment: "")
         }
     }
 
@@ -124,4 +124,13 @@ extension UIColor {
     /// Accent tint applied to the *text* of the selected word in the reader
     /// (foregroundColor, not background).
     static let wordSelectionTint = UIColor.appBlue
+
+    /// Words of Christ ("red letters") in the reader.
+    /// Light #B42836 / Dark #DE6672 — both meet WCAG AA (4.5:1) against the
+    /// reader background. `.systemRed` failed contrast in light mode.
+    static let redLetterText = UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0xDE / 255, green: 0x66 / 255, blue: 0x72 / 255, alpha: 1)
+            : UIColor(red: 0xB4 / 255, green: 0x28 / 255, blue: 0x36 / 255, alpha: 1)
+    }
 }

@@ -165,7 +165,12 @@ struct CrossRefsView: View {
                     HStack(alignment: .center, spacing: 12) {
                         VStack(alignment: .leading, spacing: 6) {
                             ReferenceLabel(ref.targetReference)
-                            if ref.targetText.isEmpty {
+                            // bug-007: never print the fallback (English) text next to
+                            // the active translation. Versification is resolved in
+                            // DatabaseService.loadCrossReferences, so isFallback here
+                            // means the translation genuinely has no text for the verse
+                            // — show the placeholder rather than silently mixing languages.
+                            if ref.targetText.isEmpty || ref.isFallback {
                                 Text("verse.text_unavailable")
                                     .font(.callout).foregroundStyle(.tertiary).italic()
                             } else {
@@ -344,6 +349,7 @@ struct OriginalWordsView: View {
 
 struct CommentariesView: View {
     let verseId: String
+    @Environment(\.colorTheme) private var colorTheme
     @State private var selectedTheologian: Theologian? = nil
     @State private var availableSources: Set<String> = []
 
@@ -410,6 +416,12 @@ struct CommentariesView: View {
             NavigationStack {
                 CommentaryDetailView(theologian: t, verseId: verseId)
             }
+            // The stacked commentary sheet defaults to the system sheet surface
+            // (white / systemBackground), which ignored the theme — it stayed cold
+            // white under Incunable. presentationBackground paints the sheet itself
+            // (not the content), so it also covers the area behind the nav bar and
+            // the safe-area insets, matching VerseBottomSheetView's sheetBackground.
+            .presentationBackground(colorTheme.sheetBackground)
         }
     }
 }
