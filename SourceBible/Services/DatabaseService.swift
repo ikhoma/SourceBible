@@ -652,6 +652,51 @@ final class DatabaseService: @unchecked Sendable {
                                     maculaVerse: mt, translation: target) ?? mt
     }
 
+    /// Original-language (Macula) words for a translation verse, via `verse_org` (ADR-028).
+    ///
+    /// Supersedes the `verse_map` + `findBestMaculaVerse` heuristic for the Original pill.
+    /// `verse_org` is total and testament-agnostic, so this handles what the old Int-based
+    /// path could not: cross-CHAPTER shifts (RST Psalter = Hebrew+1, 1Chr 6, Daniel 6,
+    /// Isa 64), cross-testament (NT → Macula Greek), and merged N:M verses.
+    ///
+    /// Returns [] for an explicit "no original" mapping (org_* NULL) — e.g. KJV/NASB
+    /// NEH 7:68 (horses) or RST ROM 16:24 (grace): verses absent from the critical
+    /// Hebrew/Greek text. The Original pill then shows its empty state, not a wrong verse.
+    ///
+    /// Transition safety: if no `verse_org` row exists (DB not yet rebuilt with the table),
+    /// falls back to identity (same book/chapter/verse) — the old behavior for that verse.
+    func loadOriginalWords(bookId: String, chapter: Int, verse: Int,
+                           translation: String) -> [BibleWord] {
+        guard isAvailable else {
+            return loadWords(bookId: bookId, chapter: chapter, verse: verse)
+        }
+        var refs: [(String, Int, Int)] = []
+        var sawRow = false
+        let sql = """
+            SELECT org_book_id, org_chapter, org_verse FROM verse_org
+            WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
+            ORDER BY org_chapter, org_verse
+            """
+        query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
+            sawRow = true
+            if let ob = optString(stmt, 0),
+               let oc = optInt(stmt, 1),
+               let ov = optInt(stmt, 2) {
+                refs.append((ob, oc, ov))
+            }
+        }
+        // No row at all → DB predates verse_org; keep old identity behavior for this verse.
+        if !sawRow {
+            return loadWords(bookId: bookId, chapter: chapter, verse: verse)
+        }
+        // Row(s) present. All-NULL org ⇒ "no original" ⇒ [] (correct empty state).
+        var out: [BibleWord] = []
+        for (ob, oc, ov) in refs {
+            out += loadWords(bookId: ob, chapter: oc, verse: ov)
+        }
+        return out
+    }
+
     // MARK: - Cross References
 
     func loadCrossReferences(bookId: String, chapter: Int, verse: Int,

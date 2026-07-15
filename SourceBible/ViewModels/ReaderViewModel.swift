@@ -777,14 +777,16 @@ class ReaderViewModel: ObservableObject {
         isLoading = false
     }
 
-    /// Load words for a verse on demand (called from bottom sheet).
-    /// Uses Strong's overlap matching to find the correct Macula verse number,
-    /// correcting for MT/translation numbering offsets (common in 62 Psalm chapters
-    /// where the Hebrew superscription counts as verse 1 but translations omit it).
+    /// Load original-language words for the selected verse on demand (Original pill).
+    ///
+    /// ADR-028: resolves the verse's original text through `verse_org` (curated,
+    /// build-time, O2-verified), replacing the old `findBestMaculaVerse` heuristic.
+    /// Handles cross-chapter shifts (RST Psalter, 1Chr 6, Daniel 6, Isa 64), the NT
+    /// (Macula Greek), merged N:M verses, and "no original" verses (empty result).
     func loadWordsForSelectedVerse() {
         guard let verse = selectedVerse else { return }
-        let maculaVerse = findBestMaculaVerse(for: verse)
-        let words = db.loadWords(bookId: verse.bookId, chapter: verse.chapter, verse: maculaVerse)
+        let words = db.loadOriginalWords(bookId: verse.bookId, chapter: verse.chapter,
+                                         verse: verse.number, translation: currentTranslation.id)
         if let idx = verses.firstIndex(where: { $0.id == verse.id }) {
             let v = verses[idx]
             verses[idx] = BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
@@ -792,50 +794,6 @@ class ReaderViewModel: ObservableObject {
                                      highlightColor: v.highlightColor, parsed: v.parsed)
             selectedVerse = verses[idx]
         }
-    }
-
-    /// Returns the Macula (MT) verse number for the given translation verse.
-    ///
-    /// Resolution order:
-    ///   1. verse_map table (deterministic, pre-computed at DB build time)
-    ///      — covers all 459 chapters across all translations where counts differ.
-    ///   2. Identity mapping (translation verse == Macula verse) for all other chapters.
-    ///   3. Strong's-overlap heuristic (±2 search) as a safety net for any
-    ///      genuinely unmapped edge cases.
-    private func findBestMaculaVerse(for verse: BibleVerse) -> Int {
-        // 1. DB lookup — O(1) indexed read
-        if let mapped = db.findMaculaVerse(bookId: verse.bookId,
-                                           chapter: verse.chapter,
-                                           translationVerse: verse.number,
-                                           translation: currentTranslation.id) {
-            return mapped
-        }
-
-        // 2. Identity — the vast majority of chapters need no adjustment
-        //    Verify with a quick Strong's check before trusting identity.
-        let prefix = (allBooks.first { $0.id == verse.bookId }?.testament == .new) ? "G" : "H"
-        let parsedStrongs = Set(
-            verse.parsed?.segments.flatMap(\.strongs).map { id in
-                id.hasPrefix("S") ? prefix + id.dropFirst() : id
-            } ?? []
-        )
-        guard parsedStrongs.count >= 2 else { return verse.number }
-
-        let exactWords   = db.loadWords(bookId: verse.bookId, chapter: verse.chapter, verse: verse.number)
-        let exactStrongs = Set(exactWords.compactMap(\.strongsId))
-        if parsedStrongs.intersection(exactStrongs).count >= 2 { return verse.number }
-
-        // 3. Heuristic fallback — unmapped edge case
-        var bestVerse   = verse.number
-        var bestOverlap = parsedStrongs.intersection(exactStrongs).count
-        for delta in [-1, 1, -2, 2] {
-            let candidate = verse.number + delta
-            guard candidate > 0 else { continue }
-            let words   = db.loadWords(bookId: verse.bookId, chapter: verse.chapter, verse: candidate)
-            let overlap = parsedStrongs.intersection(Set(words.compactMap(\.strongsId))).count
-            if overlap > bestOverlap { bestOverlap = overlap; bestVerse = candidate }
-        }
-        return bestVerse
     }
 
     /// Returns verse text in all available translations.

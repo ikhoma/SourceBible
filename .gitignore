@@ -6,9 +6,19 @@ sourcebible.db-shm
 # Bundled DB in Resources — generated, not source-controlled (149 MB)
 SourceBible/Resources/sourcebible.db
 
+# Local DB backups (sqlite .backup copies, ~150–190 MB each — never commit,
+# exceed GitHub's 100 MB limit and cause push rejection)
+backups/
+
 # ── Datasets (large / licensed — download manually, see docs/BUILD.md) ──
-data/
+data/*
 scripts/.cache/
+
+# EXCEPTION: versification build inputs are small (MIT .vrs) and curated
+# (overrides.tsv = hand-derived mapping decisions, ADR-028) — MUST be tracked,
+# else a fresh checkout loses them and the build is not reproducible.
+!data/versification/
+!data/versification/**
 
 # ── macOS ─────────────────────────────────────────────────────
 .DS_Store

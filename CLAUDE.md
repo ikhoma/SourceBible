@@ -233,22 +233,31 @@ Mac має Python 3.9 за замовчуванням. Не використов
 
 ## Повний цикл збірки DB
 
+**Канонічний конвеєр — `./rebuild.sh`** (оркеструє всі кроки нижче). Вручну:
+
 ```bash
 cd ~/Projects/SourceBible
-python3 scripts/build_db.py                      # ~10 хв
-python3 build_verse_map.py sourcebible.db        # ~1 хв, 7292 рядки
+python3 scripts/build_db.py                      # ~10 хв (ядро: word, verse, strongs, FTS)
+python3 build_verse_map.py sourcebible.db        # ~1 хв, verse_map (крос-рефи)
+python3 scripts/build_versification.py sourcebible.db  # verse_org — «Оригінал» (ADR-028); падає на CONFLICT
 python3 scripts/import_commentaries.py sourcebible.db  # ~2 хв, 36 071 вірші (Calvin + Henry + Spurgeon + Owen)
 python3 scripts/process_glosses.py sourcebible.db      # синтез глос
 cp sourcebible.db SourceBible/Resources/sourcebible.db
 # Xcode: ⇧⌘K → Run
 ```
 
+**⛔ `build_versification.py` вимагає `data/versification/{org,eng,rso}.json` + `overrides.tsv`.**
+Ці файли — курований build-input (ADR-028), трекаються в git (виняток у `.gitignore`,
+решта `data/` ігнорується). Без них крок падає. `overrides.tsv` — рішення виведені й
+O2-перевірені вручну; НЕ регенерувати наосліп. verse_org поки НЕ замінює verse_map:
+`verse_map`+`convertVerse` лишаються для крос-рефів (DROP — окрема фаза).
+
 ## Що реалізовано (не реалізовувати повторно)
 
 | Компонент | Файл | Статус |
 |-----------|------|--------|
-| verse_map + findBestMaculaVerse (3 рівні) | `ReaderViewModel.swift` | ✅ |
-| findMaculaVerse() DB lookup | `DatabaseService.swift` | ✅ |
+| verse_org → loadOriginalWords (ADR-028; крос-глава/тестамент/N:M/«немає оригіналу») | `DatabaseService.swift` + `ReaderViewModel.swift` | ✅ (findBestMaculaVerse ВИДАЛЕНО) |
+| findMaculaVerse()/convertVerse() — лишились для крос-рефів (verse_map) | `DatabaseService.swift` | ✅ |
 | MorphologyDecoder case "S" (займ. суф.) | `WordTabContent.swift` | ✅ |
 | Header xlit: Macula ctx > xlitSimple > transliteration | `WordTabContent.swift` | ✅ |
 | Sub-entry xlit fix (H871a, H1886d, H2050b) | `build_db.py` → verify_xlit_integrity | ✅ |

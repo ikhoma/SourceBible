@@ -26,8 +26,14 @@
 | `ASV+.zip` | MyBible модуль | Public domain |
 | `NASB+.zip` | MyBible модуль | Licensed — не розповсюджувати |
 | `RST+.zip` | MyBible модуль | Public domain |
+| `versification/{org,eng,rso}.json` | [Copenhagen-Alliance/versification-specification](https://github.com/Copenhagen-Alliance/versification-specification) → `standard-mappings/` | MIT |
+| `versification/overrides.tsv` | Курований (ADR-028) — рішення виведені й O2-перевірені вручну | — |
 
 Cross-references завантажуються автоматично з OpenBible.info (CC BY 4.0) і кешуються у `scripts/.cache/`.
+
+**`data/versification/` трекається в git** (виняток у `.gitignore`, решта `data/` — ні):
+`.vrs` малі й MIT, а `overrides.tsv` — курований build-input, який не можна втратити.
+Використовується кроком `scripts/build_versification.py` (verse_org, ADR-028).
 
 ## Збірка
 
@@ -73,15 +79,18 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 
 Потім у Xcode: **Product → Clean Build Folder** (Shift+Cmd+K), потім Run.
 
-Або одразу повний цикл (всі кроки):
+Або одразу повний цикл — **`./rebuild.sh`** (той самий порядок). Вручну:
 ```bash
 cd ~/Projects/SourceBible \
   && python3 scripts/build_db.py \
   && python3 build_verse_map.py sourcebible.db \
+  && python3 scripts/build_versification.py sourcebible.db \
   && python3 scripts/import_commentaries.py sourcebible.db \
   && cp sourcebible.db SourceBible/Resources/sourcebible.db \
   && echo "✓ DB built and copied to Resources"
 ```
+`build_versification.py` падає з ненульовим кодом на невирішеному CONFLICT — тоді
+`rebuild.sh` (`set -e`) аборти ДО `cp`, і бита версифікація не потрапляє в бандл.
 
 ## Крок 3: Commentaries (Calvin + Henry + Spurgeon + Owen)
 
