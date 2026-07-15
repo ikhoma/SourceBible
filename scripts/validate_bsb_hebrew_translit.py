@@ -71,11 +71,37 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BSB_TSV = os.path.join(REPO, "data", "bsb_tables.tsv")
 REPORT = os.path.join(REPO, "data", "bsb_translit_validation.tsv")
 
-# Same helper set as build_db.py / ADR-020. Keep in sync.
+# Used ONLY to decide which slots are display words (a slot with no non-helper token
+# is not rendered). NOT used to pick a slot's head — see head_token(). Same set as
+# build_db.py; incomplete (missing H3807a לְ, H4480 מִן) but that only matters for head
+# selection, which no longer uses it.
 HELPER_STRONGS = {
     "H1886a", "H871a", "H3509a", "H1930a",
     "H2050b", "H2050c", "H2050d", "H5105b",
 }
+
+
+def is_enclitic(lexical_class, morph):
+    """Pronominal suffix (morph 'Sp3ms'…) or enclitic particle (class 'x')."""
+    return lexical_class == "x" or (morph or "").startswith("S")
+
+
+def head_token(tokens):
+    """
+    The head (root) of a slot: the last token that is not an enclitic.
+
+    Hebrew builds a slot as [proclitics…] HEAD [enclitics…] — inseparable prepositions,
+    the article and the waw attach to the front; pronominal suffixes to the back.
+
+    Mirrors VerseTabContent.headToken(of:). Keep the two in sync until the build emits
+    an explicit `word.is_head` column (see ADR).
+
+    tokens: list of (word_id, slot, strongs_id, xlit_slot, lexical_class, morph)
+    """
+    for t in reversed(tokens):
+        if not is_enclitic(t[4], t[5]):
+            return t
+    return tokens[-1]
 
 # BSB book name → OSIS id used in the `word` table.
 BSB_BOOK_TO_OSIS = {
@@ -199,11 +225,14 @@ def load_bsb(path):
         if ot:
             print("  ⚠  unmapped book names (ignored): %s" % sorted(ot)[:5])
 
+    # Keep heb_sort in the tuple: when several English verses merge onto one MT verse
+    # (see bsb_by_macula in main), the concatenated list must be re-sorted into Hebrew
+    # order, and heb_sort is the only thing that can do that.
     out = {}
     n_words = n_strongs = 0
     for k, items in raw.items():
         items.sort(key=lambda x: x[0])
-        out[k] = [(t, s) for _, t, s in items]
+        out[k] = items                       # [(heb_sort, translit, strongs), ...]
         n_words += len(items)
         n_strongs += sum(1 for _, _, s in items if s)
 
@@ -267,11 +296,27 @@ def main():
     macula_verses = cur.fetchall()
     print("  Macula OT verses:                %d\n" % len(macula_verses))
 
-    # Reverse map: Macula ref -> BSB(English) ref, so we can look BSB up per verse.
-    # verse_map is english->macula; invert it per (book, chapter).
-    rev = {}
-    for (b, c, tv), mv in vmap.items():
-        rev[(b, c, mv)] = tv
+    # Re-key BSB from English numbering onto Macula numbering, mapping FORWARD through
+    # verse_map (which is english -> macula).
+    #
+    # Do NOT invert verse_map into a macula -> english dict. The relation is many-to-one:
+    # several English verses can land on one MT verse (English splits what MT keeps whole).
+    # A dict inversion silently keeps whichever key was written last, so we end up comparing
+    # a Macula verse against an ARBITRARY member of its English group — the counts then
+    # differ for a reason that has nothing to do with BSB. That bug produced 785 phantom
+    # COUNT_MISMATCHes, 100% of them on remapped verses, dominated by an off-by-one.
+    #
+    # Correct: map every BSB English verse forward to its MT verse and concatenate the word
+    # lists of all English verses that share an MT target, restoring Hebrew order by Heb Sort.
+    bsb_by_macula = defaultdict(list)
+    merged_from = defaultdict(list)            # macula ref -> [english verses], for reporting
+    for (b, c, ev), words_ in bsb.items():
+        mv = vmap.get((b, c, ev), ev)          # identity where no mapping row exists
+        bsb_by_macula[(b, c, mv)].extend(words_)
+        merged_from[(b, c, mv)].append(ev)
+    for k in bsb_by_macula:
+        bsb_by_macula[k].sort(key=lambda x: x[0])            # restore Hebrew order
+        bsb_by_macula[k] = [(t, s) for _, t, s in bsb_by_macula[k]]
 
     rows = []          # report rows
     stats = defaultdict(int)
@@ -280,12 +325,13 @@ def main():
     for (book_id, ch, mvs) in macula_verses:
         stats["verses_total"] += 1
 
-        english_vs = rev.get((book_id, ch, mvs), mvs)
-        bsb_words = bsb.get((book_id, ch, english_vs))
+        bsb_words = bsb_by_macula.get((book_id, ch, mvs))
 
-        # ── Macula display slots (identical logic to _apply_bh_hebrew_translit) ──
+        # ── Macula display slots ──
+        # Display-slot detection still uses HELPER_STRONGS (a slot of pure glue is not a
+        # word). HEAD selection uses head_token() — the rule the app now uses.
         cur.execute("""
-            SELECT id, slot, strongs_id, xlit_slot
+            SELECT id, slot, strongs_id, xlit_slot, lexical_class, morph
             FROM word
             WHERE book_id=? AND chapter=? AND verse=? AND language='hbo'
             ORDER BY slot, position
@@ -295,18 +341,27 @@ def main():
             continue
 
         slot_has_display = {}
-        slot_root = {}       # slot -> (strongs_id, existing xlit_slot)
-        for (wid, slot, sid, xs) in tokens:
+        slot_tokens = defaultdict(list)
+        for t in tokens:
+            slot, sid = t[1], t[2]
             if slot is None:
                 continue
+            slot_tokens[slot].append(t)
             if slot not in slot_has_display:
                 slot_has_display[slot] = False
             if sid not in HELPER_STRONGS:
                 slot_has_display[slot] = True
-                if slot not in slot_root:
-                    slot_root[slot] = (sid, xs)
 
         display_slots = sorted(k for k, v in slot_has_display.items() if v)
+
+        # slot -> (head strongs_id, slot-level xlit_slot)
+        # xlit_slot is read from ANY token in the slot that carries it (it is a slot-level
+        # value); build_db.py still writes it onto the leading preposition.
+        slot_root = {}
+        for slot, toks in slot_tokens.items():
+            head = head_token(toks)
+            existing = next((t[3] for t in toks if t[3]), None)
+            slot_root[slot] = (head[2], existing)
 
         # ── L3: coverage ──
         if not bsb_words:
@@ -323,9 +378,11 @@ def main():
         # ── L1: per-verse count parity ──
         if len(display_slots) != len(bsb_words):
             stats["verses_count_mismatch"] += 1
+            src = merged_from.get((book_id, ch, mvs), [mvs])
             rows.append(("COUNT_MISMATCH", "%s %d:%d" % (book_id, ch, mvs), "", "", "",
-                         "", "", "macula_slots=%d bsb_words=%d (english v%d)"
-                         % (len(display_slots), len(bsb_words), english_vs)))
+                         "", "", "macula_slots=%d bsb_words=%d (from english v%s)"
+                         % (len(display_slots), len(bsb_words),
+                            "+".join(str(v) for v in sorted(src)))))
             continue
 
         stats["verses_ok"] += 1
