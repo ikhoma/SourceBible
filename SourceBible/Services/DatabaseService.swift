@@ -42,8 +42,9 @@ final class DatabaseService: @unchecked Sendable {
     /// Versification scheme the `cross_reference` table is numbered in.
     /// OpenBible.info cross-references use KJV numbering for both endpoints
     /// (`from_verse` and `to_verse`), so every cross-ref lookup must translate
-    /// between the reader's translation and this scheme via `verse_map`.
-    /// See docs/features/verse_versification_system_design.md.
+    /// between the reader's translation and this scheme via `verse_org` (ADR-028):
+    /// reader → original → KJV on the source side, KJV → original → reader on the
+    /// target side. Both hops are curated and cross-chapter capable.
     static let crossRefVersification = "KJV"
 
     // nonisolated(unsafe): OpaquePointer не є Sendable, але db доступна лише
@@ -400,34 +401,37 @@ final class DatabaseService: @unchecked Sendable {
             return String(strongsId.dropLast())
         }()
 
-        // Three LEFT JOINs: verse_map reverse-lookup (macula→trans) for each translation,
-        // then verse join using the translated verse number.
-        // This fixes versification mismatches (e.g. Psalm headings counted as verse 1 in MT
-        // but not in KJV/RST), preventing wrong verses from appearing in concordance.
-        // COALESCE on vm.trans_verse falls back to w.verse for chapters with identity mapping
-        // (verse_map only stores non-identity rows).
+        // Reverse verse_org lookup (original→translation, ADR-028) for each translation,
+        // then verse join using the translated chapter AND verse — the word table is
+        // numbered in the original (Macula) scheme, and the curated mapping is
+        // cross-chapter capable (RST Psalter = original chapter − 1, Dan 3/4, …),
+        // which the old same-chapter mapping-table JOIN could not express.
+        // COALESCE falls back to identity when verse_org has no row for this verse
+        // (DB predates the table, or the translation has no counterpart — the text
+        // join then comes up empty and the fallback translation is shown instead).
         let sql = """
             SELECT DISTINCT
                 w.book_id, w.chapter, w.verse,
-                COALESCE(vm.trans_verse,    w.verse) AS display_verse,
+                COALESCE(vo.chapter, w.chapter) AS display_chapter,
+                COALESCE(vo.verse,   w.verse)   AS display_verse,
                 COALESCE(v.text, v_fb.text) AS resolved_text,
                 CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback
             FROM word w
-            LEFT JOIN verse_map vm    ON vm.translation   = ?
-                                     AND vm.book_id       = w.book_id
-                                     AND vm.chapter       = w.chapter
-                                     AND vm.macula_verse  = w.verse
-            LEFT JOIN verse_map vm_fb ON vm_fb.translation   = ?
-                                     AND vm_fb.book_id      = w.book_id
-                                     AND vm_fb.chapter      = w.chapter
-                                     AND vm_fb.macula_verse = w.verse
+            LEFT JOIN verse_org vo    ON vo.translation    = ?
+                                     AND vo.org_book_id    = w.book_id
+                                     AND vo.org_chapter    = w.chapter
+                                     AND vo.org_verse      = w.verse
+            LEFT JOIN verse_org vo_fb ON vo_fb.translation = ?
+                                     AND vo_fb.org_book_id = w.book_id
+                                     AND vo_fb.org_chapter = w.chapter
+                                     AND vo_fb.org_verse   = w.verse
             LEFT JOIN verse v    ON v.book_id    = w.book_id
-                                AND v.chapter    = w.chapter
-                                AND v.verse      = COALESCE(vm.trans_verse, w.verse)
+                                AND v.chapter    = COALESCE(vo.chapter, w.chapter)
+                                AND v.verse      = COALESCE(vo.verse, w.verse)
                                 AND v.translation = ?
             LEFT JOIN verse v_fb ON v_fb.book_id = w.book_id
-                                AND v_fb.chapter = w.chapter
-                                AND v_fb.verse   = COALESCE(vm_fb.trans_verse, w.verse)
+                                AND v_fb.chapter = COALESCE(vo_fb.chapter, w.chapter)
+                                AND v_fb.verse   = COALESCE(vo_fb.verse, w.verse)
                                 AND v_fb.translation = ?
             WHERE (w.strongs_id = ?
                OR (w.strongs_id GLOB ? || '[a-z]'
@@ -439,12 +443,12 @@ final class DatabaseService: @unchecked Sendable {
                               translation, fallbackTranslation,
                               base, base, base, limit]) { stmt in
             let bookId      = string(stmt, 0)
-            let chapter     = Int(sqlite3_column_int(stmt, 1))
-            // col 2 = w.verse (Macula) — not used for display
-            let displayVerse = Int(sqlite3_column_int(stmt, 3))
-            let rawText     = optString(stmt, 4) ?? ""
+            // cols 1–2 = w.chapter / w.verse (original numbering) — not used for display
+            let chapter      = Int(sqlite3_column_int(stmt, 3))   // display_chapter
+            let displayVerse = Int(sqlite3_column_int(stmt, 4))   // display_verse
+            let rawText     = optString(stmt, 5) ?? ""
             let text        = DatabaseService.stripBibleMarkup(rawText)
-            let isFallback  = sqlite3_column_int(stmt, 5) != 0
+            let isFallback  = sqlite3_column_int(stmt, 6) != 0
             // Skip entries where neither translation has verse text.
             guard !text.isEmpty else { return }
             let short = BibleBookNames.short(for: bookId)
@@ -531,28 +535,29 @@ final class DatabaseService: @unchecked Sendable {
         }
 
         // --- Query C: verse text for first occurrence per book ---
-        // Reuses the same verse_map JOIN pattern as loadConcordance to handle
-        // versification mismatches (e.g. Psalm headings in MT vs KJV/RST).
+        // Reuses the same reverse verse_org JOIN pattern as loadConcordance to handle
+        // versification mismatches (Psalm headings, cross-chapter shifts — ADR-028).
         let exampleSQL = """
-            SELECT COALESCE(vm.trans_verse, w.verse) AS display_verse,
-                   COALESCE(v.text, v_fb.text)       AS resolved_text,
+            SELECT COALESCE(vo.chapter, w.chapter) AS display_chapter,
+                   COALESCE(vo.verse,   w.verse)   AS display_verse,
+                   COALESCE(v.text, v_fb.text)     AS resolved_text,
                    CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback
             FROM word w
-            LEFT JOIN verse_map vm    ON vm.translation    = ?
-                                     AND vm.book_id        = w.book_id
-                                     AND vm.chapter        = w.chapter
-                                     AND vm.macula_verse   = w.verse
-            LEFT JOIN verse_map vm_fb ON vm_fb.translation = ?
-                                     AND vm_fb.book_id     = w.book_id
-                                     AND vm_fb.chapter     = w.chapter
-                                     AND vm_fb.macula_verse = w.verse
+            LEFT JOIN verse_org vo    ON vo.translation    = ?
+                                     AND vo.org_book_id    = w.book_id
+                                     AND vo.org_chapter    = w.chapter
+                                     AND vo.org_verse      = w.verse
+            LEFT JOIN verse_org vo_fb ON vo_fb.translation = ?
+                                     AND vo_fb.org_book_id = w.book_id
+                                     AND vo_fb.org_chapter = w.chapter
+                                     AND vo_fb.org_verse   = w.verse
             LEFT JOIN verse v    ON v.book_id     = w.book_id
-                                AND v.chapter     = w.chapter
-                                AND v.verse       = COALESCE(vm.trans_verse, w.verse)
+                                AND v.chapter     = COALESCE(vo.chapter, w.chapter)
+                                AND v.verse       = COALESCE(vo.verse, w.verse)
                                 AND v.translation = ?
             LEFT JOIN verse v_fb ON v_fb.book_id  = w.book_id
-                                AND v_fb.chapter  = w.chapter
-                                AND v_fb.verse    = COALESCE(vm_fb.trans_verse, w.verse)
+                                AND v_fb.chapter  = COALESCE(vo_fb.chapter, w.chapter)
+                                AND v_fb.verse    = COALESCE(vo_fb.verse, w.verse)
                                 AND v_fb.translation = ?
             WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
               AND \(strongsFilter)
@@ -561,18 +566,20 @@ final class DatabaseService: @unchecked Sendable {
 
         var groups: [BookUsageGroup] = []
         for row in bookRows {
-            var displayVerse = row.verse
-            var rawText      = ""
-            var isFallback   = false
+            var displayChapter = row.chapter
+            var displayVerse   = row.verse
+            var rawText        = ""
+            var isFallback     = false
 
             query(exampleSQL, bindings: [
                 translation, fallbackTranslation, translation, fallbackTranslation,
                 row.bookId, row.chapter, row.verse,
                 base, base, base
             ]) { stmt in
-                displayVerse = Int(sqlite3_column_int(stmt, 0))
-                rawText      = optString(stmt, 1) ?? ""
-                isFallback   = sqlite3_column_int(stmt, 2) != 0
+                displayChapter = Int(sqlite3_column_int(stmt, 0))
+                displayVerse   = Int(sqlite3_column_int(stmt, 1))
+                rawText        = optString(stmt, 2) ?? ""
+                isFallback     = sqlite3_column_int(stmt, 3) != 0
             }
 
             // Skip if no verse text found in either translation.
@@ -580,12 +587,12 @@ final class DatabaseService: @unchecked Sendable {
             guard !text.isEmpty else { continue }
 
             let short   = bookShortNames[row.bookId] ?? BibleBookNames.short(for: row.bookId)
-            let ref     = "\(short) \(row.chapter):\(displayVerse)"
-            let entryId = "\(row.bookId)|\(row.chapter)|\(displayVerse)"
+            let ref     = "\(short) \(displayChapter):\(displayVerse)"
+            let entryId = "\(row.bookId)|\(displayChapter)|\(displayVerse)"
             let example = ConcordanceEntry(id: entryId, reference: ref,
                                            text: text, rawText: rawText,
                                            isFallback: isFallback,
-                                           bookId: row.bookId, chapter: row.chapter, verse: displayVerse)
+                                           bookId: row.bookId, chapter: displayChapter, verse: displayVerse)
 
             groups.append(BookUsageGroup(
                 id:       row.bookId,
@@ -599,62 +606,76 @@ final class DatabaseService: @unchecked Sendable {
         return (total, groups)
     }
 
-    // MARK: - Verse Map (versification)
+    // MARK: - Versification hops (verse_org, ADR-028)
 
-    /// Returns the Macula (MT) verse number for a given translation verse,
-    /// or nil when the chapter has no registered offset (identity mapping assumed).
+    /// Forward hop: first original-language (Macula) ref a translation verse maps to.
     ///
-    /// The verse_map table is populated at DB build time by build_verse_map.py
-    /// using Strong's-overlap alignment across all translation/chapter combos
-    /// where verse counts differ between the translation and the Macula word table.
-    func findMaculaVerse(bookId: String, chapter: Int,
-                         translationVerse: Int, translation: String) -> Int? {
-        guard isAvailable else { return nil }
-        var result: Int?
+    /// - Returns: `sawRows == false` → the DB predates `verse_org`; callers keep
+    ///   identity (the old behavior for that verse). `org == nil` with `sawRows` →
+    ///   the verse explicitly has no original-text counterpart (org_* NULL, e.g.
+    ///   RST ROM 16:24 or KJV NEH 7:68). N:M merges: rows are ordered by
+    ///   (org_chapter, org_verse) and the first non-NULL is taken.
+    private func orgRef(bookId: String, chapter: Int, verse: Int, translation: String)
+        -> (sawRows: Bool, org: (bookId: String, chapter: Int, verse: Int)?) {
+        var sawRows = false
+        var org: (String, Int, Int)?
         let sql = """
-            SELECT macula_verse FROM verse_map
-            WHERE translation = ? AND book_id = ? AND chapter = ? AND trans_verse = ?
+            SELECT org_book_id, org_chapter, org_verse FROM verse_org
+            WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
+            ORDER BY org_chapter, org_verse
             """
-        query(sql, bindings: [translation, bookId, chapter, translationVerse]) { stmt in
-            result = Int(sqlite3_column_int(stmt, 0))
+        query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
+            sawRows = true
+            if org == nil,
+               let ob = optString(stmt, 0),
+               let oc = optInt(stmt, 1),
+               let ov = optInt(stmt, 2) {
+                org = (ob, oc, ov)
+            }
+        }
+        return (sawRows, org)
+    }
+
+    /// Reverse hop: which verse of `translation` carries a given original (Macula)
+    /// ref. `nil` when the translation has no verse for that original — a gap or a
+    /// merge asymmetry (e.g. no RST verse maps to Heb PSA 90:6; RST 89:6 covers 90:5).
+    /// N:M merges: rows are ordered by (chapter, verse) and the first is taken.
+    private func translationRef(orgBookId: String, orgChapter: Int, orgVerse: Int,
+                                translation: String)
+        -> (bookId: String, chapter: Int, verse: Int)? {
+        var result: (String, Int, Int)?
+        let sql = """
+            SELECT book_id, chapter, verse FROM verse_org
+            WHERE translation = ? AND org_book_id = ? AND org_chapter = ? AND org_verse = ?
+            ORDER BY chapter, verse
+            """
+        query(sql, bindings: [translation, orgBookId, orgChapter, orgVerse]) { stmt in
+            if result == nil {
+                result = (string(stmt, 0),
+                          Int(sqlite3_column_int(stmt, 1)),
+                          Int(sqlite3_column_int(stmt, 2)))
+            }
         }
         return result
     }
 
-    /// Reverse of `findMaculaVerse` — returns the verse number a given Macula (MT)
-    /// verse carries in `translation`, or nil when the chapter has no registered
-    /// offset (identity mapping assumed).
-    ///
-    /// `verse_map` stores only non-identity rows, so a nil result means "same number".
-    func findTranslationVerse(bookId: String, chapter: Int,
-                              maculaVerse: Int, translation: String) -> Int? {
-        guard isAvailable else { return nil }
-        var result: Int?
+    /// Single verse text lookup (raw markup, unstripped). nil when absent.
+    private func verseText(bookId: String, chapter: Int, verse: Int,
+                           translation: String) -> String? {
+        var text: String?
         let sql = """
-            SELECT trans_verse FROM verse_map
-            WHERE translation = ? AND book_id = ? AND chapter = ? AND macula_verse = ?
+            SELECT text FROM verse
+            WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
             """
-        query(sql, bindings: [translation, bookId, chapter, maculaVerse]) { stmt in
-            result = Int(sqlite3_column_int(stmt, 0))
+        query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
+            if text == nil { text = optString(stmt, 0) }
         }
-        return result
-    }
-
-    /// Converts a verse number from one translation's versification to another's,
-    /// routing through Macula/MT as the pivot scheme. Identity when either hop is
-    /// unmapped (verse_map only stores non-identity rows).
-    func convertVerse(bookId: String, chapter: Int, verse: Int,
-                      from source: String, to target: String) -> Int {
-        guard source != target else { return verse }
-        let mt = findMaculaVerse(bookId: bookId, chapter: chapter,
-                                 translationVerse: verse, translation: source) ?? verse
-        return findTranslationVerse(bookId: bookId, chapter: chapter,
-                                    maculaVerse: mt, translation: target) ?? mt
+        return text
     }
 
     /// Original-language (Macula) words for a translation verse, via `verse_org` (ADR-028).
     ///
-    /// Supersedes the `verse_map` + `findBestMaculaVerse` heuristic for the Original pill.
+    /// Supersedes the old heuristic verse-mapping (`findBestMaculaVerse`) for the Original pill.
     /// `verse_org` is total and testament-agnostic, so this handles what the old Int-based
     /// path could not: cross-CHAPTER shifts (RST Psalter = Hebrew+1, 1Chr 6, Daniel 6,
     /// Isa 64), cross-testament (NT → Macula Greek), and merged N:M verses.
@@ -708,63 +729,109 @@ final class DatabaseService: @unchecked Sendable {
 
         let xrefVsn = DatabaseService.crossRefVersification
 
-        // SOURCE SIDE: cross_reference.from_verse is in KJV numbering, but `verse`
-        // is the number the reader sees in `translation`. Convert before querying,
-        // otherwise a reader in RST Psalms (LXX numbering, +1 from the superscription)
-        // looks up the wrong row and gets someone else's cross-refs — or none.
-        let fromVerse = convertVerse(bookId: bookId, chapter: chapter, verse: verse,
-                                     from: translation, to: xrefVsn)
+        // SOURCE SIDE: cross_reference endpoints are KJV-numbered, but the reader's
+        // ref arrives in `translation` numbering. Route reader → original → KJV
+        // through verse_org. Both hops are curated and cross-chapter capable, so a
+        // reader in RST Psalm 50 correctly reads the KJV Psalm 51 row — the old
+        // same-chapter conversion read someone else's cross-refs (or none).
+        // nil → the verse has an original but KJV has no verse for it (e.g. RST Psalm
+        // superscriptions): no valid cross-ref row exists, so show none — per the
+        // ADR-028 rule "empty, not a neighbor's data".
+        guard let src = crossRefSourceRef(bookId: bookId, chapter: chapter, verse: verse,
+                                          translation: translation, xrefVsn: xrefVsn)
+        else { return [] }
 
-        // TARGET SIDE: xr.to_verse is likewise KJV-numbered. Route it through MT and
-        // back out into `translation` before joining `verse`, so the text, the printed
-        // reference and the tap target all speak the reader's versification.
-        //   xr.to_verse (KJV) --vm_x--> MT --vm_t--> translation
-        // verse_map holds only non-identity rows, so each hop COALESCEs to identity.
-        // The fallback join (v_fb) stays on the raw xr.to_verse because the fallback
-        // translation IS the cross-ref versification (both KJV) — no conversion needed.
+        // Raw target rows, KJV-numbered, highest-voted first.
+        struct RawTarget { let book: String; let chapter: Int; let verse: Int }
+        var raw: [RawTarget] = []
         let sql = """
-            SELECT xr.to_book, xr.to_chapter, xr.to_verse, xr.votes,
-                   COALESCE(v.text, v_fb.text) AS resolved_text,
-                   CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback,
-                   COALESCE(vm_t.trans_verse,
-                            COALESCE(vm_x.macula_verse, xr.to_verse)) AS display_verse
-            FROM cross_reference xr
-            LEFT JOIN verse_map vm_x ON vm_x.translation  = ?
-                                    AND vm_x.book_id      = xr.to_book
-                                    AND vm_x.chapter      = xr.to_chapter
-                                    AND vm_x.trans_verse  = xr.to_verse
-            LEFT JOIN verse_map vm_t ON vm_t.translation  = ?
-                                    AND vm_t.book_id      = xr.to_book
-                                    AND vm_t.chapter      = xr.to_chapter
-                                    AND vm_t.macula_verse = COALESCE(vm_x.macula_verse, xr.to_verse)
-            LEFT JOIN verse v    ON v.book_id    = xr.to_book
-                                AND v.chapter    = xr.to_chapter
-                                AND v.verse      = COALESCE(vm_t.trans_verse,
-                                                            COALESCE(vm_x.macula_verse, xr.to_verse))
-                                AND v.translation = ?
-            LEFT JOIN verse v_fb ON v_fb.book_id = xr.to_book
-                                AND v_fb.chapter = xr.to_chapter
-                                AND v_fb.verse   = xr.to_verse
-                                AND v_fb.translation = ?
-            WHERE xr.from_book = ? AND xr.from_chapter = ? AND xr.from_verse = ?
-            ORDER BY xr.votes DESC
+            SELECT to_book, to_chapter, to_verse FROM cross_reference
+            WHERE from_book = ? AND from_chapter = ? AND from_verse = ?
+            ORDER BY votes DESC
             """
-        query(sql, bindings: [xrefVsn, translation, translation, fallbackTranslation,
-                              bookId, chapter, fromVerse]) { stmt in
-            let toBook     = string(stmt, 0)
-            let toChapter  = Int(sqlite3_column_int(stmt, 1))
-            // col 2 = xr.to_verse (KJV numbering) — not used for display or navigation
-            let text       = DatabaseService.stripBibleMarkup(optString(stmt, 4) ?? "")
-            let isFallback = sqlite3_column_int(stmt, 5) != 0
-            let toVerse    = Int(sqlite3_column_int(stmt, 6))   // display_verse
-            let short      = bookShortNames[toBook] ?? BibleBookNames.short(for: toBook)
-            let ref        = "\(short) \(toChapter):\(toVerse)"
-            let id         = "\(toBook)|\(toChapter)|\(toVerse)"
+        query(sql, bindings: [src.bookId, src.chapter, src.verse]) { stmt in
+            raw.append(RawTarget(book: string(stmt, 0),
+                                 chapter: Int(sqlite3_column_int(stmt, 1)),
+                                 verse: Int(sqlite3_column_int(stmt, 2))))
+        }
+
+        // TARGET SIDE: re-express each KJV target in the reader's versification
+        // (KJV → original → reader), so the printed reference, the text and the tap
+        // target all speak the reader's numbering — including cross-chapter shifts.
+        for target in raw {
+            let (display, fallbackOnly) = resolveXrefTarget(
+                book: target.book, chapter: target.chapter, verse: target.verse,
+                translation: translation, xrefVsn: xrefVsn)
+
+            let readerText: String? = fallbackOnly ? nil :
+                verseText(bookId: display.bookId, chapter: display.chapter,
+                          verse: display.verse, translation: translation)
+            let fbText: String? = readerText != nil ? nil :
+                verseText(bookId: target.book, chapter: target.chapter,
+                          verse: target.verse, translation: fallbackTranslation)
+
+            let text       = DatabaseService.stripBibleMarkup(readerText ?? fbText ?? "")
+            let isFallback = readerText == nil && fbText != nil
+            let short      = bookShortNames[display.bookId] ?? BibleBookNames.short(for: display.bookId)
+            let ref        = "\(short) \(display.chapter):\(display.verse)"
+            let id         = "\(display.bookId)|\(display.chapter)|\(display.verse)"
             refs.append(CrossReference(id: id, targetReference: ref, targetText: text,
-                                       bookId: toBook, chapter: toChapter, verse: toVerse,
-                                       isFallback: isFallback))
+                                       bookId: display.bookId, chapter: display.chapter,
+                                       verse: display.verse, isFallback: isFallback))
         }
         return refs
+    }
+
+    /// Reader's verse re-expressed in the cross-ref versification (KJV numbering).
+    ///
+    /// Identity when: reader already IS the cross-ref scheme; the DB predates
+    /// `verse_org`; or the verse has no original counterpart (org NULL — raw KJV
+    /// numbers stay valid there by convention). Fast path: when the same numbers
+    /// carry the same original in both schemes, skip the reverse lookup entirely.
+    ///
+    /// `nil` when the verse HAS an original but the cross-ref scheme has no verse
+    /// for it (e.g. RST Psalm superscriptions — unnumbered in KJV): there is no
+    /// valid cross_reference row, and falling back to raw numbers would surface a
+    /// DIFFERENT verse's cross-refs.
+    private func crossRefSourceRef(bookId: String, chapter: Int, verse: Int,
+                                   translation: String, xrefVsn: String)
+        -> (bookId: String, chapter: Int, verse: Int)? {
+        guard translation != xrefVsn else { return (bookId, chapter, verse) }
+        let (sawRows, orgOpt) = orgRef(bookId: bookId, chapter: chapter, verse: verse,
+                                       translation: translation)
+        guard sawRows, let org = orgOpt else { return (bookId, chapter, verse) }
+        let (sawX, orgX) = orgRef(bookId: bookId, chapter: chapter, verse: verse,
+                                  translation: xrefVsn)
+        if sawX, let ox = orgX, ox == org { return (bookId, chapter, verse) }
+        return translationRef(orgBookId: org.bookId, orgChapter: org.chapter,
+                              orgVerse: org.verse, translation: xrefVsn)
+    }
+
+    /// A KJV-numbered cross-ref target re-expressed in the reader's versification.
+    ///
+    /// - Returns: `display` — the ref to print/navigate; `fallbackOnly == true` means
+    ///   the reader's translation has NO verse for that original (merge gap, e.g. no
+    ///   RST verse maps to Heb PSA 90:6). The display then keeps the raw KJV numbers
+    ///   and the caller must take text from the fallback translation only — joining
+    ///   the reader's text at raw numbers would show a DIFFERENT verse's text (the
+    ///   old verse-shift bug this migration removes).
+    private func resolveXrefTarget(book: String, chapter: Int, verse: Int,
+                                   translation: String, xrefVsn: String)
+        -> (display: (bookId: String, chapter: Int, verse: Int), fallbackOnly: Bool) {
+        guard translation != xrefVsn else { return ((book, chapter, verse), false) }
+        let (sawRaw, orgRawOpt) = orgRef(bookId: book, chapter: chapter, verse: verse,
+                                         translation: xrefVsn)
+        guard sawRaw, let orgRaw = orgRawOpt else { return ((book, chapter, verse), false) }
+        // Fast path: same numbers already carry the same original in the reader's
+        // translation — the vast majority of rows; avoids the reverse lookup.
+        let (sawT, orgT) = orgRef(bookId: book, chapter: chapter, verse: verse,
+                                  translation: translation)
+        if sawT, let ot = orgT, ot == orgRaw { return ((book, chapter, verse), false) }
+        if let reader = translationRef(orgBookId: orgRaw.bookId, orgChapter: orgRaw.chapter,
+                                       orgVerse: orgRaw.verse, translation: translation) {
+            return (reader, false)
+        }
+        return ((book, chapter, verse), true)
     }
 
     // MARK: - Commentary

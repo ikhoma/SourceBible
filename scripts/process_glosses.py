@@ -6,7 +6,7 @@ Adds/updates word.gloss_display with clean English glosses.
 Usage:
     python3 scripts/process_glosses.py sourcebible.db
 
-Run after build_db.py, build_verse_map.py, import_commentaries.py.
+Run after build_db.py, build_versification.py, import_commentaries.py.
 Approx. 1 min for ~600k rows.
 
 Pipeline (Hebrew words only; Greek returned as-is):

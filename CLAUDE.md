@@ -90,10 +90,11 @@ iOS Bible app (SwiftUI, SQLite без ORM). Оригінальні мови (Mac
 
 - **`SourceBible/Resources/sourcebible.db`** — SQLite база що бандлиться в app
 - **`scripts/build_db.py`** — збирає базу з нуля (~10 хв)
-- **`build_verse_map.py`** — окремий скрипт, додає verse_map після build_db.py
+- **`scripts/build_versification.py`** — додає `verse_org` (курована версифікація, ADR-028) після build_db.py
 - **`docs/db_build.md`** — повна документація збірки з відомими помилками
 
-Ключові таблиці: `word` (Macula слова, MT нумерація), `verse` (тексти перекладів), `strongs` (лексикон), `verse_map` (маппінг нумерації), `cross_reference`, `translation`, `book`.
+Ключові таблиці: `word` (Macula слова, MT нумерація), `verse` (тексти перекладів), `strongs` (лексикон), `verse_org` (курований маппінг нумерації translation⇄оригінал, ADR-028), `cross_reference`, `translation`, `book`.
+Стара `verse_map` видалена (ADR-028 фаза 2, 2026-07): крос-рефи і конкорданс тепер через `verse_org`.
 
 ## 🎯 iOS deployment target — обов'язкове правило
 
@@ -193,12 +194,10 @@ APFS sparse file — 24MB фізично / ~149MB логічно. Linux чита
 **⛔ Не запускати `.recover` на робочій базі.**
 `.recover` витягує тільки некорумповані сторінки. Sparse сторінки (де живуть `verse` і `strongs`) не відновлюються → база після `.recover` втрачає ці таблиці. Зламали робочу базу саме так.
 
-**⛔ `build_db.py` не будує `verse_map`.**
-Це окремий скрипт. Завжди запускати після build_db.py:
-```bash
-python3 build_verse_map.py sourcebible.db
-```
-Без verse_map "Оригінал" показує слова не того вірша у 459 розділах.
+**⛔ `build_db.py` не будує `verse_org`.**
+Це окремий крок (`scripts/build_versification.py`). Завжди запускати після build_db.py
+(канонічно — через `./rebuild.sh`, який також створює `idx_verse_org_rev`).
+Без verse_org «Оригінал» і крос-рефи падають в identity-fallback у зсунутих главах.
 
 **⛔ Не брати xlit sub-entry від базового Strong's номера.**
 H871a (прийменник בְּ) і H871 (місто Атарот) — абсолютно різні слова. Strip suffix для xlit = неправильний xlit. Fallback H835a→H835 безпечний тільки якщо `original[0]` збігається.
@@ -238,8 +237,8 @@ Mac має Python 3.9 за замовчуванням. Не використов
 ```bash
 cd ~/Projects/SourceBible
 python3 scripts/build_db.py                      # ~10 хв (ядро: word, verse, strongs, FTS)
-python3 build_verse_map.py sourcebible.db        # ~1 хв, verse_map (крос-рефи)
-python3 scripts/build_versification.py sourcebible.db  # verse_org — «Оригінал» (ADR-028); падає на CONFLICT
+python3 scripts/build_versification.py sourcebible.db  # verse_org — «Оригінал» + крос-рефи (ADR-028); падає на CONFLICT
+sqlite3 sourcebible.db "CREATE INDEX IF NOT EXISTS idx_verse_org_rev ON verse_org(translation, org_book_id, org_chapter, org_verse);"
 python3 scripts/import_commentaries.py sourcebible.db  # ~2 хв, 36 071 вірші (Calvin + Henry + Spurgeon + Owen)
 python3 scripts/process_glosses.py sourcebible.db      # синтез глос
 cp sourcebible.db SourceBible/Resources/sourcebible.db
@@ -249,15 +248,15 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 **⛔ `build_versification.py` вимагає `data/versification/{org,eng,rso}.json` + `overrides.tsv`.**
 Ці файли — курований build-input (ADR-028), трекаються в git (виняток у `.gitignore`,
 решта `data/` ігнорується). Без них крок падає. `overrides.tsv` — рішення виведені й
-O2-перевірені вручну; НЕ регенерувати наосліп. verse_org поки НЕ замінює verse_map:
-`verse_map`+`convertVerse` лишаються для крос-рефів (DROP — окрема фаза).
+O2-перевірені вручну; НЕ регенерувати наосліп. verse_org — єдине джерело версифікації:
+«Оригінал», крос-рефи і конкорданс (ADR-028 фаза 2 завершена; verse_map видалено).
 
 ## Що реалізовано (не реалізовувати повторно)
 
 | Компонент | Файл | Статус |
 |-----------|------|--------|
 | verse_org → loadOriginalWords (ADR-028; крос-глава/тестамент/N:M/«немає оригіналу») | `DatabaseService.swift` + `ReaderViewModel.swift` | ✅ (findBestMaculaVerse ВИДАЛЕНО) |
-| findMaculaVerse()/convertVerse() — лишились для крос-рефів (verse_map) | `DatabaseService.swift` | ✅ |
+| verse_org → крос-рефи + конкорданс (ADR-028 фаза 2: `orgRef`/`translationRef` hops, fallback-only при merge-gap) | `DatabaseService.swift` | ✅ (findMaculaVerse/findTranslationVerse/convertVerse/verse_map/build_verse_map.py ВИДАЛЕНО) |
 | MorphologyDecoder case "S" (займ. суф.) | `WordTabContent.swift` | ✅ |
 | Header xlit: Macula ctx > xlitSimple > transliteration | `WordTabContent.swift` | ✅ |
 | Sub-entry xlit fix (H871a, H1886d, H2050b) | `build_db.py` → verify_xlit_integrity | ✅ |
@@ -276,8 +275,14 @@ word(id, book_id, chapter, verse, position, surface, lemma,
 ```
 `gloss_macula` — стара назва була `gloss`, перейменована. Якщо код падає з "no such column: w.gloss_macula" — база стара, потрібна перезбірка.
 
-## verse_map — зсув нумерації псалмів
+## verse_org — версифікація (ADR-028)
 
-459 розділів де KJV/RST нумерація відрізняється від MT (Macula). Псалми: заголовок = вірш 1 в MT, але KJV/RST його не рахують. Деталі: `docs/db_build.md` → розділ verse_map.
+Тотальний курований маппінг «вірш перекладу ⇄ вірш оригіналу» (UBS .vrs + O2-верифікація
+через Strong's; розбіжність = білд падає). Обслуговує «Оригінал», крос-рефи і конкорданс.
+Крос-глава (RST Псалтир = Heb−1, Дан 3/4, Йона 2), N:M і «немає оригіналу» (org NULL) —
+першокласні випадки. Reverse-хоп (оригінал→переклад) використовує `idx_verse_org_rev`
+(створюється у `rebuild.sh`, НЕ у замороженому `build_versification.py`).
 
-Очікуваний розмір: **7 292 рядки**, 459 розділів. Якщо менше — щось пішло не так.
+Очікуваний розмір: **155 621 рядок** (5 перекладів × ~31k). Якщо суттєво менше — щось пішло не так.
+Стара евристична `verse_map` (7 292 рядки, 57% хибних) видалена в ADR-028 фазі 2 —
+не відроджувати; мапінг НЕ виводити наново евристикою.
