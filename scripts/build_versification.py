@@ -61,6 +61,12 @@ SCHEME_CANDIDATES = {
     "ASV":  ["eng.json"],
     "NASB": ["eng.json"],
     "RST":  ["rso.json", "org.json", "eng.json"],
+    # Огієнко (UBIO): russian_numbering=true → як RST (rso primary). БЕЗ Strong's,
+    # тож O2 не працює: verified=0 усюди, empirical/conflict не запускаються (потрібно
+    # len(t_str)>=2). Мапінг суто за O3 (verse-count) + схема; NONE-глави → override.
+    # Верифікація «за структурою = RST» — поки вручну (ADR-029). NB: sanity-gate нижче
+    # видасть «O2 ненадійний» для UBIO — це очікувано, не помилка.
+    "UBIO": ["rso.json", "org.json", "eng.json"],
 }
 
 OT_BOOKS = {

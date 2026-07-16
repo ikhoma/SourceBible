@@ -77,8 +77,14 @@ struct StudyPinView: UIViewRepresentable {
             // self is installed as the selected verse's background → self.frame
             // IS the verse row's frame. Read verse position AND the scroll offset
             // in the same call: no cross-layer sampling skew.
+            //
+            // "Not laid out yet" must be a SIZE check, not a position check: a verse
+            // row ABOVE the current viewport has a NEGATIVE global minY — valid
+            // geometry (delta < 0 → pin scrolls UP). The old `minY > 0` guard read
+            // "above viewport" as "not laid out", so an upward pin (e.g. cross-ref
+            // «Назад» to an earlier verse of the SAME chapter) silently never fired.
+            guard bounds.height > 0 else { return }     // not laid out yet
             let verseGlobalMinY = convert(bounds, to: window).minY
-            guard verseGlobalMinY > 0 else { return }   // not laid out yet
 
             lastHandled = trigger
 

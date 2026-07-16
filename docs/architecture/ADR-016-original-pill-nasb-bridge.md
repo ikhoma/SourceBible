@@ -183,3 +183,34 @@ Clickability, navigation, highlight, and the Word-tab title are all driven by **
 ### Changed (Swift, `ReaderViewModel.swift` unless noted)
 
 `verseWordSegmentPairs` + `clickableWordIDs` (new) · `isClickable` (mapping-based) · `translationOrderedClickableWords` (= pairs) · `selectedWordDisplayText` (pair lookup) · `syncSegment` (pair lookup) · `tapWord(_ segment:)` (pair-by-segment.id) · `navigateToPrevious/NextWord` (iterate pairs) · `autoSelectFirstWordIfNeeded` (first pair) · removed `nasbVerseStrongs` + `loadNASBStrongs(for:)` + `nasbClickableWords`.
+
+---
+
+## Amendment 2026-07-15 — CHEAT MODE for Strong's-less translations (UBIO)
+
+**Context:** ADR-029 added UBIO (Огієнко), which has **no Strong's tags** (`strong_numbers=false`).
+The per-translation gate above yields an **empty** `verseWordSegmentPairs` for every UBIO
+verse → **no** original word is clickable → word-study is completely dead for a whole
+translation. The `verse_org` work (ADR-028) already lets UBIO *display* the correct
+original; this closes the *interaction* half.
+
+**Decision:** `clickableWordIDs` gains a fallback. When the pair set is **empty** (the gate
+has no input — i.e. the displayed translation tags nothing), fall back to making **every
+original word with a lexicon entry** (`strongsId != nil`) directly tappable. Tap opens the
+lexicon from **Macula's own Strong's** (`tapWord(_ word:)` already works standalone);
+`syncSegment` returns nil → no translation cross-highlight (no pairing possible) — accepted.
+
+- Triggers **only** when pairs are empty → translations WITH Strong's (KJV/ASV/NASB/RST) are
+  **unaffected**; no regression on their tuned Original screen (verify: their chevron set
+  unchanged).
+- Direction is Original-tab → lexicon only. Translation-text long-press → original still
+  requires translation Strong's (dead for UBIO by nature) — out of scope.
+- **Known follow-up:** `<>` word-navigation (`translationOrderedClickableWords`) still keys
+  on pairs → empty for UBIO, so tap-to-open works but next/prev word-nav does not. Left as
+  polish (merge/head-token mapping lives in the View, not the VM). Verify on device whether
+  the empty nav needs the chevrons hidden.
+- Does **not** close `spec-nt-lemma-form-clickability` (Deferred): that gap is a *partial*
+  mismatch on translations that DO tag Strong's (Greek lemma vs form), where the pair set is
+  non-empty → cheat mode does not trigger.
+
+**Changed:** `ReaderViewModel.clickableWordIDs` (fallback branch) only.

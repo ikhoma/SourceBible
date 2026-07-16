@@ -756,53 +756,13 @@ def verify_xlit_integrity(cur):
 # Step 5 — Strong's Lexicon
 # ─────────────────────────────────────────────
 
-STRONGS_URLS = {
-    "H": ("https://raw.githubusercontent.com/openscriptures/strongs/master/hebrew/strongsHebrew.json",
-          "strongsHebrew.json", DATA_DIR / "strongsHebrew.json"),
-    "G": ("https://raw.githubusercontent.com/openscriptures/strongs/master/greek/strongsGreek.json",
-          "strongsGreek.json", DATA_DIR / "strongsGreek.json"),
-}
-
-def import_strongs(cur):
-    print("\n[4/6] Importing Strong's lexicon...")
-    total = 0
-
-    for lang_prefix, (url, cache_name, local_path) in STRONGS_URLS.items():
-        raw = None
-        if local_path.exists():
-            print(f"  [local] {local_path.name}")
-            raw = local_path.read_text(encoding="utf-8")
-        else:
-            try:
-                raw = download(url, cache_name)
-            except Exception as e:
-                print(f"  WARNING: Strong's {lang_prefix}: {e}")
-                print(f"  → Download manually and save as: {local_path}")
-                continue
-
-        data = json.loads(raw)
-        rows = []
-        for key, entry in data.items():
-            sid = normalize_strongs(key, lang_prefix)
-            if not sid:
-                continue
-            lemma = entry.get("lemma", "")
-            xlit  = entry.get("xlit",  entry.get("translit", ""))
-            pron  = entry.get("pron",  entry.get("pronounce", ""))
-            pos   = entry.get("pos", "")
-            short = entry.get("strongs_def", "").strip()[:500]
-            long_ = entry.get("kjv_def",     "").strip()[:3000]
-            rows.append((sid, lang_prefix, lemma, xlit, pron, pos, short, long_))
-
-        cur.executemany(
-            "INSERT OR IGNORE INTO strongs (id,language,original,transliteration,pronunciation,"
-            "part_of_speech,short_def,long_def) VALUES (?,?,?,?,?,?,?,?)",
-            rows
-        )
-        total += len(rows)
-        print(f"  Strong's {lang_prefix}: {len(rows):,} entries")
-
-    print(f"  Total: {total:,} entries")
+# NOTE: import_strongs (openscriptures strongsHebrew/Greek.json) REMOVED 2026-07-15.
+# It was the original Strong's source but became fully redundant: _seed_strongs_stubs
+# seeds every ID from Macula, import_stepbible_lexicons (TBESH/TBESG) fills the
+# definitions, and _backfill_strongs_originals_from_macula fills `original`. Proven
+# identical: a full rebuild WITHOUT this step produces the same strongs table
+# (14,712 rows / 14,712 short_def / 14,204 long_def) as before. The dead step only
+# emitted a confusing "requests not installed / 0 entries" warning. Do not resurrect.
 
 
 def _seed_strongs_stubs(cur):
@@ -1195,6 +1155,12 @@ TRANSLATIONS = [
     ("ASV",  "American Standard Version",   "en", DATA_DIR / "ASV+.zip"),
     ("NASB", "New American Standard Bible", "en", DATA_DIR / "NASB+.zip"),
     ("RST",  "Синодальний переклад",        "ru", DATA_DIR / "RST+.zip"),
+    # ⚠️ LICENSED — не розповсюджувати публічно без дозволу (як NASB). Огієнко НЕ
+    # суспільне надбання: права United Bible Societies / Українське біблійне
+    # товариство (© 2009), PD ~2042/2058 (ADR-029). Додано для dev/beta; НЕ
+    # шипити в публічний App Store до письмової ліцензії від УБТ. Без Strong's
+    # (strong_numbers=false) → «Оригінал» працює через verse_org, word-study ні.
+    ("UBIO", "Біблія в пер. Івана Огієнка", "uk", DATA_DIR / "UBIO'88.zip"),
 ]
 
 def _detect_sqlite_schema(con):
@@ -2059,8 +2025,8 @@ def main():
     con.commit()
 
     import_books(cur);              con.commit()
-    import_strongs(cur);            con.commit()   # must be before words (FK constraint)
-    _seed_strongs_stubs(cur);       con.commit()   # ensures FK satisfiable even when JSON download fails
+    _seed_strongs_stubs(cur);       con.commit()   # seeds every Macula Strong's ID (FK); was a safety net for import_strongs, now the sole seeder
+    import_stepbible_lexicons(cur); con.commit()   # enriches strongs with BDB + xlit_simple (TBESH/TBESG, exact ID only)
     import_stepbible_lexicons(cur); con.commit()   # enriches strongs with BDB + xlit_simple (TBESH/TBESG, exact ID only)
     # _apply_xlit_fallback removed: it derived xlit_simple from openscriptures academic
     # transliteration (ʾašrēy-style notation), which is neither TBESH nor BH format.

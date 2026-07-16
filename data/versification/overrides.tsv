@@ -62,3 +62,49 @@ RST	PSA	114	6	PSA	116	6	Synodal Пс114=Heb Пс116:1-9 (rso.json PSA 114→116)
 RST	PSA	114	7	PSA	116	7	Synodal Пс114=Heb Пс116:1-9 (rso.json PSA 114→116)
 RST	PSA	114	8	PSA	116	8	Synodal Пс114=Heb Пс116:1-9 (rso.json PSA 114→116)
 RST	PSA	114	9	PSA	116	9	Synodal Пс114=Heb Пс116:1-9 (rso.json PSA 114→116)
+#
+# ── UBIO (Огієнко) Псалом 114 = єврейський 116:1-9 ──────────────────────────────
+# UBIO синодальний (russian_numbering=true), Пс 114 = 9 віршів = Synodal 114 =
+# Heb 116:1-9 (той самий rso.json PSA 114→116, що RST O2-довів). БЕЗ Strong's, тож
+# O2 не перевірить — але мапінг документальний, не здогад. ⚠️ UBIO PSA 141 та JER 5
+# (теж NONE) — НЕ додано: без Strong's їх треба вивести з тексту/структури проти
+# RST-proxy, а не вгадати. Додати після звірки build-звіту (див. ADR-029).
+UBIO	PSA	114	1	PSA	116	1	Synodal Пс114=Heb 116:1-9 (rso PSA 114→116); UBIO без Strong's, мапінг документальний
+UBIO	PSA	114	2	PSA	116	2	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	3	PSA	116	3	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	4	PSA	116	4	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	5	PSA	116	5	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	6	PSA	116	6	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	7	PSA	116	7	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	8	PSA	116	8	Synodal Пс114=Heb 116:1-9
+UBIO	PSA	114	9	PSA	116	9	Synodal Пс114=Heb 116:1-9
+#
+# ── UBIO Псалом 141 = єврейський 142 (синодальний зсув) ─────────────────────────
+# UBIO 141:1 = надписання («Псалом навчальний... коли в печері») = Heb 142:1 (теж
+# надписання). Обидва 8 віршів → чистий 141:N → 142:N. rso: PSA 141→142. Документально.
+UBIO	PSA	141	1	PSA	142	1	Synodal Пс141=Heb 142 (надписання↔надписання); rso PSA 141→142
+UBIO	PSA	141	2	PSA	142	2	Synodal Пс141=Heb 142
+UBIO	PSA	141	3	PSA	142	3	Synodal Пс141=Heb 142
+UBIO	PSA	141	4	PSA	142	4	Synodal Пс141=Heb 142
+UBIO	PSA	141	5	PSA	142	5	Synodal Пс141=Heb 142
+UBIO	PSA	141	6	PSA	142	6	Synodal Пс141=Heb 142
+UBIO	PSA	141	7	PSA	142	7	Synodal Пс141=Heb 142
+UBIO	PSA	141	8	PSA	142	8	Synodal Пс141=Heb 142
+#
+# ── UBIO PSA 86:1 та 89:2-6 — синодальні dropped-range вірші rso ────────────────
+# rso нерівні діапазони (89:2-6→90:1-6) без Strong's empirical не розвʼязав. ⚠️ RST-
+# proxy тут ХИБНИЙ: RST ділить Пс 89 інакше (89:2=Heb 90:1, зсув −1), а UBIO
+# ОБʼЄДНУЄ надписання+перший рядок у 89:1=Heb 90:1, тож 89:2=«Перше ніж гори»=Heb
+# 90:2. Виведено ПОСЛІВНО з тексту UBIO проти івриту (identity 89:N→90:N), НЕ з RST.
+UBIO	PSA	86	1	PSA	87	1	UBIO 86:1=«Синів Кореєвих...Основа»=Heb 87:1 (rso dropped-range; виведено з тексту)
+UBIO	PSA	89	2	PSA	90	2	UBIO 89:1 обʼєднує надпис+90:1, тож 89:N→90:N identity (НЕ RST −1; послівно з тексту)
+UBIO	PSA	89	3	PSA	90	3	identity 89:N→90:N (послівно: «Ти людину вертаєш»=Heb 90:3)
+UBIO	PSA	89	4	PSA	90	4	identity 89:N→90:N (послівно: «тисяча літ»=Heb 90:4)
+UBIO	PSA	89	5	PSA	90	5	identity 89:N→90:N (послівно: «Пустив течію»=Heb 90:5)
+UBIO	PSA	89	6	PSA	90	6	identity 89:N→90:N (послівно: «уранці розцвітає»=Heb 90:6)
+#
+# ── UBIO JER 5 — ВІДОМИЙ GAP, свідомо НЕ мапимо ────────────────────────────────
+# UBIO JER 5 = 30 віршів, іврит/rso/eng = 31 (НЕ синодальний зсув — ідіосинкразія
+# модуля Огієнка: десь злиті 2 вірші). Без Strong's O2 не перевірить, точку злиття
+# вгадувати = ризик тихо хибного мапінгу. «Оригінал» тут порожній (чесно), доки
+# хтось з укр+іврит не пінне точку вручну. НЕ додавати наосліп.

@@ -26,6 +26,7 @@
 | `ASV+.zip` | MyBible модуль | Public domain |
 | `NASB+.zip` | MyBible модуль | Licensed — не розповсюджувати |
 | `RST+.zip` | MyBible модуль | Public domain |
+| `UBIO'88.zip` | MyBible модуль (Огієнко 1962/1988) | **Licensed — UBS/УБТ ©2009; не розповсюджувати публічно без дозволу** (ADR-029) |
 | `versification/{org,eng,rso}.json` | [Copenhagen-Alliance/versification-specification](https://github.com/Copenhagen-Alliance/versification-specification) → `standard-mappings/` | MIT |
 | `versification/overrides.tsv` | Курований (ADR-028) — рішення виведені й O2-перевірені вручну | — |
 

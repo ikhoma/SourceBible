@@ -381,9 +381,24 @@ class ReaderViewModel: ObservableObject {
         return pairs
     }
 
-    /// Ids of clickable words (those present in the canonical mapping).
+    /// Ids of clickable words in the Original pill.
+    ///
+    /// Normal path: words the DISPLAYED translation tags with a Strong's number
+    /// (canonical word↔segment mapping, ADR-016). Particles/affixes fall out.
+    ///
+    /// CHEAT MODE (ADR-016 amendment): when the translation tags NOTHING for this
+    /// verse — e.g. a Strong's-less translation like UBIO (Ohienko) — the gate has
+    /// no input, so instead of leaving every word dead, fall back to making every
+    /// original word that HAS a lexicon entry (non-nil strongsId) directly tappable.
+    /// Tap opens the lexicon from Macula's own Strong's; cross-highlight of the
+    /// translation word is simply absent (no pairing possible) — acceptable.
+    /// Triggers only when the pair set is empty, so translations WITH Strong's
+    /// (KJV/ASV/NASB/RST) are unaffected — no regression on their tuned Original screen.
     var clickableWordIDs: Set<String> {
-        Set(verseWordSegmentPairs.map { $0.word.id })
+        let paired = Set(verseWordSegmentPairs.map { $0.word.id })
+        guard paired.isEmpty else { return paired }
+        guard let words = selectedVerse?.words else { return [] }
+        return Set(words.filter { $0.strongsId != nil }.map { $0.id })
     }
 
     /// Clickable words in translation reading order — drives <> word navigation.
