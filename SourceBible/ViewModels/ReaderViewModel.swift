@@ -406,6 +406,28 @@ class ReaderViewModel: ObservableObject {
         verseWordSegmentPairs.map { $0.word }
     }
 
+    /// Words the ‹ › chevrons traverse in word mode.
+    ///
+    /// Normal path: canonical word↔segment pairs in TRANSLATION order (ADR-016).
+    /// CHEAT-MODE fallback (ADR-016 amendment, mirrors `clickableWordIDs`): when the
+    /// displayed translation tags nothing for this verse (Strong's-less UBIO/Ohienko),
+    /// traverse the Macula words that have a lexicon entry in ORIGINAL-language order —
+    /// so a word page opened from the Original pill can still be walked word-by-word.
+    var wordNavSequence: [BibleWord] {
+        let pairs = verseWordSegmentPairs
+        guard pairs.isEmpty else { return pairs.map { $0.word } }
+        return verseWordsWithStrongs
+    }
+
+    /// True when the DISPLAYED translation has no Strong's tagging for the focused
+    /// verse (e.g. UBIO/Ohienko) while the original words are loaded. Gates the
+    /// Word-tab support CTA. Requires words to be loaded so tagged translations
+    /// don't flash the CTA while `loadWordsForSelectedVerse()` is in flight.
+    var translationLacksStrongsMapping: Bool {
+        guard let v = selectedVerse, !v.words.isEmpty else { return false }
+        return verseWordSegmentPairs.isEmpty
+    }
+
     /// Kept for backward compatibility — prefer translationOrderedClickableWords for navigation.
     var verseWordsWithStrongs: [BibleWord] {
         selectedVerse?.words.filter { $0.strongsId != nil } ?? []
@@ -566,7 +588,7 @@ class ReaderViewModel: ObservableObject {
             return verses.first?.id == v.id
         } else {
             guard let w = selectedWord else { return true }
-            return translationOrderedClickableWords.first?.id == w.id
+            return wordNavSequence.first?.id == w.id
         }
     }
 
@@ -577,7 +599,7 @@ class ReaderViewModel: ObservableObject {
             return verses.last?.id == v.id
         } else {
             guard let w = selectedWord else { return true }
-            return translationOrderedClickableWords.last?.id == w.id
+            return wordNavSequence.last?.id == w.id
         }
     }
 
@@ -838,6 +860,7 @@ class ReaderViewModel: ObservableObject {
         selectedVerse = verse
         selectedWord = nil
         selectedSegment = nil
+        strongsEntry = nil   // stale lexicon must not survive a verse change
         bottomSheetMode = .verse
         activeSheet = .verse
         verseScrollTrigger += 1
@@ -886,9 +909,13 @@ class ReaderViewModel: ObservableObject {
 
     /// Called when the bottom sheet is dismissed — clears word/segment selection
     /// so the verse text no longer shows a highlight after the sheet closes.
+    /// Also drops the loaded lexicon entry: a stale `strongsEntry` from the
+    /// previous word otherwise keeps rendering in the Word tab on the next verse
+    /// (masking the empty/CTA states for Strong's-less translations).
     func clearWordSelection() {
         selectedWord = nil
         selectedSegment = nil
+        strongsEntry = nil
     }
 
     func navigateToPreviousVerse() {
@@ -899,6 +926,7 @@ class ReaderViewModel: ObservableObject {
         selectedVerse = verses[idx - 1]
         selectedWord = nil
         selectedSegment = nil
+        strongsEntry = nil   // stale lexicon must not survive a verse change
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
         // Analytics: verse chevron nav + unique verse read.
@@ -914,6 +942,7 @@ class ReaderViewModel: ObservableObject {
         selectedVerse = verses[idx + 1]
         selectedWord = nil
         selectedSegment = nil
+        strongsEntry = nil   // stale lexicon must not survive a verse change
         verseScrollTrigger += 1
         loadWordsForSelectedVerse()
         // Analytics: verse chevron nav + unique verse read.
@@ -921,30 +950,33 @@ class ReaderViewModel: ObservableObject {
         if let newId = selectedVerse?.id { sessionTracker.incVersesOpened(verseId: newId) }
     }
 
-    /// Navigate to the previous meaningful word in the focused verse (translation order).
+    /// Navigate to the previous meaningful word in the focused verse.
+    /// Sequence: translation order, or Macula order for Strong's-less translations
+    /// (see `wordNavSequence`). Segment sync is a no-op in the Macula fallback —
+    /// there is nothing to highlight in an untagged translation.
     func navigateToPreviousWord() {
-        let pairs = verseWordSegmentPairs
+        let seq = wordNavSequence
         guard let word = selectedWord,
-              let idx = pairs.firstIndex(where: { $0.word.id == word.id }),
+              let idx = seq.firstIndex(where: { $0.id == word.id }),
               idx > 0 else { return }
-        let prev = pairs[idx - 1]
-        selectedWord = prev.word
-        selectedSegment = prev.segment
-        loadStrongs(for: prev.word)
+        let prev = seq[idx - 1]
+        selectedWord = prev
+        syncSegment(for: prev)
+        loadStrongs(for: prev)
         // Analytics: word chevron nav.
         sessionTracker.incWordNav()
     }
 
-    /// Navigate to the next meaningful word in the focused verse (translation order).
+    /// Navigate to the next meaningful word in the focused verse (see above).
     func navigateToNextWord() {
-        let pairs = verseWordSegmentPairs
+        let seq = wordNavSequence
         guard let word = selectedWord,
-              let idx = pairs.firstIndex(where: { $0.word.id == word.id }),
-              idx < pairs.count - 1 else { return }
-        let next = pairs[idx + 1]
-        selectedWord = next.word
-        selectedSegment = next.segment
-        loadStrongs(for: next.word)
+              let idx = seq.firstIndex(where: { $0.id == word.id }),
+              idx < seq.count - 1 else { return }
+        let next = seq[idx + 1]
+        selectedWord = next
+        syncSegment(for: next)
+        loadStrongs(for: next)
         // Analytics: word chevron nav.
         sessionTracker.incWordNav()
     }

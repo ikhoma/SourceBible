@@ -15,10 +15,10 @@ struct DonationView: View {
     @State private var selectedProductId: String?
     @State private var showThanks = false
 
-    /// Standard Apple EULA. Replace with a custom Terms URL if one exists.
+    /// Apple's standard EULA covers this free app with optional donations (no custom Terms needed).
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     /// Same policy the analytics consent card links to — keep the two in sync.
-    private let privacyURL = URL(string: "https://sourcebible.app/privacy")!
+    private let privacyURL = URL(string: "https://source-bible.vercel.app/privacy")!
 
     private var selectedProduct: Product? {
         service.products.first { $0.id == selectedProductId }

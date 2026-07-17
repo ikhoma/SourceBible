@@ -161,6 +161,10 @@ struct MenuView: View {
                         }
                     }
                     .tint(.appBlue)
+
+                    NavigationLink("menu.privacy") {
+                        PrivacyPolicyView()
+                    }
                 }
                 .listRowBackground(colorTheme.cardBackground)
                 }

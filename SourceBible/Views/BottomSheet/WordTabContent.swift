@@ -25,6 +25,13 @@ struct WordTabView: View {
                 } else {
                     ConcordanceView(entry: entry)
                 }
+            } else if vm.selectedWord == nil, vm.selectedSegment == nil,
+                      vm.translationLacksStrongsMapping {
+                // Strong's-less translation (UBIO/Ohienko): nothing to tap in the
+                // translation text — explain why and ask for support instead of
+                // showing a dead-end hint. Words remain reachable via the Original
+                // pill (cheat mode, ADR-016 amendment).
+                WordMappingSupportView()
             } else {
                 Text(vm.selectedWord != nil || vm.selectedSegment != nil
                      ? LocalizedStringKey(MorphKey.emptyNoData)
@@ -33,6 +40,63 @@ struct WordTabView: View {
             }
         }
         .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 20)
+    }
+}
+
+// MARK: - Word Mapping Support CTA
+
+/// Shown in the Word tab when the displayed translation has no Strong's tagging
+/// (e.g. UBIO/Ohienko). Explains that word-level mapping is a substantial effort
+/// and routes to the donation screen.
+private struct WordMappingSupportView: View {
+    @Environment(\.colorTheme) private var colorTheme
+    @State private var showDonation = false
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "character.book.closed")
+                .font(.system(size: 44))
+                .foregroundStyle(.quaternary)
+                .padding(.top, 12)
+
+            Text("word.mapping.support.title")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+
+            Text("word.mapping.support.body")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                showDonation = true
+            } label: {
+                Text("word.mapping.support.cta")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.appBlue)
+            .padding(.top, 6)
+
+            Text("word.mapping.support.hint")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .sheet(isPresented: $showDonation) {
+            NavigationStack {
+                DonationView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                            SheetCloseButton { showDonation = false }
+                        }
+                    }
+            }
+        }
     }
 }
 

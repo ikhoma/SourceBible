@@ -69,7 +69,15 @@ struct NoteEditorView: View {
                     // .borderedProminent у toolbar: на iOS 26 системно рендериться
                     // акцентною glass-капсулою (Liquid Glass toolbar guidance,
                     // createwithswift.com); на iOS 18 — звичайна prominent-капсула.
-                    Button("note.editor.save") { saveAndDismiss() }
+                    // .foregroundStyle(.white): на .appBlue (#3085CF) системний
+                    // авто-контраст у темній темі обирає чорний лейбл; для accent-
+                    // капсули коректний колір — білий (як у системних prominent-кнопок).
+                    Button {
+                        saveAndDismiss()
+                    } label: {
+                        Text("note.editor.save")
+                            .foregroundStyle(.white)
+                    }
                         .buttonStyle(.borderedProminent)
                         .tint(.appBlue)
                 }

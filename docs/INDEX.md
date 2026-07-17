@@ -89,6 +89,7 @@ Load the full document only when the task is relevant to it.
 
 | File | Summary |
 |---|---|
+| `about-page.md` | **About page copy (EN+UK)** — final marketing/attribution text for Menu → About. «We bridge the gap…», softened «no seminary», manuscripts (Westminster Leningrad Codex / Nestle 1904), tagline «Built by Bible students and teachers, for Bible students and teachers», Ukraine/war + support, sources & licenses (KJV/ASV/RST, Macula, Strong's, TBESH/TBESG, commentaries, OpenBible, Doré). Copy source of truth; implemented in `SourceBible/Views/Menu/AboutView.swift` (Liquid Glass support button → DonationView). No BibleHub translit. NASB/UBIO omitted from public sources (licensed) |
 | `glossary.md` | Term definitions — word-study surfaces (original ≠ lexicon ≠ concordance), analytics taxonomy, session/consent, Mixpanel projects. Read when terms feel ambiguous |
 | `ux/known-design-friction.md` | Register of "works as designed but confuses users" cases + discoverability decisions (accept/affordance/tutorial); feeds the onboarding tutorial. Seeded with ux-001 |
 | `ux/feature-requests.md` | Backlog of net-new features asked by users, with target milestone (board status `planned`). ux-017 → v1.5; candidates ux-005/011/016 |

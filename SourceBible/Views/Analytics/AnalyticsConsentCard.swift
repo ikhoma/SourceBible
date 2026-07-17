@@ -30,49 +30,74 @@ struct AnalyticsConsentCard: View {
     @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(spacing: 16) {
             Text("analytics.consent.title")
                 .font(.title2)
                 .fontWeight(.bold)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
 
             Text("analytics.consent.body")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
 
             // Privacy link — same size as body text
-            if let url = URL(string: "https://sourcebible.app/privacy") {
+            if let url = URL(string: "https://source-bible.vercel.app/privacy") {
                 Link("analytics.consent.privacy_link", destination: url)
                     .font(.subheadline)
                     .foregroundStyle(.appBlue)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             }
 
-            // Actions
-            HStack(spacing: 12) {
-                Button {
-                    analyticsEnabled = false
-                    isPresented = false
-                } label: {
-                    Text("analytics.consent.decline")
-                        .frame(maxWidth: .infinity)
+            // Actions — full-width, stacked, native Liquid Glass surfaces.
+            // Styles branch by OS the same way AboutView does:
+            // iOS 26 Liquid Glass (.glassProminent / .glass) with the
+            // pre-26 system fallback (.borderedProminent / .bordered).
+            VStack(spacing: 12) {
+                if #available(iOS 26, *) {
+                    acceptButton.buttonStyle(.glassProminent)
+                    declineButton.buttonStyle(.glass)
+                } else {
+                    acceptButton.buttonStyle(.borderedProminent)
+                    declineButton.buttonStyle(.bordered)
                 }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
-                .controlSize(.large)
-
-                Button {
-                    analyticsEnabled = true
-                    isPresented = false
-                } label: {
-                    Text("analytics.consent.accept")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.appBlue)
-                .controlSize(.large)
             }
         }
         .padding(24)
         .padding(.bottom, 8)
+    }
+
+    // Accept action WITHOUT its buttonStyle, so the surface can branch by OS.
+    // .foregroundStyle(.white): the system auto-contrast on .appBlue (#3085CF)
+    // picks a black label in dark mode; the correct color on an accent capsule
+    // is white, matching the system's own prominent buttons.
+    private var acceptButton: some View {
+        Button {
+            analyticsEnabled = true
+            isPresented = false
+        } label: {
+            Text("analytics.consent.accept")
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+        }
+        .controlSize(.large)
+        .tint(.appBlue)
+    }
+
+    // Decline action WITHOUT its buttonStyle, so the surface can branch by OS.
+    private var declineButton: some View {
+        Button {
+            analyticsEnabled = false
+            isPresented = false
+        } label: {
+            Text("analytics.consent.decline")
+                .frame(maxWidth: .infinity)
+        }
+        .controlSize(.large)
+        .tint(.secondary)
     }
 }
 
