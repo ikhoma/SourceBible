@@ -87,7 +87,7 @@ struct ContentView: View {
                         .tint(.primary)
                 }
                 Tab("tab.search", systemImage: "magnifyingglass", value: AppTab.search, role: .search) {
-                    SearchView()
+                    SearchView(isSelectedTab: selectedTab == .search)
                         .environmentObject(readerVM)
                         .environmentObject(router)
                         .tint(.primary)
@@ -120,7 +120,7 @@ struct ContentView: View {
                     .tabItem { Label("tab.menu", systemImage: "ellipsis.circle.fill") }
                     .tag(AppTab.menu)
 
-                SearchView()
+                SearchView(isSelectedTab: selectedTab == .search)
                     .environmentObject(readerVM)
                     .environmentObject(router)
                     .tint(.primary)

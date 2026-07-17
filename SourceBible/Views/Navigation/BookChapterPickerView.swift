@@ -38,8 +38,11 @@ struct BookChapterPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(step == .chapter ? "action.back" : "action.close") {
-                        if step == .chapter { step = .book } else { dismiss() }
+                    if step == .chapter {
+                        Button("action.back") { step = .book }
+                    } else {
+                        // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                        SheetCloseButton { dismiss() }
                     }
                 }
                 if step == .book {
@@ -59,16 +62,35 @@ struct BookChapterPickerView: View {
         .themedSheet(colorTheme)
     }
 
+    /// ux-011: true when the user typed a query that matches no book in either
+    /// testament. Without this the two section headers rendered with no rows and no
+    /// feedback, so an invalid book name looked "accepted".
+    private var searchHasNoMatches: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+            && filtered(.old).isEmpty && filtered(.new).isEmpty
+    }
+
     private var bookList: some View {
-        List {
-            Section(header: Text("testament.old")) {
-                ForEach(filtered(.old)) { book in bookRow(book).themedRow(colorTheme) }
-            }
-            Section(header: Text("testament.new")) {
-                ForEach(filtered(.new)) { book in bookRow(book).themedRow(colorTheme) }
+        Group {
+            if searchHasNoMatches {
+                // ux-011: empty state instead of two bare testament headers.
+                ContentUnavailableView {
+                    Label("picker.no_book_found", systemImage: "book.closed")
+                } description: {
+                    Text("picker.no_book_found.hint")
+                }
+            } else {
+                List {
+                    Section(header: Text("testament.old")) {
+                        ForEach(filtered(.old)) { book in bookRow(book).themedRow(colorTheme) }
+                    }
+                    Section(header: Text("testament.new")) {
+                        ForEach(filtered(.new)) { book in bookRow(book).themedRow(colorTheme) }
+                    }
+                }
+                .themedList(colorTheme)
             }
         }
-        .themedList(colorTheme)
         .searchable(text: $searchText, prompt: Text("picker.search_book"))
         .navigationTitle("picker.title_book")
     }

@@ -8,13 +8,22 @@ struct NotesListView: View {
     @EnvironmentObject private var notesVM: NotesViewModel
     @EnvironmentObject private var router:  AppNavigationRouter
 
+    /// Фільтри вкладки Entries (період / книга / сортування).
+    var filter = EntriesFilter()
+
+    private var filteredNotes: [NoteWithBlocks] {
+        filter.apply(to: notesVM.notes)
+    }
+
     var body: some View {
         Group {
             if notesVM.notes.isEmpty {
                 emptyState
+            } else if filteredNotes.isEmpty {
+                filteredEmptyState
             } else {
                 List {
-                    ForEach(notesVM.notes, id: \.note.id) { item in
+                    ForEach(filteredNotes, id: \.note.id) { item in
                         Button {
                             notesVM.openEdit(note: item)
                         } label: {
@@ -46,6 +55,20 @@ struct NotesListView: View {
                     .environmentObject(router)
                     .presentationDetents([.large])
             }
+        }
+    }
+
+    /// Записи є, але фільтри сховали всі — окремий стан, щоб не плутати з
+    /// «нотаток ще немає».
+    private var filteredEmptyState: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 48)).foregroundStyle(.quaternary)
+            Text("entries.filter.empty")
+                .font(.callout).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
         }
     }
 

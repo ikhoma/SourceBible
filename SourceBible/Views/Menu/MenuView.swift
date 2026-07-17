@@ -81,63 +81,25 @@ struct MenuView: View {
                     // producing a short indented divider.
                     .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
                     // Menu + custom collapsed label instead of a bare Picker: the
-                    // default menu-picker renders the selected Label (icon glued to
-                    // text) in the primary color. Secondary + explicit spacing keeps
-                    // the value column consistent with the LabeledContent rows below.
-                    // Row = plain HStack, Menu wraps ONLY the trailing value cluster:
-                    // • menu anchors at the trailing edge (not centered over the row),
-                    // • the row title stays visible while the menu is up (iOS "lifts"
-                    //   the menu source view — wrapping the whole row left it empty),
-                    // • no LabeledContent → nothing clips "Match Device" on device.
-                    // .font(.body) is explicit: a Menu label does not inherit the
-                    // Form row text style and rendered smaller than sibling rows.
-                    HStack {
-                        Text("menu.appearance_mode")
-                        Spacer()
-                        Menu {
-                            Picker("", selection: $appearanceModeRaw) {
-                                ForEach(AppearanceMode.allCases) { mode in
-                                    Label(mode.labelKey, systemImage: mode.systemImage)
-                                        .tag(mode.rawValue)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                        } label: {
+                    // Pushed sub-pages (same pattern as Default translation /
+                    // Launch behavior): the in-row Menu approach clipped its label
+                    // on device no matter how it was hosted — NavigationLink +
+                    // LabeledContent is the reliable native rendering.
+                    NavigationLink {
+                        AppearanceModePickerView(selectedRaw: $appearanceModeRaw)
+                    } label: {
+                        LabeledContent("menu.appearance_mode") {
                             HStack(spacing: 5) {
                                 Image(systemName: appearanceMode.systemImage)
                                 Text(appearanceMode.labelKey)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption2)
                             }
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            // Menu proposes its label LESS than intrinsic width on
-                            // device (larger Dynamic Type) and Text CLIPS without an
-                            // ellipsis ("Модерний" → "одерний"). fixedSize makes the
-                            // content dictate its own width. Values are short and
-                            // known — the row cannot overflow.
-                            .fixedSize()
                         }
                     }
-                    HStack {
-                        Text("menu.title_font")
-                        Spacer()
-                        Menu {
-                            Picker("", selection: $titleFontStyleRaw) {
-                                ForEach(TitleFontStyle.allCases) { style in
-                                    Text(style.labelKey).tag(style.rawValue)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                        } label: {
-                            HStack(spacing: 5) {
-                                Text(titleFontStyle.labelKey)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption2)
-                            }
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .fixedSize() // see comment on the Mode row above
+                    NavigationLink {
+                        TitleFontPickerView(selectedRaw: $titleFontStyleRaw)
+                    } label: {
+                        LabeledContent("menu.title_font") {
+                            Text(titleFontStyle.labelKey)
                         }
                     }
                     Toggle("menu.hide_book_covers", isOn: $hideBookCovers)
@@ -174,16 +136,10 @@ struct MenuView: View {
                     } label: {
                         LabeledContent("menu.language", value: currentLanguageLabel)
                     }
-                    // bug-023: the About destination had no navigation title.
-                    // bug-022: the only text here is the version string, which is a
-                    // proper noun and not translatable — real About copy still TBD.
+                    // About — real copy in AboutView (EN/UK, sources & licenses,
+                    // Support primary action → DonationView). Closes bug-022/bug-023.
                     NavigationLink("menu.about") {
-                        ZStack {
-                            colorTheme.appBackground.ignoresSafeArea()
-                            Text("Source Bible v1.0")
-                        }
-                        .navigationTitle("menu.about")
-                        .navigationBarTitleDisplayMode(.inline)
+                        AboutView()
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
@@ -270,6 +226,68 @@ private struct ThemeCardButton: View {
     }
 }
 
+// MARK: - AppearanceModePickerView
+
+struct AppearanceModePickerView: View {
+    @Binding var selectedRaw: String
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorTheme) private var colorTheme
+
+    var body: some View {
+        List(AppearanceMode.allCases) { mode in
+            // Button (not onTapGesture) → the ENTIRE row is tappable, including
+            // the inset margins, with the native highlight — standard iOS feel.
+            Button {
+                selectedRaw = mode.rawValue
+                dismiss()
+            } label: {
+                HStack {
+                    Label(mode.labelKey, systemImage: mode.systemImage)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if mode.rawValue == selectedRaw {
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                    }
+                }
+            }
+            .themedRow(colorTheme)
+        }
+        .themedList(colorTheme)
+        .navigationTitle("menu.appearance_mode")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - TitleFontPickerView
+
+struct TitleFontPickerView: View {
+    @Binding var selectedRaw: String
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorTheme) private var colorTheme
+
+    var body: some View {
+        List(TitleFontStyle.allCases) { style in
+            Button {
+                selectedRaw = style.rawValue
+                dismiss()
+            } label: {
+                HStack {
+                    Text(style.labelKey)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if style.rawValue == selectedRaw {
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                    }
+                }
+            }
+            .themedRow(colorTheme)
+        }
+        .themedList(colorTheme)
+        .navigationTitle("menu.title_font")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 // MARK: - LaunchBehaviorPickerView
 
 struct LaunchBehaviorPickerView: View {
@@ -295,22 +313,23 @@ struct LaunchBehaviorPickerView: View {
 
     var body: some View {
         List(options) { opt in
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(opt.titleKey).font(.body)
-                    Text(opt.subtitleKey)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if opt.behavior.rawValue == selectedRaw {
-                    Image(systemName: "checkmark").foregroundStyle(.appBlue)
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
+            Button {
                 selectedRaw = opt.behavior.rawValue
                 dismiss()
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(opt.titleKey).font(.body)
+                            .foregroundStyle(.primary)
+                        Text(opt.subtitleKey)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if opt.behavior.rawValue == selectedRaw {
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                    }
+                }
             }
             .themedRow(colorTheme)
         }
@@ -333,22 +352,23 @@ struct DefaultTranslationPickerView: View {
 
     var body: some View {
         List(translations) { t in
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(t.name).font(.body)
-                    Text(languageLabel(for: t.language))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if t.id == selectedId {
-                    Image(systemName: "checkmark").foregroundStyle(.appBlue)
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
+            Button {
                 selectedId = t.id
                 dismiss()
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t.name).font(.body)
+                            .foregroundStyle(.primary)
+                        Text(languageLabel(for: t.language))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if t.id == selectedId {
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                    }
+                }
             }
             .themedRow(colorTheme)
         }

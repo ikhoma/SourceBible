@@ -15,6 +15,11 @@ struct SearchView: View {
     @EnvironmentObject private var router:   AppNavigationRouter
     @EnvironmentObject private var readerVM: ReaderViewModel
 
+    /// True while the search tab is the selected tab (passed by ContentView). Drives a
+    /// deterministic restore of the search-bar presentation on tab re-selection
+    /// (bug-011) instead of relying on `.onAppear` for a `role: .search` tab.
+    var isSelectedTab: Bool = true
+
     @State private var searchText:       String = ""
     @State private var isSearchActive:   Bool   = false
 
@@ -135,6 +140,14 @@ struct SearchView: View {
             vm.analytics      = analytics
             vm.sessionTracker = sessionTracker
         }
+        // bug-011: restore the search-bar presentation (the large clear ✕) when
+        // returning to a committed results page — see reassertSearchPresentationIfNeeded().
+        // Driven off the tab-selection state (reliable for a role: .search tab), with
+        // .onAppear as a backup; both are idempotent via the guard.
+        .onChange(of: isSelectedTab) { _, selected in
+            if selected { reassertSearchPresentationIfNeeded() }
+        }
+        .onAppear { reassertSearchPresentationIfNeeded() }
     }
 
     // MARK: - Main content
@@ -369,6 +382,12 @@ struct SearchView: View {
                     ),
                     titleKey: "search.filter.translation.title"
                 )
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                        SheetCloseButton { activeFilterSheet = nil }
+                    }
+                }
             }
             .presentationDetents([.medium, .large])
         case .testament:
@@ -388,6 +407,12 @@ struct SearchView: View {
             .themedList(colorTheme)
             .navigationTitle("search.filter.testament.title")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                    SheetCloseButton { activeFilterSheet = nil }
+                }
+            }
         }
         .themedSheet(colorTheme)
         .presentationDetents([.medium])
@@ -460,6 +485,12 @@ struct SearchView: View {
             .themedList(colorTheme)
             .navigationTitle("search.filter.book.title")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                    SheetCloseButton { activeFilterSheet = nil }
+                }
+            }
         }
         .themedSheet(colorTheme)
         .presentationDetents([.medium, .large])
@@ -680,6 +711,23 @@ struct SearchView: View {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
         )
+    }
+
+    /// bug-011: Opening a result switches to the Bible tab, which deselects this
+    /// search-role tab and collapses its `.searchable` presentation
+    /// (`isSearchActive` -> false). On return, `committedQuery` still drives the
+    /// results page, but the system search bar that draws the large clear (✕) button
+    /// is inactive, so the ✕ is missing on the 2nd+ open. Re-assert the presented
+    /// state whenever a committed results page is on screen so every return matches
+    /// the first-open chrome.
+    private func reassertSearchPresentationIfNeeded() {
+        guard isShowingResults, !isSearchActive else { return }
+        isSearchActive = true
+        // The committed results state is keyboard-free (see `commit`). Re-presenting
+        // the field can make it first responder, so drop the keyboard on the next tick
+        // once the presentation has mounted (mirrors ContentView's deferred cross-tab
+        // navigation hop).
+        Task { @MainActor in dismissKeyboard() }
     }
 }
 

@@ -690,7 +690,8 @@ struct TranslationPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("action.close") { dismiss() }
+                    // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                    SheetCloseButton { dismiss() }
                 }
             }
         }

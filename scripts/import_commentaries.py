@@ -251,6 +251,13 @@ def _henry_extract_sections(html: str):
     4. The verse list is used directly — Henry always lists every verse explicitly,
        so no range inference is needed.
     """
+    # bug-010: each chapter file ends with a `<!-- (End Body) -->` comment followed by
+    # the site footer (TOC / Previous / Next / Back-to-BiblesNet / Free Download /
+    # Contact Us). The final section is sliced to len(html), so that boilerplate leaked
+    # into the commentary body. Truncate at the body-end marker first. One file
+    # (Habakkuk 1) writes it malformed as `<! -- (End Body) -->`, hence the tolerant \s*.
+    html = re.split(r"<!\s*--\s*\(End Body\)\s*-->", html, maxsplit=1)[0]
+
     verse_re = re.compile(r'^[A-Za-z]+\d+_(\d+)$')
 
     # All named anchors in document order

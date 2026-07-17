@@ -26,26 +26,16 @@ struct NoteEditorView: View {
     }
 
     var body: some View {
-        // No NavigationStack — UINavigationController inside a sheet interferes
-        // with the UITextView responder chain and can suppress keyboard on iOS 16+.
-        VStack(spacing: 0) {
-
-            // Manual navigation bar
-            HStack {
-                Button("action.cancel") { dismiss() }
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(navigationTitle)
-                    .font(.headline)
-                Spacer()
-                Button("note.editor.save") { saveAndDismiss() }
-                    .bold()
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-
-            Divider()
-
+        // Системний header (2026-07): NavigationStack + toolbar замість кастомного
+        // HStack — дає центрований системний тайтл, X-кнопку закриття (role: .close
+        // на iOS 26) і акцентну Save-капсулу без ручних відступів і Divider.
+        // Історична примітка: раніше NavigationStack тут свідомо не було через
+        // конфлікт UINavigationController з responder chain UITextView (клавіатура
+        // могла не з'являтись). Відтоді фокус переведено на
+        // UIViewControllerRepresentable + viewDidAppear (див. NoteTextEditor нижче),
+        // що не залежить від таймінгу sheet-анімації; sim-QA 2026-07-16 підтвердив
+        // каретку в редакторі всередині NavigationStack.
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
 
@@ -68,6 +58,21 @@ struct NoteEditorView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 .padding(.bottom, 16)
+            }
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    SheetCloseButton { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    // .borderedProminent у toolbar: на iOS 26 системно рендериться
+                    // акцентною glass-капсулою (Liquid Glass toolbar guidance,
+                    // createwithswift.com); на iOS 18 — звичайна prominent-капсула.
+                    Button("note.editor.save") { saveAndDismiss() }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.appBlue)
+                }
             }
         }
         // Applied HERE, not at the call sites: this editor is presented from both

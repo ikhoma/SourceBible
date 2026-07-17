@@ -11,13 +11,22 @@ struct BookmarksListView: View {
     @EnvironmentObject private var bookmarksVM: BookmarksViewModel
     @EnvironmentObject private var router:      AppNavigationRouter
 
+    /// Фільтри вкладки Entries (період / книга / сортування).
+    var filter = EntriesFilter()
+
+    private var filteredBookmarks: [BookmarkWithVerses] {
+        filter.apply(to: bookmarksVM.bookmarks)
+    }
+
     var body: some View {
         Group {
             if bookmarksVM.bookmarks.isEmpty {
                 emptyState
+            } else if filteredBookmarks.isEmpty {
+                filteredEmptyState
             } else {
                 List {
-                    ForEach(bookmarksVM.bookmarks, id: \.bookmark.id) { item in
+                    ForEach(filteredBookmarks, id: \.bookmark.id) { item in
                         BookmarkCardView(item: item)
                             .contentShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
                             .onTapGesture {
@@ -41,6 +50,20 @@ struct BookmarksListView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
             }
+        }
+    }
+
+    /// Записи є, але фільтри сховали всі — окремий стан, щоб не плутати з
+    /// «закладок ще немає».
+    private var filteredEmptyState: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 48)).foregroundStyle(.quaternary)
+            Text("entries.filter.empty")
+                .font(.callout).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
         }
     }
 

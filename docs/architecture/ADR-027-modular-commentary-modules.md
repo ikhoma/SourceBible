@@ -1,14 +1,15 @@
 # ADR-027 — Модульні commentary-модулі з OTA-оновленням
 
 **Status:** Proposed (2026-07-05)
-**Related:** ADR-012 (Unified User Data Layer — writable GRDB, sync-ready), ADR-008 (Search — FTS5 у ядрі), ADR-006 (Localization — upgrade path Bundle→DB→Remote), `commentary-system-design.md`, `scripts/import_commentaries.py`, `docs/db_build.md`
+**Depends on:** ADR-028 (Версифікація — `verse_org` як єдине джерело версифікації; модулі якоряться в org ЧЕРЕЗ нього)
+**Related:** ADR-012 (Unified User Data Layer — writable GRDB, sync-ready), ADR-008 (Search — FTS5 у ядрі), ADR-006 (Localization — upgrade path Bundle→DB→Remote), ADR-029 (переклади → ядро, коментарі → модулі; те саме розрізнення), `commentary-system-design.md`, `scripts/import_commentaries.py`, `docs/db_build.md`
 **Замінює/уточнює:** модель доставки коментарів у монолітному `sourcebible.db`
 
 ---
 
 ## Контекст
 
-Зараз **усі** дані бандляться в один `sourcebible.db`: ядро (`word` Macula, `verse`, `strongs`, `verse_map`, `cross_reference`, `book`, `translation`) **разом** із коментарями (`comments`, `comment_verses`). Збірка — `build_db.py` (~10 хв) + `build_verse_map.py` + `import_commentaries.py` (Calvin/Henry/Spurgeon/Owen) + `process_glosses.py`. База — APFS sparse (~24 МБ фізично / ~149 МБ логічно).
+Зараз **усі** дані бандляться в один `sourcebible.db`: ядро (`word` Macula, `verse`, `strongs`, `verse_org`, `cross_reference`, `book`, `translation`) **разом** із коментарями (`comments`, `comment_verses`). Збірка — `build_db.py` (~10 хв) + `build_versification.py` (`verse_org`, ADR-028) + `import_commentaries.py` (Calvin/Henry/Spurgeon/Owen) + `process_glosses.py`. База — APFS sparse (~24 МБ фізично / ~149 МБ логічно).
 
 Це створює три проблеми, виявлені на практиці:
 
@@ -38,7 +39,10 @@
 
 ### Жорсткі інваріанти дизайну
 
-1. **Версифікація нормалізується до канонічної (Macula/MT + `verse_map`) на етапі ЗБІРКИ.** Кожне зовнішнє джерело (SWORD, MyBible) має свою нумерацію; якщо лишити «як є» — проблема verse-map повертається помножена на кожен модуль у рантаймі. Застосунок мусить робити однаковий lookup незалежно від джерела модуля.
+1. **Секції якоряться в оригіналі (org) ЧЕРЕЗ `verse_org` (ADR-028) — модуль НЕ носить власної версифікації.** `verse_org` — тотальний курований міст «вірш перекладу ⇄ вірш оригіналу» (org = Macula: MT для СЗ, грец. для НЗ); мапінг НЕ виводиться наново (правило ADR-028 «never re-derive mapping»).
+   - **Build-time:** рідне посилання джерела (SWORD OSIS ≈ `eng`-схема; MyBible `russian_numbering` ≈ `rso`) → reverse через `verse_org` → координата org. Так класичний зсув (напр. заголовки Псалмів = вірш 1 у MT) лікується сам.
+   - **Runtime:** юзер читає переклад T, тапає вірш → forward `verse_org` `(T,book,ch,v)`→`org_*` → секція, заякорена на org. Версифікація-агностично для будь-якого перекладу (KJV/RST/Огієнко), однаковий шлях, що й «Оригінал»/крос-рефи.
+   - **`org = NULL`** («немає оригіналу») → fallback-індекс на координату конкретного перекладу (рідко для 66 книг, але правило обов'язкове). **N:M/крос-глава** → `comment_verses` розкладається на кілька рядків індексу на той самий `key`.
 
 2. **Стабільні природні ключі, НЕ `rowid`.** Ідентичність розділу = `source + book_id + start_ch:start_vs–end_ch:end_vs` (стабільний хеш). Перезбірка/виправлення тексту **не змінює** ідентичність. Інакше зсув `rowid` ламає все, що посилається на розділ (закладки, «продовжити», cross-ref).
 
@@ -53,16 +57,16 @@
 comments(
     key            TEXT PRIMARY KEY,   -- стабільний: hash(source|book|range)
     source         TEXT,               -- 'Calvin'
-    book_id        TEXT,               -- канонічний ('ISA'), НЕ MyBible book_number
+    book_id        TEXT,               -- org_book_id (USFM 'ISA'), НЕ MyBible book_number
     start_chapter  INTEGER, start_verse INTEGER,
-    end_chapter    INTEGER, end_verse   INTEGER,   -- у КАНОНІЧНІЙ версифікації
+    end_chapter    INTEGER, end_verse   INTEGER,   -- КООРДИНАТИ ORG (Macula), отримані через verse_org на збірці
     text           TEXT,
     -- provenance / статус (критично для MT-циклу):
     origin         TEXT,               -- 'SWORD:CalvinCommentaries' | 'MyBible:Calvin-c' | 'CCEL'
     translation_status TEXT,           -- 'source' | 'raw-mt' | 'reviewed' | 'final'
     reviewer       TEXT, reviewed_at   TEXT
 )
-comment_verses(key TEXT, book_id TEXT, chapter INTEGER, verse INTEGER)  -- lookup, канонічна нумерація
+comment_verses(key TEXT, book_id TEXT, chapter INTEGER, verse INTEGER)  -- індекс в ORG-координатах; runtime: reader-translation → verse_org → org → key. org=NULL → окремий translation-anchored fallback-індекс
 module_info(name, value)  -- author, version, schema_version, min_app_version, book_versions(JSON)
 ```
 

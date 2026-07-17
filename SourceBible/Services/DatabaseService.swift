@@ -849,6 +849,28 @@ final class DatabaseService: @unchecked Sendable {
         return sources
     }
 
+    /// Returns the set of commentary source names that have a NON-EMPTY section
+    /// actually covering the given verse — not merely the same book. A source may
+    /// have sections elsewhere in the book but a coverage gap (or a blank section) at
+    /// this verse; Calvin's modules are patchy (ADR-027). Offering such a source opened
+    /// an empty detail page (bug-016), so the picker filters on this per-verse set.
+    func commentarySourcesAvailable(bookId: String, chapter: Int, verse: Int) -> Set<String> {
+        guard isAvailable else { return [] }
+        var sources = Set<String>()
+        let sql = """
+            SELECT DISTINCT c.source
+            FROM comments c
+            JOIN comment_verses cv ON cv.comment_id = c.id
+            WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
+              AND c.text IS NOT NULL
+              AND TRIM(c.text, char(32) || char(9) || char(10) || char(13)) <> ''
+            """
+        query(sql, bindings: [bookId, chapter, verse]) { stmt in
+            sources.insert(string(stmt, 0))
+        }
+        return sources
+    }
+
     /// Loads a commentary section for a specific verse.
     /// Uses a two-table join: comment_verses (lookup index) → comments (full text).
     /// One commentary section may cover multiple verses; the full section is returned
@@ -863,6 +885,9 @@ final class DatabaseService: @unchecked Sendable {
             JOIN comment_verses cv ON cv.comment_id = c.id
             WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
               AND c.source = ?
+              AND c.text IS NOT NULL
+              AND TRIM(c.text, char(32) || char(9) || char(10) || char(13)) <> ''
+            ORDER BY c.id
             LIMIT 1
             """
         query(sql, bindings: [bookId, chapter, verse, source]) { stmt in

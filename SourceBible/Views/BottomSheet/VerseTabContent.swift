@@ -386,7 +386,16 @@ struct CommentariesView: View {
         String(verseId.split(separator: "|").first ?? "")
     }
 
-    /// Only show theologians that have commentary for the current book.
+    /// (bookId, chapter, verse) parsed from verseId "BOOK|chapter|verse".
+    private var verseComponents: (bookId: String, chapter: Int, verse: Int)? {
+        let parts = verseId.split(separator: "|")
+        guard parts.count == 3, let ch = Int(parts[1]), let vs = Int(parts[2]) else { return nil }
+        return (String(parts[0]), ch, vs)
+    }
+
+    /// bug-016: only show theologians that have a NON-EMPTY section for THIS verse —
+    /// not merely somewhere in the book. Calvin's modules are patchy (ADR-027), so a
+    /// book-level check offered him on verses he does not cover, opening an empty page.
     private var visibleTheologians: [Theologian] {
         Theologian.all.filter { availableSources.contains($0.id.capitalized) }
     }
@@ -399,7 +408,7 @@ struct CommentariesView: View {
                     Image(systemName: "books.vertical")
                         .font(.system(size: 48)).foregroundStyle(.quaternary)
                     VStack(spacing: 4) {
-                        Text("verse.commentaries.none_for_book")
+                        Text("verse.commentary.unavailable")
                             .font(.callout).foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -437,12 +446,24 @@ struct CommentariesView: View {
             }
         }
         }
-        .task(id: bookId) {
-            availableSources = DatabaseService.shared.commentarySourcesAvailable(bookId: bookId)
+        .task(id: verseId) {
+            if let vc = verseComponents {
+                availableSources = DatabaseService.shared.commentarySourcesAvailable(
+                    bookId: vc.bookId, chapter: vc.chapter, verse: vc.verse)
+            } else {
+                // Unparseable verseId — fall back to book-level so we never hide everything.
+                availableSources = DatabaseService.shared.commentarySourcesAvailable(bookId: bookId)
+            }
         }
         .sheet(item: $selectedTheologian) { t in
             NavigationStack {
                 CommentaryDetailView(theologian: t, verseId: verseId)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
+                            SheetCloseButton { selectedTheologian = nil }
+                        }
+                    }
             }
             // The stacked commentary sheet defaults to the system sheet surface
             // (white / systemBackground), which ignored the theme — it stayed cold
