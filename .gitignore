@@ -65,3 +65,4 @@ SourceBible/Generated/AnalyticsConfiguration.swift
 # ── Local workflow scripts ─────────────────────────────────────
 commit_all.sh
 SourceBible/Resources/sourcebible-backup.db
+sb_baseline.db*
