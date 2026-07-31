@@ -143,6 +143,7 @@ struct AboutView: View {
                     "TBESH / TBESG — STEPBible.org — CC BY 4.0",
                 ]),
                 LicenseGroup(title: "Переклади", items: [
+                    "Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA · Вікіджерела",
                     "King James Version (KJV) — суспільне надбання",
                     "American Standard Version (ASV) — суспільне надбання",
                     "Синодальний переклад (RST) — суспільне надбання",
@@ -171,6 +172,7 @@ struct AboutView: View {
                 "TBESH / TBESG — STEPBible.org — CC BY 4.0",
             ]),
             LicenseGroup(title: "Translations", items: [
+                "Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA · Wikisource",
                 "King James Version (KJV) — Public Domain",
                 "American Standard Version (ASV) — Public Domain",
                 "Russian Synodal Translation (RST) — Public Domain",
