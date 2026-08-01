@@ -16,6 +16,7 @@ struct MenuView: View {
     @Environment(\.locale) private var locale
     @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
     @AppStorage(AppStorageKeys.launchBehavior) private var launchBehaviorRaw = LaunchBehavior.resume.rawValue
+    @AppStorage(AppStorageKeys.translationLaunchBehavior) private var translationLaunchRaw = TranslationLaunchBehavior.fixed.rawValue
 
     private var currentLanguageLabel: String {
         switch appLanguage {
@@ -33,6 +34,15 @@ struct MenuView: View {
     private var launchBehaviorLabel: LocalizedStringKey {
         LaunchBehavior(rawValue: launchBehaviorRaw) == .lastBookmark
             ? "menu.launch.last_bookmark" : "menu.launch.resume"
+    }
+
+    private var translationLaunchBehavior: TranslationLaunchBehavior {
+        TranslationLaunchBehavior(rawValue: translationLaunchRaw) ?? .fixed
+    }
+
+    private var translationLaunchLabel: LocalizedStringKey {
+        translationLaunchBehavior == .lastUsed
+            ? "menu.translation_launch.last_used" : "menu.translation_launch.fixed"
     }
 
     var body: some View {
@@ -110,13 +120,26 @@ struct MenuView: View {
                 .listRowBackground(colorTheme.cardBackground)
                 Section("menu.section.translation") {
                     NavigationLink {
-                        DefaultTranslationPickerView(
-                            translations: readerVM.availableTranslations,
-                            selectedId: $defaultTranslationId
-                        )
+                        TranslationLaunchBehaviorPickerView(selectedRaw: $translationLaunchRaw)
                     } label: {
-                        LabeledContent("menu.default_translation",
-                                       value: defaultTranslationId)
+                        LabeledContent("menu.translation_launch") {
+                            Text(translationLaunchLabel)
+                        }
+                    }
+                    // The explicit pick only applies in .fixed mode. In .lastUsed it
+                    // degrades to a first-launch fallback, so showing it would read
+                    // as authoritative when it isn't — hide it instead, the way
+                    // Settings hides rows that don't apply to the current mode.
+                    if translationLaunchBehavior == .fixed {
+                        NavigationLink {
+                            DefaultTranslationPickerView(
+                                translations: readerVM.availableTranslations,
+                                selectedId: $defaultTranslationId
+                            )
+                        } label: {
+                            LabeledContent("menu.default_translation",
+                                           value: defaultTranslationId)
+                        }
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
@@ -339,6 +362,60 @@ struct LaunchBehaviorPickerView: View {
         }
         .themedList(colorTheme)
         .navigationTitle("menu.launch_behavior")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - TranslationLaunchBehaviorPickerView
+
+/// Sibling of `LaunchBehaviorPickerView`: that one answers "which passage on
+/// launch", this one "which translation on launch". Same row shape on purpose —
+/// the two settings sit next to each other and should read as a pair.
+struct TranslationLaunchBehaviorPickerView: View {
+    @Binding var selectedRaw: String
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorTheme) private var colorTheme
+
+    private struct Option: Identifiable {
+        let behavior: TranslationLaunchBehavior
+        let titleKey: LocalizedStringKey
+        let subtitleKey: LocalizedStringKey
+        var id: String { behavior.rawValue }
+    }
+
+    private let options: [Option] = [
+        Option(behavior: .fixed,
+               titleKey: "menu.translation_launch.fixed",
+               subtitleKey: "menu.translation_launch.fixed.subtitle"),
+        Option(behavior: .lastUsed,
+               titleKey: "menu.translation_launch.last_used",
+               subtitleKey: "menu.translation_launch.last_used.subtitle"),
+    ]
+
+    var body: some View {
+        List(options) { opt in
+            Button {
+                selectedRaw = opt.behavior.rawValue
+                dismiss()
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(opt.titleKey).font(.body)
+                            .foregroundStyle(.primary)
+                        Text(opt.subtitleKey)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if opt.behavior.rawValue == selectedRaw {
+                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
+                    }
+                }
+            }
+            .themedRow(colorTheme)
+        }
+        .themedList(colorTheme)
+        .navigationTitle("menu.translation_launch")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -127,8 +127,12 @@ class ReaderViewModel: ObservableObject {
             guard let self else { return }
             self.allBooks              = self.db.loadBooks()
             self.availableTranslations = self.db.loadTranslations()
-            // Restore persisted default translation (set from Menu settings)
-            if let savedId = UserDefaults.standard.string(forKey: AppStorageKeys.defaultTranslationId),
+            // Restore the launch translation. The store resolves WHICH id to use
+            // from `translationLaunchBehavior` — the Settings pick (.fixed, the
+            // default) or the last translation the user switched to (.lastUsed).
+            // An unknown id (translation removed from the DB between builds) falls
+            // through to `Translation.defaultTranslation`, same as before.
+            if let savedId = self.positionStore.launchTranslationId(),
                let match = self.availableTranslations.first(where: { $0.id == savedId }) {
                 self.currentTranslation = match
             }
@@ -463,11 +467,28 @@ class ReaderViewModel: ObservableObject {
     // closure is not re-evaluated when the presenter's @State changes), while
     // the sheet's own body re-renders on every vm change.
 
-    /// Desired VISIBLE gap between the bottom of the pinned verse card and the
-    /// real (on-screen) top of the sheet. Kept below the next row's top padding
-    /// (~12 pt) so the next verse's number/text is hidden behind the sheet — at
-    /// 16 a ~4 pt sliver peeked and the ±1 px height wobble made it flicker.
-    static let sheetGap: CGFloat = 8
+    /// **Джерело правди для обох зазорів навколо припнутої картки.**
+    /// Дорівнює внутрішньому вертикальному падінгу рядка вірша
+    /// (`VerseRow`: `.padding(.vertical, 12)`). Рядки стоять у `VStack(spacing: 0)`,
+    /// тож увесь вертикальний ритм дає цей падінг — а отже над карткою лежить рівно
+    /// стільки ж порожнечі (нижній падінг попереднього рядка), скільки й під нею
+    /// (верхній падінг наступного).
+    ///
+    /// Наслідок: зазор ≤ цього значення показує ЛИШЕ порожнечу; більший — починає
+    /// відкривати ТЕКСТ сусіднього вірша. Це кількісно пояснює емпіричну нотатку
+    /// ADR-021 «при 16 визирав сливер ~4 pt»: 16 − 12 = 4.
+    /// ⛔ Міняти лише разом із падінгом у `VerseRow` — інакше зв'язок розсинхронізується.
+    ///
+    /// ⚠️ На iOS 18 зазори сидять РІВНО на цій межі. Стара нотатка ADR-021 згадує
+    /// ще й ±1 px хитавицю висоти, через яку сливер мигтів: теоретично вона може
+    /// дати субпіксельний проблиск і тут. На iPhone 16 Pro / iOS 18 не відтворилось,
+    /// але це перше місце для підозри, якщо десь помітиш мигтіння під карткою.
+    static let verseRowVerticalPadding: CGFloat = 12
+
+    /// Видимий зазор між НИЗОМ картки припнутого вірша і реальним верхом sheet'а.
+    static var sheetGap: CGFloat {
+        if #available(iOS 26, *) { return 8 } else { return verseRowVerticalPadding }
+    }
     /// Visible gap between the bottom of the toolbar and the pinned verse top.
     /// Separate from `sheetGap` because the references differ: the sheet's frame
     /// top is exact, but `toolbarBottomY` (NavBarBottomReader) is the nav-bar
@@ -476,16 +497,24 @@ class ReaderViewModel: ObservableObject {
     /// deterministic StudyScrollApplier this knob now maps 1:1 to on-screen pt.
     /// (debug 2026-06-16: [SCROLL] confirmed the card lands exactly at
     /// toolbarBottom+gap; perceived gap was ~4 pt larger → 16−4 = 12.)
-    static let toolbarGap: CGFloat = 0
-    /// Empirical correction. UIKit lays a custom-detent sheet out ~16 pt HIGHER
-    /// than `containerHeight − detentHeight` — i.e. the sheet ends up ~16 pt
-    /// taller than the detent value it's given. Measured on device
-    /// (debug 2026-06-12, iPhone 17 sim): at detent=628, computedTop=246 but
-    /// REAL sheet top=230. Without subtracting this, the sheet's real top lands
-    /// flush on the verse card (visible gap = sheetGap − 16 = 0).
-    /// NOTE: verify on a non–Dynamic-Island device; if it tracks safe area
-    /// rather than being constant, derive it from the bottom inset instead.
-    static let detentTopOffset: CGFloat = 16
+    ///
+    /// ⚠️ Значення нижче вже НЕ те, що описано вище — воно розділене по платформах.
+    /// iOS 26 лишається 0: тулбар ПЛАВАЮЧИЙ, його фрейм лежить ~4 pt нижче видимої
+    /// капсули (тобто 0 уже читається як зазор), а scroll-edge блюр ховає те, що
+    /// проїжджає під ним. iOS 18: бар СУЦІЛЬНИЙ, фрейм == видимий край, блюру немає —
+    /// тому зазор задається явно й дорівнює тому самому падінгу рядка, що й знизу.
+    static var toolbarGap: CGFloat {
+        if #available(iOS 26, *) { return 0 } else { return verseRowVerticalPadding }
+    }
+    /// Поправка UIKit: sheet із кастомним detent'ом лягає ВИЩЕ, ніж
+    /// `containerHeight − detentHeight`, тобто виходить вищим за задане значення.
+    /// Видимий зазор = `sheetGap + detentTopOffset − Δ`, тож щоб зазор дорівнював
+    /// `sheetGap`, тут має стояти рівно Δ.
+    ///
+    /// ⚠️ Значення НЕ константа платформи — заміряно 2026-08-01 (bug-031):
+    /// iOS 26.5/iPhone 17 = 16.8, iOS 18.0/iPhone 16 Pro = 34.0. Тому воно більше
+    /// не хардкодиться, а вимірюється в рантаймі — див. `SheetDetentCalibration`.
+    static var detentTopOffset: CGFloat { SheetDetentCalibration.offset }
 
     /// Global (window) Y of the navigation bar's BOTTOM edge, read from UIKit.
     /// The iOS 26 floating toolbar does NOT reduce the SwiftUI safe area, so a
@@ -623,6 +652,10 @@ class ReaderViewModel: ObservableObject {
         currentTranslation = translation
         translationBookNames = db.loadBookNames(for: translation.id)
         isTranslationPickerPresented = false
+        // Record for TranslationLaunchBehavior.lastUsed. Written unconditionally
+        // (not only when fromId != id) so the very first launch after flipping the
+        // mode still has a value even if the user re-picks the same translation.
+        positionStore.saveLastUsedTranslation(translation.id)
         loadChapter()
         // Re-load concordance so the word usage tab reflects the new translation immediately.
         if let word = selectedWord {

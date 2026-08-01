@@ -31,6 +31,48 @@ struct StudySheetDetent: CustomPresentationDetent {
     }
 }
 
+// MARK: - Sheet detent calibration (bug-031)
+
+/// UIKit лягає sheet із кастомним detent'ом ВИЩЕ, ніж `containerHeight − detentHeight`.
+/// Ця різниця (Δ) не є універсальною константою: заміряно 2026-08-01 —
+/// iOS 26.5 / iPhone 17 = **16.8**, iOS 18.0 / iPhone 16 Pro = **34.0**, тобто вдвічі
+/// більше. У межах однієї платформи Δ стала (перевірено на detent'ах 680 і 614).
+///
+/// Замість того щоб плодити `#available`-гілки під кожну нову ОС і клас пристрою,
+/// значення **вимірюється в рантаймі**: сид дає правильну геометрію з першого кадру,
+/// а перше ж реальне вимірювання його підтверджує або виправляє. На незнайомій
+/// комбінації ОС/пристрою система підлаштовується сама, без правок коду.
+///
+/// Корекція застосовується з НАСТУПНОЇ презентації sheet'а — свідомо, щоб не
+/// пересмикувати вже відкриту картку під пальцем користувача.
+@MainActor
+enum SheetDetentCalibration {
+
+    /// Сид: заміряні значення. Правильні для відомих конфігурацій, тож у типовому
+    /// випадку калібрування нічого не змінює — воно страхує невідомі.
+    private static var seeded: CGFloat = {
+        if #available(iOS 26, *) { return 16 } else { return 34 }
+    }()
+
+    private static var measured: CGFloat?
+
+    /// Поправка, якою користується `ReaderViewModel.detentTopOffset`.
+    static var offset: CGFloat { measured ?? seeded }
+
+    /// Записати заміряну Δ. Ігнорує сміття (від'ємні / абсурдно великі значення) і
+    /// дрібні коливання ±1 pt, щоб не ганяти геометрію туди-сюди.
+    static func record(_ delta: CGFloat) {
+        guard delta.isFinite, delta >= 0, delta <= 120 else { return }
+        // Порівнюємо з ЧИННИМ значенням (`offset`), а не з попереднім заміром.
+        // Інакше перший же запис проходив би завжди — і на відомій конфігурації
+        // зсував би геометрію на дрібницю без потреби (iOS 26: сид 16, замір 16.8).
+        // Поріг 1 pt: нижче нього різниця невідчутна, а перекладати через неї
+        // лейаут — гарантований мікро-джиттер.
+        if abs(offset - delta) < 1 { return }
+        measured = delta
+    }
+}
+
 // MARK: - UIKit detent applier
 
 /// Drives the sheet height at the UIKit level, bypassing SwiftUI's detent
@@ -70,23 +112,62 @@ struct StudySheetDetentApplier: UIViewRepresentable {
             apply(animated: false)
         }
 
+        /// Identifier of the detent this applier installs. Also the value written to
+        /// `largestUndimmedDetentIdentifier` — see `apply(animated:)`.
+        private static let detentID = UISheetPresentationController.Detent.Identifier("studySheet")
+
         private func apply(animated: Bool) {
             guard desiredHeight > 0, let sheet = sheetController() else { return }
             let h = desiredHeight
+            let id = Self.detentID
             // NOTE: the resolver captures ONLY `h` — never `sheet`. Capturing the
             // UISheetPresentationController here would form a retain cycle
             // (sheet → detents → resolver → sheet), because this closure is stored
             // on `sheet.detents` below. Keep it that way.
-            let detent = UISheetPresentationController.Detent.custom(
-                identifier: .init("studySheet")
-            ) { context in
+            let detent = UISheetPresentationController.Detent.custom(identifier: id) { context in
                 min(h, context.maximumDetentValue)
             }
-            if animated {
-                sheet.animateChanges { sheet.detents = [detent] }
-            } else {
+            // ⛔ bug-030 — BOTH assignments must stay together, in this order.
+            //
+            // `largestUndimmedDetentIdentifier` is what actually makes the sheet
+            // non-modal: undimmed background + touches passed through to the
+            // presenter + no tap-outside-to-dismiss. UIKit honours it ONLY when the
+            // identifier names a detent that is present in `sheet.detents`.
+            //
+            // SwiftUI's `.presentationBackgroundInteraction(.enabled)` in ReaderView
+            // sets it to ITS OWN detent id (`.custom(StudySheetDetent.self)`). The
+            // line below then replaces the whole set with `id` — orphaning SwiftUI's
+            // identifier, so UIKit silently ignored it. Result on iOS 18: dimming
+            // stayed (over the pinned verse) and a tap on the toolbar chevrons was
+            // read as "outside the sheet" and dismissed it instead of navigating
+            // verses. Re-asserting the id here is what closes that gap.
+            let applyChanges = {
                 sheet.detents = [detent]
+                sheet.largestUndimmedDetentIdentifier = id
             }
+            if animated {
+                sheet.animateChanges(applyChanges)
+            } else {
+                applyChanges()
+            }
+            // Калібрування (bug-031): після того як лейаут осів, зміряти РЕАЛЬНИЙ
+            // top sheet'а і зберегти різницю з розрахунковим. Наступна презентація
+            // використає заміряне значення. Нічого не малює й не рухає зараз.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                self.calibrate()
+            }
+        }
+
+        /// Вимірює Δ = computedTop − realTop і віддає її `SheetDetentCalibration`.
+        private func calibrate() {
+            guard desiredHeight > 0,
+                  let sheet = sheetController(),
+                  let container = sheet.containerView,
+                  let presented = sheet.presentedView else { return }
+            let realTop = container.convert(presented.bounds, from: presented).origin.y
+            let computedTop = container.bounds.height - desiredHeight
+            SheetDetentCalibration.record(computedTop - realTop)
         }
 
         private func sheetController() -> UISheetPresentationController? {

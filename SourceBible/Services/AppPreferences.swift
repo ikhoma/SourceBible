@@ -38,12 +38,20 @@ enum AppStorageKeys {
     static let bookPickerBooksViewMode = "bookPickerBooksViewMode"
 
     // ── Launch preference ─────────────────────────────────────────────────────
+    /// Which PASSAGE opens on launch. LaunchBehavior rawValue.
     static let launchBehavior       = "launchBehavior"
+    /// Which TRANSLATION opens on launch. TranslationLaunchBehavior rawValue:
+    /// "fixed" (use `defaultTranslationId`) | "lastUsed" (use `lastUsedTranslationId`).
+    static let translationLaunchBehavior = "translationLaunchBehavior"
 
     // ── Reading / navigation state (ephemeral; safe to clear) ─────────────────
     static let lastReadBookId        = "lastReadBookId"
     static let lastReadChapter       = "lastReadChapter"
     static let lastReadVerseAnchorId = "lastReadVerseAnchorId"
+    /// Last translation the user switched to. Ephemeral state, NOT a preference —
+    /// the preference is `defaultTranslationId`. Cleared with reading history:
+    /// launch then falls back to the Settings pick, never to a stale translation.
+    static let lastUsedTranslationId = "lastUsedTranslationId"
 
     // ── Search history (ephemeral; safe to clear) ─────────────────────────────
     static let searchRecentQueries  = "searchRecentQueries"
@@ -67,6 +75,7 @@ enum AppPreferences {
         [AppStorageKeys.lastReadBookId,
          AppStorageKeys.lastReadChapter,
          AppStorageKeys.lastReadVerseAnchorId,
+         AppStorageKeys.lastUsedTranslationId,
          AppStorageKeys.searchRecentQueries]
             .forEach { defaults.removeObject(forKey: $0) }
     }

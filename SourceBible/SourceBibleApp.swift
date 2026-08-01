@@ -91,6 +91,9 @@ struct SourceBibleApp: App {
         TitleFontStyle.registerBundledFonts()
         // One-time migration: legacy isDarkMode Bool → appearanceMode enum.
         AppearanceMode.migrateFromLegacyDarkMode()
+        // iOS 18: явний UITabBarAppearance (bug-032). No-op на iOS 26.
+        // Має стояти ДО побудови сцени — проксі не чіпає вже створені бари.
+        LegacyTabBarAppearance.install()
 
         // Build the GRDB store — crashes on failure are intentional at init time
         // (a corrupted DB is unrecoverable; better to surface it immediately).
@@ -175,6 +178,12 @@ struct SourceBibleApp: App {
                 }
                 // Appearance: nil = Match Device (follow system)
                 .preferredColorScheme(appearanceMode.colorScheme)
+                // iOS 18: змонтований UITabBar не бачить зміни preferredColorScheme —
+                // переприкладаємо вигляд явно, інакше бар лишається в старій темі
+                // (bug-032). No-op на iOS 26.
+                .onChange(of: appearanceModeRaw) { _, _ in
+                    LegacyTabBarAppearance.refresh()
+                }
                 .environment(\.colorTheme, ColorTheme(rawValue: colorThemeRaw) ?? .paper)
                 .environment(\.titleFontStyle, TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern)
                 // Localization

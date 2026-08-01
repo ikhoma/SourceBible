@@ -49,7 +49,7 @@ struct BookmarkCardView: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
+            RoundedRectangle(cornerRadius: AppCornerRadius.card, style: .continuous)
                 .fill(colorTheme.cardBackground)
         )
         .onAppear {

@@ -359,9 +359,13 @@ struct SearchView: View {
             Button(action: action) { content }
                 .buttonStyle(.glass)
         } else {
+            // `.bordered` давав важку «кнопкову» заливку; системний
+            // `secondarySystemFill` легший і читається як нативний чип у контенті.
+            // NB: тулбар рідера СВІДОМО лишається без капсул (див. `pickerGroup`) —
+            // тут капсула доречна саме тому, що смуга фільтрів не є нав-баром.
             Button(action: action) { content }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(.plain)
+                .legacyControlCapsule()
         }
     }
 

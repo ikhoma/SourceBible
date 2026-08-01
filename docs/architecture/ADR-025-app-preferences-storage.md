@@ -40,8 +40,8 @@
 | Категорія | Ключі | Чистити? |
 |---|---|---|
 | **Appearance / preference** | `isDarkMode`, `hideBookCovers`, `redLetters`, `defaultTranslationId`, `appLanguage` | reset до дефолтів |
-| **Reading / navigation (ephemeral)** | `lastReadBookId`, `lastReadChapter`, `lastReadVerseAnchorId`, `searchRecentQueries` | ✅ так |
-| **Launch preference** | `launchBehavior` | reset до дефолту (`resume`) |
+| **Reading / navigation (ephemeral)** | `lastReadBookId`, `lastReadChapter`, `lastReadVerseAnchorId`, `lastUsedTranslationId`, `searchRecentQueries` | ✅ так |
+| **Launch preference** | `launchBehavior`, `translationLaunchBehavior` | reset до дефолтів (`resume`, `fixed`) |
 | **Consent (sensitive)** | `analyticsEnabled`, `analyticsConsentShown` | ⛔ НІКОЛИ |
 | **Migration bookkeeping** | `migrationHighlightsDone`, legacy `highlightedVerseIds` | ⛔ НІКОЛИ |
 
@@ -79,3 +79,29 @@
   `SourceBibleApp`, `SearchViewModel`, `ReaderViewModel`, `AnalyticsConsentCard`, `MigrationService`.
 - `spec-reader-resume-position.md` `ReadingPositionStore` використовує `AppStorageKeys`.
 - UI для scoped-clear (кнопки в Меню) — **поза** цим ADR (додається за потреби; API вже готове).
+
+---
+
+## Amendment 2026-07-31 — режим стартового перекладу
+
+Додано другу launch-преференцію, паралельну `launchBehavior`:
+
+| ключ | категорія | дефолт | що робить |
+|---|---|---|---|
+| `translationLaunchBehavior` | Launch preference | `fixed` | `TranslationLaunchBehavior` rawValue: `fixed` \| `lastUsed` |
+| `lastUsedTranslationId` | Reading / navigation (ephemeral) | — | останній переклад, на який перемкнувся користувач |
+
+**Чому `defaultTranslationId` НЕ став режимом.** Він лишається в категорії
+*Appearance / preference* — це явний вибір користувача, який має переживати
+«Clear reading history». Новий `lastUsedTranslationId` — навпаки, **ефемерний слід**,
+і чиститься разом із позицією читання. Розділення навмисне: після очищення історії
+запуск падає назад на вибір із Налаштувань, а не на застряглий переклад.
+
+**Чому дефолт `fixed`, а не `lastUsed`.** До цієї зміни рідер безумовно застосовував
+`defaultTranslationId`. `fixed` = точно та сама поведінка, тож апдейт нічого не
+змінює для наявних користувачів мовчки. `lastUsed` — свідоме увімкнення.
+
+Резолюція «який id брати» живе в `ReadingPositionStore.launchTranslationId()`, а не
+в `ReaderViewModel` — щоб ViewModel не знав про ключі напряму (та сама причина, з якої
+ADR виносив імена ключів у `AppStorageKeys`). Деталі поведінки — у
+`spec-reader-resume-position.md`, розділ «Стартовий переклад».

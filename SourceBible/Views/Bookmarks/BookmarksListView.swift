@@ -28,7 +28,7 @@ struct BookmarksListView: View {
                 List {
                     ForEach(filteredBookmarks, id: \.bookmark.id) { item in
                         BookmarkCardView(item: item)
-                            .contentShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                            .contentShape(RoundedRectangle(cornerRadius: AppCornerRadius.card, style: .continuous))
                             .onTapGesture {
                                 if let verseId = item.verseIds.first {
                                     router.requestNavigation(to: verseId)

@@ -1,6 +1,6 @@
 # Reader Resume Position — Design & Spec
 
-**Status:** Draft (proposed 2026-07-02)
+**Status:** Draft (proposed 2026-07-02) · **amended 2026-07-31** (стартовий переклад — §15)
 **Type:** Feature spec (UX fix) + persistence decision
 **Scope:** `ReaderViewModel`, `ReaderView`, `MenuView`, `@AppStorage` keys. **No changes to `sourcebible.db` schema.** Optional GRDB `user_data.db` migration only if Phase 2 (sync) is taken.
 
@@ -328,3 +328,61 @@ Section("menu.section.reading") {
 - ADR-021 (Study Mode scroll) — не регресувати pin/contentOffset механіку.
 - ADR-024 (cross-ref back-stack) — навігація, яку capture-guard не має чіпати.
 - PDR-Page-Turn-Gesture-Zone — edge-swipe оновлює bookId/chapter.
+
+---
+
+## 15. Стартовий переклад (amendment 2026-07-31) — IMPLEMENTED
+
+`LaunchBehavior` відповідає на питання «яке **місце** відкрити». Ця поправка додає
+його брата — «який **переклад** відкрити». Обидва живуть у `ReadingPositionStore`,
+бо це одна відповідь на одне питання: у якому стані рідер стартує.
+
+### Модель
+
+```
+enum TranslationLaunchBehavior: String, CaseIterable {
+    case fixed     // завжди переклад, обраний у Налаштуваннях
+    case lastUsed  // той, що був активний останнім
+}
+```
+
+Ключі (ADR-025): `translationLaunchBehavior` (Launch preference, дефолт `fixed`),
+`lastUsedTranslationId` (Reading / navigation — ефемерний, чиститься з історією).
+
+### Поведінка
+
+| режим | джерело id | якщо порожньо |
+|---|---|---|
+| `fixed` (дефолт) | `defaultTranslationId` (вибір у Меню) | `Translation.defaultTranslation` |
+| `lastUsed` | `lastUsedTranslationId` (пишеться в `selectTranslation`) | падає на `defaultTranslationId`, далі на компільований дефолт |
+
+Резолюція — у `ReadingPositionStore.launchTranslationId()`, не у ViewModel: рідер
+питає «з чим стартувати» і не знає про ключі. Невідомий id (переклад зник між
+білдами) → `first(where:)` не знаходить → лишається `Translation.defaultTranslation`,
+як і до зміни.
+
+**Чому дефолт `fixed`:** до цієї зміни рідер безумовно застосовував
+`defaultTranslationId`. `fixed` відтворює це один-в-один — апдейт не міняє поведінку
+наявних користувачів мовчки.
+
+**Чому `lastUsed` теж падає на `defaultTranslationId`, а не одразу на компільований
+дефолт:** користувач міг увімкнути режим до першого перемикання. Явний вибір із
+Налаштувань — сильніший сигнал, ніж «нічого не знаю», тож він виграє.
+
+### UI (Меню → Переклад)
+
+- Рядок «Переклад при відкритті» → `TranslationLaunchBehaviorPickerView`
+  (копія форми `LaunchBehaviorPickerView` — дві настройки читаються як пара).
+- Рядок «Переклад за замовчуванням» показується **лише** в режимі `fixed`.
+  У `lastUsed` він деградує до first-launch fallback: показувати його означало б
+  подавати як головний той рядок, який уже нічим не керує.
+
+### Acceptance
+
+- [x] Debug build зелений, Swift 6 без нових warning'ів.
+- [ ] `fixed` + вибір RST → kill/relaunch → RST (поведінка як до зміни).
+- [ ] `lastUsed`, перемкнути на UBIO → kill/relaunch → UBIO.
+- [ ] `lastUsed` без жодного перемикання → відкривається вибір із Налаштувань.
+- [ ] Clear reading history у режимі `lastUsed` → наступний запуск = вибір із Налаштувань.
+- [ ] Перемикання режиму на `lastUsed` ховає рядок конкретного перекладу.
+- [ ] Archive/Release зелений.

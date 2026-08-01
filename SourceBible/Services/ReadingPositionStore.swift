@@ -19,6 +19,17 @@ enum LaunchBehavior: String, CaseIterable {
     case lastBookmark  // open the most-recently-created bookmark
 }
 
+/// WHICH TRANSLATION the reader opens with on launch — the sibling of
+/// `LaunchBehavior`, which answers "which passage".
+///
+/// `.fixed` is the default because it is the pre-existing behaviour: before this
+/// setting existed the reader unconditionally applied `defaultTranslationId`.
+/// Defaulting to `.lastUsed` would silently change what upgrading users see.
+enum TranslationLaunchBehavior: String, CaseIterable {
+    case fixed     // always open the translation picked in Settings
+    case lastUsed  // reopen whichever translation was active last
+}
+
 /// A persisted reading position. `verseAnchorId` is the top-visible verse
 /// (reading mode) or the focused verse (Study Mode) — compound ID "BOOK|ch|v".
 struct ReadingPosition: Equatable {
@@ -31,9 +42,16 @@ struct ReadingPosition: Equatable {
 
 protocol ReadingPositionStore: AnyObject {
     var launchBehavior: LaunchBehavior { get set }
+    var translationLaunchBehavior: TranslationLaunchBehavior { get set }
     /// Returns nil when no position has ever been saved (first launch / clean install).
     func load() -> ReadingPosition?
     func save(_ position: ReadingPosition)
+    /// The translation id the reader should open with, resolved from
+    /// `translationLaunchBehavior`. nil = nothing to restore (caller keeps
+    /// `Translation.defaultTranslation`).
+    func launchTranslationId() -> String?
+    /// Records the translation the user switched to, for `.lastUsed`.
+    func saveLastUsedTranslation(_ id: String)
 }
 
 /// UserDefaults-backed implementation. Uses an empty `lastReadBookId` as the
@@ -53,6 +71,38 @@ final class UserDefaultsReadingPositionStore: ReadingPositionStore {
                 ?? .resume
         }
         set { defaults.set(newValue.rawValue, forKey: AppStorageKeys.launchBehavior) }
+    }
+
+    var translationLaunchBehavior: TranslationLaunchBehavior {
+        get {
+            TranslationLaunchBehavior(
+                rawValue: defaults.string(forKey: AppStorageKeys.translationLaunchBehavior) ?? ""
+            ) ?? .fixed
+        }
+        set { defaults.set(newValue.rawValue, forKey: AppStorageKeys.translationLaunchBehavior) }
+    }
+
+    func launchTranslationId() -> String? {
+        switch translationLaunchBehavior {
+        case .fixed:
+            return fixedTranslationId()
+        case .lastUsed:
+            let id = defaults.string(forKey: AppStorageKeys.lastUsedTranslationId) ?? ""
+            // Nothing used yet (mode flipped before the first switch, or history
+            // cleared): fall back to the Settings pick rather than to the
+            // compiled-in default, so the user's explicit choice still wins.
+            return id.isEmpty ? fixedTranslationId() : id
+        }
+    }
+
+    func saveLastUsedTranslation(_ id: String) {
+        defaults.set(id, forKey: AppStorageKeys.lastUsedTranslationId)
+    }
+
+    /// The translation explicitly picked in Settings. Empty = never set.
+    private func fixedTranslationId() -> String? {
+        let id = defaults.string(forKey: AppStorageKeys.defaultTranslationId) ?? ""
+        return id.isEmpty ? nil : id
     }
 
     func load() -> ReadingPosition? {

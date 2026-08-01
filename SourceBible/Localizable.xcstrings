@@ -1934,6 +1934,86 @@
         }
       }
     },
+    "menu.translation_launch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Translation on launch"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переклад при відкритті"
+          }
+        }
+      }
+    },
+    "menu.translation_launch.fixed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chosen translation"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обраний переклад"
+          }
+        }
+      }
+    },
+    "menu.translation_launch.fixed.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always open the one you pick below"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завжди відкривати той, що обрано нижче"
+          }
+        }
+      }
+    },
+    "menu.translation_launch.last_used" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last used"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Останній відкритий"
+          }
+        }
+      }
+    },
+    "menu.translation_launch.last_used.subtitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The translation you read most recently"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переклад, який ви читали востаннє"
+          }
+        }
+      }
+    },
     "menu.translation_picker" : {
       "extractionState" : "stale",
       "localizations" : {

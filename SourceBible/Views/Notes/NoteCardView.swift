@@ -47,14 +47,14 @@ struct NoteCardView: View {
                     .padding(.vertical, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppCornerRadius.cardInner, style: .continuous)
                             .fill(Color(.secondarySystemFill))
                     )
             }
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
+            RoundedRectangle(cornerRadius: AppCornerRadius.card, style: .continuous)
                 .fill(colorTheme.cardBackground)
         )
     }
