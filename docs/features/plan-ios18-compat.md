@@ -1,6 +1,6 @@
 # plan-ios18-compat: iOS 18 Compatibility Refactor — Safe Half (Fable) + Deferred Sprint
 
-**Status:** Phase A — DONE ✅ (2026-07-06) | Phase B — deferred to compat sprint
+**Status:** Phase A — DONE ✅ (2026-07-06) | **Phase B — TARGET FLIPPED 2026-07-31, QA відкрите** (гілка `ios18-target-flip`)
 
 > **Вердикт Phase A (2026-07-06).** Compiler-oracle аудит (target=18.0) → **0 unguarded iOS 26 викликів**; guard-покриття вже 100%. Фінальний diff **порожній**, target лишається 26.4. Debug + Release + **Archive** зелені; iOS 18 sim smoke-run OK (1 екран); iOS 26 sim без змін. Незалежно підтверджено: чистий git-tree, жодних `#if BETA`/device сліпих зон. **Компіляційний** ризик Phase B знято повністю; **runtime/QA** ризик лишається на Phase B. Fable-звіт: `report-ios18-compat-phase-a.md`.
 **Date:** 2026-07-06
@@ -109,7 +109,7 @@ Default = Sonnet; ескалація на Opus тільки для fallback-рі
 - Перевірка `LocalizedBundle` swizzle + `activate` на iOS 18.
 - Перф на старіших пристроях (не-Pro).
 - Release notes / App Store min-version bump.
-- **Entry condition Phase B:** Phase A змерджено **І** поточна фіча-робота заморожена (щоб не накопичувати новий unguarded iOS 26 API).
+- ~~**Entry condition Phase B:** Phase A змерджено **І** поточна фіча-робота заморожена~~ — **свідомо порушено 2026-07-31 (рішення Івана).** Фічі НЕ заморожені (нотіфікації, онбординг, тематичні плани в роботі). Обґрунтування: target=26.4 означав, що тестер на iOS 18 не може **встановити** TestFlight-білд — тобто будь-яка інша фіча в цьому білді коштує нуль для частини тестерів. Ціна порушення: новий unguarded iOS 26 API може зайти непоміченим, бо гейт «фічі заморожені» більше не тримає. Компенсація: компілятор під target=18.0 тепер сам є постійним oracle-ом — будь-який unguarded виклик валить білд одразу, а не через спринт.
 
 ---
 
@@ -148,4 +148,61 @@ Default = Sonnet; ескалація на Opus тільки для fallback-рі
 6. [x] Fable: Debug + **Archive** зелені; run на iOS 26 sim; (доказ) run на iOS 18 sim. — Archive зібрано (Ivan, 2026-07-06).
 7. [x] Fable: підготувати diff + короткий звіт. — `report-ios18-compat-phase-a.md`.
 8. [x] Ivan: ревʼю. — merge н/д (diff порожній).
-9. [ ] **Phase B → compat-спринт:** flip target 26.4→18.0 + повний iOS 18 runtime/QA + SPM min-target check + реліз. Більше нічого в A не додавати.
+9. [~] **Phase B → compat-спринт:** flip target 26.4→18.0 ✅ **зроблено 2026-07-31**; повний iOS 18 runtime/QA + SPM min-target check + реліз — **відкриті**.
+
+---
+
+## Phase B — виконання flip'у (2026-07-31)
+
+**Що зроблено.** `IPHONEOS_DEPLOYMENT_TARGET` 26.4 → 18.0 у двох конфігах
+(`project.pbxproj`, рядки 312 і 361). Більше нічого — жодного коду, жодних нових guard'ів.
+Diff Phase B = **2 рядки**. Гілка `ios18-target-flip`, відгалужена від `work`.
+
+**Що перевірено.**
+
+| перевірка | результат |
+|---|---|
+| Compile @ target=18.0 (Debug) | ✅ 0 errors, 0 warnings |
+| Runtime launch, iOS 18.0 sim (iPhone 16 Pro) | ✅ застосунок стартує |
+| Візуальний smoke: рідер | ✅ обкладинка Доре з bleed під тулбар (ADR-017), пікери «Gen 1 / KJV», чеврон, таб-бар — усе на місці |
+
+Прогноз Phase A підтвердився повністю: аудит 2026-07-06 обіцяв 0 unguarded викликів —
+компілятор під реальним target=18.0 не знайшов жодного.
+
+**Інтерактивне QA на iOS 18.0 (iPhone 16 Pro), пройдено 2026-08-01 через computer-use.**
+
+| сценарій | результат |
+|---|---|
+| Резюм позиції при холодному старті | ✅ відкрився Пс 33 зі збереженим скролом |
+| Меню → секція «Translation», обидва рядки | ✅ рендеряться |
+| Пікер «Translation on launch» (2 опції + сабтайтли + чекмарк) | ✅ |
+| Режим `lastUsed`: рядок конкретного перекладу ховається | ✅ зникає |
+| `lastUsed`: перемкнув на UBIO → kill → relaunch | ✅ відкрився UBIO |
+| Режим `fixed`: рядок повертається, показує KJV | ✅ |
+| `fixed`: kill → relaunch при lastUsed=UBIO | ✅ відкрився KJV (UBIO проігноровано) — регресія для наявних користувачів виключена |
+| UBIO: рідні укр. назви книг (ADR-018) | ✅ «Пс. 33 / Псалом 33» |
+| Study Mode: тап вірша, pin під тулбаром, sheet, морф тулбара в «Close» (ADR-021/024) | ✅ геометрія без дефектів |
+| Study Mode → Cross Refs | ✅ Eph 5:19 / Ps 96:1 / Isa 42:10 / 1Chr 25:7 |
+| Study Mode → Original (verse_org, ADR-028) | ✅ іврит + xlit + Strong's + морфологія; sub-entry H3807a коректний (ADR-019) |
+| Chapter paging чевроном (ADR-026 legacy-шлях на 18) | ✅ Пс 33 → Пс 34, глава відкрилась зверху |
+| Тулбар без Liquid Glass | ✅ деградує в плаский системний вигляд, без артефактів |
+
+**Знайдено й полагоджено під час QA: bug-030.**
+Чеврони Study Mode на iOS 18 закривали sheet замість переходу по віршах, і затемнення
+sheet'а не прибиралось. Одна причина: `largestUndimmedDetentIdentifier` вказував на detent,
+який `StudySheetDetentApplier` затирав, тож undimmed-режим мовчки не застосовувався.
+Фікс — 2 рядки в `StudySheetDetent.swift`, верифіковано на 18 і 26. Деталі: `docs/bugs/in-progress/bug-030.md`.
+Це рівно той клас дефектів, заради якого існувала entry-умова «фічі заморожені»: під target=26.4
+гілка була недосяжною і ніколи не виконувалась.
+
+**Що ЛИШАЄТЬСЯ на ручне QA.**
+
+- **Archive/Release** — ⛔ НЕ закрито. Архів, зроблений раніше, був ДО flip'у й ДО пікера,
+  тож не рахується. Спроба зібрати Release у сесії обірвалась (лок build-бази, далі втрата
+  містка). Обовʼязково перед TestFlight — у Debug не видно `#Preview`-пасток (CLAUDE.md).
+- **iPhone SE (3rd gen)** — найвужчий екран у пулі iOS 18; ADR-021 має незакритий
+  «SE-validation pending» саме по `detentTopOffset`. Не перевірявся.
+- **Full-surface свайп** перегортання (перевірено лише чеврон; PDR-Page-Turn-Gesture-Zone
+  має rollback-клаузу саме на конфлікт свайпу з тапом/лонгпресом).
+- **SPM min-target check.**
+- Локалізація UI на UK при iOS 18 (перевірялось лише EN).
