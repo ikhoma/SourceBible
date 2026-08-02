@@ -563,6 +563,12 @@ struct ConcordanceView: View {
                     BookUsageRow(group: group, strongsId: entry.id)
                         .contentShape(Rectangle())
                         .onTapGesture {
+                            // ADR-032: приклад вживання — поведінково той самий крос-реф
+                            // (щільний список у шіті → стрибок в іншу книгу). Хаптика
+                            // саме тут, а не в `navigateToVerse(.fresh)`: через той самий
+                            // роутер приходять не-дотикові входи (cold-start deep-link,
+                            // нотіфікація за ADR-031), і вони мають лишатись тихими.
+                            Haptics.lightTransition()
                             router.pendingVerseId = group.example.id
                         }
                     Divider()
