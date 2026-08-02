@@ -539,7 +539,6 @@ private struct InfoGroup: View {
 struct ConcordanceView: View {
     let entry: StrongsEntry
     @EnvironmentObject private var vm:     ReaderViewModel
-    @EnvironmentObject private var router: AppNavigationRouter
     @Environment(\.sessionTracker) private var tracker
 
     var body: some View {
@@ -559,18 +558,20 @@ struct ConcordanceView: View {
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 8)
             } else {
+                // ⛔ Рядок НЕ клікабельний — навмисно (2026-08-02).
+                // Раніше тап перекидав на вірш-приклад, але афордансу не було
+                // (ні шеврона, ні кольору посилання, ні press-стану), тож дію
+                // знаходили випадково — і вона ще й стирала cross-ref back stack
+                // (йшла через `.fresh`), тобто «‹ Назад» зникала. Читалось як
+                // «застосунок сам кудись поїхав».
+                //
+                // Прибрано, а не полагоджено, бо очікування від рядка інше:
+                // «покажи всі N входжень у цій книзі», а не «стрибни на один
+                // приклад». N буває і 5, і 500 — це власний екран зі списком і
+                // фільтрами (stacked sheet у стилі Пошуку), а не один тап.
+                // → майбутнє, `spec-word-usage-redesign.md`.
                 ForEach(entry.bookGroups) { group in
                     BookUsageRow(group: group, strongsId: entry.id)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            // ADR-032: приклад вживання — поведінково той самий крос-реф
-                            // (щільний список у шіті → стрибок в іншу книгу). Хаптика
-                            // саме тут, а не в `navigateToVerse(.fresh)`: через той самий
-                            // роутер приходять не-дотикові входи (cold-start deep-link,
-                            // нотіфікація за ADR-031), і вони мають лишатись тихими.
-                            Haptics.lightTransition()
-                            router.pendingVerseId = group.example.id
-                        }
                     Divider()
                 }
             }

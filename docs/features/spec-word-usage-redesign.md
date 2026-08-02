@@ -87,7 +87,7 @@ If a word has no concordance data (e.g. hapax legomenon with no Strong's mapping
 
 ### P2 — Future
 
-- [ ] "Show all occurrences" button at the bottom → opens full concordance sheet (modelled after Comments sheet) with per-book sections, all verses, and filters
+- [ ] "Show all occurrences" → **stacked sheet** зі списком усіх входжень і фільтрами, змодельований за екраном Пошуку (див. Amendment 2026-08-02)
 - [ ] LXX support: Greek words show OT occurrences from Septuagint when LXX data is added to DB v2
 - [ ] Smarter example selection: instead of first occurrence, pick the verse with highest syntactic/rhetorical weight (requires NLP signal in DB) v1.5
 
@@ -175,3 +175,33 @@ Suggested order:
 - `docs/db_build.md` — `word` table schema, `strongs_id` GLOB sub-entry logic
 - `verse_versification_system_design.md` — verse_map context (example verse display may need verse_map correction for Psalms)
 - `unified_word_lookup_system_design.md` — how word tap flows into Strong's lookup
+
+---
+
+## Amendment 2026-08-02 — перехід із рядка книги прибрано
+
+**Що було.** Рядок у «Вживання» (`ConcordanceView` → `BookUsageRow`) був
+клікабельним: тап перекидав на вірш-приклад цієї книги через
+`router.pendingVerseId`.
+
+**Що не так.**
+
+1. **Немає афордансу.** Рядок не мав ні шеврона, ні кольору посилання, ні
+   press-стану — на відміну від сусіднього `CrossRefsView`, де шеврон є.
+   Дію знаходили випадково; автор специфікації про неї не памʼятав.
+2. **Стирав історію.** Навігація йшла через `VerseNavSource.fresh`, тобто
+   **чистила cross-ref back stack** — кнопка «‹ Назад» зникала. Випадковий тап
+   читався як «застосунок сам кудись поїхав».
+3. **Не те очікування.** Рядок каже «5 разів у цій книзі». Природне очікування —
+   «покажи ці 5», а не «стрибни на один приклад із них».
+
+**Рішення: перехід прибрано** (не полагоджено). Рядок став чистим контентом.
+Правильна відповідь на очікування — P2 вище, і вона не зводиться до однієї
+навігації: N буває і 5, і 500, тож потрібен власний UI зі списком, пагінацією
+та фільтрами. Форма — **stacked sheet поверх наявного**, змодельований за
+екраном Пошуку (той самий рядок фільтрів, той самий формат рядка результату),
+щоб не вигадувати другий патерн перегляду списку віршів.
+
+**Наслідки для інших доків.** ADR-032 (карта хаптики) — хаптику з цього тапу
+знято разом із самим тапом. ADR-024 — питання «чи має `.fresh` із шіта пушити
+back stack» більше не стоїть: інших таких входів немає.
