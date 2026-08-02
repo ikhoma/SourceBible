@@ -40,9 +40,14 @@ struct MenuView: View {
         TranslationLaunchBehavior(rawValue: translationLaunchRaw) ?? .fixed
     }
 
-    private var translationLaunchLabel: LocalizedStringKey {
-        translationLaunchBehavior == .lastUsed
-            ? "menu.translation_launch.last_used" : "menu.translation_launch.fixed"
+    /// Значення в рядку: або «Останній відкритий», або id конкретного перекладу.
+    @ViewBuilder
+    private var translationLaunchValueLabel: some View {
+        if translationLaunchBehavior == .lastUsed {
+            Text("menu.translation_launch.last_used")
+        } else {
+            Text(defaultTranslationId)
+        }
     }
 
     var body: some View {
@@ -118,27 +123,20 @@ struct MenuView: View {
                         .tint(.appBlue)
                 }
                 .listRowBackground(colorTheme.cardBackground)
+                // Режим і конкретний переклад — ОДИН рядок і один список.
+                // Раніше це були дві настройки (режим + значення), і рядок значення
+                // доводилось ховати в режимі .lastUsed, бо він переставав керувати.
+                // «Останній відкритий» — просто ще один пункт того самого списку.
                 Section("menu.section.translation") {
                     NavigationLink {
-                        TranslationLaunchBehaviorPickerView(selectedRaw: $translationLaunchRaw)
+                        TranslationLaunchPickerView(
+                            translations: readerVM.availableTranslations,
+                            behaviorRaw: $translationLaunchRaw,
+                            fixedId: $defaultTranslationId
+                        )
                     } label: {
                         LabeledContent("menu.translation_launch") {
-                            Text(translationLaunchLabel)
-                        }
-                    }
-                    // The explicit pick only applies in .fixed mode. In .lastUsed it
-                    // degrades to a first-launch fallback, so showing it would read
-                    // as authoritative when it isn't — hide it instead, the way
-                    // Settings hides rows that don't apply to the current mode.
-                    if translationLaunchBehavior == .fixed {
-                        NavigationLink {
-                            DefaultTranslationPickerView(
-                                translations: readerVM.availableTranslations,
-                                selectedId: $defaultTranslationId
-                            )
-                        } label: {
-                            LabeledContent("menu.default_translation",
-                                           value: defaultTranslationId)
+                            translationLaunchValueLabel
                         }
                     }
                 }
@@ -366,57 +364,84 @@ struct LaunchBehaviorPickerView: View {
     }
 }
 
-// MARK: - TranslationLaunchBehaviorPickerView
+// MARK: - TranslationLaunchPickerView
 
-/// Sibling of `LaunchBehaviorPickerView`: that one answers "which passage on
-/// launch", this one "which translation on launch". Same row shape on purpose —
-/// the two settings sit next to each other and should read as a pair.
-struct TranslationLaunchBehaviorPickerView: View {
-    @Binding var selectedRaw: String
+/// Обʼєднаний вибір «з чим відкривати рідер»: «Останній відкритий» стоїть у списку
+/// нарівні з конкретними перекладами.
+///
+/// Під капотом і далі ДВА ключі (ADR-025): `translationLaunchBehavior` — режим,
+/// `defaultTranslationId` — явний вибір. Розділення навмисне й лишається: явний
+/// вибір належить до preference і переживає «очистити історію читання», а слід
+/// останнього перекладу ефемерний і чиститься разом із позицією. Тому вибір
+/// конкретного перекладу пише ОБИДВА ключі — і режим, і значення.
+///
+/// ⛔ Не плутати з `DefaultTranslationPickerView` — той лишається чистим списком
+/// перекладів без «Останнього відкритого», бо його перевикористовує фільтр пошуку.
+struct TranslationLaunchPickerView: View {
+    let translations: [Translation]
+    @Binding var behaviorRaw: String
+    @Binding var fixedId: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorTheme) private var colorTheme
 
-    private struct Option: Identifiable {
-        let behavior: TranslationLaunchBehavior
-        let titleKey: LocalizedStringKey
-        let subtitleKey: LocalizedStringKey
-        var id: String { behavior.rawValue }
+    private var behavior: TranslationLaunchBehavior {
+        TranslationLaunchBehavior(rawValue: behaviorRaw) ?? .fixed
     }
 
-    private let options: [Option] = [
-        Option(behavior: .fixed,
-               titleKey: "menu.translation_launch.fixed",
-               subtitleKey: "menu.translation_launch.fixed.subtitle"),
-        Option(behavior: .lastUsed,
-               titleKey: "menu.translation_launch.last_used",
-               subtitleKey: "menu.translation_launch.last_used.subtitle"),
-    ]
-
     var body: some View {
-        List(options) { opt in
-            Button {
-                selectedRaw = opt.behavior.rawValue
-                dismiss()
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(opt.titleKey).font(.body)
-                            .foregroundStyle(.primary)
-                        Text(opt.subtitleKey)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        List {
+            Section {
+                Button {
+                    behaviorRaw = TranslationLaunchBehavior.lastUsed.rawValue
+                    dismiss()
+                } label: {
+                    row(title: Text("menu.translation_launch.last_used"),
+                        subtitle: Text("menu.translation_launch.last_used.subtitle"),
+                        isSelected: behavior == .lastUsed)
+                }
+                .themedRow(colorTheme)
+            }
+            Section {
+                ForEach(translations) { t in
+                    Button {
+                        // Порядок важливий лише для читабельності: обидва ключі
+                        // пишуться в одному оновленні, гонки тут немає.
+                        fixedId = t.id
+                        behaviorRaw = TranslationLaunchBehavior.fixed.rawValue
+                        dismiss()
+                    } label: {
+                        row(title: Text(t.name),
+                            subtitle: Text(languageLabel(for: t.language)),
+                            isSelected: behavior == .fixed && fixedId == t.id)
                     }
-                    Spacer()
-                    if opt.behavior.rawValue == selectedRaw {
-                        Image(systemName: "checkmark").foregroundStyle(.appBlue)
-                    }
+                    .themedRow(colorTheme)
                 }
             }
-            .themedRow(colorTheme)
         }
         .themedList(colorTheme)
         .navigationTitle("menu.translation_launch")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func row(title: Text, subtitle: Text, isSelected: Bool) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                title.font(.body).foregroundStyle(.primary)
+                subtitle.font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark").foregroundStyle(.appBlue)
+            }
+        }
+    }
+
+    private func languageLabel(for code: String) -> LocalizedStringKey {
+        switch code {
+        case "uk": return "lang.ukrainian"
+        case "ru": return "lang.russian"
+        default:   return "lang.english"
+        }
     }
 }
 

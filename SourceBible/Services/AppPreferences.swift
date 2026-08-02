@@ -53,6 +53,14 @@ enum AppStorageKeys {
     /// launch then falls back to the Settings pick, never to a stale translation.
     static let lastUsedTranslationId = "lastUsedTranslationId"
 
+    // ── Device-derived cache (НЕ користувацькі дані) ──────────────────────────
+    /// Заміряна поправка лейауту sheet'а (`SheetDetentCalibration`) і версія ОС,
+    /// під якою її знято. Це не преференція і не історія — це кеш вимірювання
+    /// геометрії пристрою, тому НЕ входить у жоден clear: чистити його означало б
+    /// повертати хибний перший кадр після кожного очищення.
+    static let sheetDetentTopOffset        = "sheetDetentTopOffset"
+    static let sheetDetentTopOffsetOSBuild = "sheetDetentTopOffsetOSBuild"
+
     // ── Search history (ephemeral; safe to clear) ─────────────────────────────
     static let searchRecentQueries  = "searchRecentQueries"
 

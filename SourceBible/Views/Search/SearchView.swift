@@ -179,28 +179,49 @@ struct SearchView: View {
     @ViewBuilder
     private var resultsPage: some View {
         if #available(iOS 26.0, *) {
-            resultsBody(pinnedFilterBar: false)
+            resultsBody
                 .safeAreaBar(edge: .top) {
                     filterBar   // padding is inside filterBar — see note there
                 }
         } else {
-            resultsBody(pinnedFilterBar: true)
+            resultsBody
+                .safeAreaInset(edge: .top, spacing: 0) { legacyFilterBar }
         }
     }
 
+    /// iOS 18 fallback for `.safeAreaBar` — `safeAreaInset(edge: .top)` is its
+    /// direct predecessor (iOS 15+): так само резервує місце зверху, так само не
+    /// скролиться разом із вмістом.
+    ///
+    /// ⛔ `ignoresSafeArea` — ТІЛЬКИ на фоні, не на всій смузі. У цьому вся правка:
+    /// чипи мусять лишитись під статус-баром, а матеріал — дотягнутись до краю
+    /// екрана. Раніше смуга була закріпленою секційною шапкою ВСЕРЕДИНІ скролу,
+    /// тож її фон обмежувався висотою чипів — над ним лишалась смуга, крізь яку
+    /// проїжджав текст результатів («дірка»), а сам фон читався як окрема плашка.
+    ///
+    /// Нав-бар на сторінці результатів схований (`toolbar(.hidden)` вище), тому
+    /// матеріал тут — єдине, що прикриває цю зону.
+    private var legacyFilterBar: some View {
+        filterBar
+            .background {
+                Rectangle()
+                    // `.bar` — матеріал, яким система малює саме нав-бари й таббари.
+                    // `.ultraThinMaterial` тонший і прозоріший, тож смуга помітно
+                    // відрізнялась від тулбара за кольором (зауваження 2026-08-02).
+                    .fill(.bar)
+                    .ignoresSafeArea(edges: .top)
+            }
+    }
+
     @ViewBuilder
-    private func resultsBody(pinnedFilterBar: Bool) -> some View {
+    private var resultsBody: some View {
         if !vm.results.isEmpty {
-            resultsScroll(pinnedFilterBar: pinnedFilterBar)
+            resultsScroll
         } else if vm.isLoading {
             loadingView
-        } else if pinnedFilterBar {
-            // iOS 18: no safeAreaBar — keep the chips above the empty state manually.
-            VStack(spacing: 0) {
-                filterBar
-                emptyResultsView
-            }
         } else {
+            // Смуга приходить із safeAreaBar / safeAreaInset вище — на порожньому
+            // стані теж, тож окремий VStack для iOS 18 більше не потрібен.
             emptyResultsView
         }
     }
@@ -508,17 +529,17 @@ struct SearchView: View {
 
     // MARK: - Results list
 
-    /// Scrollable results with infinite scroll. When `pinnedFilterBar` is true
-    /// (iOS 18 fallback) the chip bar is rendered as a pinned section header; on
-    /// iOS 26 it's hosted by the `.safeAreaBar` in `resultsPage` instead.
+    /// Scrollable results with infinite scroll. Смуга фільтрів сюди БІЛЬШЕ НЕ
+    /// входить: на обох платформах вона живе в `resultsPage` як safe-area бар
+    /// (`safeAreaBar` на 26, `safeAreaInset` на 18). Раніше на 18 вона була
+    /// закріпленою секційною шапкою всередині цього скролу — звідси й «дірка».
     @ViewBuilder
-    private func resultsScroll(pinnedFilterBar: Bool) -> some View {
+    private var resultsScroll: some View {
         // ScrollView (not List) so the ZStack appBackground shows through — see note
         // on `predictiveList`.
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0,
-                       pinnedViews: pinnedFilterBar ? [.sectionHeaders] : []) {
-                Section {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                Group {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("search.results_header \(searchText.trimmingCharacters(in: .whitespaces))")
                             .font(.title2).bold()
@@ -546,16 +567,6 @@ struct SearchView: View {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 20)
-                    }
-                } header: {
-                    if pinnedFilterBar {
-                        filterBar
-                            .background(.ultraThinMaterial)
-                            // Cancel the LazyVStack's 20pt horizontal padding for the
-                            // header only: the material band must reach the screen edges,
-                            // otherwise it ends in a hard vertical cut 20pt in from each
-                            // side. filterBar re-applies the 20pt inset to the chips.
-                            .padding(.horizontal, -20)
                     }
                 }
             }

@@ -56,8 +56,26 @@ enum SheetDetentCalibration {
 
     private static var measured: CGFloat?
 
+    /// Замір із ПОПЕРЕДНЬОГО запуску. Без цього на пристрої, де реальна Δ
+    /// відрізняється від сида (напр. iPhone SE), ПЕРШИЙ sheet кожного запуску
+    /// малювався з хибною геометрією, а виправлявся лише з другого — помітно оку.
+    /// Тепер хибним може бути щонайбільше найперший sheet після встановлення.
+    ///
+    /// Значення привʼязане до версії ОС: оновлення системи цілком може змінити
+    /// лейаут sheet'а, і тоді старий замір треба відкинути, а не тягнути далі.
+    private static var persisted: CGFloat? = {
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: AppStorageKeys.sheetDetentTopOffsetOSBuild)
+                == UIDevice.current.systemVersion,
+              defaults.object(forKey: AppStorageKeys.sheetDetentTopOffset) != nil
+        else { return nil }
+        let value = CGFloat(defaults.double(forKey: AppStorageKeys.sheetDetentTopOffset))
+        return (value >= 0 && value <= 120) ? value : nil
+    }()
+
     /// Поправка, якою користується `ReaderViewModel.detentTopOffset`.
-    static var offset: CGFloat { measured ?? seeded }
+    /// Порядок: замір цієї сесії → замір минулого запуску → сид платформи.
+    static var offset: CGFloat { measured ?? persisted ?? seeded }
 
     /// Записати заміряну Δ. Ігнорує сміття (від'ємні / абсурдно великі значення) і
     /// дрібні коливання ±1 pt, щоб не ганяти геометрію туди-сюди.
@@ -70,6 +88,9 @@ enum SheetDetentCalibration {
         // лейаут — гарантований мікро-джиттер.
         if abs(offset - delta) < 1 { return }
         measured = delta
+        UserDefaults.standard.set(Double(delta), forKey: AppStorageKeys.sheetDetentTopOffset)
+        UserDefaults.standard.set(UIDevice.current.systemVersion,
+                                  forKey: AppStorageKeys.sheetDetentTopOffsetOSBuild)
     }
 }
 
