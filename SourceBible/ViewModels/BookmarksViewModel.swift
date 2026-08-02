@@ -69,6 +69,9 @@ final class BookmarksViewModel: ObservableObject {
     /// Toggle bookmark for a verse. Returns true if now bookmarked.
     @discardableResult
     func toggleBookmark(verseId: String) -> Bool {
+        // Однаково в обидва боки: постановка й зняття закладки рівнозначні,
+        // на відміну від highlight, де створення відчутніше за скасування.
+        Haptics.lightTransition()
         if let existing = bookmarks.first(where: { $0.verseIds.contains(verseId) }) {
             deleteBookmark(id: existing.bookmark.id)
             return false

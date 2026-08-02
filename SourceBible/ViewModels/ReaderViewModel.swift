@@ -757,9 +757,14 @@ class ReaderViewModel: ObservableObject {
                 if activeSheet == .verse, let current = selectedVerse, current.id != verseId {
                     crossRefBackStack.append(current.id)
                 }
+                // Хаптика: перехід по перехресному — це стрибок в інше місце Біблії,
+                // а не крок по сусідніх віршах. Тому impact, а не selection: те саме
+                // трактування, що й у «тап по вірші → Study Mode» — зміна контексту.
+                Haptics.lightTransition()
             case .back:
                 // Stack was already popped by crossRefBack() — nothing to do here.
-                break
+                // Хаптика така сама, як і на шляху «вперед»: повернення — теж стрибок.
+                Haptics.lightTransition()
             }
 
             selectedVerse = verse
@@ -890,6 +895,7 @@ class ReaderViewModel: ObservableObject {
     // MARK: - Bottom Sheet
 
     func tapVerse(_ verse: BibleVerse) {
+        Haptics.lightTransition()
         selectedVerse = verse
         selectedWord = nil
         selectedSegment = nil
@@ -955,6 +961,7 @@ class ReaderViewModel: ObservableObject {
         guard let current = selectedVerse,
               let idx = verses.firstIndex(where: { $0.id == current.id }),
               idx > 0 else { return }
+        Haptics.selectionChanged()
         verseScrollIntent = .chevron
         selectedVerse = verses[idx - 1]
         selectedWord = nil
@@ -971,6 +978,7 @@ class ReaderViewModel: ObservableObject {
         guard let current = selectedVerse,
               let idx = verses.firstIndex(where: { $0.id == current.id }),
               idx < verses.count - 1 else { return }
+        Haptics.selectionChanged()
         verseScrollIntent = .chevron
         selectedVerse = verses[idx + 1]
         selectedWord = nil
@@ -992,6 +1000,7 @@ class ReaderViewModel: ObservableObject {
         guard let word = selectedWord,
               let idx = seq.firstIndex(where: { $0.id == word.id }),
               idx > 0 else { return }
+        Haptics.selectionChanged()
         let prev = seq[idx - 1]
         selectedWord = prev
         syncSegment(for: prev)
@@ -1006,6 +1015,7 @@ class ReaderViewModel: ObservableObject {
         guard let word = selectedWord,
               let idx = seq.firstIndex(where: { $0.id == word.id }),
               idx < seq.count - 1 else { return }
+        Haptics.selectionChanged()
         let next = seq[idx + 1]
         selectedWord = next
         syncSegment(for: next)
@@ -1098,6 +1108,8 @@ class ReaderViewModel: ObservableObject {
 
     /// Apply or change a highlight color. Always results in an active highlight of the given color.
     func setHighlightColor(_ color: HighlightColor, for verse: BibleVerse) {
+        // Єдина дія в мапі, що лишає слід у даних — тому відчутніша за решту.
+        Haptics.meaningfulAction()
         if let existing = highlightColors[verse.id] {
             if existing != color.rawValue {
                 // Change color in-place — avoids fragile double-toggle sequencing
@@ -1120,6 +1132,8 @@ class ReaderViewModel: ObservableObject {
     /// Remove any active highlight from the verse. No-op if not highlighted.
     func removeHighlight(for verse: BibleVerse) {
         guard let existing = highlightColors[verse.id] else { return }
+        // Скасування слабше за створення — навмисно.
+        Haptics.selectionChanged()
         store.toggleHighlight(verseId: verse.id, translation: currentTranslation.id, color: existing)
         refreshHighlightInList(verseId: verse.id)
     }

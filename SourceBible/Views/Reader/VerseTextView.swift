@@ -388,7 +388,7 @@ struct VerseTextView: UIViewRepresentable {
             // never get applied. Let onWordTap → selectedSegment update drive the redraw.
             selectedWordRange = nil
 
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            Haptics.selectionChanged()
             // Highlight is applied via selectedSegment → applySelection() (SwiftUI re-render)
             onWordTap(seg)
         }
