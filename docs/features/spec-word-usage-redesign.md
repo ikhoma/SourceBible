@@ -175,6 +175,9 @@ Suggested order:
 - `docs/db_build.md` — `word` table schema, `strongs_id` GLOB sub-entry logic
 - `verse_versification_system_design.md` — verse_map context (example verse display may need verse_map correction for Psalms)
 - `unified_word_lookup_system_design.md` — how word tap flows into Strong's lookup
+- `docs/bugs/new/bug-032.md` — затримка першого відкриття «Вживання»: N+1 запитів у
+  `loadBookUsageGroups` (по одному на книгу), синхронний виклик на головному потоці,
+  нелінивий рендер. План: спершу замір на пристрої, потім рішення
 
 ---
 
