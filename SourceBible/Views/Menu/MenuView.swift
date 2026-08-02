@@ -211,7 +211,7 @@ private struct ThemeCardButton: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppCornerRadius.tile, style: .continuous)
                         .fill(theme.appBackground)
                     Text(verbatim: "Aa")
                         .font(sampleFont)
@@ -219,7 +219,7 @@ private struct ThemeCardButton: View {
                 }
                 .frame(height: 64)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppCornerRadius.tile, style: .continuous)
                         .strokeBorder(
                             // Selection indicator follows the primary label colour
                             // (black in light, white in dark) rather than the brand
