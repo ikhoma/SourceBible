@@ -343,7 +343,8 @@ struct SearchView: View {
     /// iOS 18: чипи голі, тож розміри смуги задають вигляд повністю.
     /// - 16 по горизонталі = стандартний leading-інсет нав-бара, тож перший чип
     ///   стоїть рівно там, де «Hos 4 ⌄» у рідері;
-    /// - по вертикалі — не падінг, а ЖОРСТКА висота `legacyBarHeight` (див. нижче).
+    /// - по вертикалі — не падінг, а висота заміряного нав-бара (`legacyBarHeight`)
+    ///   плюс відʼємна поправка `legacyTopCorrection` (див. нижче).
     private static var filterBarHorizontalPadding: CGFloat {
         if #available(iOS 26, *) { return 20 } else { return 16 }
     }
@@ -361,7 +362,47 @@ struct SearchView: View {
     ///
     /// `let` на рівні типу — рахується один раз за запуск; метрика не змінюється в
     /// рантаймі (портретна орієнтація, застосунок портретний).
-    fileprivate static let legacyBarHeight: CGFloat = {
+    /// Метрики вікна. `statusBar` і `safeTop` на пристроях з Dynamic Island —
+    /// РІЗНІ числа (54 і 59): safe area піднята, щоб обійти острівець, а нав-бар
+    /// кладеться одразу під статус-бар.
+    private static var windowMetrics: (statusBar: CGFloat, safeTop: CGFloat) {
+        guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene }).first,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first
+        else { return (0, 0) }
+        let safeTop = window.safeAreaInsets.top
+        return (scene.statusBarManager?.statusBarFrame.height ?? safeTop, safeTop)
+    }
+
+    /// ⛔ ЦЕ І БУЛА ПРИЧИНА «шапка вища за тулбар» — не висота смуги.
+    ///
+    /// Заміряно на iPhone 16: нав-бар рідера закінчується на y = 97.7, а смуга
+    /// фільтрів на 103.0 — при однаковій висоті 44. `safeAreaInset(edge: .top)`
+    /// починає вміст із `safeAreaInsets.top` (59), а нав-бар — зі статус-бара (54).
+    /// Звідси стабільні ~5 pt різниці, скільки не підбирай висоту.
+    ///
+    /// Компенсуємо відʼємним верхнім падінгом: смуга піднімається в ту саму смугу
+    /// координат, що й нав-бар.
+    private static var legacyTopCorrection: CGFloat {
+        let m = windowMetrics
+        return max(0, m.safeTop - m.statusBar)
+    }
+
+    /// Висота смуги = висота СПРАВЖНЬОГО нав-бара рідера, а не номінальна.
+    ///
+    /// `readerVM.toolbarBottomY` міряє `UINavigationBar` у координатах вікна
+    /// (`NavBarBottomReader` у `ReaderView`) — той самий бар, з яким ми хочемо
+    /// збігтися. Номінальні `UINavigationBar().sizeThatFits()` дають 44.0, а
+    /// фактичний бар — 43.7, і ця 0.3 лишалась як хвіст після першої правки.
+    ///
+    /// Фолбек на номінальну висоту потрібен лише для випадку, коли рідер ще жодного
+    /// разу не рендерився (запуск одразу в Пошук через launch-арг).
+    private var legacyBarHeight: CGFloat {
+        let measured = readerVM.toolbarBottomY - Self.windowMetrics.statusBar
+        return measured > 1 ? measured : Self.nominalNavBarHeight
+    }
+
+    private static let nominalNavBarHeight: CGFloat = {
         UINavigationBar().sizeThatFits(
             CGSize(width: CGFloat.greatestFiniteMagnitude,
                    height: CGFloat.greatestFiniteMagnitude)
@@ -386,7 +427,8 @@ struct SearchView: View {
                 }
             }
             .padding(.horizontal, Self.filterBarHorizontalPadding)
-            .modifier(FilterBarHeight())
+            .modifier(FilterBarHeight(barHeight: legacyBarHeight,
+                                      topCorrection: Self.legacyTopCorrection))
         }
         // The .glass chips' shadow blur is wider than any padding we'd want to add
         // (padding alone just pushes the pills around and still clips at the bottom).
@@ -854,11 +896,16 @@ private struct SearchResultRow: View {
 /// піксель-у-піксель. `maxHeight` разом із `height` не потрібен: чипи голі й
 /// нижчі за бар, тож вони просто центруються.
 private struct FilterBarHeight: ViewModifier {
+    let barHeight: CGFloat
+    let topCorrection: CGFloat
+
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
             content.padding(.vertical, 8)
         } else {
-            content.frame(height: SearchView.legacyBarHeight)
+            content
+                .frame(height: barHeight)
+                .padding(.top, -topCorrection)
         }
     }
 }
