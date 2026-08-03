@@ -63,7 +63,7 @@ struct NotesListView: View {
     private var filteredEmptyState: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "line.3.horizontal.decrease.circle")
+            Image(systemName: "line.3.horizontal.decrease")
                 .font(.system(size: 48)).foregroundStyle(.quaternary)
             Text("entries.filter.empty")
                 .font(.callout).foregroundStyle(.secondary)

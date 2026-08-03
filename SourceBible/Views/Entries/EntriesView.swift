@@ -44,8 +44,7 @@ struct EntriesView: View {
             .toolbar {
                 // 2026-07: кнопку «+» (нова нотатка без вірша) прибрано з v1 —
                 // нотатки створюються тільки з вірша (Study Mode → Нотатка).
-                // Замість неї — фільтри списку (Mail-style іконка: contour ↔
-                // circle.fill як індикатор активного фільтра).
+                // Замість неї — фільтри списку.
                 ToolbarItem(placement: .primaryAction) {
                     filterMenu
                 }
@@ -96,9 +95,13 @@ struct EntriesView: View {
                 }
             }
         } label: {
-            Image(systemName: filter.isFiltering
-                  ? "line.3.horizontal.decrease.circle.fill"
-                  : "line.3.horizontal.decrease.circle")
+            // 2026-08-03: плоский гліф замість `.circle` / `.circle.fill`.
+            // ⚠️ У `line.3.horizontal.decrease` НЕМАЄ fill-варіанта, тож старий
+            // індикатор «фільтр активний» (контур ↔ заливка) тут не працює.
+            // Тимчасово стан позначено вагою — рішення про фінальний індикатор
+            // за користувачем.
+            Image(systemName: "line.3.horizontal.decrease")
+                .fontWeight(filter.isFiltering ? .bold : .regular)
         }
         .accessibilityLabel(Text("entries.filter.a11y"))
     }
