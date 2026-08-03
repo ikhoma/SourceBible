@@ -879,6 +879,10 @@ enum MorphologyDecoder {
     }
 
     private static func shortKeyForCode(_ code: String) -> String? {
+        // Грецькі коди («N-NSM», «V-PAI-3S») сюди не пускаємо: там розкладка
+        // інша, і збіг першої літери був би випадковим. Для грецької працює
+        // гілка з `lexicalClass` вище.
+        guard !code.contains("-") else { return nil }
         let ch = Array(code)
         guard let first = ch.first else { return nil }
         switch first {
@@ -1127,12 +1131,31 @@ enum MorphologyDecoder {
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> String? {
         guard !code.isEmpty else { return nil }
-        // Складене слово показує СКЛАД («артикль + іменник»), а не саму лише
-        // частину мови голови. «Іменник» для הַדַּעַת приховує, що артикль узагалі
-        // є — і що номер Стронга поруч стосується лише кореня.
+        // Складене слово показує СКЛАД («арт. + ім.»), а не саму лише частину
+        // мови голови. «Іменник» для הַדַּעַת приховує, що артикль узагалі є —
+        // і що номер Стронга поруч стосується лише кореня.
         let composed = composition(code, lexicalClass: lexicalClass, using: t)
         if !composed.isEmpty { return composed }
-        return decodeOne(code, lexicalClass: lexicalClass, using: t)
+
+        // Одноморфемне слово — ТОЙ САМИЙ скорочений підпис, що й у складі.
+        // Інакше список читався б у двох регістрах одразу: «Дієслово» в одному
+        // рядку і «арт. + ім.» у сусідньому.
+        if let short = shortLabel(code, lexicalClass: lexicalClass, using: t) {
+            return short
+        }
+
+        // Останній рубіж: підпису-скорочення для цього коду немає (грецькі коди
+        // без `lexicalClass` — там перша літера коду ненадійна: "ADV" почалося б
+        // з "A" і назвалось прикметником). Беремо повну назву й гасимо лише
+        // регістр першої літери, щоб рядок лишався однорідним.
+        return decodeOne(code, lexicalClass: lexicalClass, using: t).map(lowercasedFirst)
+    }
+
+    /// «Дієслово» → «дієслово». Тільки перша літера: решта може бути власною
+    /// назвою породи («Niphal»), і повний `lowercased()` її б зіпсував.
+    private static func lowercasedFirst(_ s: String) -> String {
+        guard let f = s.first else { return s }
+        return String(f).lowercased() + s.dropFirst()
     }
 
     /// Розбір ОДНІЄЇ морфеми. Виділено з `decode`, щоб `composition` могла
