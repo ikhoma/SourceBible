@@ -34,15 +34,6 @@
 
 import SwiftUI
 
-// MARK: - Height measurement
-
-private struct SheetHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 // MARK: - Consent Card
 
 struct AnalyticsConsentCard: View {
@@ -54,14 +45,18 @@ struct AnalyticsConsentCard: View {
     var body: some View {
         VStack(spacing: 16) {
             // Образ замість стіни тексту: за пів секунди видно, про що мова,
-            // ще до читання. Тонований круг, а не ілюстрація — той самий ефект
-            // ціною одного символа.
+            // ще до читання.
+            //
+            // 48 pt + `.quaternary` — навмисно ті самі значення, що в empty-state'ах
+            // (`NotesListView` / `BookmarksListView` / `CrossRefsView`), щоб великі
+            // символи в застосунку виглядали як один прийом, а не як три різні.
+            //
+            // padding(.bottom, 8) + spacing 16 = 24 знизу, рівно стільки ж, скільки
+            // дає верхній `.padding(24)` картки. Зазори навколо іконки симетричні.
             Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(.appBlue)
-                .frame(width: 56, height: 56)
-                .background(Color.appBlue.opacity(0.12), in: Circle())
-                .padding(.bottom, 4)
+                .font(.system(size: 48))
+                .foregroundStyle(.quaternary)
+                .padding(.bottom, 8)
                 .accessibilityHidden(true)   // суто декоративний
 
             Text("analytics.consent.title")
@@ -96,6 +91,11 @@ struct AnalyticsConsentCard: View {
         }
         .padding(24)
         .padding(.bottom, 8)
+        // Запобіжник: забороняє тексту стискатись у «…», якщо детент раптом
+        // виявиться меншим за потрібну висоту (довший переклад, більший шрифт
+        // Dynamic Type). Краще, щоб картка чесно вилізла за межі й це побачили,
+        // ніж щоб половина пояснення тихо зникла в трьох крапках.
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // Accept action WITHOUT its buttonStyle, so the surface can branch by OS.
@@ -138,9 +138,11 @@ struct AnalyticsConsentCard: View {
 // Usage: attach .analyticsConsentIfNeeded() to the root ContentView.
 // Shows the sheet once; never again after that.
 //
-// Sheet sizing: measured dynamically via GeometryReader so the sheet
-// hugs its content. Initial value of 300 avoids a visible jump on first
-// appearance (actual measured height is typically ~260–280 pt).
+// Sheet sizing: детент рахується з прихованої копії картки поза шітом.
+// Деталі й граблі — у доккоментарі `heightProbe` нижче.
+//
+// `.presentationSizing(.fitted)` (iOS 18+) тут не підходить: на iPhone він
+// розтягує шіт майже на весь екран замість обгортання вмісту (перевірено).
 //
 // Corner radius: not set — iOS 26 floating partial sheets automatically
 // use the device's rounded-corner radius. Explicit values looked "off".
@@ -156,8 +158,39 @@ struct AnalyticsConsentModifier: ViewModifier {
     @State private var sheetHeight: CGFloat = 300
     @State private var decisionMade = false
 
+    /// Невидимий дублікат картки — єдине джерело висоти детента.
+    ///
+    /// Лежить у `.background` кореневого в'ю, де висота нічим не обмежена, тож
+    /// картка повідомляє свою ІДЕАЛЬНУ висоту. Детент правильний уже на першій
+    /// появі: без стрибка й без підбору стартового значення.
+    ///
+    /// ⛔ Не міряти картку, що вже в шіті — це дедлок:
+    ///   детент 300 → контент затиснуто до 300 → замір дає 300 → детент 300…
+    /// Заміряне значення не може перерости стартове, тож щойно вміст став вищим
+    /// за 300, іконку зрізало верхнім краєм шіта.
+    ///
+    /// ⛔ І не через `PreferenceKey`: преференси з вмісту `.background`/`.overlay`
+    /// не піднімаються до батьківського в'ю, тож значення просто не доходило.
+    /// `onGeometryChange` (iOS 16.4+, у нас таргет 18) пише прямо в `@State`
+    /// і цієї ізоляції не має.
+    ///
+    /// Патерн: fatbobman «SwiftUI Sheet Auto-Sizing» + Daniel Saidi «size to fit».
+    private var heightProbe: some View {
+        AnalyticsConsentCard(isPresented: .constant(false),
+                             decisionMade: .constant(false))
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.height
+            } action: { height in
+                if height > 0 { sheetHeight = height }
+            }
+            .hidden()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
     func body(content: Content) -> some View {
         content
+            .background(alignment: .top) { heightProbe }
             .onAppear {
                 if !consentShown {
                     showSheet = true
@@ -170,17 +203,6 @@ struct AnalyticsConsentModifier: ViewModifier {
                 if !decisionMade { analyticsEnabled = false }
             }) {
                 AnalyticsConsentCard(isPresented: $showSheet, decisionMade: $decisionMade)
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.preference(
-                                key: SheetHeightKey.self,
-                                value: geo.size.height
-                            )
-                        }
-                    )
-                    .onPreferenceChange(SheetHeightKey.self) { height in
-                        if height > 0 { sheetHeight = height }
-                    }
                     .presentationDetents([.height(sheetHeight)])
                     .presentationDragIndicator(.visible)
                     .themedSheet(colorTheme)

@@ -320,13 +320,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anonymous usage stats show which features people use and which they ignore, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
+            "value" : "Anonymous usage stats show which features people use, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Анонімна статистика показує, якими функціями користуються, а якими ні, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
+            "value" : "Анонімна статистика показує, якими функціями користуються, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
           }
         }
       }
@@ -348,6 +348,7 @@
       }
     },
     "analytics.consent.privacy_link" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3252,7 +3253,7 @@
         }
       }
     },
-    "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in SourceBible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training." : {
+    "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in Source Bible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training." : {
 
     },
     "picker.chapters_count" : {
@@ -4025,7 +4026,7 @@
         }
       }
     },
-    "Support SourceBible" : {
+    "Support Source Bible" : {
 
     },
     "tab.bible" : {
@@ -4776,7 +4777,7 @@
         }
       }
     },
-    "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep SourceBible free for everyone, with the help of those who choose to support it." : {
+    "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it." : {
 
     },
     "We are grateful to everyone who made this scholarship freely available." : {
@@ -4784,6 +4785,40 @@
     },
     "We bridge the gap between modern readers and the world of the biblical text." : {
 
+    },
+    "word.empty.no_data" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language data unavailable for this word"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дані мови недоступні для цього слова"
+          }
+        }
+      }
+    },
+    "word.empty.tap_hint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap a word to explore"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Натисніть на слово для вивчення"
+          }
+        }
+      }
     },
     "word.mapping.support.body" : {
       "localizations" : {
@@ -4845,40 +4880,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Цей переклад ще не повʼязано з номерами Стронга"
-          }
-        }
-      }
-    },
-    "word.empty.no_data" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Language data unavailable for this word"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Дані мови недоступні для цього слова"
-          }
-        }
-      }
-    },
-    "word.empty.tap_hint" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap a word to explore"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Натисніть на слово для вивчення"
           }
         }
       }
@@ -5010,7 +5011,7 @@
     "Контакти" : {
 
     },
-    "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо SourceBible безкоштовним для всіх завдяки тим, хто вирішує його підтримати." : {
+    "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати." : {
 
     },
     "Ми вдячні всім, хто зробив ці матеріали вільно доступними." : {
@@ -5019,10 +5020,10 @@
     "Ми прокладаємо міст між сучасним читачем і світом біблійного тексту." : {
 
     },
-    "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у SourceBible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту." : {
+    "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у Source Bible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту." : {
 
     },
-    "Підтримати SourceBible" : {
+    "Підтримати Source Bible" : {
 
     },
     "Створено дослідниками й викладачами Біблії — для дослідників і викладачів Біблії." : {
