@@ -1,9 +1,9 @@
 // AboutView.swift
-// SourceBible
+// Source Bible
 //
 // In-app About screen (Menu → About). Long-form marketing/attribution copy, so
 // the two languages are held inline and picked by `appLanguage` rather than
-// routed through xcstrings (which is for UI labels). The "Support SourceBible"
+// routed through xcstrings (which is for UI labels). The "Support Source Bible"
 // primary action pushes the existing DonationView (StoreKit 2, DonationService).
 
 import SwiftUI
@@ -17,7 +17,7 @@ struct AboutView: View {
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        return "SourceBible v\(v)"
+        return "Source Bible v\(v)"
     }
 
     /// Support action WITHOUT its buttonStyle, so the surface can branch by OS
@@ -26,7 +26,7 @@ struct AboutView: View {
         NavigationLink {
             DonationView()
         } label: {
-            Text(uk ? "Підтримати SourceBible" : "Support SourceBible")
+            Text(uk ? "Підтримати Source Bible" : "Support Source Bible")
                 .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
         }
@@ -50,8 +50,8 @@ struct AboutView: View {
 
                     // ── Mission ──
                     Text(uk
-                         ? "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у SourceBible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту."
-                         : "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in SourceBible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training.")
+                         ? "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у Source Bible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту."
+                         : "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in Source Bible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training.")
                         .fixedSize(horizontal: false, vertical: true)
 
                     // ── Manuscript basis ──
@@ -69,8 +69,8 @@ struct AboutView: View {
 
                     // ── Team / war ──
                     Text(uk
-                         ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо SourceBible безкоштовним для всіх завдяки тим, хто вирішує його підтримати."
-                         : "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep SourceBible free for everyone, with the help of those who choose to support it.")
+                         ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати."
+                         : "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it.")
                         .fixedSize(horizontal: false, vertical: true)
 
                     // ── Support (primary action → existing donation flow) ──

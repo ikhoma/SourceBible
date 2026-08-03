@@ -304,13 +304,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "OK"
+            "value" : "Share statistics"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Добре"
+            "value" : "Ділитися статистикою"
           }
         }
       }
@@ -320,13 +320,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "We collect anonymous usage statistics to improve the app. No personal data, notes, or search queries are ever shared."
+            "value" : "Anonymous usage stats show which features people use and which they ignore, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ми збираємо анонімну статистику використання, щоб покращувати застосунок. Жодних особистих даних, нотаток чи тексту запитів."
+            "value" : "Анонімна статистика показує, якими функціями користуються, а якими ні, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
           }
         }
       }
@@ -336,13 +336,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Not now"
+            "value" : "Don't share"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Не зараз"
+            "value" : "Не ділитися"
           }
         }
       }
@@ -374,7 +374,7 @@
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Допоможи покращити SourceBible"
+            "value" : "Допоможіть покращити Source Bible"
           }
         }
       }
@@ -696,13 +696,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your donation supports the development of SourceBible. All features stay free for everyone."
+            "value" : "Your donation supports the development of Source Bible. All features stay free for everyone."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ваша пожертва підтримує розробку SourceBible. Усі функції залишаються безкоштовними для всіх."
+            "value" : "Ваша пожертва підтримує розробку Source Bible. Усі функції залишаються безкоштовними для всіх."
           }
         }
       }
@@ -888,13 +888,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your donation was received. Thank you for supporting SourceBible!"
+            "value" : "Your donation was received. Thank you for supporting Source Bible!"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вашу пожертву отримано. Дякуємо за підтримку SourceBible!"
+            "value" : "Вашу пожертву отримано. Дякуємо за підтримку Source Bible!"
           }
         }
       }
