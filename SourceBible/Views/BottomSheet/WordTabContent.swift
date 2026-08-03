@@ -414,9 +414,49 @@ struct WordMeaningView: View {
 
     // MARK: Lexical meaning
 
+    /// Порядок секцій лексикону + яку з них позначити як форму з вірша (ADR-033).
+    ///
+    /// Стаття BDB двошарова: `1)` — злитий заголовок кореня (склейка глос УСІХ порід),
+    /// `1a)/1b)` — самі породи. У порядку джерела заголовок іде першим і найпомітнішим,
+    /// тож для Ніфаля `נִדְמוּ` («народ знищено») зверху світилось активне «destroy».
+    /// Це illegitimate totality transfer: приписати формі весь діапазон кореня.
+    ///
+    /// ⛔ FAIL-SAFE. Будь-яка невизначеність → повертаємо ЯК Є, нічого не ховаючи:
+    /// немає розбору, не дієслово, у статті немає порід, або породи цієї форми в BDB
+    /// немає (рідкісні Polel/Pilpel). Краще зайвий рядок, ніж порожній екран.
+    ///
+    /// Це функція від `(entry, selectedWord)`, а НЕ збережений стан — інакше перехід
+    /// по чевронах міняв би слово, а позначка лишалась би від попереднього.
+    private func rankedLexicon(_ sections: [LexiconSection]) -> (sections: [LexiconSection], markedId: UUID?) {
+        guard let morph = vm.selectedWord?.morphology,
+              let stem  = MorphologyDecoder.canonicalHebrewStem(morph)
+        else { return (sections, nil) }
+
+        let named = sections.filter { !$0.stemName.isEmpty }
+        guard !named.isEmpty,
+              let hit = named.firstIndex(where: { Self.normalizedStem($0.stemName) == stem })
+        else { return (sections, nil) }
+
+        var ordered = named
+        let match = ordered.remove(at: hit)
+        ordered.insert(match, at: 0)
+        // Злитий заголовок кореня вже відсіяно фільтром `named` — він єдиний,
+        // хто приходить без імені перед іменованими секціями.
+        return (ordered, match.id)
+    }
+
+    /// «Niphal», «Niph.», «NIPHAL » → «niphal». BDB не гарантує єдиного написання.
+    private static func normalizedStem(_ name: String) -> String {
+        name.lowercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ".", with: "")
+            .replacingOccurrences(of: " ", with: "")
+    }
+
     @ViewBuilder
     private var lexicalSection: some View {
-        let sections = LexiconParser.parse(entry.fullDefinition)
+        let ranked = rankedLexicon(LexiconParser.parse(entry.fullDefinition))
+        let sections = ranked.sections
         if !sections.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 sectionLabel(t.string(for: MorphKey.sectionLexical))
@@ -424,7 +464,11 @@ struct WordMeaningView: View {
                     ForEach(Array(sections.enumerated()), id: \.offset) { si, sec in
                         VStack(alignment: .leading, spacing: 0) {
                             if !sec.stemName.isEmpty {
-                                Text(sec.stemName)
+                                // Сам розбір («Niphal perfect 3cp») тут НЕ дублюємо —
+                                // він уже стоїть у секції «Морфологія» вище.
+                                Text(sec.id == ranked.markedId
+                                     ? "\(sec.stemName) (\(t.string(for: MorphKey.stemFormInVerse)))"
+                                     : sec.stemName)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                                     .padding(.top, 10).padding(.bottom, 4)
@@ -840,6 +884,32 @@ enum MorphologyDecoder {
         case "p": return t.string(for: MorphKey.posPronSuffix)
         case "d": return t.string(for: MorphKey.posDirObjSuffix)
         default:  return t.string(for: MorphKey.posSuffix)
+        }
+    }
+
+    /// Канонічна АНГЛІЙСЬКА назва породи — ключ звірки з підписами секцій BDB (ADR-033).
+    ///
+    /// ⛔ Не плутати з `hebrewStem` нижче: та віддає ЛОКАЛІЗОВАНУ назву для показу.
+    /// Звіряти локалізовану назву з BDB не можна — українською («Ніфаль») вона не
+    /// збіжиться з англійським підписом ніколи, і ранжування тихо не працювало б
+    /// саме в українській локалі.
+    ///
+    /// nil для всього, що не дієслово, і для кодів поза цими вісьмома. Рідкісні
+    /// породи (Polel, Pilpel, Hithpolel) OSHB не кодує — там свідомо nil, а не
+    /// евристика «схожа назва».
+    static func canonicalHebrewStem(_ code: String) -> String? {
+        let ch = Array(code)
+        guard ch.first == "V", ch.count > 1 else { return nil }
+        switch ch[1] {
+        case "q": return "qal"
+        case "N": return "niphal"
+        case "p": return "piel"
+        case "P": return "pual"
+        case "h": return "hiphil"
+        case "H": return "hophal"
+        case "t": return "hithpael"
+        case "D": return "poel"
+        default:  return nil
         }
     }
 
