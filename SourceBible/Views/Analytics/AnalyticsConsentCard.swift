@@ -158,6 +158,11 @@ struct AnalyticsConsentModifier: ViewModifier {
     @State private var sheetHeight: CGFloat = 300
     @State private var decisionMade = false
 
+    /// Згода потрібна, але шіт ще не показано — чекаємо на замір висоти.
+    @State private var consentPending = false
+    /// Проба вже відпрацювала хоч раз, тобто `sheetHeight` — справжній, а не сід.
+    @State private var heightMeasured = false
+
     /// Невидимий дублікат картки — єдине джерело висоти детента.
     ///
     /// Лежить у `.background` кореневого в'ю, де висота нічим не обмежена, тож
@@ -175,26 +180,60 @@ struct AnalyticsConsentModifier: ViewModifier {
     /// і цієї ізоляції не має.
     ///
     /// Патерн: fatbobman «SwiftUI Sheet Auto-Sizing» + Daniel Saidi «size to fit».
+    ///
+    /// ⛔ Замір сам по собі гонку не вирішує — показ шіта мусить його ДОЧЕКАТИСЬ.
+    /// Див. `presentIfReady()`.
     private var heightProbe: some View {
         AnalyticsConsentCard(isPresented: .constant(false),
                              decisionMade: .constant(false))
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.height
             } action: { height in
-                if height > 0 { sheetHeight = height }
+                guard height > 0 else { return }
+                sheetHeight = height
+                heightMeasured = true
+                presentIfReady()
             }
             .hidden()
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
 
+    /// Шіт показуємо ЛИШЕ коли висота вже заміряна.
+    ///
+    /// ⛔ ГОНКА, через яку шіт підстрибував. `onAppear` кореневого в'ю і
+    /// `onGeometryChange` проби — дві незалежні події, порядок між ними не
+    /// гарантований. Виграє проба — детент одразу правильний; виграє `onAppear` —
+    /// шіт презентується з сідовими 300, потім детент стрибає на заміряні 388,
+    /// а контент, що був затиснутий у 300, переїжджає вдруге.
+    ///
+    /// Саме тому баг «то є, то немає»: у симуляторі проба зазвичай встигає перша
+    /// (заміряно `probe=388 | present@388`), а на холодному старті пристрою —
+    /// не завжди.
+    private func presentIfReady() {
+        guard consentPending, heightMeasured else { return }
+        consentPending = false
+        consentShown = true
+        showSheet = true
+    }
+
     func body(content: Content) -> some View {
         content
             .background(alignment: .top) { heightProbe }
             .onAppear {
-                if !consentShown {
-                    showSheet = true
-                    consentShown = true
+                guard !consentShown else { return }
+                consentPending = true
+                presentIfReady()
+            }
+            // Страхувальна сітка: якщо заміру так і не сталося, показуємо шіт із
+            // сідовою висотою. Стрибок неприємний, але мовчки НЕ спитати згоду —
+            // гірше: `analyticsConsentShown` виставляється лише разом із показом,
+            // тож без цієї гілки користувача не спитали б ніколи.
+            .task {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if consentPending {
+                    heightMeasured = true
+                    presentIfReady()
                 }
             }
             // onDismiss ловить свайп вниз і тап поза шітом. Без явного вибору
