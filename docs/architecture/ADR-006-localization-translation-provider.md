@@ -286,3 +286,39 @@ The implementation plan (`localization-implementation-plan.md`) is structurally 
 **Issue:** Step 1 and Step 6 propose `String(localized: "key", bundle: .localized)` and `Text(verbatim: String(localized:...))` everywhere. This is Option B2 above — rejected in favor of B1 (swizzling). The plan should be updated so Step 1 implements `object_setClass` swizzling and Step 6 uses plain `Text("key")` / `String(localized: "key")` without explicit bundle parameter.
 
 Everything else in the plan — step ordering, `MorphKey` design, `TranslationProvider` protocol, `@AppStorage` + `.id()` wiring, QA checklists — is correct and optimal.
+
+---
+
+## Amendment 2026-08-03 — одна резолюція мови замість п'яти дефолтів
+
+`appLanguage` пишеться в `UserDefaults` **лише коли користувач відкриє пікер
+мови**. Доти ключа немає, і кожен call-site вирішував це по-своєму:
+
+| місце | було | наслідок на українському телефоні |
+|---|---|---|
+| свізл бандла (`init`) | `?? defaultLanguage` (мова системи) | ✅ інтерфейс український |
+| `AboutView`, `MenuView`, `LanguageSettingsView`, `PrivacyPolicyView` | `@AppStorage(...) = "en"` | ❌ англійський текст «Про застосунок» і політики; у пікері позначено English |
+| `BibleBookNames.isUkrainian` | `string(forKey:) == "uk"` (`nil ≠ "uk"`) | ❌ англійські назви книг у фолбеку |
+
+Тобто перший запуск був **змішаний за мовою**, і це не бачив ніхто, бо тестувати
+починали вже після дотику до налаштувань.
+
+**Рішення:** `AppLanguage` став єдиним джерелом.
+
+- `resolved` — збережене (якщо валідне) → мова системи → звузити до `{en, uk}`.
+  Для тих, хто читає стан сам (`init`, `ReadingPositionStore`, `BibleBookNames`).
+- `narrowed(_:)` — звужує вже наявний рядок. Для call-site'ів, що тримають
+  значення в руках (`@AppStorage`) і не мають перечитувати `UserDefaults`.
+
+Усі `@AppStorage(appLanguage)` дефолтяться в `resolved`, а не в `"en"`.
+`SourceBibleApp.defaultLanguage` прибрано як зайвого посередника.
+
+⛔ **`?? default` тут недостатньо** — `??` ловить лише `nil`. Порожній або
+невалідний збережений рядок проходив далі, і `.onChange(of: appLanguage)` мовчки
+перевстановлював англійський бандл поверх правильної мови, обраної в `init`.
+Тому обидва localization-call-site'и в `body` проганяють значення через
+`narrowed`.
+
+**Перевірено на симуляторі** (`-AppleLanguages`, ключ відсутній / порожній):
+uk → український інтерфейс + UBIO; en → англійський + KJV; порожній збережений
+рядок при системній uk → український (раніше давав англійський таб-бар).

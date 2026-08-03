@@ -27,7 +27,7 @@ struct SourceBibleApp: App {
     // MARK: - Language
 
     /// Persisted language code ("en" | "uk"). Drives locale environment on change.
-    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = Self.defaultLanguage
+    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = AppLanguage.resolved
 
     // MARK: - Appearance
     //
@@ -41,8 +41,6 @@ struct SourceBibleApp: App {
     private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .matchDevice }
 
     /// On first launch: follow system locale if supported, else "en".
-    private static var defaultLanguage: String { AppLanguage.resolved }
-
     // MARK: - Scene phase (for app_opened + session lifecycle)
     @Environment(\.scenePhase) private var scenePhase
 
@@ -79,8 +77,10 @@ struct SourceBibleApp: App {
         // After this, Text("key") and String(localized: "key") both
         // resolve through the active language automatically.
         // See ADR-006: docs/architecture/ADR-006-localization-translation-provider.md
-        let lang = UserDefaults.standard.string(forKey: AppStorageKeys.appLanguage) ?? Self.defaultLanguage
-        LocalizedBundle.install(language: lang)
+        // `AppLanguage.resolved`, а не `string(forKey:) ?? default`: `??` ловить
+        // лише `nil`, тож порожній або невалідний збережений рядок проходив далі
+        // й давав англійський бандл при українському всьому іншому.
+        LocalizedBundle.install(language: AppLanguage.resolved)
 
         // ── Appearance init ───────────────────────────────────────────────────
         // Register the bundled Cormorant face (Antique title style) with Core
@@ -184,9 +184,15 @@ struct SourceBibleApp: App {
                 .environment(\.colorTheme, ColorTheme(rawValue: colorThemeRaw) ?? .paper)
                 .environment(\.titleFontStyle, TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern)
                 // Localization
-                .environment(\.locale, Locale(identifier: appLanguage))
+                //
+                // Обидва місця проганяють значення через `AppLanguage.narrowed`,
+                // а не беруть сире: `@AppStorage` повертає збережений рядок як є,
+                // тож будь-що поза {en, uk} (порожнє, залишок від старої збірки)
+                // давало англійський бандл, тимчасом як init уже поставив
+                // правильну мову. Тобто onChange мовчки перебивав резолюцію.
+                .environment(\.locale, Locale(identifier: AppLanguage.narrowed(appLanguage)))
                 .onChange(of: appLanguage) { _, lang in
-                    LocalizedBundle.activate(language: lang)
+                    LocalizedBundle.activate(language: AppLanguage.narrowed(lang))
                 }
         }
     }
@@ -209,6 +215,18 @@ enum AppLanguage {
            supported.contains(saved) {
             return saved
         }
+        return systemDefault
+    }
+
+    /// Звужує довільний рядок до підтримуваної мови, падаючи на системну.
+    /// Для call-site'ів, які вже тримають значення в руках (`@AppStorage`) і
+    /// не мають перечитувати `UserDefaults`.
+    static func narrowed(_ language: String) -> String {
+        supported.contains(language) ? language : systemDefault
+    }
+
+    /// Мова телефону, звужена до підтримуваних.
+    private static var systemDefault: String {
         let code = Locale.preferredLanguages.first.map { String($0.prefix(2)) } ?? "en"
         return supported.contains(code) ? code : "en"
     }

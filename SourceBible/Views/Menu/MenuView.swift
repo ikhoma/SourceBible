@@ -14,7 +14,11 @@ struct MenuView: View {
     @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = AppLanguage.defaultTranslationId
     @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
     @Environment(\.locale) private var locale
-    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
+    // Дефолт `@AppStorage` спрацьовує, поки ключа НЕМА — а він пишеться лише
+    // коли людина відкриє пікер мови. Жорсткий "en" тут означав, що на
+    // українському телефоні цей екран був англійським, хоч решта інтерфейсу
+    // (через свізл бандла) — українська. `resolved` дає ту саму мову, що й свізл.
+    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = AppLanguage.resolved
     @AppStorage(AppStorageKeys.launchBehavior) private var launchBehaviorRaw = LaunchBehavior.resume.rawValue
     @AppStorage(AppStorageKeys.translationLaunchBehavior) private var translationLaunchRaw = TranslationLaunchBehavior.lastUsed.rawValue
 

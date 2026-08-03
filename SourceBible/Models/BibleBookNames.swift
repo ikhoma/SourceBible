@@ -49,8 +49,11 @@ enum BibleBookNames {
 
     // MARK: - Locale helper
 
+    /// ⛔ Не порівнювати сирий `string(forKey:)` з "uk": поки людина не відкрила
+    /// пікер мови, ключа немає, і `nil != "uk"` давало англійські назви книг на
+    /// українському телефоні. `AppLanguage.resolved` падає на мову системи.
     private static var isUkrainian: Bool {
-        UserDefaults.standard.string(forKey: AppStorageKeys.appLanguage) == "uk"
+        AppLanguage.resolved == "uk"
     }
 
     // MARK: - Testament map (66 books)

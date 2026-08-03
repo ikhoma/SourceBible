@@ -11,7 +11,11 @@ import SwiftUI
 
 struct PrivacyPolicyView: View {
     @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
-    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
+    // Дефолт `@AppStorage` спрацьовує, поки ключа НЕМА — а він пишеться лише
+    // коли людина відкриє пікер мови. Жорсткий "en" тут означав, що на
+    // українському телефоні цей екран був англійським, хоч решта інтерфейсу
+    // (через свізл бандла) — українська. `resolved` дає ту саму мову, що й свізл.
+    @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = AppLanguage.resolved
 
     private var colorTheme: ColorTheme { ColorTheme(rawValue: colorThemeRaw) ?? .paper }
     private var uk: Bool { appLanguage == "uk" }
