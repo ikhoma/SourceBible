@@ -346,24 +346,32 @@ enum TranslationLaunchBehavior: String, CaseIterable {
 }
 ```
 
-Ключі (ADR-025): `translationLaunchBehavior` (Launch preference, дефолт `fixed`),
+Ключі (ADR-025): `translationLaunchBehavior` (Launch preference, дефолт
+**`lastUsed`** — змінено 2026-08-03, було `fixed`),
 `lastUsedTranslationId` (Reading / navigation — ефемерний, чиститься з історією).
 
 ### Поведінка
 
 | режим | джерело id | якщо порожньо |
 |---|---|---|
-| `fixed` (дефолт) | `defaultTranslationId` (вибір у Меню) | `Translation.defaultTranslation` |
-| `lastUsed` | `lastUsedTranslationId` (пишеться в `selectTranslation`) | падає на `defaultTranslationId`, далі на компільований дефолт |
+| `fixed` | `defaultTranslationId` (вибір у Меню) | `AppLanguage.defaultTranslationId` |
+| `lastUsed` (дефолт) | `lastUsedTranslationId` (пишеться в `selectTranslation`) | `defaultTranslationId`, далі `AppLanguage.defaultTranslationId` |
 
 Резолюція — у `ReadingPositionStore.launchTranslationId()`, не у ViewModel: рідер
 питає «з чим стартувати» і не знає про ключі. Невідомий id (переклад зник між
 білдами) → `first(where:)` не знаходить → лишається `Translation.defaultTranslation`,
 як і до зміни.
 
-**Чому дефолт `fixed`:** до цієї зміни рідер безумовно застосовував
-`defaultTranslationId`. `fixed` відтворює це один-в-один — апдейт не міняє поведінку
-наявних користувачів мовчки.
+**Чому дефолт `lastUsed` (2026-08-03, було `fixed`):** попередній вибір беріг
+сумісність із дорелізною поведінкою для наявних користувачів. Аргумент відпав —
+база на цей момент складається з тестерів. `lastUsed` робить те, чого людина
+очікує без жодних налаштувань. `fixed` лишається явним вибором у Меню.
+
+**Стартовий переклад під мову (2026-08-03):** останній фолбек —
+`AppLanguage.defaultTranslationId`: UK → `UBIO`, інакше `KJV`. Раніше ланцюг
+обривався на `defaultTranslationId` і повертав `nil`, тож рідер падав на
+компільований `Translation.defaultTranslation` — і **україномовний користувач на
+першому запуску бачив KJV**, уже обравши українську мову інтерфейсу.
 
 **Чому `lastUsed` теж падає на `defaultTranslationId`, а не одразу на компільований
 дефолт:** користувач міг увімкнути режим до першого перемикання. Явний вибір із
@@ -389,6 +397,9 @@ enum TranslationLaunchBehavior: String, CaseIterable {
 - [ ] `fixed` + вибір RST → kill/relaunch → RST (поведінка як до зміни).
 - [ ] `lastUsed`, перемкнути на UBIO → kill/relaunch → UBIO.
 - [ ] `lastUsed` без жодного перемикання → відкривається вибір із Налаштувань.
+- [x] Найперший запуск, нічого не обрано, `appLanguage=uk` → **UBIO**
+      (перевірено на симуляторі 2026-08-03, launch-args із порожніми ключами).
+- [x] Те саме з `appLanguage=en` → **KJV** (перевірено там само).
 - [ ] Clear reading history у режимі `lastUsed` → наступний запуск = вибір із Налаштувань.
 - [ ] Перемикання режиму на `lastUsed` ховає рядок конкретного перекладу.
 - [ ] Archive/Release зелений.

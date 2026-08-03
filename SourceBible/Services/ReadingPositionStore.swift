@@ -22,9 +22,16 @@ enum LaunchBehavior: String, CaseIterable {
 /// WHICH TRANSLATION the reader opens with on launch — the sibling of
 /// `LaunchBehavior`, which answers "which passage".
 ///
-/// `.fixed` is the default because it is the pre-existing behaviour: before this
-/// setting existed the reader unconditionally applied `defaultTranslationId`.
-/// Defaulting to `.lastUsed` would silently change what upgrading users see.
+/// `.lastUsed` — дефолт (змінено 2026-08-03, було `.fixed`).
+///
+/// Початково дефолтом був `.fixed`, щоб апдейт не змінив мовчки поведінку для
+/// наявних користувачів. Аргумент відпав: на цей момент база користувачів — це
+/// тестери, тож зберігати сумісність із дорелізною поведінкою немає для кого.
+/// `.lastUsed` робить те, чого людина очікує за замовчуванням: застосунок
+/// відкривається там і тим, чим вона читала востаннє.
+///
+/// `.fixed` лишається як явний вибір у Меню для тих, хто хоче завжди стартувати
+/// з одного перекладу незалежно від того, куди заглядав.
 enum TranslationLaunchBehavior: String, CaseIterable {
     case fixed     // always open the translation picked in Settings
     case lastUsed  // reopen whichever translation was active last
@@ -77,7 +84,7 @@ final class UserDefaultsReadingPositionStore: ReadingPositionStore {
         get {
             TranslationLaunchBehavior(
                 rawValue: defaults.string(forKey: AppStorageKeys.translationLaunchBehavior) ?? ""
-            ) ?? .fixed
+            ) ?? .lastUsed
         }
         set { defaults.set(newValue.rawValue, forKey: AppStorageKeys.translationLaunchBehavior) }
     }
@@ -85,13 +92,17 @@ final class UserDefaultsReadingPositionStore: ReadingPositionStore {
     func launchTranslationId() -> String? {
         switch translationLaunchBehavior {
         case .fixed:
-            return fixedTranslationId()
+            // Без явного вибору — переклад під мову, а не компільований KJV.
+            return fixedTranslationId() ?? AppLanguage.defaultTranslationId
         case .lastUsed:
             let id = defaults.string(forKey: AppStorageKeys.lastUsedTranslationId) ?? ""
-            // Nothing used yet (mode flipped before the first switch, or history
-            // cleared): fall back to the Settings pick rather than to the
-            // compiled-in default, so the user's explicit choice still wins.
-            return id.isEmpty ? fixedTranslationId() : id
+            if !id.isEmpty { return id }
+            // Ще нічого не читали (найперший запуск, режим перемкнули до першого
+            // перемикання, або історію очищено). Порядок падіння навмисний:
+            //   1) явний вибір у Налаштуваннях — він завжди б'є будь-який дефолт;
+            //   2) переклад під мову інтерфейсу — щоб україномовний не впирався
+            //      в KJV на першому екрані.
+            return fixedTranslationId() ?? AppLanguage.defaultTranslationId
         }
     }
 

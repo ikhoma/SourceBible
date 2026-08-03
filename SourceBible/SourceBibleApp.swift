@@ -41,10 +41,7 @@ struct SourceBibleApp: App {
     private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .matchDevice }
 
     /// On first launch: follow system locale if supported, else "en".
-    private static var defaultLanguage: String {
-        let code = Locale.preferredLanguages.first.map { String($0.prefix(2)) } ?? "en"
-        return AppLanguage.supported.contains(code) ? code : "en"
-    }
+    private static var defaultLanguage: String { AppLanguage.resolved }
 
     // MARK: - Scene phase (for app_opened + session lifecycle)
     @Environment(\.scenePhase) private var scenePhase
@@ -199,4 +196,31 @@ struct SourceBibleApp: App {
 
 enum AppLanguage {
     static let supported: Set<String> = ["en", "uk"]
+
+    /// Активна мова інтерфейсу. На першому запуску ключа ще немає — беремо з
+    /// системних налаштувань, звужуючи до підтримуваних.
+    ///
+    /// Джерело правди для всіх, кому треба знати мову ДО побудови сцени
+    /// (локалізація бандла, вибір стартового перекладу). Раніше ця логіка жила
+    /// лише в `SourceBibleApp.defaultLanguage`; `ReadingPositionStore` не мав до
+    /// неї доступу й тому не міг обрати переклад під мову.
+    static var resolved: String {
+        if let saved = UserDefaults.standard.string(forKey: AppStorageKeys.appLanguage),
+           supported.contains(saved) {
+            return saved
+        }
+        let code = Locale.preferredLanguages.first.map { String($0.prefix(2)) } ?? "en"
+        return supported.contains(code) ? code : "en"
+    }
+
+    /// Переклад «з коробки» для активної мови — для найпершого запуску, коли
+    /// користувач ще нічого не читав і нічого не обирав у Налаштуваннях.
+    ///
+    /// Українцю відкривати KJV безглуздо: до цієї зміни саме так і було, бо
+    /// єдиним фолбеком був компільований `Translation.defaultTranslation`.
+    /// Невідомий id тут безпечний — `ReaderViewModel` звіряє його з тим, що
+    /// реально є в базі, і мовчки падає на `Translation.defaultTranslation`.
+    static var defaultTranslationId: String {
+        resolved == "uk" ? "UBIO" : Translation.kjv.id
+    }
 }

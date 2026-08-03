@@ -11,12 +11,12 @@ struct MenuView: View {
     @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
-    @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = "KJV"
+    @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = AppLanguage.defaultTranslationId
     @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
     @Environment(\.locale) private var locale
     @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = "en"
     @AppStorage(AppStorageKeys.launchBehavior) private var launchBehaviorRaw = LaunchBehavior.resume.rawValue
-    @AppStorage(AppStorageKeys.translationLaunchBehavior) private var translationLaunchRaw = TranslationLaunchBehavior.fixed.rawValue
+    @AppStorage(AppStorageKeys.translationLaunchBehavior) private var translationLaunchRaw = TranslationLaunchBehavior.lastUsed.rawValue
 
     private var currentLanguageLabel: String {
         switch appLanguage {
@@ -37,7 +37,7 @@ struct MenuView: View {
     }
 
     private var translationLaunchBehavior: TranslationLaunchBehavior {
-        TranslationLaunchBehavior(rawValue: translationLaunchRaw) ?? .fixed
+        TranslationLaunchBehavior(rawValue: translationLaunchRaw) ?? .lastUsed
     }
 
     /// Значення в рядку: або «Останній відкритий», або id конкретного перекладу.
@@ -385,7 +385,7 @@ struct TranslationLaunchPickerView: View {
     @Environment(\.colorTheme) private var colorTheme
 
     private var behavior: TranslationLaunchBehavior {
-        TranslationLaunchBehavior(rawValue: behaviorRaw) ?? .fixed
+        TranslationLaunchBehavior(rawValue: behaviorRaw) ?? .lastUsed
     }
 
     var body: some View {
