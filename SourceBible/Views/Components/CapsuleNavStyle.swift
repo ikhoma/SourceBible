@@ -64,23 +64,19 @@ struct LegacyCapsuleButtonShape: ViewModifier {
     }
 }
 
-/// Капсульний трек для `.pickerStyle(.segmented)` на iOS 18.
-///
-/// SwiftUI не дає форму сегментованого контрола, а `UISegmentedControl` на 18
-/// малює прямокутник із радіусом ~9. Обтинаємо зовнішній трек капсулою; внутрішня
-/// «пігулка» виділення має власний радіус і лишається як є — на око вони
-/// узгоджуються, бо капсула лише зрізає кути треку.
-///
-/// ⛔ На iOS 26 no-op: там трек уже капсульний, і обтинання дало б подвійну форму.
-struct LegacySegmentedCapsule: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content
-        } else {
-            content.clipShape(Capsule())
-        }
-    }
-}
+// ⛔ Сегментований контрол на iOS 18 лишається СИСТЕМНИМ. Не заокруглювати.
+//
+// Пробували 2026-08-03: `clipShape(Capsule())` на `.pickerStyle(.segmented)`.
+// Трек став капсулою, а «пігулка» виділення всередині лишилась зі своїм
+// радіусом ~9 — вийшов прямокутник у капсулі, гірше за вихідний вигляд.
+//
+// Форму індикатора SwiftUI не віддає, а `UISegmentedControl` не має для неї
+// публічного API. Єдиний спосіб — лізти в його `subviews` і правити
+// `layer.cornerRadius` вручну: недокументована ієрархія, що ламається між
+// версіями iOS. Не варте того заради кількох пунктів радіуса.
+//
+// Якщо колись справді знадобиться капсульний сегментований — це власний
+// контрол, а не патч системного.
 
 /// Радіус карток у Entries (нотатки, закладки).
 ///
@@ -118,7 +114,4 @@ extension View {
         modifier(LegacyCapsuleButtonShape())
     }
 
-    func legacySegmentedCapsule() -> some View {
-        modifier(LegacySegmentedCapsule())
-    }
 }

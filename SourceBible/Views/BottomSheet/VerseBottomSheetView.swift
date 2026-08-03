@@ -248,7 +248,6 @@ struct VerseBottomSheetView: View {
             Text("sheet.mode.word").tag(BottomSheetMode.word)
         }
         .pickerStyle(.segmented)
-        .legacySegmentedCapsule()
         .onAppear {
             UISegmentedControl.appearance().setTitleTextAttributes(
                 [.font: UIFont.systemFont(ofSize: 13, weight: .medium)], for: .normal)

@@ -24,7 +24,6 @@ struct EntriesView: View {
                         Text("entries.tab.bookmarks").tag(EntriesTab.bookmarks)
                     }
                     .pickerStyle(.segmented)
-                    .legacySegmentedCapsule()
                     .padding(.horizontal, 16).padding(.vertical, 12)
 
                     if tab == .notes {

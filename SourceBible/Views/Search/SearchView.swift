@@ -335,6 +335,25 @@ struct SearchView: View {
     /// cut off", 2026-07-14). Padding the content gives the shadow room within the clip
     /// AND lets the bar span the full width, so the scroll-edge blur reaches the screen
     /// edges instead of stopping at a 20pt inset.
+    /// Поля смуги фільтрів.
+    ///
+    /// iOS 26: як було — чипи `.buttonStyle(.glass)` мають власну геометрію,
+    /// і 20/8 підібрані під неї. ⛔ Не чіпати.
+    ///
+    /// iOS 18: чипи голі, тож розміри смуги задають вигляд повністю.
+    /// - 16 по горизонталі = стандартний leading-інсет нав-бара, тож перший чип
+    ///   стоїть рівно там, де «Hos 4 ⌄» у рідері;
+    /// - 11 по вертикалі: `.headline` дає ~22 pt, 22 + 11·2 = 44 — висота
+    ///   дефолтного тулбара. До цього було 8 + власні 6 чипа з кожного боку,
+    ///   тобто ~50, і смуга помітно переростала тулбар.
+    private static var filterBarHorizontalPadding: CGFloat {
+        if #available(iOS 26, *) { return 20 } else { return 16 }
+    }
+
+    private static var filterBarVerticalPadding: CGFloat {
+        if #available(iOS 26, *) { return 8 } else { return 11 }
+    }
+
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -352,8 +371,8 @@ struct SearchView: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Self.filterBarHorizontalPadding)
+            .padding(.vertical, Self.filterBarVerticalPadding)
         }
         // The .glass chips' shadow blur is wider than any padding we'd want to add
         // (padding alone just pushes the pills around and still clips at the bottom).
@@ -389,18 +408,14 @@ struct SearchView: View {
             Button(action: action) { content }
                 .buttonStyle(.glass)
         } else {
-            // Без заливки — рішення 2026-08-03. Спершу чипи мали капсулу
-            // `secondarySystemFill` (легшу за важкий `.bordered`), бо смуга
-            // фільтрів — не нав-бар. Але поруч із тулбаром рідера, який на 18
-            // свідомо голий, це давало два різні трактування одного й того ж
-            // контрола: «пікер із чевроном». Консистентність усередині
-            // застосунку тут важить більше, ніж різниця контекстів.
-            //
-            // Падінги лишаються — вони тримають зону дотику, а не малюють фон.
+            // 1:1 з `pickerGroup` рідера: той самий вміст, і ЖОДНИХ власних
+            // падінгів. Спершу (2026-08-03) прибрали лише заливку, а падінги
+            // 12/6 лишили «щоб тримати зону дотику» — і чипи, втративши фон,
+            // почали читатись як текст із випадковими великими проміжками.
+            // Розміри тепер задає сама смуга (`filterBar`), як тулбар задає
+            // розміри своїх пікерів.
             Button(action: action) { content }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
         }
     }
 
