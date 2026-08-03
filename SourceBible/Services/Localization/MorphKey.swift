@@ -28,6 +28,32 @@ enum MorphKey {
     static let posNegParticle     = "morph.pos.negative_particle"
     static let posInterrogative   = "morph.pos.interrogative"
 
+    // MARK: - Скорочені підписи частин мови
+    //
+    // ⛔ ТІЛЬКИ для складу слова в рядку вкладки «Оригінал», де ширини мало.
+    // У вкладці «Слово» лишаються повні назви: там місця вистачає, і саме там
+    // людина розбирається, а не сканує список.
+    //
+    // EN «noun»/«verb» навмисно НЕ скорочені до «n.»/«v.» — вони й так короткі,
+    // а односимвольні позначки читаються як нотація для тих, хто вже в темі.
+
+    static let posShortVerb           = "morph.pos.short.verb"
+    static let posShortNoun           = "morph.pos.short.noun"
+    static let posShortAdjective      = "morph.pos.short.adjective"
+    static let posShortPronoun        = "morph.pos.short.pronoun"
+    static let posShortPreposition    = "morph.pos.short.preposition"
+    static let posShortConjunction    = "morph.pos.short.conjunction"
+    static let posShortAdverb         = "morph.pos.short.adverb"
+    static let posShortParticle       = "morph.pos.short.particle"
+    static let posShortInterjection   = "morph.pos.short.interjection"
+    static let posShortPronSuffix     = "morph.pos.short.pronominal_suffix"
+    static let posShortDirObjSuffix   = "morph.pos.short.direct_object_suffix"
+    static let posShortSuffix         = "morph.pos.short.suffix"
+    static let posShortArticle        = "morph.pos.short.article"
+    static let posShortRelPronoun     = "morph.pos.short.relative_pronoun"
+    static let posShortNegParticle    = "morph.pos.short.negative_particle"
+    static let posShortInterrogative  = "morph.pos.short.interrogative"
+
     // MARK: - Hebrew verbal stems (Binyanim)
     // Stem names (Qal, Niphal…) are scholarly proper nouns — not translated.
     // Only the description after the dash is localized.

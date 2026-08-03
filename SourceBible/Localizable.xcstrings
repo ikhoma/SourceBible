@@ -2544,6 +2544,262 @@
         }
       }
     },
+    "morph.pos.short.adjective" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "adj."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "прикм."
+          }
+        }
+      }
+    },
+    "morph.pos.short.adverb" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "adv."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "присл."
+          }
+        }
+      }
+    },
+    "morph.pos.short.article" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "art."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "арт."
+          }
+        }
+      }
+    },
+    "morph.pos.short.conjunction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "conj."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "спол."
+          }
+        }
+      }
+    },
+    "morph.pos.short.direct_object_suffix" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dir. obj."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "прям. об."
+          }
+        }
+      }
+    },
+    "morph.pos.short.interjection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "interj."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "вигук"
+          }
+        }
+      }
+    },
+    "morph.pos.short.interrogative" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "interr. part."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "пит. ч."
+          }
+        }
+      }
+    },
+    "morph.pos.short.negative_particle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "neg. part."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "запер. ч."
+          }
+        }
+      }
+    },
+    "morph.pos.short.noun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noun"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ім."
+          }
+        }
+      }
+    },
+    "morph.pos.short.particle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "part."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "част."
+          }
+        }
+      }
+    },
+    "morph.pos.short.preposition" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "prep."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "прийм."
+          }
+        }
+      }
+    },
+    "morph.pos.short.pronominal_suffix" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pron. suf."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "займ. суф."
+          }
+        }
+      }
+    },
+    "morph.pos.short.pronoun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pron."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "займ."
+          }
+        }
+      }
+    },
+    "morph.pos.short.relative_pronoun" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "rel. pron."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "відн. займ."
+          }
+        }
+      }
+    },
+    "morph.pos.short.suffix" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "suf."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "суф."
+          }
+        }
+      }
+    },
+    "morph.pos.short.verb" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "verb"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "дієсл."
+          }
+        }
+      }
+    },
     "morph.pos.relative_pronoun" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2613,6 +2869,7 @@
       }
     },
     "morph.row.composition" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2815,22 +3072,6 @@
         }
       }
     },
-    "morph.stem.form_in_verse" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "form in this verse"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "форма у вірші"
-          }
-        }
-      }
-    },
     "morph.section.morphology" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2895,6 +3136,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "визначений"
+          }
+        }
+      }
+    },
+    "morph.stem.form_in_verse" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "form in this verse"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "форма у вірші"
           }
         }
       }

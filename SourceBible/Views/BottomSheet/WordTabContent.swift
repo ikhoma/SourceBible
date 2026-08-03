@@ -838,9 +838,76 @@ enum MorphologyDecoder {
         let labels = parts.enumerated().compactMap { i, part -> String? in
             // lexicalClass описує ГОЛОВУ слота — до афіксів його прикладати не можна,
             // інакше артикль назветься іменником.
-            decodeOne(part, lexicalClass: i == head ? lexicalClass : nil, using: t)
+            shortLabel(part, lexicalClass: i == head ? lexicalClass : nil, using: t)
         }
         return labels.count > 1 ? labels.joined(separator: " + ") : ""
+    }
+
+    /// Скорочений підпис частини мови для ОДНІЄЇ морфеми.
+    ///
+    /// ⛔ Окремий набір ключів (`morph.pos.short.*`), а не обрізання повних назв:
+    /// «Означений артикль» → «арт.» не виводиться алгоритмічно, а українські
+    /// скорочення мають власну традицію («дієсл.», «прийм.»), яку не вгадати
+    /// правилом. Повні назви лишаються у вкладці «Слово».
+    private static func shortLabel(
+        _ code: String,
+        lexicalClass: String?,
+        using t: TranslationProvider
+    ) -> String? {
+        if let cls = lexicalClass, let key = shortKeyForClass(cls) {
+            return t.string(for: key)
+        }
+        guard let key = shortKeyForCode(code) else { return nil }
+        return t.string(for: key)
+    }
+
+    private static func shortKeyForClass(_ cls: String) -> String? {
+        switch cls {
+        case "noun":        return MorphKey.posShortNoun
+        case "verb":        return MorphKey.posShortVerb
+        case "adj", "num":  return MorphKey.posShortAdjective
+        case "adv":         return MorphKey.posShortAdverb
+        case "prep":        return MorphKey.posShortPreposition
+        case "cj", "conj":  return MorphKey.posShortConjunction
+        case "pron":        return MorphKey.posShortPronoun
+        case "ij", "intj":  return MorphKey.posShortInterjection
+        case "art", "det":  return MorphKey.posShortArticle
+        case "ptcl":        return MorphKey.posShortParticle
+        case "rel":         return MorphKey.posShortRelPronoun
+        default:            return nil   // om / x / невідоме → падаємо на код морфеми
+        }
+    }
+
+    private static func shortKeyForCode(_ code: String) -> String? {
+        let ch = Array(code)
+        guard let first = ch.first else { return nil }
+        switch first {
+        case "N": return MorphKey.posShortNoun
+        case "V": return MorphKey.posShortVerb
+        case "A": return MorphKey.posShortAdjective
+        case "R": return MorphKey.posShortPreposition
+        case "C": return MorphKey.posShortConjunction
+        case "D": return MorphKey.posShortAdverb
+        case "P": return MorphKey.posShortPronoun
+        case "I": return MorphKey.posShortInterjection
+        case "T":
+            guard ch.count > 1 else { return MorphKey.posShortParticle }
+            switch ch[1] {
+            case "d": return MorphKey.posShortArticle
+            case "r": return MorphKey.posShortRelPronoun
+            case "n": return MorphKey.posShortNegParticle
+            case "i": return MorphKey.posShortInterrogative
+            default:  return MorphKey.posShortParticle
+            }
+        case "S":
+            guard ch.count > 1 else { return MorphKey.posShortSuffix }
+            switch ch[1] {
+            case "p": return MorphKey.posShortPronSuffix
+            case "d": return MorphKey.posShortDirObjSuffix
+            default:  return MorphKey.posShortSuffix
+            }
+        default: return nil
+        }
     }
 
     // MARK: Lexical class → POS label
@@ -1208,11 +1275,6 @@ struct WordRow: View {
         }
     }
 
-    /// Слот із кількох морфем — код склеєно через `·` у `displayWords`.
-    private var isCompositeWord: Bool {
-        word.morphology?.contains("·") ?? false
-    }
-
     private var morphLabel: String? {
         guard let morph = word.morphology else { return nil }
         return MorphologyDecoder.decode(morph, lexicalClass: word.lexicalClass, using: t)
@@ -1242,26 +1304,21 @@ struct WordRow: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
-                    // Однослівне — короткий підпис лишається в рядку, як і був.
-                    if !isCompositeWord, let label = morphLabel {
+                    // Морфологія лишається в тому ж рядку — і для однослівних, і для
+                    // складених. Окремий рядок «лише для складених» (спроба 2026-08-03)
+                    // давав рвану висоту рядків у списку.
+                    //
+                    // `fixedSize(vertical:)` дозволяє САМІЙ морфології перенестись на
+                    // наступний рядок, коли складу забагато («спол. + дієсл. + займ.
+                    // суф.»), замість обрізання. Перший рядок при цьому лишається на
+                    // спільній базовій лінії з івритом і транслітерацією — переноситься
+                    // тільки хвіст.
+                    if let label = morphLabel {
                         Text(label)
                             .font(.footnote)
                             .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                }
-
-                // Складене слово — склад окремим рядком на всю ширину.
-                //
-                // Чому не в тому ж рядку: «іменник + займенниковий суфікс» довше за
-                // будь-що, що там стояло, і поруч із івритом, транслітерацією та
-                // чипом Стронга воно або обрізалось би, або ламало б вирівнювання
-                // по базовій лінії. Однослівні рядки при цьому не змінюються
-                // взагалі — нової лінії в них не з'являється.
-                if isCompositeWord, let label = morphLabel {
-                    Text(label)
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 // Bottom line: gloss — show for all words that have one, clickable or not
