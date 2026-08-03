@@ -180,7 +180,7 @@ struct VerseParser {
             let ids = parseStrongsIds(strongsBuffer)
             // Прив'язуємо Strong's до ПОПЕРЕДНЬОГО текстового сегмента
             if !ids.isEmpty, let lastIdx = lastTextSegmentIndex() {
-                segments[lastIdx].strongs = ids
+                attachStrongs(ids, toSegmentAt: lastIdx)
             }
             strongsBuffer = ""
 
@@ -243,6 +243,59 @@ struct VerseParser {
     /// Індекс останнього сегмента з непорожнім *значущим* текстом (для прив'язки Strong's).
     /// Пропускає whitespace-only сегменти (міжтегові пробіли), щоб Strong's прив'язувався
     /// до реального слова, а не до пробілу між тегами.
+    /// Роздільники, які НЕ належать слову, навіть якщо лексер приліпив їх до
+    /// його текстового вузла.
+    ///
+    /// Набір явний, а не `.punctuationCharacters`: у той клас входять апостроф і
+    /// дефіс, а вони бувають частиною самого слова («'tis», «Beth-el»), і зрізати
+    /// їх означало б відкусити початок слова замість сміття перед ним.
+    private static let leadingSeparators = CharacterSet(charactersIn: ",.;:!?…—–()[]\"“”«»")
+        .union(.whitespacesAndNewlines)
+
+    /// Прив'язує Strong's до попереднього текстового сегмента, ВІДРІЗАВШИ провідні
+    /// роздільники в окремий, НЕ позначений сегмент.
+    ///
+    /// Навіщо. Розмітка KJV прив'язує номер до текстового вузла між тегами, а вузол
+    /// починається там, де скінчився попередній `</S>`. Для складеного івритського
+    /// слова (וְהַנָּבִיא = «and the prophet») вузол виходить `", and the prophet"` —
+    /// разом із комою, що відділяє його від попередньої фрази. Далі ця кома
+    /// підсвічувалась у вірші й потрапляла в заголовок шіта: «, and the prophet».
+    ///
+    /// Кома належить реченню, а не слову, тож у підсвітку їй не місце.
+    ///
+    /// Сегмент не «чиститься», а РОЗБИВАЄТЬСЯ: роздільники лишаються окремим
+    /// сегментом без Strong's. Текст вірша від цього не змінюється ні на символ —
+    /// змінюється лише те, що саме підсвічується.
+    private mutating func attachStrongs(_ ids: [String], toSegmentAt index: Int) {
+        let segment = segments[index]
+        let lead = segment.text.unicodeScalars
+            .prefix { Self.leadingSeparators.contains($0) }
+        let leadText = String(String.UnicodeScalarView(lead))
+
+        // Нема чого відрізати, або сегмент — суцільні роздільники (тоді відрізання
+        // лишило б Strong's без тексту взагалі).
+        guard !leadText.isEmpty, leadText.count < segment.text.count else {
+            segments[index].strongs = ids
+            return
+        }
+
+        let wordText = String(segment.text.dropFirst(leadText.count))
+        segments[index] = VerseSegment(
+            text: leadText,
+            styles: segment.styles,
+            characterOffset: segment.characterOffset
+        )
+        segments.insert(
+            VerseSegment(
+                text: wordText,
+                styles: segment.styles,
+                strongs: ids,
+                characterOffset: segment.characterOffset + leadText.utf16.count
+            ),
+            at: index + 1
+        )
+    }
+
     private func lastTextSegmentIndex() -> Int? {
         segments.indices.reversed().first { !segments[$0].isLineBreak
                                          && !segments[$0].isParagraphBreak
