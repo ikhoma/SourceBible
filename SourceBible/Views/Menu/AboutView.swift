@@ -83,7 +83,7 @@ struct AboutView: View {
                         if #available(iOS 26, *) {
                             supportButton.buttonStyle(.glassProminent)
                         } else {
-                            supportButton.buttonStyle(.borderedProminent)
+                            supportButton.buttonStyle(.borderedProminent).legacyCapsuleButton()
                         }
                     }
                     .padding(.top, 4)

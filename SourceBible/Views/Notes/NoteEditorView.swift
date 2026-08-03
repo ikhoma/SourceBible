@@ -79,6 +79,7 @@ struct NoteEditorView: View {
                             .foregroundStyle(.white)
                     }
                         .buttonStyle(.borderedProminent)
+                        .legacyCapsuleButton()
                         .tint(.appBlue)
                 }
             }

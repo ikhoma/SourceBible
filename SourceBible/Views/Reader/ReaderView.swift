@@ -66,7 +66,7 @@ struct ReaderView: View {
                 } else if let error = vm.errorMessage {
                     VStack(spacing: 12) {
                         Text(error).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Button("reader.retry") { vm.loadChapter() }.buttonStyle(.bordered)
+                        Button("reader.retry") { vm.loadChapter() }.buttonStyle(.bordered).legacyCapsuleButton()
                     }.padding()
                 } else {
                     classicReader

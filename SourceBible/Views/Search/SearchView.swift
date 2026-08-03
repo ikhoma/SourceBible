@@ -367,8 +367,8 @@ struct SearchView: View {
     /// Filter chip styled like the Reader's toolbar pickers (`pickerGroup`):
     /// headline text + caption chevron.down in `.primary`, glass capsule around it.
     /// The Reader gets the capsule for free from the iOS 26 toolbar; outside a
-    /// toolbar the equivalent is `.buttonStyle(.glass)`. iOS 18 fallback keeps the
-    /// system bordered capsule (no manual corner radius per iOS 26 rules).
+    /// toolbar the equivalent is `.buttonStyle(.glass)`. На iOS 18 — без заливки,
+    /// як тулбар рідера (див. коментар у гілці нижче).
     @ViewBuilder
     private func filterChip(action: @escaping () -> Void,
                             @ViewBuilder label: () -> some View) -> some View {
@@ -389,13 +389,18 @@ struct SearchView: View {
             Button(action: action) { content }
                 .buttonStyle(.glass)
         } else {
-            // `.bordered` давав важку «кнопкову» заливку; системний
-            // `secondarySystemFill` легший і читається як нативний чип у контенті.
-            // NB: тулбар рідера СВІДОМО лишається без капсул (див. `pickerGroup`) —
-            // тут капсула доречна саме тому, що смуга фільтрів не є нав-баром.
+            // Без заливки — рішення 2026-08-03. Спершу чипи мали капсулу
+            // `secondarySystemFill` (легшу за важкий `.bordered`), бо смуга
+            // фільтрів — не нав-бар. Але поруч із тулбаром рідера, який на 18
+            // свідомо голий, це давало два різні трактування одного й того ж
+            // контрола: «пікер із чевроном». Консистентність усередині
+            // застосунку тут важить більше, ніж різниця контекстів.
+            //
+            // Падінги лишаються — вони тримають зону дотику, а не малюють фон.
             Button(action: action) { content }
                 .buttonStyle(.plain)
-                .legacyControlCapsule()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
         }
     }
 

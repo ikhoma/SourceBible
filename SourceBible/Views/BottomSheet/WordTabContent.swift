@@ -75,6 +75,7 @@ private struct WordMappingSupportView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .legacyCapsuleButton()
             .controlSize(.large)
             .tint(.appBlue)
             .padding(.top, 6)

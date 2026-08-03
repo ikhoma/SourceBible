@@ -83,7 +83,7 @@ struct AnalyticsConsentCard: View {
                 if #available(iOS 26, *) {
                     acceptButton.buttonStyle(.glassProminent)
                 } else {
-                    acceptButton.buttonStyle(.borderedProminent)
+                    acceptButton.buttonStyle(.borderedProminent).legacyCapsuleButton()
                 }
                 declineButton
             }

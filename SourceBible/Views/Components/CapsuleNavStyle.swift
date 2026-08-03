@@ -46,27 +46,38 @@ extension View {
 
 // MARK: - Legacy (iOS 18) parity helpers
 
-/// Капсула для контролів, які на iOS 26 система стилізує САМА:
-/// `ToolbarItemGroup` дає скляну капсулу автоматично, `.buttonStyle(.glass)` — теж.
+/// Капсульна форма для системних кнопок (`.bordered` / `.borderedProminent`).
 ///
-/// ⛔ На iOS 26 це НАВМИСНО no-op. `CLAUDE.md` прямо забороняє домальовувати
-/// `.glassEffect` до тулбарних кнопок — система вже все зробила, ручний шар лише
-/// ламає системну консистентність.
+/// На iOS 26 кнопки капсульні за замовчуванням — там це НАВМИСНО no-op, щоб
+/// не чіпати системний вигляд. На iOS 18 `.bordered*` дає прямокутник із малим
+/// радіусом, і поруч із рештою застосунку він читається як з іншої епохи.
 ///
-/// Застосовується ТІЛЬКИ до чипів у контенті (фільтри пошуку). Тулбар рідера
-/// свідомо лишається без капсул на iOS 18 — рішення 2026-08-01: у нав-барі 18
-/// нативні саме голі контроли, а капсула там читається як чужа мова iOS 26.
-/// Матеріал — системний `secondarySystemFill`, легший за `.bordered`, який давав
-/// важку «кнопкову» заливку.
-struct LegacyControlCapsule: ViewModifier {
+/// `.buttonBorderShape(.capsule)` — системний API, а не ручний `cornerRadius`:
+/// форма лишається на совісті стилю кнопки, ми лише просимо іншу.
+struct LegacyCapsuleButtonShape: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
             content
         } else {
+            content.buttonBorderShape(.capsule)
+        }
+    }
+}
+
+/// Капсульний трек для `.pickerStyle(.segmented)` на iOS 18.
+///
+/// SwiftUI не дає форму сегментованого контрола, а `UISegmentedControl` на 18
+/// малює прямокутник із радіусом ~9. Обтинаємо зовнішній трек капсулою; внутрішня
+/// «пігулка» виділення має власний радіус і лишається як є — на око вони
+/// узгоджуються, бо капсула лише зрізає кути треку.
+///
+/// ⛔ На iOS 26 no-op: там трек уже капсульний, і обтинання дало б подвійну форму.
+struct LegacySegmentedCapsule: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
             content
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(UIColor.secondarySystemFill), in: Capsule())
+        } else {
+            content.clipShape(Capsule())
         }
     }
 }
@@ -103,7 +114,11 @@ enum AppCornerRadius {
 }
 
 extension View {
-    func legacyControlCapsule() -> some View {
-        modifier(LegacyControlCapsule())
+    func legacyCapsuleButton() -> some View {
+        modifier(LegacyCapsuleButtonShape())
+    }
+
+    func legacySegmentedCapsule() -> some View {
+        modifier(LegacySegmentedCapsule())
     }
 }

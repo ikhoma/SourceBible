@@ -147,6 +147,7 @@ struct DonationView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .legacyCapsuleButton()
             .controlSize(.large)
             .tint(.appBlue)
             .disabled(selectedProduct == nil || service.purchaseState == .purchasing)
@@ -204,6 +205,7 @@ struct DonationView: View {
                     Task { await service.loadProducts() }
                 }
                 .buttonStyle(.bordered)
+                .legacyCapsuleButton()
             }
         }
         .padding(.horizontal, 32)
@@ -223,9 +225,9 @@ private struct AmountButton: View {
     var body: some View {
         Group {
             if isSelected {
-                button.buttonStyle(.borderedProminent)
+                button.buttonStyle(.borderedProminent).legacyCapsuleButton()
             } else {
-                button.buttonStyle(.bordered)
+                button.buttonStyle(.bordered).legacyCapsuleButton()
             }
         }
         .buttonBorderShape(.roundedRectangle)
