@@ -190,6 +190,12 @@ struct AnalyticsConsentModifier: ViewModifier {
                 proxy.size.height
             } action: { height in
                 guard height > 0 else { return }
+                // ⛔ ПІСЛЯ показу висоту НЕ чіпаємо. Проба живе в корені й може
+                // переміряти пізніше (перекладка при завантаженні рідера, осідання
+                // скляних кнопок на iOS 26, зміна Dynamic Type). Кожен такий апдейт
+                // після показу = зміна детента у відкритого шіта, тобто рівно той
+                // стрибок, який ми ловимо. Детент фіксується один раз — перед показом.
+                guard !showSheet else { return }
                 sheetHeight = height
                 heightMeasured = true
                 presentIfReady()
