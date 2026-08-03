@@ -220,7 +220,18 @@ struct AnalyticsConsentModifier: ViewModifier {
         guard consentPending, heightMeasured else { return }
         consentPending = false
         consentShown = true
-        showSheet = true
+        // ⛔ Показ ВІДКЛАДАЄМО на наступний тік.
+        //
+        // `presentIfReady()` викликається з `onGeometryChange`, тобто ПІД ЧАС
+        // розкладки. Виставити `showSheet` прямо там означає почати презентацію
+        // в тому самому проході, у якому щойно змінився `sheetHeight`: UIKit
+        // забирає детент до того, як зміна докотилась, тож перший кадр шіта
+        // виїжджає зі старою висотою й одразу підганяється під нову.
+        //
+        // Саме тому замір показував ідеальні числа (`p388 SHOW@388`, `inner: 388`),
+        // а на екрані стрибало: у трейсі — намір, на екрані — те, що UIKit устиг
+        // прочитати. Один тік затримки прибирає розбіжність.
+        Task { @MainActor in showSheet = true }
     }
 
     func body(content: Content) -> some View {
