@@ -343,16 +343,30 @@ struct SearchView: View {
     /// iOS 18: чипи голі, тож розміри смуги задають вигляд повністю.
     /// - 16 по горизонталі = стандартний leading-інсет нав-бара, тож перший чип
     ///   стоїть рівно там, де «Hos 4 ⌄» у рідері;
-    /// - 11 по вертикалі: `.headline` дає ~22 pt, 22 + 11·2 = 44 — висота
-    ///   дефолтного тулбара. До цього було 8 + власні 6 чипа з кожного боку,
-    ///   тобто ~50, і смуга помітно переростала тулбар.
+    /// - по вертикалі — не падінг, а ЖОРСТКА висота `legacyBarHeight` (див. нижче).
     private static var filterBarHorizontalPadding: CGFloat {
         if #available(iOS 26, *) { return 20 } else { return 16 }
     }
 
-    private static var filterBarVerticalPadding: CGFloat {
-        if #available(iOS 26, *) { return 8 } else { return 11 }
-    }
+    /// Висота смуги на iOS 18 = висота справжнього нав-бара, ЗАМІРЯНА, а не вписана.
+    ///
+    /// Спершу тут була арифметика падінгів: `.headline` ≈ 22 pt, отже 11·2 + 22 = 44.
+    /// Але 22 — це номінальний line height шрифту, а не фактична висота `HStack` із
+    /// текстом і SF-символом: реальний рядок виходив на пару пунктів вищим, і смуга
+    /// не збігалася з тулбаром рідера (зауваження 2026-08-03).
+    ///
+    /// Тепер висоту дає сам UIKit — той самий компонент, з яким ми й хочемо збігтися.
+    /// Жодного магічного числа: якщо Apple колись змінить метрику нав-бара, смуга
+    /// поїде разом із ним, а не залишиться на 44.
+    ///
+    /// `let` на рівні типу — рахується один раз за запуск; метрика не змінюється в
+    /// рантаймі (портретна орієнтація, застосунок портретний).
+    fileprivate static let legacyBarHeight: CGFloat = {
+        UINavigationBar().sizeThatFits(
+            CGSize(width: CGFloat.greatestFiniteMagnitude,
+                   height: CGFloat.greatestFiniteMagnitude)
+        ).height
+    }()
 
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -372,7 +386,7 @@ struct SearchView: View {
                 }
             }
             .padding(.horizontal, Self.filterBarHorizontalPadding)
-            .padding(.vertical, Self.filterBarVerticalPadding)
+            .modifier(FilterBarHeight())
         }
         // The .glass chips' shadow blur is wider than any padding we'd want to add
         // (padding alone just pushes the pills around and still clips at the bottom).
@@ -829,4 +843,22 @@ private struct SearchResultRow: View {
     SearchView()
         .environmentObject(AppNavigationRouter())
         .environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
+}
+
+// MARK: - Filter bar height
+
+/// iOS 26 лишає падінг 8 — там чипи `.buttonStyle(.glass)` мають власну геометрію,
+/// і це число підібране під неї. ⛔ Не чіпати.
+///
+/// iOS 18 фіксує висоту рівно по нав-бару, щоб смуга й тулбар рідера збігалися
+/// піксель-у-піксель. `maxHeight` разом із `height` не потрібен: чипи голі й
+/// нижчі за бар, тож вони просто центруються.
+private struct FilterBarHeight: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.padding(.vertical, 8)
+        } else {
+            content.frame(height: SearchView.legacyBarHeight)
+        }
+    }
 }
