@@ -91,6 +91,8 @@ enum MorphKey {
 
     // MARK: - Row labels (InfoGroup)
 
+    /// Склад складеного слова: «артикль + іменник».
+    static let rowComposition         = "morph.row.composition"
     static let rowPartOfSpeech        = "morph.row.part_of_speech"
     static let rowStem                = "morph.row.stem"
     static let rowAspect              = "morph.row.aspect"

@@ -389,6 +389,9 @@ struct WordMeaningView: View {
 
     private func morphologyRows(word: BibleWord, decoded: FullMorphology) -> [(String, String, Bool)] {
         var rows: [(String, String, Bool)] = []
+        // Склад іде ПЕРШИМ: він відповідає на «з чого це слово», перш ніж решта
+        // рядків почне описувати його голову. Для однослівних порожній — рядка немає.
+        if !decoded.composition.isEmpty     { rows.append((t.string(for: MorphKey.rowComposition),     decoded.composition,     false)) }
         if !decoded.partOfSpeech.isEmpty    { rows.append((t.string(for: MorphKey.rowPartOfSpeech),    decoded.partOfSpeech,    false)) }
         if !decoded.stem.isEmpty            { rows.append((t.string(for: MorphKey.rowStem),            decoded.stem,            false)) }
         if !decoded.aspect.isEmpty          { rows.append((t.string(for: MorphKey.rowAspect),          decoded.aspect,          false)) }
@@ -780,9 +783,65 @@ struct FullMorphology {
     var stem: String = ""
     var aspect: String = ""
     var grammaticalForm: String = ""
+    /// «артикль + іменник» для складеного слова; порожній рядок для однослівного.
+    var composition: String = ""
 }
 
 enum MorphologyDecoder {
+
+    // MARK: Слот із кількох морфем
+
+    /// Розділювач морфем у склеєному коді слота.
+    /// Ставиться у `VerseTabContent.displayWords`, коли токени зі спільним
+    /// Macula-слотом зливаються в одне відображуване слово:
+    /// `הַדַּעַת` → `Td·Ncfsa` (артикль + іменник).
+    private static let morphemeSeparator: Character = "·"
+
+    /// Індекс голови слота — останньої морфеми, що НЕ є займенниковим суфіксом.
+    ///
+    /// Те саме правило, що й `headToken(of:)` у `VerseTabContent` (ADR-020):
+    /// іврит будує слот як `[проклітики…] ГОЛОВА [енклітики…]`, тож голова —
+    /// остання не-енклітика. Енклітика в коді = префікс `S` (`Sp3ms`).
+    private static func headIndex(_ parts: [String]) -> Int {
+        parts.lastIndex(where: { !$0.hasPrefix("S") }) ?? parts.count - 1
+    }
+
+    /// Голова слота — код, який і треба розбирати «повністю».
+    ///
+    /// ⛔ БУЛО: `decodeFull` брав `code.first` і для складеного слова розбирав
+    /// ПРОКЛІТИКУ. Для `Td·Ncfsa` це артикль: гілка `case "T"` не виставляє
+    /// `grammaticalForm` взагалі, а `lexicalClass` потім перезаписував частину
+    /// мови на «іменник» — і саме це перекриття ховало проблему. Наслідок:
+    /// у складених слів мовчки зникали рід/число/стан, а в дієслів — порода.
+    static func headMorpheme(_ code: String) -> String {
+        let parts = code.split(separator: morphemeSeparator).map(String.init)
+        guard parts.count > 1 else { return code }
+        return parts[headIndex(parts)]
+    }
+
+    /// Склад слова словами: «артикль + іменник», «сполучник + прийменник + іменник».
+    ///
+    /// Свідомо НЕ нотація BibleHub (`Art | N-fs`). Вона компактна, але потребує
+    /// знання скорочень, і читач без підготовки її просто прогортає. Мета
+    /// застосунку — зменшувати розрив між академізмом і розумінням, тож склад
+    /// проговорюється тими самими словами, якими ми вже називаємо частини мови.
+    ///
+    /// Порожній рядок, якщо морфема одна: показувати «іменник» як «склад» безглуздо.
+    static func composition(
+        _ code: String,
+        lexicalClass: String? = nil,
+        using t: TranslationProvider = BundleTranslationProvider()
+    ) -> String {
+        let parts = code.split(separator: morphemeSeparator).map(String.init)
+        guard parts.count > 1 else { return "" }
+        let head = headIndex(parts)
+        let labels = parts.enumerated().compactMap { i, part -> String? in
+            // lexicalClass описує ГОЛОВУ слота — до афіксів його прикладати не можна,
+            // інакше артикль назветься іменником.
+            decodeOne(part, lexicalClass: i == head ? lexicalClass : nil, using: t)
+        }
+        return labels.count > 1 ? labels.joined(separator: " + ") : ""
+    }
 
     // MARK: Lexical class → POS label
 
@@ -822,7 +881,10 @@ enum MorphologyDecoder {
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> FullMorphology? {
         guard !code.isEmpty else { return nil }
-        let ch = Array(code)
+        // Для складеного слота розбираємо ГОЛОВУ, а не першу морфему — інакше
+        // весь розбір походить від проклітики (див. `headMorpheme`).
+        let head = headMorpheme(code)
+        let ch = Array(head)
         guard let first = ch.first else { return nil }
         var m = FullMorphology()
 
@@ -876,6 +938,7 @@ enum MorphologyDecoder {
            let posLabel = lexicalClassLabel(cls, using: t) {
             m.partOfSpeech = posLabel
         }
+        m.composition = composition(code, lexicalClass: lexicalClass, using: t)
         return m
     }
 
@@ -992,6 +1055,22 @@ enum MorphologyDecoder {
     // MARK: Short decode (for WordCard — Оригінал pill)
 
     static func decode(
+        _ code: String,
+        lexicalClass: String? = nil,
+        using t: TranslationProvider = BundleTranslationProvider()
+    ) -> String? {
+        guard !code.isEmpty else { return nil }
+        // Складене слово показує СКЛАД («артикль + іменник»), а не саму лише
+        // частину мови голови. «Іменник» для הַדַּעַת приховує, що артикль узагалі
+        // є — і що номер Стронга поруч стосується лише кореня.
+        let composed = composition(code, lexicalClass: lexicalClass, using: t)
+        if !composed.isEmpty { return composed }
+        return decodeOne(code, lexicalClass: lexicalClass, using: t)
+    }
+
+    /// Розбір ОДНІЄЇ морфеми. Виділено з `decode`, щоб `composition` могла
+    /// викликати те саме для кожної частини складеного слова.
+    fileprivate static func decodeOne(
         _ code: String,
         lexicalClass: String? = nil,
         using t: TranslationProvider = BundleTranslationProvider()
@@ -1129,6 +1208,16 @@ struct WordRow: View {
         }
     }
 
+    /// Слот із кількох морфем — код склеєно через `·` у `displayWords`.
+    private var isCompositeWord: Bool {
+        word.morphology?.contains("·") ?? false
+    }
+
+    private var morphLabel: String? {
+        guard let morph = word.morphology else { return nil }
+        return MorphologyDecoder.decode(morph, lexicalClass: word.lexicalClass, using: t)
+    }
+
     private func rowContent(showChevron: Bool) -> some View {
         HStack(alignment: .center, spacing: 0) {
             VStack(alignment: .leading, spacing: 5) {
@@ -1153,12 +1242,26 @@ struct WordRow: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
-                    if let morph = word.morphology,
-                       let label = MorphologyDecoder.decode(morph, lexicalClass: word.lexicalClass, using: t) {
+                    // Однослівне — короткий підпис лишається в рядку, як і був.
+                    if !isCompositeWord, let label = morphLabel {
                         Text(label)
                             .font(.footnote)
                             .foregroundStyle(.tertiary)
                     }
+                }
+
+                // Складене слово — склад окремим рядком на всю ширину.
+                //
+                // Чому не в тому ж рядку: «іменник + займенниковий суфікс» довше за
+                // будь-що, що там стояло, і поруч із івритом, транслітерацією та
+                // чипом Стронга воно або обрізалось би, або ламало б вирівнювання
+                // по базовій лінії. Однослівні рядки при цьому не змінюються
+                // взагалі — нової лінії в них не з'являється.
+                if isCompositeWord, let label = morphLabel {
+                    Text(label)
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 // Bottom line: gloss — show for all words that have one, clickable or not

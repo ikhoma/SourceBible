@@ -2612,6 +2612,22 @@
         }
       }
     },
+    "morph.row.composition" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Composition"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Склад слова"
+          }
+        }
+      }
+    },
     "morph.row.grammatical_form" : {
       "extractionState" : "stale",
       "localizations" : {
