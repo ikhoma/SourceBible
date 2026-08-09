@@ -38,6 +38,48 @@ struct SearchView: View {
     /// True when the committed results page is on screen (drives hiding the nav title there).
     private var isShowingResults: Bool { !committedQuery.isEmpty && !isTypingUncommitted }
 
+    // MARK: - Version-dependent search chrome (bug-036)
+    //
+    // The same `.searchable` renders in two different places, and everything below
+    // follows from that:
+    //   iOS 26 — `Tab(role: .search)` morphs the field into the BOTTOM tab bar. The
+    //            nav bar holds nothing we need, so the results page can hide it.
+    //   iOS 18 — `.automatic` resolves to `navigationBarDrawer`: the field IS part of
+    //            the nav bar. Hiding the bar hid the field and its clear (✕) with it,
+    //            so a committed query had no way out — the user was stuck on the
+    //            results page for the rest of the session (bug-036).
+    //
+    // Both versions still want the same thing on the results page: no large "Search"
+    // title, because `resultsScroll` already draws a "Results for …" header and the
+    // large title flickered between states. iOS 26 gets that by hiding the bar; iOS 18
+    // gets it by dropping the title to inline + empty, which keeps the bar — and the
+    // field — alive.
+
+    /// Hiding the nav bar is safe ONLY where the search field lives somewhere else.
+    private var hidesNavBar: Bool {
+        if #available(iOS 26, *) { return isShowingResults }
+        return false
+    }
+
+    /// Large title belongs to the home states (hint / Recent / predictions) only.
+    private var showsLargeTitle: Bool { !isShowingResults }
+
+    /// iOS 18: чипи фільтрів у контенті, під полем пошуку (див. `legacyFilterBar`).
+    /// ⛔ НЕ повертати їх у нав-бар — `UISearchController` ховає айтеми нав-бара на
+    /// весь час активної презентації (`hidesNavigationBarDuringPresentation`), а на
+    /// сторінці результатів поле лишається активним (кнопка «Cancel» на екрані). Тобто
+    /// чипи-`ToolbarItemGroup` там недосяжні структурно, не через налаштування бара.
+    private var showsLegacyFilterBar: Bool { isShowingResults && !hidesNavBar }
+
+    /// `.always` keeps the iOS 18 drawer pinned instead of letting it collapse under
+    /// the title on scroll — on a results page the field must not scroll away, that is
+    /// the whole point of the fix. On iOS 26 the placement stays `.automatic` so the
+    /// tab-bar morph and its animation are untouched.
+    private var searchPlacement: SearchFieldPlacement {
+        if #available(iOS 26, *) { return .automatic }
+        return .navigationBarDrawer(displayMode: .always)
+    }
+
     // MARK: - Filter state (YouVersion-style: Translation / Testament / Book chips)
 
     enum TestamentFilter { case all, old, new }
@@ -84,12 +126,16 @@ struct SearchView: View {
                 // the safe areas and the empty space below short List content.
                 colorTheme.appBackground.ignoresSafeArea()
                 content
-                    // Large bold "Search" on the home states (hint / Recent / predictions).
-                    // On the results page there's already a "Results for …" header, and the
-                    // large title there flickered between states — so hide the nav bar there.
-                    .navigationTitle("tab.search")
-                    .navigationBarTitleDisplayMode(.large)
-                    .toolbar(isShowingResults ? .hidden : .automatic, for: .navigationBar)
+                    // See "Version-dependent search chrome" above — `.toolbar(.hidden)` is
+                    // iOS 26-only on purpose; on iOS 18 it takes the search field with it.
+                    .navigationTitle(showsLargeTitle ? Text("tab.search") : Text(verbatim: ""))
+                    .navigationBarTitleDisplayMode(showsLargeTitle ? .large : .inline)
+                    .toolbar(hidesNavBar ? .hidden : .automatic, for: .navigationBar)
+                    // ⛔ БЕЗ `.toolbarBackground(.visible)`. Непрозорий нав-бар був
+                    // потрібен, поки в ньому лежали чипи: прозорий `scrollEdgeAppearance`
+                    // (дефолт iOS 18) лишав їх текстом на фоні. Тепер чипи в контенті, а
+                    // видима підложка лише імітувала другий бар під полем пошуку —
+                    // сторінка результатів має виглядати як усі інші стани пошуку.
             }
         }
         // No `.searchSuggestions` overlay (removed the iOS 26 width squeeze). Predictions
@@ -98,7 +144,7 @@ struct SearchView: View {
         .searchable(
             text: $searchText,
             isPresented: $isSearchActive,
-            placement: .automatic,
+            placement: searchPlacement,
             // bug-018: String(localized:) bypasses the LocalizedBundle swizzle and
             // resolves against the system locale (always EN). Text(_:) resolves the
             // key through Bundle.main at render time → follows the in-app language.
@@ -111,7 +157,7 @@ struct SearchView: View {
             // Typing phase only refreshes predictions — it does NOT run the full search.
             // (That avoids dense results painting behind the predictions + translucent bar,
             // and the wasted per-keystroke FTS queries.) Results load on commit.
-            vm.updateSuggestions(for: newValue)
+            vm.updateSuggestions(for: newValue, translation: effectiveTranslationId)
 
             // Clearing the field (cancel ✕ or the in-field clear) drops back out of the
             // committed/results state so we don't flash stale results.
@@ -130,7 +176,15 @@ struct SearchView: View {
             rerunSearchIfNeeded()
         }
         .onChange(of: selectedBookId)        { _, _ in rerunSearchIfNeeded() }
-        .onChange(of: selectedTranslationId) { _, _ in rerunSearchIfNeeded() }
+        .onChange(of: selectedTranslationId) { _, _ in
+            rerunSearchIfNeeded()
+            // Підказки живуть у мові ПОШУКОВОГО перекладу (ADR-008, amend 2026-08-07),
+            // тож зміна перекладу під час набору мусить їх перезібрати — інакше на
+            // екрані лишається список чужою мовою до наступного натиску клавіші.
+            if isTypingUncommitted {
+                vm.updateSuggestions(for: searchText, translation: effectiveTranslationId)
+            }
+        }
         .sheet(item: $activeFilterSheet) { sheet in
             filterSheet(sheet)
         }
@@ -169,13 +223,26 @@ struct SearchView: View {
 
     // MARK: - Results page (after commit)
 
-    /// The filter chip bar uses the NATIVE bar treatment — same as the status/tool
-    /// bars on the Reader. On iOS 26 it lives in a `.safeAreaBar(edge: .top)`, so the
-    /// system renders the Liquid Glass scroll-edge blur behind it automatically as the
-    /// results scroll underneath (no manual material). iOS 18 fallback keeps it pinned
-    /// as a section header. (iOS 26 rule: #available guard + iOS 18 fallback.)
-    /// The bar stays visible on the empty state too, so over-narrowed filters can be
-    /// loosened without retyping the query.
+    /// Куди йде смуга фільтрів — і чому на двох ОС по-різному.
+    ///
+    /// iOS 26: `.safeAreaBar(edge: .top)`. Нав-бар на сторінці результатів схований
+    /// (поле пошуку живе в таб-барі), тож смуга — сама собі бар, і система малює за
+    /// нею Liquid Glass scroll-edge блюр. ⛔ Не чіпати, працює.
+    ///
+    /// iOS 18: смуга-інсет під полем пошуку (`legacyFilterBar`), закріплена — результати
+    /// заїжджають ПІД неї. Тут нав-бар лишається (без нього зникає поле — bug-036), тож
+    /// смуга висить безпосередньо під дровером із полем.
+    ///
+    /// Історія (щоб не ходити по колу): смуга вже жила тут раніше й була прибрана, бо
+    /// малювала собі `.fill(.bar)` + `Divider` і читалась як ТРЕТЯ плашка після нав-бара
+    /// й дровера; заміна на `ToolbarItemGroup` у нав-барі здавалась «нативнішою», але
+    /// чипи там просто не показуються — `UISearchController` ховає айтеми нав-бара, поки
+    /// презентація активна. Смуга повернулась БЕЗ бар-фону і без арифметики вирівнювання
+    /// (`legacyBarHeight`/`legacyTopCorrection`/`windowMetrics` не відроджувати): фон =
+    /// `appBackground`, тобто це не окрема плашка, а продовження екрана.
+    ///
+    /// Смуга/чипи лишаються видимими і на порожньому стані, щоб зашироко звужені
+    /// фільтри можна було послабити, не набираючи запит наново.
     @ViewBuilder
     private var resultsPage: some View {
         if #available(iOS 26.0, *) {
@@ -185,41 +252,41 @@ struct SearchView: View {
                 }
         } else {
             resultsBody
-                .safeAreaInset(edge: .top, spacing: 0) { legacyFilterBar }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    legacyFilterBar
+                }
         }
     }
 
-    /// iOS 18 fallback for `.safeAreaBar` — `safeAreaInset(edge: .top)` is its
-    /// direct predecessor (iOS 15+): так само резервує місце зверху, так само не
-    /// скролиться разом із вмістом.
+    /// iOS 18: та сама трійка чипів, що й `filterBar`, але з фоном екрана замість
+    /// бар-матеріалу — смуга не має читатись як власний тулбар.
     ///
-    /// ⛔ `ignoresSafeArea` — ТІЛЬКИ на фоні, не на всій смузі. У цьому вся правка:
-    /// чипи мусять лишитись під статус-баром, а матеріал — дотягнутись до краю
-    /// екрана. Раніше смуга була закріпленою секційною шапкою ВСЕРЕДИНІ скролу,
-    /// тож її фон обмежувався висотою чипів — над ним лишалась смуга, крізь яку
-    /// проїжджав текст результатів («дірка»), а сам фон читався як окрема плашка.
+    /// Фон обов'язковий і непрозорий: смуга закріплена, і без нього рядки результатів
+    /// просвічували б крізь неї під час скролу. `appBackground` — той самий колір, що й
+    /// у `ZStack` нижче, тож видно лише те, що вміст під смугою зникає, а не «плашку».
     ///
-    /// Нав-бар на сторінці результатів схований (`toolbar(.hidden)` вище), тому
-    /// матеріал тут — єдине, що прикриває цю зону.
+    /// ⛔ Ніяких `Divider`/`.fill(.bar)` — саме вони робили з неї фальшивий бар.
     private var legacyFilterBar: some View {
-        filterBar
-            .background {
-                Rectangle()
-                    // `.bar` — матеріал, яким система малює саме нав-бари й таббари.
-                    // `.ultraThinMaterial` тонший і прозоріший, тож смуга помітно
-                    // відрізнялась від тулбара за кольором (зауваження 2026-08-02).
-                    .fill(.bar)
-                    .ignoresSafeArea(edges: .top)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                filterChip(action: { activeFilterSheet = .translation }) {
+                    Text(effectiveTranslationId)
+                }
+                filterChip(action: { activeFilterSheet = .testament }) {
+                    Text(testamentChipKey)
+                }
+                filterChip(action: { activeFilterSheet = .book }) {
+                    if let bookId = selectedBookId {
+                        Text(bookDisplayName(bookId))
+                    } else {
+                        Text("search.filter.all_books")
+                    }
+                }
             }
-            // Волосяна лінія на нижній межі — те, що системні нав-бар і таббар
-            // малюють як shadow своєї appearance. Без неї смуга обривалась у порожнечу
-            // й не читалась як бар (зауваження 2026-08-02).
-            //
-            // NB: система ховає цю лінію, коли скрол стоїть на самому верху
-            // (scrollEdgeAppearance без shadow), і показує, коли вміст заїхав під бар.
-            // Тут вона стала: на сторінці результатів під смугою ЗАВЖДИ є список,
-            // тож стан «нема під що підкладати лінію» недосяжний.
-            .overlay(alignment: .bottom) { Divider() }
+            .padding(.horizontal, Self.filterBarHorizontalPadding)
+            .padding(.vertical, 8)
+        }
+        .background(colorTheme.appBackground)
     }
 
     @ViewBuilder
@@ -335,79 +402,10 @@ struct SearchView: View {
     /// cut off", 2026-07-14). Padding the content gives the shadow room within the clip
     /// AND lets the bar span the full width, so the scroll-edge blur reaches the screen
     /// edges instead of stopping at a 20pt inset.
-    /// Поля смуги фільтрів.
-    ///
-    /// iOS 26: як було — чипи `.buttonStyle(.glass)` мають власну геометрію,
-    /// і 20/8 підібрані під неї. ⛔ Не чіпати.
-    ///
-    /// iOS 18: чипи голі, тож розміри смуги задають вигляд повністю.
-    /// - 16 по горизонталі = стандартний leading-інсет нав-бара, тож перший чип
-    ///   стоїть рівно там, де «Hos 4 ⌄» у рідері;
-    /// - по вертикалі — не падінг, а висота заміряного нав-бара (`legacyBarHeight`)
-    ///   плюс відʼємна поправка `legacyTopCorrection` (див. нижче).
-    private static var filterBarHorizontalPadding: CGFloat {
-        if #available(iOS 26, *) { return 20 } else { return 16 }
-    }
-
-    /// Висота смуги на iOS 18 = висота справжнього нав-бара, ЗАМІРЯНА, а не вписана.
-    ///
-    /// Спершу тут була арифметика падінгів: `.headline` ≈ 22 pt, отже 11·2 + 22 = 44.
-    /// Але 22 — це номінальний line height шрифту, а не фактична висота `HStack` із
-    /// текстом і SF-символом: реальний рядок виходив на пару пунктів вищим, і смуга
-    /// не збігалася з тулбаром рідера (зауваження 2026-08-03).
-    ///
-    /// Тепер висоту дає сам UIKit — той самий компонент, з яким ми й хочемо збігтися.
-    /// Жодного магічного числа: якщо Apple колись змінить метрику нав-бара, смуга
-    /// поїде разом із ним, а не залишиться на 44.
-    ///
-    /// `let` на рівні типу — рахується один раз за запуск; метрика не змінюється в
-    /// рантаймі (портретна орієнтація, застосунок портретний).
-    /// Метрики вікна. `statusBar` і `safeTop` на пристроях з Dynamic Island —
-    /// РІЗНІ числа (54 і 59): safe area піднята, щоб обійти острівець, а нав-бар
-    /// кладеться одразу під статус-бар.
-    private static var windowMetrics: (statusBar: CGFloat, safeTop: CGFloat) {
-        guard let scene = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene }).first,
-              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first
-        else { return (0, 0) }
-        let safeTop = window.safeAreaInsets.top
-        return (scene.statusBarManager?.statusBarFrame.height ?? safeTop, safeTop)
-    }
-
-    /// ⛔ ЦЕ І БУЛА ПРИЧИНА «шапка вища за тулбар» — не висота смуги.
-    ///
-    /// Заміряно на iPhone 16: нав-бар рідера закінчується на y = 97.7, а смуга
-    /// фільтрів на 103.0 — при однаковій висоті 44. `safeAreaInset(edge: .top)`
-    /// починає вміст із `safeAreaInsets.top` (59), а нав-бар — зі статус-бара (54).
-    /// Звідси стабільні ~5 pt різниці, скільки не підбирай висоту.
-    ///
-    /// Компенсуємо відʼємним верхнім падінгом: смуга піднімається в ту саму смугу
-    /// координат, що й нав-бар.
-    private static var legacyTopCorrection: CGFloat {
-        let m = windowMetrics
-        return max(0, m.safeTop - m.statusBar)
-    }
-
-    /// Висота смуги = висота СПРАВЖНЬОГО нав-бара рідера, а не номінальна.
-    ///
-    /// `readerVM.toolbarBottomY` міряє `UINavigationBar` у координатах вікна
-    /// (`NavBarBottomReader` у `ReaderView`) — той самий бар, з яким ми хочемо
-    /// збігтися. Номінальні `UINavigationBar().sizeThatFits()` дають 44.0, а
-    /// фактичний бар — 43.7, і ця 0.3 лишалась як хвіст після першої правки.
-    ///
-    /// Фолбек на номінальну висоту потрібен лише для випадку, коли рідер ще жодного
-    /// разу не рендерився (запуск одразу в Пошук через launch-арг).
-    private var legacyBarHeight: CGFloat {
-        let measured = readerVM.toolbarBottomY - Self.windowMetrics.statusBar
-        return measured > 1 ? measured : Self.nominalNavBarHeight
-    }
-
-    private static let nominalNavBarHeight: CGFloat = {
-        UINavigationBar().sizeThatFits(
-            CGSize(width: CGFloat.greatestFiniteMagnitude,
-                   height: CGFloat.greatestFiniteMagnitude)
-        ).height
-    }()
+    /// Поля смуги фільтрів — спільні для обох ОС (`filterBar` на 26, `legacyFilterBar`
+    /// на 18): 20 по горизонталі вирівнює першу капсулу з текстом результатів, 8 по
+    /// вертикалі підібрані під геометрію чипів `.buttonStyle(.glass)`. ⛔ Не чіпати.
+    private static let filterBarHorizontalPadding: CGFloat = 20
 
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -427,8 +425,7 @@ struct SearchView: View {
                 }
             }
             .padding(.horizontal, Self.filterBarHorizontalPadding)
-            .modifier(FilterBarHeight(barHeight: legacyBarHeight,
-                                      topCorrection: Self.legacyTopCorrection))
+            .padding(.vertical, 8)
         }
         // The .glass chips' shadow blur is wider than any padding we'd want to add
         // (padding alone just pushes the pills around and still clips at the bottom).
@@ -460,18 +457,46 @@ struct SearchView: View {
                 // kept deliberately (sign-off 2026-07-08).
                 .foregroundStyle(.primary)
         }
+        // Той самий вміст, але на щабель дрібніший: `.headline` (17pt semibold) у малій
+        // капсулі виглядає як кнопка дії, а це фільтр. `.subheadline` — той розмір, яким
+        // система підписує власні pill-фільтри.
+        let legacyContent = HStack(spacing: 4) {
+            label()
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
+        }
         if #available(iOS 26.0, *) {
             Button(action: action) { content }
                 .buttonStyle(.glass)
         } else {
-            // 1:1 з `pickerGroup` рідера: той самий вміст, і ЖОДНИХ власних
-            // падінгів. Спершу (2026-08-03) прибрали лише заливку, а падінги
-            // 12/6 лишили «щоб тримати зону дотику» — і чипи, втративши фон,
-            // почали читатись як текст із випадковими великими проміжками.
-            // Розміри тепер задає сама смуга (`filterBar`), як тулбар задає
-            // розміри своїх пікерів.
-            Button(action: action) { content }
-                .buttonStyle(.plain)
+            // Системна капсула, а не намальована: `.bordered` + `.buttonBorderShape
+            // (.capsule)` дають фон, зону дотику, press-стан і Dynamic Type від системи
+            // (правило «системний еквівалент замість власного компонента», CLAUDE.md).
+            // `.small` тримає смугу низькою — це фільтр, а не primary action.
+            //
+            // Історія: до цього чипи на 18 були `.buttonStyle(.plain)`, тобто просто
+            // текст. Без будь-якої капсули не було видно, що це кнопка, а не заголовок —
+            // і на нав-барі це вже одного разу зламалось (2026-08-03). Тепер афорданс
+            // несе системний стиль, а не наші падінги.
+            //
+            // ⛔ Пробували замінити заливку на `cardBackground` + тінь, «як активний
+            // сегмент segmented control» (2026-08-07) — відкинуто, вернулись сюди.
+            // Причина, чому це не виражається системним стилем: у `.bordered` заливку
+            // задає лише `.tint`, і той самий tint фарбує підпис, тож «світлий фон +
+            // темний текст» вимагає `.plain` + власної `Capsule` з падінгами вручну. А
+            // власна заливка тягне за собою ще й розгалуження за темою: у світлій межу
+            // робила тінь, у темній вона невидима (чорне на чорному) і капсула виходила
+            // пласкою. Двічі власний код замість одного системного стилю — не варте того.
+            //
+            // `.tint(.primary)` — лише колір тексту/шеврона; заливку `.bordered` бере
+            // сам (нейтральний fill), тож капсули не конкурують із синім у результатах.
+            Button(action: action) { legacyContent }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .tint(.primary)
         }
     }
 
@@ -820,7 +845,17 @@ struct SearchView: View {
     /// is inactive, so the ✕ is missing on the 2nd+ open. Re-assert the presented
     /// state whenever a committed results page is on screen so every return matches
     /// the first-open chrome.
+    ///
+    /// ⛔ iOS 26 ONLY — and that guard is load-bearing (bug-036, 2026-08-06).
+    /// `isPresented` is not "is the field on screen", it is "is search ACTIVE", and on
+    /// iOS 18 the active state is the one where UIKit expands the bar to full width with
+    /// a Cancel button and **hides the nav-bar items** — i.e. exactly our filter chips.
+    /// Forcing it there made the chips vanish on the results page.
+    /// iOS 18 needs no re-assertion anyway: `navigationBarDrawer(displayMode: .always)`
+    /// keeps the field permanently in the bar whether search is active or not, so the
+    /// chrome bug-011 describes cannot occur.
     private func reassertSearchPresentationIfNeeded() {
+        guard #available(iOS 26, *) else { return }
         guard isShowingResults, !isSearchActive else { return }
         isSearchActive = true
         // The committed results state is keyboard-free (see `commit`). Re-presenting
@@ -885,27 +920,4 @@ private struct SearchResultRow: View {
     SearchView()
         .environmentObject(AppNavigationRouter())
         .environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
-}
-
-// MARK: - Filter bar height
-
-/// iOS 26 лишає падінг 8 — там чипи `.buttonStyle(.glass)` мають власну геометрію,
-/// і це число підібране під неї. ⛔ Не чіпати.
-///
-/// iOS 18 фіксує висоту рівно по нав-бару, щоб смуга й тулбар рідера збігалися
-/// піксель-у-піксель. `maxHeight` разом із `height` не потрібен: чипи голі й
-/// нижчі за бар, тож вони просто центруються.
-private struct FilterBarHeight: ViewModifier {
-    let barHeight: CGFloat
-    let topCorrection: CGFloat
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content.padding(.vertical, 8)
-        } else {
-            content
-                .frame(height: barHeight)
-                .padding(.top, -topCorrection)
-        }
-    }
 }

@@ -13,7 +13,8 @@
 #   cd ~/Projects/SourceBible
 #   python3 scripts/measure_strongs_coverage.py sourcebible.db
 #
-# Python 3.9 compatible. Opens the DB read-only. No writes, no schema changes.
+# Python 3.10+ (project minimum, see CLAUDE.md). Opens the DB read-only.
+# No writes, no schema changes.
 
 import re
 import sqlite3
@@ -63,8 +64,11 @@ def load_verse_bases(conn: sqlite3.Connection, tid: str) -> Dict[Tuple, List[str
 
 def load_macula_bases(conn: sqlite3.Connection) -> Dict[Tuple, List[str]]:
     """(book_id, chapter, verse) -> list of Macula word base numbers (identity verse join).
-    NOTE: ignores verse_map numbering offsets (~459 chapters, mostly Psalms); the
-    word-level estimate is therefore approximate for those chapters."""
+    NOTE: ignores versification offsets (~459 chapters, mostly Psalms); the
+    word-level estimate is therefore approximate for those chapters.
+    The offsets now live in `verse_org` (ADR-028) — the old `verse_map` table this
+    note used to name was deleted in phase 2. To make the estimate exact, hop through
+    `verse_org` instead of joining on identity; do NOT re-derive a mapping."""
     out = defaultdict(list)  # type: Dict[Tuple, List[str]]
     cur = conn.execute(
         "SELECT book_id, chapter, verse, strongs_id FROM word WHERE strongs_id IS NOT NULL"
@@ -144,7 +148,7 @@ def main() -> int:
     # --- Word-level gate estimate --------------------------------------------
     # For each Macula word (with Strong's), is its base tagged by the module for
     # that verse? Approximates how many Original-pill words each gate makes
-    # clickable. Identity verse join (verse_map offsets ignored — see note).
+    # clickable. Identity verse join (verse_org offsets ignored — see note).
     macula = load_macula_bases(conn)
     total_words = sum(len(v) for v in macula.values())
     print("=== Word-level gate estimate (Macula words made clickable) ===")

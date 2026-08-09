@@ -1,6 +1,6 @@
 # ADR-012: Unified User Data Layer (GRDB + Block-based Notes + Sync-ready Schema)
 
-**Status:** Amended  
+**Status:** Accepted (amended ×4)  
 **Date:** 2026-05-19  
 **Amended:** 2026-05-19 (rev 2) — SyncEngine → v2; Auth → v1.5; note_blocks hybrid schema (verse_id/strongs_id as columns); DeviceIdentity pattern for pre-auth user_id; AuthService + SyncEngine as protocols with NoOp v1 impls  
 **Amended:** 2026-05-20 (rev 3) — DeviceIdentity renamed to PreAuthIdentity (.userId → .stableId); clarified that ViewModels never access PreAuthIdentity directly; column name user_id retained (maps 1:1 to Supabase auth.uid())  

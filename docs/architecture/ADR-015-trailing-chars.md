@@ -1,7 +1,8 @@
 # ADR-015: Trailing Characters from Macula `after` Attribute
 
-**Status:** Proposed  
+**Status:** Accepted (реалізовано 2026-06; статус виправлено 2026-08-07 lint-ом)  
 **Date:** 2026-06-01  
+**Реалізація:** колонка `word.after_char` у схемі, 12 місць у `scripts/build_db.py`  
 **Deciders:** Ivan  
 **Spec:** `docs/features/spec-trailing-chars.md`
 

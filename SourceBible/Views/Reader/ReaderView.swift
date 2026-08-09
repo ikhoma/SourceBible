@@ -588,6 +588,18 @@ struct VerseRowView: View {
     var onVerseTap: () -> Void
     var onWordTap: (VerseSegment) -> Void
 
+    /// Примітка, відкрита в тултіпі: текст + прямокутник хрестика у координатах
+    /// `VerseTextView`, який стає якорем поповера.
+    ///
+    /// Живе в рядку вірша, а не у ViewModel: це чисто презентаційний, ефемерний стан
+    /// одного вірша — у моделі він змушував би перемальовувати всю главу на кожен тап.
+    private struct OpenFootnote: Identifiable {
+        let id: String          // маркер, напр. "[2]"
+        let text: String
+        let anchor: CGRect
+    }
+    @State private var openFootnote: OpenFootnote? = nil
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
@@ -605,9 +617,30 @@ struct VerseRowView: View {
                         highlightColor: verse.highlightColor,
                         selectedSegment: selectedSegment,
                         redLetters: redLetters,
+                        footnotes: verse.footnotes,
                         onVerseTap: onVerseTap,
-                        onWordTap: onWordTap
+                        onWordTap: onWordTap,
+                        onFootnoteTap: { marker, rect in
+                            guard let text = verse.footnotes[marker] else { return }
+                            openFootnote = OpenFootnote(id: marker, text: text, anchor: rect)
+                        }
                     )
+                    // Тултіп, а не sheet — і це вимір, не смак: медіана примітки Огієнка
+                    // 42 символи, максимум 298, жодної довшої за 400. Sheet на два рядки
+                    // тексту забирає екран і рве читання; поповер лишає вірш на місці.
+                    //
+                    // `attachmentAnchor: .rect(.rect(...))` бере прямокутник ГЛИФА, який
+                    // прислав UIKit, тож дзьобик показує на конкретний хрестик, а не на
+                    // середину вірша (у вірші їх буває три — Бут. 1:2).
+                    //
+                    // ⛔ `.presentationCompactAdaptation(.popover)` обовʼязковий: без нього
+                    // на iPhone (compact) SwiftUI перетворює поповер саме на той sheet,
+                    // якого ми уникаємо. Доступний з iOS 16.4, тобто нижче нашого мінімуму
+                    // 18 — гілка `#available` не потрібна.
+                    .popover(item: $openFootnote,
+                             attachmentAnchor: .rect(.rect(openFootnote?.anchor ?? .zero))) { note in
+                        FootnoteTooltip(text: note.text)
+                    }
                     // ⛔ Do NOT add redLetters (or any other global setting) back into this
                     // id(). It changes the identity of every row at once → SwiftUI destroys
                     // and recreates all UITextViews in the chapter (coordinator + gestures +

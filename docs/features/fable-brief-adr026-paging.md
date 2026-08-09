@@ -1,5 +1,7 @@
 # Fable Run-Brief — ADR-026 Reader Chapter Paging (Phase 2)
 
+**Status:** Done (ADR-026 IMPLEMENTED 2026-07-10 — прогін завершено)
+
 **Spec:** ADR-026 (Accepted scope) · PDR-Page-Turn-Gesture-Zone (full-surface, 2026-07-10)
 **Mode:** Autonomous. Isolated branch/worktree only. Review by final diff.
 

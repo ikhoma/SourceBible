@@ -64,5 +64,10 @@ SourceBible/Generated/AnalyticsConfiguration.swift
 
 # ── Local workflow scripts ─────────────────────────────────────
 commit_all.sh
+
+# ── Scratch / broken copies awaiting deletion ─────────────────
+# Two byte-identical broken copies of make_gold_entry_page.py landed here
+# 2026-08; ignored rather than deleted (reversible). Delete by hand when sure.
+scripts/_to_delete/
 SourceBible/Resources/sourcebible-backup.db
 sb_baseline.db*

@@ -3,7 +3,26 @@ set -e
 
 cd "$(dirname "$0")"
 
-echo "▸ Building database..."
+# ── Python version floor ──────────────────────────────────────────────────────
+# build_db.py uses 3.10+ syntax (dict[str, int] at :1844), so a 3.9 interpreter
+# dies ~10 minutes in, after the Macula import. Fail here instead, in a second,
+# and print WHICH python3 was picked up — /usr/bin/python3 is Apple's 3.9.6 and
+# sits second in PATH, so a broken PATH is the likely cause, not a missing build.
+python3 - <<'PY'
+import sys
+need = (3, 10)
+got = sys.version.split()[0]
+if sys.version_info < need:
+    sys.stderr.write(
+        "\n✗ python3 is %s at %s\n"
+        "  this build needs >= %d.%d (build_db.py uses 3.10+ syntax)\n"
+        "  /usr/bin/python3 is Apple's 3.9 — put a newer python3 first in PATH\n\n"
+        % (got, sys.executable, need[0], need[1]))
+    raise SystemExit(1)
+print("▸ python3 %s at %s" % (got, sys.executable))
+PY
+
+echo "\n▸ Building database..."
 python3 scripts/build_db.py
 
 echo "\n▸ Building verse_org (versification: Original tab + cross-references, ADR-028)..."

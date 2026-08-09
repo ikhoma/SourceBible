@@ -1,0 +1,62 @@
+osis	genre	chapter	verse	pos_in_verse	slot	pos_in_slot	surface	xlit	lemma	strong	morph	pos	lexical_class	gloss_macula	gloss_en	gloss_display	gloss_bsb	freq_ot	freq_slot_ot	tier	uk_ohienko_verse	uk_ohienko_numbering	uk_gromov_verse	uk_gromov_numbering	uk
+1CH	генеалогія	1	1	1	1	1	אָדָ֥ם	ʾāḏām	אָדָם	0121	Np	noun	noun	Adam	Adam	Adam	Adam	5	3	mid		direct		direct	
+DEU	закон/сповідь	6	4	1	1	1	שְׁמַ֖ע	šəmaʿ	שָׁמַע	8085	Vqv2ms	verb	verb	hear	hear	hear	Hear	45	35	mid		direct		direct	
+DEU	закон/сповідь	6	4	4	4	1	אֱלֹהֵ֖י		אֱלֹהִים	0430	Ncmpc	noun	noun	God	God	God	our God	810	119	head		direct		direct	
+DEU	закон/сповідь	6	4	5	4	2	נוּ		הוּא	5105a	Sp1cp	suffix	pron	our	our	our		706	119	head		direct		direct	
+DEU	закон/сповідь	6	5	9	6	1	לְבָבְ		לֵבָב	3824	Ncmsc	noun	noun	heart	heart	heart	your heart	177	33	head		direct		direct	
+DEU	закон/сповідь	6	5	10	6	2	ךָ֥		הוּא	3509b	Sp2ms	suffix	pron	your	your	your		3765	33	head		direct		direct	
+DEU	закон/сповідь	6	5	11	7	1	וּ	û	וְ	2050b	C	conjunction	cj	and	and	and		48805	25	head		direct		direct	
+DEU	закон/сповідь	6	5	12	7	2	בְ	ḇə	בְּ	0871a	R	preposition	prep	with	with	with		971	25	head		direct		direct	
+DEU	закон/сповідь	6	5	13	7	3	כָל	ḵol-	כֹּל	3605	Ncmsc	noun	noun	all	all	all	with all	3543	25	head		direct		direct	
+DEU	закон/сповідь	6	5	14	8	1	נַפְשְׁ		נֶפֶשׁ	5315	Ncbsc	noun	noun	being	soul	being	your soul	31	7	mid		direct		direct	
+DEU	закон/сповідь	6	5	15	8	2	ךָ֖		הוּא	3509b	Sp2ms	suffix	pron	your	your	your		3765	7	head		direct		direct	
+DEU	закон/сповідь	6	5	16	9	1	וּ	û	וְ	2050b	C	conjunction	cj	and	and	and		48805	25	head		direct		direct	
+DEU	закон/сповідь	6	5	17	9	2	בְ	ḇə	בְּ	0871a	R	preposition	prep	with	with	with		971	25	head		direct		direct	
+DEU	закон/сповідь	6	5	18	9	3	כָל	ḵol-	כֹּל	3605	Ncmsc	noun	noun	all	all	all	with all	3543	25	head		direct		direct	
+GEN	наратив	22	1	1	1	1	וַ	wa	וְ	2050b	C	conjunction	cj	and	and	and		48805	549	head		direct		direct	
+GEN	наратив	22	1	2	1	2	יְהִ֗י	yəhiy	הָיָה	1961	Vqw3ms	verb	verb	it.was	happened	was		549	549	head		direct		direct	
+GEN	наратив	22	1	8	5	1	וְ	wə	וְ	2050b	C	conjunction	cj	and	that	and		48805	7	head		direct		direct	
+GEN	наратив	22	1	9	5	2	הָ֣	hā	הַ	1886a	Td	particle	art	(the)	the	(the)		5110	7	head		direct		direct	
+GEN	наратив	22	1	10	5	3	אֱלֹהִ֔ים	ʾĕlōhiym	אֱלֹהִים	0430	Ncmpa	noun	noun	God	God	God	God	808	7	head		direct		direct	
+GEN	наратив	22	1	21	13	1	הִנֵּֽנִ		הִנֵּה	2009	Tm	particle	ij	here	here	here	Here I am	198	26	head		direct		direct	
+GEN	наратив	22	1	22	13	2	י		הוּא	2967a	Sp1cs	suffix	pron	I.[am]	I	I am		26	26	mid		direct		direct	
+GEN	наратив	22	2	23	17	1	וְ	wə	וְ	2050b	C	conjunction	cj	and	and	and		48805	1	head		direct		direct	
+GEN	наратив	22	2	24	17	2	הַעֲלֵ֤		עָלָה	5927	Vhv2ms	verb	verb	offer	offer	offer	Offer him	1	1	tail		direct		direct	
+GEN	наратив	22	2	25	17	3	הוּ		הוּא	1930a	Sp3ms	suffix	pron	him.up	him	him up		1	1	tail		direct		direct	
+GEN	наратив	22	3	4	3	1	בַּ	ba	בְּ	0871a	Rd	preposition	prep	in	in	in		1809	105	head		direct		direct	
+GEN	наратив	22	3	5	3	2		–	הַ	1886a	Td	particle	art	the	the	the		15886	105	head		direct		direct	
+GEN	наратив	22	3	6	3	3	בֹּ֗קֶר	bōqer	בֹּקֶר	1242	Ncmsa	noun	noun	morning	morning	morning	the next morning	186	105	head		direct		direct	
+ISA	пророцтво	53	4	6	5	1	וּ	û	וְ	2050b	C	conjunction	cj	and	and	and		48805	1	head		direct		direct	
+ISA	пророцтво	53	4	7	5	2	מַכְאֹבֵ֖י		מַכְאוֹב	4341	Ncmpc	noun	noun	pains	sorrows	pains	our sorrows	2	1	tail		direct		direct	
+ISA	пророцтво	53	4	8	5	3	נוּ		הוּא	5105a	Sp1cp	suffix	pron	our	our	our		706	1	head		direct		direct	
+ISA	пророцтво	53	4	9	6	1	סְבָלָ֑		סָבַל	5445	Vqp3ms	verb	verb	he	carried	he	and carried	1	1	tail		direct		direct	
+ISA	пророцтво	53	4	10	6	2	ם		הוּא	3963a	Sp3mp	suffix	pron	carried.them	them	carried them		5	1	mid		direct		direct	
+ISA	пророцтво	53	4	13	8	1	חֲשַׁבְנֻ֔		חָשַׁב	2803	Vqp1cp	verb	verb	we	esteemed	we	considered Him	2	1	tail		direct		direct	
+ISA	пророцтво	53	4	14	8	2	הוּ		הוּא	1930a	Sp3ms	suffix	pron	considered.him	him	considered him		1	1	tail		direct		direct	
+ISA	пророцтво	53	5	4	3	1	מִ	mi	מִן	4480	R	preposition	prep	from	for	from		5399	1	head		direct		direct	
+ISA	пророцтво	53	5	5	3	2	פְּשָׁעֵ֔		פֶּשַׁע	6588	Ncmpc	noun	noun	transgressions	transgressions	transgressions	for our transgressions	31	1	mid		direct		direct	
+ISA	пророцтво	53	5	6	3	3	נוּ		הוּא	5105a	Sp1cp	suffix	pron	our	our	our		706	1	head		direct		direct	
+ISA	пророцтво	53	5	8	5	1	מֵ	mē	מִן	4480	R	preposition	prep	from	for	from		5399	1	head		direct		direct	
+ISA	пророцтво	53	5	9	5	2	עֲוֺנֹתֵ֑י		עָוֺן	5771	Ncbpc	noun	noun	iniquities	iniquities	iniquities	for our iniquities	30	1	mid		direct		direct	
+ISA	пророцтво	53	5	10	5	3	נוּ		הוּא	5105a	Sp1cp	suffix	pron	our	our	our		706	1	head		direct		direct	
+ISA	пророцтво	53	5	16	9	1	וּ	û	וְ	2050b	C	conjunction	cj	and	and	and		48805	1	head		direct		direct	
+ISA	пророцтво	53	5	17	9	2	בַ	ḇa	בְּ	0871a	R	preposition	prep	by	by	by		881	1	head		direct		direct	
+ISA	пророцтво	53	5	18	9	3	חֲבֻרָת֖		חַבּוּרָה	2250	Ncfsc	noun	noun	wound[s]	wounds	wound	and by His stripes	1	1	tail		direct		direct	
+ISA	пророцтво	53	5	19	9	4	וֹ		הוּא	2050c	Sp3ms	suffix	pron	his	his	his		5660	1	head		direct		direct	
+JON	наратив+діалог	1	1	1	1	1	וַֽ	wa	וְ	2050b	C	conjunction	cj	and	now	and		48805	90	head		direct		direct	
+JON	наратив+діалог	1	1	2	1	2	יְהִי֙	yəhî	הָיָה	1961	Vqw3ms	verb	verb	it.came	came	came	came	90	90	head		direct		direct	
+LEV	закон	19	17	6	5	1	בִּ	bi	בְּ	0871a	R	preposition	prep	in	in	in		5200	10	head		direct		direct	
+LEV	закон	19	17	7	5	2	לְבָבֶ֑		לֵבָב	3824	Ncmsc	noun	noun	heart	heart	heart	in your heart	177	10	head		direct		direct	
+LEV	закон	19	17	8	5	3	ךָ		הוּא	3509b	Sp2ms	suffix	pron	your	your	your		3765	10	head		direct		direct	
+LEV	закон	19	17	12	9	1	עֲמִיתֶ֔		עָמִית	5997	Ncmsc	noun	noun	citizen	neighbor	citizen	your neighbor	5	3	mid		direct		direct	
+LEV	закон	19	17	13	9	2	ךָ		הוּא	3509b	Sp2ms	suffix	pron	your.fellow	your	your fellow		3	3	mid		direct		direct	
+PRO	мудрість	3	5	10	7	1	בִּֽ֝ינָתְ		בִּינָה	0998	Ncfsc	noun	noun	understanding	understanding	understanding	your own understanding	5	1	mid		direct		direct	
+PRO	мудрість	3	5	11	7	2	ךָ֗		הוּא	3509b	Sp2ms	suffix	pron	your.own	your own	your own		18	1	mid		direct		direct	
+PSA	поезія	23	2	1	1	1	בִּ	bi	בְּ	0871a	R	preposition	prep	in	in	in		5200	1	head		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	2	1	2	נְא֣וֹת	nəʾôṯ	נָוָה	4999	Ncfpc	noun	noun	pastures	pastures	pastures	pastures	1	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	4	3	1	יַרְבִּיצֵ֑		רָבַץ	7257	Vhi3ms	verb	verb	he	lie down	he	He makes me lie down	1	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	5	3	2	נִי		הוּא	5204a	Sp1cs	suffix	pron	makes.me.lie.down	me	makes me lie down		1	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	9	7	1	יְנַהֲלֵֽ		נָהַל	5095	Vpi3ms	verb	verb	he	leads	he	He leads me	2	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	10	7	2	נִי		הוּא	5204a	Sp1cs	suffix	pron	leads.me	me	leads me		1	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	3	4	3	1	יַֽנְחֵ֥		נָחָה	5148	Vhi3ms	verb	verb	he	leads	he	He guides me	4	1	mid		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	3	5	3	2	נִי		הוּא	5204a	Sp1cs	suffix	pron	guides.me	me	guides me		1	1	tail		synodal(23→22)		synodal(23→22)	

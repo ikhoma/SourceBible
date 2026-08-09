@@ -8,8 +8,20 @@ of `word.xlit_slot`?
 
 READ-ONLY. Touches nothing. Writes one report: data/bsb_translit_validation.tsv
 
-⛔ Run on Mac only — sourcebible.db is an APFS sparse file and is unreadable from
-   the Linux sandbox (SQLITE_CORRUPT). See CLAUDE.md.
+⛔⛔ STALE — DOES NOT RUN AS-IS (audited 2026-08-07).
+   This script maps BSB→Macula through the `verse_map` table, which ADR-028 phase 2
+   DELETED, together with `build_verse_map.py` and `findBestMaculaVerse()`. The
+   replacement is `verse_org` (155 621 rows, curated + O2-verified, cross-chapter and
+   N:M aware), built by `scripts/build_versification.py`.
+   To revive this script, port `load_verse_map()` to a reverse `verse_org` hop
+   (`idx_verse_org_rev`); do NOT re-derive a mapping heuristically. See CLAUDE.md
+   → "verse_org — версифікація (ADR-028)".
+
+ℹ️ Sandbox note (re-measured 2026-08-07): sourcebible.db is no longer APFS-sparse
+   (350 MB physical vs 342 MB logical) and READ-ONLY access from the Linux sandbox
+   works — open with `mode=ro` only. Writes still happen on the Mac exclusively.
+   The previous blanket "unreadable from the sandbox" note described an older file
+   state and has been corrected in CLAUDE.md.
 
 Usage:
     python3 scripts/validate_bsb_hebrew_translit.py [path/to/sourcebible.db]

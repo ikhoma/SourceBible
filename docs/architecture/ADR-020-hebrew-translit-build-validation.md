@@ -1,7 +1,10 @@
 # ADR-020: Hebrew Transliteration Build-Time Validation
 
-**Status:** Proposed  
+**Status:** Accepted (реалізовано 2026-06; статус виправлено 2026-08-07 lint-ом)  
 **Date:** 2026-06-09  
+**Реалізація:** колонка `word.xlit_slot` у схемі, 17 місць у `scripts/build_db.py`.
+⚠️ Відоме розходження: `verify_xlit_integrity` НЕ падає, хоч docstring обіцяє `SystemExit`
+(зафіксовано в `docs/db_build.md` і `docs/original-tab.md`)  
 **Deciders:** Ivan  
 **Extends:** `docs/features/plan-hebrew-translit-rebuild.md`
 

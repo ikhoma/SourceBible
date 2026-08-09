@@ -150,6 +150,12 @@ CREATE TABLE IF NOT EXISTS verse (
     chapter     INTEGER NOT NULL,
     verse       INTEGER NOT NULL,
     text        TEXT NOT NULL,
+    -- Display-ready copy of `text` with ALL inline markup removed (bug-035).
+    -- `text` keeps <S>1234</S>/<J>/<i> for the app parser; the FTS5 index reads
+    -- THIS column instead, because unicode61 tokenizes <S>6757</S> into the tokens
+    -- S | 6757 | S and those break phrase adjacency ("смертной тени" → 0 hits).
+    -- INVARIANT: `text` = parser source, `text_clean` = the only thing FTS indexes.
+    text_clean  TEXT NOT NULL,
     FOREIGN KEY (translation) REFERENCES translation(id),
     FOREIGN KEY (book_id)     REFERENCES book(id)
 );
@@ -711,17 +717,33 @@ def enrich_macula_greek_from_xml(cur):
 
 
 # ─────────────────────────────────────────────
-# Step 4c — Verify xlit integrity (fail-fast)
+# Step 4c — Verify xlit integrity
 #   Detects sub-entries that inherited wrong xlit from an unrelated base entry.
-#   If any violations found → raises SystemExit so a corrupted DB is never shipped.
+#   Documented benign cases are auto-nulled; ANYTHING ELSE aborts the build.
 # ─────────────────────────────────────────────
+
+# Reviewed by hand and documented in docs/db_build.md → "xlit integrity check".
+# These are proper-noun variants that legitimately share a root transliteration,
+# so nulling the academic xlit is the right and sufficient repair.
+#
+# The list exists so the check can have teeth. Until 2026-08-05 this function
+# printed a WARNING and continued for EVERY hit, while its own docstring promised
+# SystemExit — so the one build-time guard over the lexicon could not fail, and a
+# genuinely new contamination would have shipped behind a line of console noise.
+XLIT_BENIGN = {"H6924a", "H672b", "H672c", "H746a"}
+
 
 def verify_xlit_integrity(cur):
     """
     Assert no sub-entry inherited xlit from an unrelated base Strong's entry.
     Safe sub-entries (same original word, e.g. H7927 / H7927a = Shechem)
     are excluded by the `sub.original != base.original` condition.
-    Raises SystemExit with diagnostic output if violations found.
+
+    Benign, reviewed cases (XLIT_BENIGN) have their academic `transliteration`
+    nulled and the build continues; `xlit_simple` from TBESH is kept, since TBESH
+    holds correct per-entry data. Any UNREVIEWED violation exits non-zero: the
+    alternative is H871a (the preposition ב) shipping the transliteration of
+    H871 (Atharim), which is exactly the class of bug this step exists for.
     """
     print("\n[4d] Verifying xlit integrity (sub-entry contamination check)...")
     rows = cur.execute("""
@@ -737,19 +759,38 @@ def verify_xlit_integrity(cur):
           AND  sub.original != base.original
     """).fetchall()
 
-    if rows:
-        print(f"  WARNING: {len(rows)} potential sub-entry xlit violation(s) — auto-nulling transliteration:")
-        ids_to_null = []
-        for r in rows:
-            print(f"    {r[0]} '{r[3]}' had xlit '{r[1]}' == base '{r[4]}' → SET transliteration=NULL")
-            ids_to_null.append((r[0],))
+    if not rows:
+        print("  ✓ 0 violations — xlit integrity OK")
+        return
+
+    benign = [r for r in rows if r[0] in XLIT_BENIGN]
+    unknown = [r for r in rows if r[0] not in XLIT_BENIGN]
+
+    if benign:
         # NULL out only the `transliteration` column (academic xlit from strongs JSON).
         # xlit_simple (from TBESH exact match) is kept — TBESH has correct per-entry data.
-        cur.executemany("UPDATE strongs SET transliteration = NULL WHERE id = ?", ids_to_null)
-        print(f"  Nulled {len(ids_to_null)} academic transliterations. xlit_simple (TBESH) preserved.")
-        print(f"  Note: review these entries — most are proper-noun variants with same root xlit.")
-    else:
-        print("  ✓ 0 violations — xlit integrity OK")
+        for r in benign:
+            print(f"    reviewed: {r[0]} '{r[3]}' xlit '{r[1]}' == base '{r[4]}'"
+                  f" → SET transliteration=NULL")
+        cur.executemany("UPDATE strongs SET transliteration = NULL WHERE id = ?",
+                        [(r[0],) for r in benign])
+        print(f"  Nulled {len(benign)} reviewed academic transliteration(s);"
+              f" xlit_simple (TBESH) preserved.")
+
+    if unknown:
+        print(f"\n  ✗ {len(unknown)} UNREVIEWED sub-entry xlit violation(s):")
+        for r in unknown:
+            print(f"    {r[0]} '{r[3]}' has xlit '{r[1]}' identical to base"
+                  f" '{r[4]}' — different words, same transliteration")
+        raise SystemExit(
+            "xlit integrity failed: %d unreviewed violation(s).\n"
+            "Each one means a sub-entry is showing another word's transliteration.\n"
+            "Inspect them, then either fix the lexicon import or, if the pair is a\n"
+            "proper-noun variant sharing a root, add the id(s) to XLIT_BENIGN in\n"
+            "scripts/build_db.py and record why in docs/db_build.md.\n"
+            "ids: %s" % (len(unknown), ", ".join(r[0] for r in unknown)))
+
+    print("  ✓ xlit integrity OK (all violations were reviewed cases)")
 
 
 # ─────────────────────────────────────────────
@@ -1254,6 +1295,81 @@ def _clean_verse(text):
     return re.sub(r'\s+', ' ', _STRIP_RE.sub('', text)).strip()
 
 
+# ── Search text (bug-035) ────────────────────────────────────────────────────
+# The FTS5 index must never see markup.  `unicode61` knows nothing about XML, so
+# <S>6757</S> enters the index as three tokens (S | 6757 | S) sitting BETWEEN two
+# real words — which kills every phrase query, since DatabaseService.makeFTSQuery()
+# wraps user input in quotes ("смертной тени"*).  One word still matched (a
+# one-token phrase needs no neighbour), which is why the bug read as "multi-word
+# search is broken" rather than "search is broken".
+#
+# Mirrors String+BibleMarkup.strippingBibleMarkup() on the Swift side — the two
+# must agree, otherwise highlight() offsets drift from what the reader displays.
+# Kept as separate patterns (not one mega-regex) in the same order as the Swift
+# version so a change on either side is easy to port.
+# ⛔ `<S>[^<]*</S>`, NOT `<S>\d+[a-z]?</S>` — the whole S element is Strong's metadata and
+# never display text, so its CONTENT goes, whatever shape it has. The narrow numeric form
+# left 1 115 occurrences in place (measured 2026-08-07), because ASV/NASB carry multi-number
+# and mixed tags the pattern does not match:
+#     <S>1487, 3361</S>   <S>1223, 5124</S>   <S>3739, Leviticus2</S>
+# Unmatched, they fell through to `_SEARCH_TAG_RE`, which strips only the angle brackets and
+# leaves the digits as TEXT inside the verse:
+#     ASV 1Co 1:14 → "…save1487, 3361 Crispus and Gaius;"
+# That is bug-035 itself, still alive in a corner: digits sitting between two real words
+# break phrase adjacency, so "save Crispus" found nothing, and 192 of 16 125 English
+# autocomplete terms (1.19%) were Strong's numbers. Fixed form: 100 (0.63%).
+#
+# This is also why the check that caught it lives per-LANGUAGE: the shared numeric share was
+# 0.53% — three clean dictionaries diluted one broken one below the ceiling.
+_SEARCH_STRONGS_RE = re.compile(r'<S>[^<]*</S>')        # whole S element, content and all
+# `<f>[2]</f>` is a footnote ANCHOR, not text: the note itself lives in the `footnote`
+# table, and the reader draws the anchor as a superscript † (VerseTextView). Left in, the
+# generic tag strip kept the marker as literal "[2]" — measured 2026-08-07: all 125 numeric
+# terms in the Ukrainian autocomplete dictionary were footnote numbers, and the marker sits
+# BETWEEN words, so `"безоднею і Дух"` matched 0 verses in UBIO (Gen 1:2, the second verse of
+# the Bible). Same defect family as bug-035, third instance. UBIO 1 329 anchors, RST 100.
+# ⛔ Not to be confused with `<n>…</n>` below: that one's content IS inline verse text (KJV
+# translator notes) and must survive.
+_SEARCH_FOOTNOTE_RE = re.compile(r'<f>[^<]*</f>')       # anchor + marker → gone
+_SEARCH_NOTE_RE    = re.compile(r'<n>(.*?)</n>', re.S)  # translator note → (text)
+_SEARCH_BREAK_RE   = re.compile(r'<(br|pb)\s*/>', re.I)  # line break → space
+_SEARCH_TAG_RE     = re.compile(r'<[^>]+>')             # any other tag → strip, keep content
+# KJV writes two Strong's for one word as `sevens<S>7651</S> <S>7651</S>,` — a literal space
+# BETWEEN the tags. Remove the tags and that space is left stranded before the comma:
+# "…take to thee by sevens , the male…". 972 verses of 982 have exactly this shape, so the
+# space is our artefact, not the translator's punctuation.
+#
+# ⛔ Only before `, ; . ! ?`. A letter after the space never triggers it, which is what makes
+# this safe: the old "сказалБог" defect was about a space BETWEEN WORDS, and this rule cannot
+# reach that case. Measured over the corpus: 982 verses changed, 0 words fused, 0 tokens
+# changed — i.e. FTS and `search_terms` are untouched and this is display-only (ADR-034).
+# Dashes are excluded on purpose: in Ukrainian a space before `—` is correct.
+_SEARCH_PUNCT_RE   = re.compile(r'\s+([,;.!?])')
+_SEARCH_SPACES_RE  = re.compile(r' {2,}')
+
+def _search_text(text):
+    """Markup-free copy of a verse, for the FTS index and the autocomplete word list.
+
+    `<S>…</S>` is removed together with its content: stripping only the tags would leave the
+    digits as searchable words (that is how 7 753 numeric terms — 25.3% of the RST word
+    list — got into `search_terms`), and matching only the single-number form left the
+    multi-number ASV/NASB tags behind (see the note above `_SEARCH_STRONGS_RE`).
+
+    ⚠️ What this canNOT fix: verses where the SOURCE module has a word replaced by a number
+    (ASV Job 21:5 has `480` where the word "Mark" belongs, 1Ch 5:5 has `400` for "Micah").
+    Those digits are plain text in `verse.text` with no markup around them — 100 terms in
+    the English dictionary after this fix. That is a dataset defect in ASV, not a stripping
+    one; the numeric ceiling is set above it deliberately.
+    """
+    s = _SEARCH_STRONGS_RE.sub('', text)
+    s = _SEARCH_FOOTNOTE_RE.sub('', s)
+    s = _SEARCH_NOTE_RE.sub(r'(\1)', s)
+    s = _SEARCH_BREAK_RE.sub(' ', s)
+    s = _SEARCH_TAG_RE.sub('', s)
+    s = _SEARCH_PUNCT_RE.sub(r'\1', s)
+    return _SEARCH_SPACES_RE.sub(' ', s).strip()
+
+
 def _extract_book_names(src, book_mapping):
     """
     Read long_name / short_name from a MyBible `books` table.
@@ -1347,14 +1463,16 @@ def import_translations(cur):
             text = _clean_verse(row[3] or "")
             if not text:
                 continue
-            rows.append((f"{tid}|{osis}|{ch}|{vs}", tid, osis, ch, vs, text))
+            rows.append((f"{tid}|{osis}|{ch}|{vs}", tid, osis, ch, vs,
+                         text, _search_text(text)))
 
         src.close()
         if tmp_path:
             os.unlink(tmp_path)
 
         cur.executemany(
-            "INSERT OR IGNORE INTO verse (id, translation, book_id, chapter, verse, text) VALUES (?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO verse (id, translation, book_id, chapter, verse, text, text_clean) "
+            "VALUES (?,?,?,?,?,?,?)",
             rows
         )
         print(f"    {len(rows):,} verses imported.")
@@ -1794,8 +1912,20 @@ def build_verse_fts(cur, con):
     Uses content='verse' so only the inverted index is stored (no text duplication).
     verse_fts.rowid == verse.rowid → JOIN back to get book_id/chapter/verse/translation.
 
+    ⛔ Indexes `verse.text_clean`, NEVER `verse.text` (bug-035). `text` carries inline
+    markup that the app parser needs; unicode61 turns <S>6757</S> into the tokens
+    S | 6757 | S sitting between two real words, so every phrase query — and the app
+    sends ALL queries as phrases — matched nothing on two or more words. Any change
+    that points this table back at `text` re-opens that bug; verify_search_index()
+    below exists to make that failure loud.
+
+    Column 0 of the index is `text_clean`, so highlight(verse_fts, 0, …) in
+    DatabaseService.searchByText() now returns markup-free text already.
+
     Tokenizer: unicode61 with remove_diacritics=2 (strips combining marks before indexing).
-    This means "αβγ" and "αβγ̈" tokenize identically — useful for accented Biblical Greek.
+    This means "αβγ" and "αβγ̈" tokenize identically — useful for accented Biblical Greek
+    and for UBIO, which stresses vowels (пі́ду). Query text goes through the same
+    tokenizer, so the stripping is symmetric.
 
     NOTE: content tables are read-only at runtime; rebuild happens here at build time only.
     """
@@ -1806,7 +1936,7 @@ def build_verse_fts(cur, con):
         DROP TABLE IF EXISTS verse_fts;
 
         CREATE VIRTUAL TABLE verse_fts USING fts5(
-            text,
+            text_clean,
             content='verse',
             content_rowid='rowid',
             tokenize='unicode61 remove_diacritics 2'
@@ -1824,55 +1954,285 @@ def build_verse_fts(cur, con):
 
 
 def build_search_terms(cur, con):
-    """Deduplicated word list for autocomplete suggestions (predictive search).
+    """Autocomplete word list, ONE DICTIONARY PER LANGUAGE (ADR-008, amend 2026-08-07).
 
-    Extracts all words from cleaned verse texts across all translations.
-    Stores lowercase terms with occurrence frequency so the iOS app can do fast
-    prefix suggestions:  SELECT term FROM search_terms WHERE term GLOB 'prefix*'
-                         ORDER BY freq DESC LIMIT 8
+    Extracts words from cleaned verse texts, keyed by `translation.language`, so the iOS
+    app can do fast prefix suggestions within the language being searched:
+
+        SELECT term FROM search_terms WHERE term GLOB 'prefix*' AND lang = ?
+        ORDER BY freq DESC LIMIT 8
 
     Terms are stored lowercase → callers must lowercase their prefix before querying.
-    Minimum word length: 2 chars. Minimum frequency: 2 occurrences (filters noise/typos).
+    Minimum word length: 2 chars. Minimum frequency: 2 occurrences per LANGUAGE (filters
+    noise/typos; note the threshold is now per-language, so a word must earn its place in
+    each dictionary it appears in).
+
+    Why per-language and not one shared table (the previous behaviour): the dictionary was
+    a single frequency bucket over all five translations, so Russian and Ukrainian forms
+    interleaved in one suggestion list — measured: `се*` → себе, себя, сердце, серед, сего,
+    серце. Worse and quieter: a suggestion could lead to ZERO results, because the term came
+    from RST while the search filters `AND v.translation = ?` and ran against UBIO.
+
+    Why per-LANGUAGE and not per-translation (the older "step B" debt, now closed against
+    it): KJV/ASV/NASB would get three nearly identical English dictionaries — measured
+    74 329 rows vs 61 776 — while the mixing being fixed is between languages, not
+    translations. Adding German or Spanish needs no change here: the new translation carries
+    its own `language` and splits itself off.
+
+    Reads `verse.text_clean`, not `verse.text` (bug-035). The old version stripped the
+    TAGS with a `<[^>]+>` regex but left the Strong's DIGITS behind as words: measured
+    on RST alone, 7 753 of 30 660 terms (25.3%) were pure numbers, `3588` occurring
+    19 048 times. Autocomplete was suggesting Strong's numbers as if they were words.
     """
-    print("\nBuilding search_terms for autocomplete...")
+    print("\nBuilding search_terms for autocomplete (per language)...")
     t0 = time.time()
 
-    # Strip all MyBible markup tags before tokenizing
-    tag_re  = re.compile(r'<[^>]+>')
     word_re = re.compile(r"[\wЀ-ӿ']+", re.UNICODE)  # ASCII + Cyrillic + apostrophe
 
-    term_freq: dict[str, int] = {}
+    lang_of = dict(cur.execute("SELECT id, language FROM translation").fetchall())
 
-    cur.execute("SELECT text FROM verse")
-    for (raw_text,) in cur.fetchall():
-        clean = tag_re.sub(' ', raw_text)
+    # language -> {term: freq}
+    per_lang: dict[str, dict[str, int]] = {}
+
+    cur.execute("SELECT translation, text_clean FROM verse")
+    for translation, clean in cur.fetchall():
+        lang = lang_of.get(translation)
+        if not lang:
+            # A translation with no language cannot be assigned a dictionary. Failing loud
+            # here beats shipping a translation whose suggestions are silently empty.
+            raise SystemExit(
+                f"✗ search_terms: translation '{translation}' has no `language` in the "
+                f"translation table — cannot build a per-language dictionary"
+            )
+        bucket = per_lang.setdefault(lang, {})
         for w in word_re.findall(clean):
             w_lower = w.lower()
             if len(w_lower) >= 2:
-                term_freq[w_lower] = term_freq.get(w_lower, 0) + 1
+                bucket[w_lower] = bucket.get(w_lower, 0) + 1
 
-    # Keep only terms that appear at least twice (filters single-verse hapax and noise)
-    terms = [(t, f) for t, f in term_freq.items() if f >= 2]
-    terms.sort(key=lambda x: -x[1])   # most frequent first
+    rows = [
+        (term, lang, freq)
+        for lang, bucket in per_lang.items()
+        for term, freq in bucket.items()
+        if freq >= 2                 # per-language hapax filter
+    ]
 
     cur.executescript("""
         DROP TABLE IF EXISTS search_terms;
         CREATE TABLE search_terms (
-            term TEXT PRIMARY KEY,
-            freq INTEGER NOT NULL DEFAULT 1
-        );
+            term TEXT NOT NULL,
+            lang TEXT NOT NULL,
+            freq INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (term, lang)
+        ) WITHOUT ROWID;
     """)
+    # WITHOUT ROWID + PK(term, lang): the PK index IS the table, and `term` leads it, so
+    # `term GLOB 'prefix*'` stays an index range scan (verified plan: SEARCH search_terms
+    # USING PRIMARY KEY (term>? AND term<?)). Reversing the key order would break that.
 
     cur.executemany(
-        "INSERT OR IGNORE INTO search_terms(term, freq) VALUES (?, ?)",
-        terms
+        "INSERT OR IGNORE INTO search_terms(term, lang, freq) VALUES (?, ?, ?)",
+        rows
     )
     con.commit()
 
-    print(f"  search_terms: {len(terms):,} unique words ({time.time() - t0:.1f}s)")
+    by_lang = ", ".join(
+        f"{lang} {sum(1 for t, l, f in rows if l == lang):,}"
+        for lang in sorted(per_lang)
+    )
+    print(f"  search_terms: {len(rows):,} rows ({by_lang}) ({time.time() - t0:.1f}s)")
 
     # V1.5 placeholder — embeddings will live here
     # build_verse_vectors(cur, con)
+
+
+# ─────────────────────────────────────────────
+# Step 8b — Search index verification (bug-035)
+# ─────────────────────────────────────────────
+
+# Phrases that MUST match, and the verse each must land on. Multi-word on purpose:
+# a single word matched even with the bug (a one-token phrase needs no neighbour),
+# so single-word anchors would have passed on the broken index and proved nothing.
+# References are in each translation's OWN numbering (RST/UBIO Synodal → PSA 22).
+_SEARCH_ANCHORS = [
+    ("RST",  "смертной тени",     "PSA", 22, 4),
+    ("UBIO", "долиною смертної",  "PSA", 22, 4),
+    ("KJV",  "valley of the shadow", "PSA", 23, 4),
+    ("ASV",  "valley of the shadow", "PSA", 23, 4),
+]
+
+# Must match NOTHING. Catches the opposite failure: an index (or a query builder)
+# that has stopped enforcing adjacency and quietly matches any co-occurrence.
+# Each word exists in the corpus; the pairing does not.
+_SEARCH_ANTI_ANCHORS = [
+    ("RST", "тени долиною"),        # right words, wrong order
+    ("KJV", "shadow of the valley"),
+]
+
+_NUMERIC_TERM_CEILING = 0.01   # ≤1% of search_terms may be pure digits, PER LANGUAGE
+
+# Anchors proving the per-language dictionaries are actually SEPARATE (ADR-008, amend
+# 2026-08-07): each word must be in its own language and ABSENT from the sibling one.
+# Measured on the live DB before the split, not chosen from memory.
+#
+# ⛔ Do NOT anchor on a word both languages share (`него` is in RST *and* in Ohienko):
+# such an anchor passes on a BROKEN split too, which is the whole failure mode of a
+# check that only asserts presence.
+_TERM_LANG_ANCHORS = [
+    ("ru", "этого",   "uk"),      # (language that must have it, term, language that must not)
+    ("ru", "который", "uk"),
+    ("ru", "чтобы",   "uk"),
+    ("uk", "цього",   "ru"),
+    ("uk", "якого",   "ru"),
+    ("uk", "щоб",     "ru"),
+    ("en", "shepherd", "ru"),
+]
+
+
+def verify_search_index(cur):
+    """Fail the build if full-text search is broken. Non-zero exit, not a warning.
+
+    Exists because bug-035 shipped: the FTS index was built over raw markup, every
+    multi-word query returned 0, and nothing in the build said so — the row counts
+    were all healthy. A count is not a check. This asserts the actual user-visible
+    behaviour (a phrase finds its verse) through the same MATCH expression the app
+    builds in DatabaseService.makeFTSQuery().
+
+    Skips a translation that is not in this build (NASB/UBIO are licence-gated)
+    rather than failing on it — but a translation that IS present must pass.
+    """
+    print("\nVerifying search index...")
+    failures: list[str] = []
+
+    present = {r[0] for r in cur.execute("SELECT id FROM translation")}
+
+    def match_expr(phrase):
+        # Mirror of DatabaseService.makeFTSQuery(): quoted phrase + prefix star.
+        return '"%s"*' % phrase.replace('"', '""')
+
+    for tid, phrase, book, ch, vs in _SEARCH_ANCHORS:
+        if tid not in present:
+            print(f"  – {tid}: not in this build, skipped")
+            continue
+        rows = cur.execute("""
+            SELECT v.book_id, v.chapter, v.verse
+            FROM verse_fts JOIN verse v ON v.rowid = verse_fts.rowid
+            WHERE verse_fts MATCH ? AND v.translation = ?
+        """, (match_expr(phrase), tid)).fetchall()
+        if not rows:
+            failures.append(
+                f"{tid}: phrase {phrase!r} found NOTHING — expected {book} {ch}:{vs}. "
+                f"Is verse_fts indexing verse.text instead of verse.text_clean?")
+        elif (book, ch, vs) not in rows:
+            failures.append(
+                f"{tid}: phrase {phrase!r} matched {len(rows)} verse(s) but not the "
+                f"expected {book} {ch}:{vs} — got {rows[:5]}")
+        else:
+            print(f"  ✓ {tid}: {phrase!r} → {book} {ch}:{vs} ({len(rows)} verse(s))")
+
+    for tid, phrase in _SEARCH_ANTI_ANCHORS:
+        if tid not in present:
+            continue
+        (n,) = cur.execute("""
+            SELECT COUNT(*) FROM verse_fts JOIN verse v ON v.rowid = verse_fts.rowid
+            WHERE verse_fts MATCH ? AND v.translation = ?
+        """, (match_expr(phrase), tid)).fetchone()
+        if n:
+            failures.append(
+                f"{tid}: control phrase {phrase!r} matched {n} verse(s) — it must match "
+                f"none. Word adjacency is no longer being enforced.")
+        else:
+            print(f"  ✓ {tid}: control {phrase!r} → 0 (correct)")
+
+    failures += verify_search_terms(cur)
+
+    if failures:
+        print("\n✗ Search index verification FAILED:")
+        for f in failures:
+            print(f"    • {f}")
+        raise SystemExit(1)
+    print("  Search index OK.")
+
+
+def verify_search_terms(cur) -> list[str]:
+    """Check the per-language autocomplete dictionaries. Returns failure strings.
+
+    Called from verify_search_index() so one build gate covers the whole search surface,
+    and reusable on its own by scripts/rebuild_search_terms.py.
+
+    Three independent checks, because each catches something the others cannot express:
+
+    1. **Every language has a dictionary.** A translation whose language ended up with no
+       terms shows the user an empty suggestion list forever, and no row count anywhere
+       would look wrong.
+    2. **The languages are actually separated.** Presence-only anchors would pass on a
+       shared table too; each anchor therefore also asserts ABSENCE from a sibling
+       language. This is the check that would have caught the pre-2026-08-07 behaviour.
+    3. **Numeric-term ceiling per language.** Markup leaking into the word list shows up as
+       numeric "words" (bug-035: 25.3% of RST terms were Strong's digits). Measured over
+       the whole table the share gets diluted — three clean English dictionaries can hide a
+       broken Russian one — so the ceiling applies to each language on its own.
+    """
+    failures: list[str] = []
+
+    cols = {r[1] for r in cur.execute("PRAGMA table_info(search_terms)")}
+    if "lang" not in cols:
+        return ["search_terms has no `lang` column — the DB predates ADR-008 amendment "
+                "2026-08-07. Run scripts/rebuild_search_terms.py (or ./rebuild.sh); the "
+                "app queries `AND lang = ?` and will return no suggestions at all."]
+
+    counts = dict(cur.execute(
+        "SELECT lang, COUNT(*) FROM search_terms GROUP BY lang").fetchall())
+    expected = {r[0] for r in cur.execute(
+        "SELECT DISTINCT language FROM translation WHERE language IS NOT NULL")}
+
+    for lang in sorted(expected):
+        if not counts.get(lang):
+            failures.append(
+                f"search_terms: language {lang!r} has NO terms, but a translation declares "
+                f"it — autocomplete would be silently empty for that translation.")
+    for lang in sorted(set(counts) - expected):
+        failures.append(
+            f"search_terms: language {lang!r} has {counts[lang]:,} terms but no translation "
+            f"declares it — stale dictionary from a removed translation?")
+
+    for lang, term, absent_from in _TERM_LANG_ANCHORS:
+        if lang not in expected or absent_from not in expected:
+            continue                       # licence-gated translation missing from this build
+        (has,) = cur.execute(
+            "SELECT COUNT(*) FROM search_terms WHERE term = ? AND lang = ?",
+            (term, lang)).fetchone()
+        (leaked,) = cur.execute(
+            "SELECT COUNT(*) FROM search_terms WHERE term = ? AND lang = ?",
+            (term, absent_from)).fetchone()
+        if not has:
+            failures.append(
+                f"search_terms: {term!r} missing from {lang!r} — the dictionary for that "
+                f"language is not being built from its own verses.")
+        elif leaked:
+            failures.append(
+                f"search_terms: {term!r} present in {absent_from!r} as well as {lang!r} — "
+                f"languages are NOT separated, suggestions will mix alphabets.")
+        else:
+            print(f"  ✓ search_terms: {term!r} in {lang}, absent from {absent_from}")
+
+    for lang in sorted(counts):
+        total = counts[lang]
+        (numeric,) = cur.execute(
+            "SELECT COUNT(*) FROM search_terms WHERE lang = ? AND term GLOB '[0-9]*' "
+            "AND term NOT GLOB '*[^0-9]*'", (lang,)).fetchone()
+        share = numeric / total if total else 0
+        if share > _NUMERIC_TERM_CEILING:
+            failures.append(
+                f"search_terms[{lang}]: {numeric:,}/{total:,} terms ({share:.1%}) are pure "
+                f"numbers, ceiling is {_NUMERIC_TERM_CEILING:.0%}. Strong's digits are "
+                f"leaking into the autocomplete list — is build_search_terms reading "
+                f"text_clean?")
+        else:
+            print(f"  ✓ search_terms[{lang}]: {total:,} terms, "
+                  f"{numeric:,} numeric ({share:.2%})")
+
+    return failures
 
 
 def finalize(cur, con):
@@ -2045,6 +2405,7 @@ def main():
     import_cross_references(cur);   con.commit()
     build_verse_fts(cur, con);      con.commit()   # FTS5 index for text search
     build_search_terms(cur, con);   con.commit()   # autocomplete word list
+    verify_search_index(cur)                       # fail-fast: phrase search must actually work (bug-035)
     finalize(cur, con)
     con.close()
 

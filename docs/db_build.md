@@ -2,12 +2,13 @@
 
 ## Передумови
 
-- **Python ≥ 3.10** — Python 3.9 не підтримує `Path | None` синтаксис (збірка падає з `TypeError`)
-  ```bash
-  python3 --version   # має бути 3.10+
-  # Якщо 3.9 — встанови через brew:
-  brew install python@3.12 && python3.12 scripts/build_db.py
-  ```
+- **Python ≥ 3.10.** `rebuild.sh` перевіряє це першим кроком і виходить із ненульовим
+  кодом, друкуючи, який саме `python3` підхопився — вручну перевіряти не треба.
+  Поріг існує через `build_db.py:1844` (`dict[str, int]`); на 3.9 збірка вмирала б
+  через ~10 хвилин, уже після імпорту Macula.
+  Заміряно 2026-08-05: `python3` = **3.14.5** (`/usr/local/bin`, інсталятор python.org),
+  а `/usr/bin/python3` = 3.9.6 (системний Apple) і **не використовується**. Homebrew на
+  цій машині немає. Деталі — `CLAUDE.md` → розділ про Python.
 - `pip3 install requests` (для завантаження cross-references з OpenBible)
 
 ## Необхідні датасети
@@ -26,7 +27,7 @@
 | `ASV+.zip` | MyBible модуль | Public domain |
 | `NASB+.zip` | MyBible модуль | Licensed — не розповсюджувати |
 | `RST+.zip` | MyBible модуль | Public domain |
-| `UBIO'88.zip` | MyBible модуль (Огієнко 1962/1988) | **Licensed — UBS/УБТ ©2009; не розповсюджувати публічно без дозволу** (ADR-029) |
+| `UBIO'88.zip` | MyBible модуль (Огієнко 1962/1988) | **CC BY-SA 3.0** — прямий дозвіл УБТ на видання Огієнка **до 1991**, включно з ювілейним 1988 (ADR-029, блокер знято 2026-07-31). Дозволяє похідні й **комерційне** використання за атрибуції (Menu → About) + SA на похідні від самого тексту. Межа «до 1991»: пізніші редакції УБТ НЕ покриті |
 | `versification/{org,eng,rso}.json` | [Copenhagen-Alliance/versification-specification](https://github.com/Copenhagen-Alliance/versification-specification) → `standard-mappings/` | MIT |
 | `versification/overrides.tsv` | Курований (ADR-028) — рішення виведені й O2-перевірені вручну | — |
 
@@ -38,12 +39,25 @@ Cross-references завантажуються автоматично з OpenBibl
 
 ## Збірка
 
-```bash
-cd ~/Projects/SourceBible
-python3 scripts/build_db.py
-```
+**Канонічний шлях — `./rebuild.sh` у корені проєкту, і він же єдине джерело правди про
+порядок кроків.** Не переліковуй команди тут: виконуваний скрипт не може розійтися з
+реальністю так, як розійшовся цей документ (див. «Історія розходження» в кінці).
 
-Очікуваний вивід:
+Що робить `rebuild.sh`, для орієнтації — деталі читай у самому скрипті:
+
+1. `scripts/build_db.py` — ядро: `word`, `verse`, `strongs`, FTS (~10 хв)
+2. `scripts/build_versification.py` — `verse_org` (ADR-028). Падає з ненульовим кодом на
+   невирішеному CONFLICT, і `set -e` аборти **ДО** `cp` — бита версифікація не потрапляє
+   в бандл
+3. `CREATE INDEX idx_verse_org_rev` — зворотний хоп (оригінал → переклад) для крос-рефів
+   і конкордансу. Навмисно поза замороженим `build_versification.py`
+4. `scripts/import_commentaries.py` — ~36 071 вірші
+5. `scripts/process_glosses.py` — `word.gloss_display`. **Без цього кроку вкладка
+   «Оригінал» показує сиру крапкову нотацію** (`he.makes.me.lie.down`), бо `COALESCE`
+   падає на `gloss_macula`. Див. «Три колонки глос» нижче
+6. `cp sourcebible.db SourceBible/Resources/` → в Xcode ⇧⌘K → Run
+
+Очікуваний вивід `build_db.py`:
 ```
 [1/6] Importing books...        66 books
 [4/6] Importing Strong's...     14,712 entries
@@ -60,42 +74,28 @@ Finalizing...
 ✓ Done: sourcebible.db  (~149 MB)
 ```
 
-> ⚠️ **`build_db.py` не будує `verse_map`** — обов'язково виконати наступний крок.
+> ⚠️ **`build_db.py` не будує `verse_org`** — це крок 2 у `rebuild.sh`
+> (`scripts/build_versification.py`). Без нього «Оригінал», крос-рефи й конкорданс падають
+> в identity-fallback у зсунутих главах. Очікуваний розмір `verse_org` — **155 621 рядок**
+> (5 перекладів × ~31k); суттєво менше = щось пішло не так.
 
-### Крок 2: verse_map (обов'язково після build_db.py)
+## Три колонки глос — не переплутати
 
-`verse_map` — окремий скрипт, **не вбудований** у `scripts/build_db.py`. Без нього "Оригінал" показує слова не того вірша у 459 розділах (Псалми, RST SNG/ZEC/ROM 16).
+Джерело правди про runtime — `docs/original-tab.md`. Тут лише те, що стосується збірки:
 
-```bash
-python3 build_verse_map.py sourcebible.db
-```
+| колонка | заповнює | вигляд | де в UI |
+|---|---|---|---|
+| `word.gloss` | `build_db.py:410`, TSV `english` | по-токенна, без крапок (`conceived`, `me`) | останній fallback |
+| `word.gloss_macula` | `build_db.py:579`, XML lowfat `gloss` | **фраза рівня слота, порізана по токенах** (`she` + `conceived.me`) | середній fallback |
+| `word.gloss_display` | `process_glosses.py:74` | нормалізована: крапки прибрані, конструкт розвернутий | **те, що видно** |
 
-Очікуваний вивід: `✓ Done: 7292 rows across 459 chapters`
+`DatabaseService.loadWords` читає `COALESCE(w.gloss_display, w.gloss_macula, w.gloss)`.
+Тобто пропущений крок 5 у `rebuild.sh` = крапки на екрані.
 
-## Копіювання в Xcode
+## Коментарі — датасети й ліцензії
 
-```bash
-cp sourcebible.db SourceBible/Resources/sourcebible.db
-```
-
-Потім у Xcode: **Product → Clean Build Folder** (Shift+Cmd+K), потім Run.
-
-Або одразу повний цикл — **`./rebuild.sh`** (той самий порядок). Вручну:
-```bash
-cd ~/Projects/SourceBible \
-  && python3 scripts/build_db.py \
-  && python3 build_verse_map.py sourcebible.db \
-  && python3 scripts/build_versification.py sourcebible.db \
-  && python3 scripts/import_commentaries.py sourcebible.db \
-  && cp sourcebible.db SourceBible/Resources/sourcebible.db \
-  && echo "✓ DB built and copied to Resources"
-```
-`build_versification.py` падає з ненульовим кодом на невирішеному CONFLICT — тоді
-`rebuild.sh` (`set -e`) аборти ДО `cp`, і бита версифікація не потрапляє в бандл.
-
-## Крок 3: Commentaries (Calvin + Henry + Spurgeon + Owen)
-
-Імпортує чотири public-domain коментаторів у таблицю `commentary` (~36 071 вірші).
+`scripts/import_commentaries.py` (крок 4 у `rebuild.sh`) імпортує чотири
+public-domain коментаторів у таблицю `commentary` (~36 071 вірші).
 
 | Джерело | Файл | Формат | Охоплення | Ліцензія |
 |---|---|---|---|---|
@@ -106,14 +106,7 @@ cd ~/Projects/SourceBible \
 
 > ⚠️ **Owen — ліцензійне обмеження:** текст публічного домену, але датасет отримано під умовою **не продавати і не включати в комерційні пакети**. Якщо в майбутньому вводиться платна/підписна модель — замінити `OwenHebrews-commentary.cmtx` на інше видання (наприклад, CCEL.org) до релізу платного тиру.
 
-```bash
-cd ~/Projects/SourceBible
-python3 scripts/import_commentaries.py sourcebible.db
-cp sourcebible.db SourceBible/Resources/sourcebible.db
-# Xcode: ⇧⌘K → Run
-```
-
-Очікуваний вивід:
+Окремо запускати не потрібно — крок 4 у `rebuild.sh`. Очікуваний вивід:
 ```
 → Importing Calvin (SWORD zCom)...
    Calvin:   11014 verses
@@ -136,17 +129,18 @@ commentary(source TEXT, book_id TEXT, chapter INT, verse INT, text TEXT,
 
 ## Відомі проблеми та рішення
 
-### ❌ Python 3.9: `TypeError: unsupported operand type(s) for |`
+### ❌ Python 3.9: `TypeError: unsupported operand type(s) for |` / `SyntaxError`
 
-**Причина:** Синтаксис `Path | None` доданий у Python 3.10. На macOS системний Python часто 3.9.
+**Причина:** `Path | None` і `dict[str, int]` — синтаксис 3.10+. Системний
+`/usr/bin/python3` на macOS — 3.9.6, і в PATH він другий; помилка означає, що
+підхопився саме він.
 
-**Рішення:**
-```bash
-brew install python@3.12
-python3.12 scripts/build_db.py
-```
+**Рішення:** не запускати `/usr/bin/python3`. `rebuild.sh` перевіряє версію першим
+кроком і сам друкує, який інтерпретатор узявся.
 
-**Статус у коді:** Всі `-> Type | None` анотації у `build_db.py` видалені — сумісно з 3.9+.
+**Статус у коді (уточнено 2026-08-05):** `-> Type | None` у `build_db.py` дійсно немає,
+але **сумісності з 3.9 немає** — лишився `dict[str, int]` у рядку 1844. Це не баг і не
+«виправити»: поріг конвеєра тепер 3.10, а на машині `python3` = 3.14.5.
 
 ---
 
@@ -293,29 +287,32 @@ cp sourcebible.db SourceBible/Resources/sourcebible.db
 
 ---
 
-### ❌ `verse_map` відсутня → "Оригінал" показує слова не того вірша
+### ❌ `verse_org` відсутня або неповна → "Оригінал" показує слова не того вірша
 
-**Причина:** У Біблії різні традиції нумерації. Псалми в MT (Macula) мають заголовок як вірш 1 — KJV і RST його пропускають. Результат: KJV вірш 1 Псалма 3 → код завантажує Macula вірш 1 (заголовок), а не текст.
+Симптом старий, причина й лікування змінились у ADR-028 фаза 2 (2026-07).
 
-**Масштаб:** 459 розділів зі зсувом (з ~1 189), 7 292 non-identity mappings. Найбільше — Псалми (62 розділи), також RST SNG, ZEC, ROM 16.
+**Причина:** різні традиції нумерації. Псалми в MT (Macula) мають заголовок як вірш 1 —
+KJV і RST його пропускають. Без маппінгу KJV Пс. 3:1 тягне Macula вірш 1 (заголовок).
 
-**Рішення:** Таблиця `verse_map` з pre-computed маппінгом. Будується алгоритмом Strong's overlap greedy alignment.
+**Рішення:** таблиця `verse_org` — тотальний курований маппінг «вірш перекладу ⇄ вірш
+оригіналу» (UBS `.vrs` + O2-верифікація через Strong's; розбіжність = білд падає).
+Обслуговує «Оригінал», крос-рефи і конкорданс. Крос-глава, N:M і «немає оригіналу»
+(`org_*` NULL) — першокласні випадки, не винятки.
 
-**Якщо `verse_map` відсутня в DB (наприклад після часткового відновлення):**
-```bash
-cd ~/Projects/SourceBible
-python3 build_verse_map.py   # standalone скрипт, не чіпає інші таблиці
-```
-Очікуваний результат: `✓ Done: 7292 rows across 459 chapters`
+**Якщо таблиці немає або в ній мало рядків:** перезбирати через `./rebuild.sh` — крок 2
+(`scripts/build_versification.py`) плюс крок 3 (`idx_verse_org_rev`). Скрипт вимагає
+`data/versification/{org,eng,rso}.json` + `overrides.tsv`; ці файли трекаються в git,
+`overrides.tsv` — курований, **НЕ регенерувати наосліп**.
 
-**Якщо збираєш DB з нуля через `scripts/build_db.py`:** `verse_map` **не будується автоматично** — після `build_db.py` обов'язково запусти `python3 build_verse_map.py sourcebible.db` (div. розділ "Збірка" вище).
+**Перевірка в UI:** RST або KJV, Псалом 3 вірш 1 → «Оригінал» має показувати слова
+першого текстового вірша, не заголовку.
 
-**Перевірка в UI:** відкрий Псалом 3, вірш 1 у RST або KJV → вкладка "Оригінал" має показувати слова першого текстового вірша (не заголовку).
+**Swift реалізація:** `DatabaseService.loadOriginalWords` (форвард-хоп) +
+`orgRef`/`translationRef` (зворотний). Три випадки й гілки — у `docs/original-tab.md`.
 
-**Swift реалізація** — три рівні пошуку в `ReaderViewModel.findBestMaculaVerse()`:
-1. O(1) lookup у `verse_map` (точний маппінг)
-2. Identity перевірка через Strong's overlap (≥2 збіги)
-3. Heuristic fallback ±2 вірші по Strong's overlap
+⛔ **Стара евристична `verse_map` (7 292 рядки, 57% хибних) видалена разом із
+`build_verse_map.py` і `ReaderViewModel.findBestMaculaVerse()`.** Не відроджувати;
+маппінг не виводити наново евристикою.
 
 ---
 
@@ -325,25 +322,13 @@ python3 build_verse_map.py   # standalone скрипт, не чіпає інші
 
 ---
 
-## Схема `verse_map` table
+## Версифікація — `verse_org`
 
-```sql
-CREATE TABLE verse_map (
-    translation  TEXT    NOT NULL,  -- ID перекладу ('KJV', 'RST', 'ASV', ...)
-    book_id      TEXT    NOT NULL,  -- 'PSA', 'ROM', 'SNG', 'ZEC'
-    chapter      INTEGER NOT NULL,
-    trans_verse  INTEGER NOT NULL,  -- номер вірша у перекладі
-    macula_verse INTEGER NOT NULL,  -- відповідний вірш у Macula (word table, MT нумерація)
-    PRIMARY KEY (translation, book_id, chapter, trans_verse)
-);
+Схема, інваріанти й гілки — в `ADR-028` і `docs/original-tab.md`, тут не дублюються.
+Для збірки достатньо трьох фактів: будує `scripts/build_versification.py` (крок 2),
+індекс зворотного хопу створює `rebuild.sh` (крок 3), очікуваний розмір — 155 621 рядок.
 
-CREATE INDEX idx_verse_map ON verse_map(translation, book_id, chapter);
-```
-
-**Ключові принципи:**
-- Зберігаємо **тільки non-identity** рядки (`trans_verse != macula_verse`). Відсутній рядок = identity mapping (вірш однаковий в обох схемах).
-- Таблиця завжди мапить → MT (Macula). Зворотний напрямок (MT → переклад) потребує окремого рядка або reverse lookup.
-- Будується один раз при зміні перекладів. Standalone скрипт: `build_verse_map.py` у корені проекту.
+⛔ Схема `verse_map` була тут до ADR-028 фази 2 і видалена разом із таблицею.
 
 ---
 
@@ -382,15 +367,31 @@ CREATE TABLE word (
     lemma        TEXT,
     strongs_id   TEXT,              -- 'H835', 'G4198'
     morph        TEXT,              -- код морфології Macula
-    gloss        TEXT,              -- контекстуальна глоса з TSV (e.g. "he.walked")
+    gloss        TEXT,              -- TSV `english` — ПО-ТОКЕННА, без крапок ("conceived", "me")
     language     TEXT,              -- 'hbo' (Hebrew) | 'grc' (Greek)
     xlit         TEXT,              -- occurrence-specific xlit з Macula TSV ← для contextSection
-    gloss_macula TEXT,              -- детальніша глоса з XML lowfat
+    gloss_macula TEXT,              -- XML lowfat `gloss` — ФРАЗА РІВНЯ СЛОТА, порізана по
+                                    -- токенах ("she" + "conceived.me"). Не по-морфемна!
     syntax_role  TEXT,              -- синтаксична роль: v=predicate, s=subject, o=object
-    greek        TEXT,              -- LXX грецький еквівалент (поверхнева форма)
-    greek_strong TEXT               -- LXX Strong's G номер (e.g. "G4198")
+    greek        TEXT,              -- LXX грецький еквівалент (поверхнева форма); лише іврит
+    greek_strong TEXT,              -- LXX Strong's G номер (e.g. "G4198"); лише іврит
+    after_char   TEXT,              -- trailing char з Macula XML: маqаф ־, соф пасук ׃
+    lexical_class TEXT,             -- Macula TSV `class`; АВТОРИТЕТНІШЕ за morph для POS
+                                    -- (H835a: morph='Ncmpc' іменник, але class='ij' вигук)
+    slot         INTEGER,           -- Macula !N дослівно. Кілька токенів з однаковим slot =
+                                    -- ОДНЕ display-слово. NULL для греки
+    xlit_slot    TEXT,              -- BibleHub комбінована транслітерація на слот (ADR-020);
+                                    -- лише іврит, лише не-helper токени
+    gloss_display TEXT              -- синтез process_glosses.py ← ЦЕ ВИДНО В UI
 );
 ```
+
+**Одиниця відображення — `slot`, не рядок.** 46.4% івритських слотів багатотокенні, це
+65.2% усіх токенів. Групування живе в `VerseTabContent.displayWords`, головний токен —
+останній не-енклітичний. Деталі: `docs/original-tab.md`.
+
+⚠️ `gloss_display` додається `process_glosses.py` через `ALTER TABLE`, тому в `SCHEMA`
+у `build_db.py` його немає — колонка з'являється після кроку 5.
 
 **Важливо про `word.xlit`:**
 - Occurrence-specific (форма конкретного слова у конкретному вірші)
@@ -406,7 +407,9 @@ import_strongs              ← FK для word table; заповнює short_def
 import_stepbible_lexicons   ← TBESH/TBESG: перезаписує long_def BDB-визначенням,
                                заповнює xlit_simple; exact-ID only (без sub-entry propagation)
 _apply_xlit_fallback        ← xlit_simple для entries без TBESH (з academic transliteration)
-verify_xlit_integrity       ← fail-safe check (auto-null false positives, не abort)
+verify_xlit_integrity       ← auto-null, НЕ abort. ⚠️ docstring і комментар у коді
+                               обіцяють SystemExit — код його не піднімає. Білд цією
+                               перевіркою НЕ захищений (див. docs/original-tab.md)
 import_macula_hebrew        ← заповнює word table з TSV (surface, morph, gloss, xlit)
 enrich_macula_from_xml      ← додає gloss_macula, syntax_role, greek, greek_strong з XML
 import_macula_greek
@@ -419,9 +422,23 @@ import_footnotes
 import_cross_references
 finalize
 
-# ── Окремий крок після build_db.py ──
-build_verse_map.py      ← НЕ вбудований у build_db.py! Запускати вручну:
-                           python3 build_verse_map.py sourcebible.db
-                           Strong's overlap alignment; 7 292 non-identity rows
-                           Псалми (62 розд.), RST SNG/ZEC/ROM — найбільше зсувів
+# ── Окремі кроки після build_db.py — усі в rebuild.sh ──
+build_versification.py  ← verse_org (ADR-028); падає на CONFLICT, set -e аборти до cp
+idx_verse_org_rev       ← індекс зворотного хопу; створює rebuild.sh, НЕ скрипт
+import_commentaries.py  ← commentary, ~36 071 вірші
+process_glosses.py      ← ALTER TABLE + word.gloss_display; без нього крапки в UI
+cp → SourceBible/Resources/sourcebible.db
 ```
+
+---
+
+## Історія розходження (щоб не повторилось)
+
+`rebuild.sh` змінили 2026-07-16 о 12:25 у комміті `86f2a79` «drop verse_map (ADR-028
+phase 2)». Цей документ чіпали того ж дня о 15:10 (`f32a884`) — і та правка додала один
+рядок про ліцензію UBIO, а сім згадок `build_verse_map` лишились жити. Ще 31 комміт по
+репо документ не бачив, хоч `scripts/` за той час змінювали лише двічі.
+
+Висновок, який тут і закріплюється: **процедура належить `rebuild.sh`, а не тексту.**
+Цей файл тримає те, чого немає більше ніде — походження й ліцензії датасетів, схеми,
+і реєстр відомих пасток. Щойно тут знову з'явиться перелік команд — він знову збреше.

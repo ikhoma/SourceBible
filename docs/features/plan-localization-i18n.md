@@ -1,5 +1,7 @@
 # Implementation Plan: UI Localization (i18n)
 
+**Status:** Draft
+
 **Spec:** `specs/localization-spec.md`  
 **Last updated:** 2026-05-23  
 **Estimated total:** ~5–7 days

@@ -1,5 +1,7 @@
 # PDR — Lexicon language: English glosses and definitions for MVP
 
+**Status:** Accepted (2026-07-14)
+
 - **Status:** accepted
 - **Date:** 2026-07-14
 - **Refs:** ADR-006 (localization / TranslationProvider), bug-006, bug-027, bug-005

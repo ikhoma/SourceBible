@@ -18,6 +18,11 @@ import UIKit
 extension NSAttributedString.Key {
     /// Зберігає індекс сегмента у ParsedVerse.segments для reverse lookup при long press
     static let verseSegmentIndex = NSAttributedString.Key("com.sourcebible.segmentIndex")
+    /// Маркер примітки (`[2]`) на глифі † — reverse lookup при тапі по хрестику.
+    /// Раніше ключ створювався рядком інлайн у двох місцях; типізована константа не дає
+    /// їм розійтися одруківкою (атрибут із іншим ім'ям просто не знайдеться, і тап тихо
+    /// відкривав би bottom sheet вірша).
+    static let footnoteMarker = NSAttributedString.Key("com.sourcebible.footnoteMarker")
 }
 
 // MARK: - HighlightableTextView
@@ -76,8 +81,14 @@ struct VerseTextView: UIViewRepresentable {
     var selectedSegment: VerseSegment? = nil
     /// When false, Jesus' words render in the normal label color (red-letter mode off).
     var redLetters: Bool = false
+    /// Примітки перекладача цього вірша: маркер (`[2]`) → текст. Керує ДВОМА речами —
+    /// чи малювати хрестик і чи є що показати по тапу.
+    var footnotes: [String: String] = [:]
     var onVerseTap: () -> Void
     var onWordTap: (VerseSegment) -> Void
+    /// Тап по хрестику: маркер + прямокутник глифа у координатах цього в'ю (для якоря
+    /// поповера). Дефолт — no-op, щоб превʼю й інші виклики не переписувати.
+    var onFootnoteTap: (String, CGRect) -> Void = { _, _ in }
 
     // MARK: UIViewRepresentable
 
@@ -146,9 +157,13 @@ struct VerseTextView: UIViewRepresentable {
         // SwiftUI destroy + recreate every UITextView in the chapter on each toggle
         // (new coordinator, new gesture recognizers, full TextKit layout ×N verses),
         // which froze the reader for ~1s. Updating in place is an order cheaper.
+        // `footnotes` входить у contentChanged, бо від нього залежить сама наявність глифа †
+        // (див. buildBaseAttributedString). Порівнюємо ключі, не тексти: тексти незмінні для
+        // даного вірша, а поява/зникнення маркера — це саме зміна набору ключів.
         let contentChanged = coord.parsed.verseId != parsed.verseId
                           || coord.highlightColor  != highlightColor
                           || coord.redLetters      != redLetters
+                          || coord.footnoteKeys    != Set(footnotes.keys)
         if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
             coord.baseAttributedString = buildBaseAttributedString()
         }
@@ -179,13 +194,16 @@ struct VerseTextView: UIViewRepresentable {
         coord.parsed         = parsed
         coord.highlightColor = highlightColor
         coord.redLetters     = redLetters
+        coord.footnoteKeys   = Set(footnotes.keys)
         coord.onVerseTap     = onVerseTap
         coord.onWordTap      = onWordTap
+        coord.onFootnoteTap  = onFootnoteTap
     }
 
     func makeCoordinator() -> Coordinator {
         let coord = Coordinator(parsed: parsed, highlightColor: highlightColor,
-                                onVerseTap: onVerseTap, onWordTap: onWordTap)
+                                onVerseTap: onVerseTap, onWordTap: onWordTap,
+                                onFootnoteTap: onFootnoteTap)
         coord.redLetters = redLetters
         coord.baseAttributedString = buildBaseAttributedString()
         return coord
@@ -233,12 +251,19 @@ struct VerseTextView: UIViewRepresentable {
             }
 
             if let anchorId = seg.footnoteAnchorId, seg.text.isEmpty {
+                // ⛔ Хрестик малюємо ЛИШЕ якщо для цього маркера є текст примітки.
+                // Заміряно 2026-08-07: у UBIO 92 з 1 329 анкерів (6.9%) не мають рядка в
+                // таблиці `footnote` — до появи тултіпа вони були просто німим знаком, а з
+                // тултіпом стали б натиском у порожнечу. Найгірший різновид афордансу:
+                // обіцяє й не дає. Немає нотатки → немає хрестика.
+                guard footnotes[anchorId] != nil else { continue }
+
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font:            UIFont.preferredFont(forTextStyle: .caption2),
                     .foregroundColor: UIColor.appBlue,
                     .baselineOffset:  NSNumber(value: 5),
                     .verseSegmentIndex: index,
-                    NSAttributedString.Key("footnoteAnchorId"): anchorId
+                    .footnoteMarker:  anchorId
                 ]
                 result.append(NSAttributedString(string: "†", attributes: attrs))
                 continue
@@ -321,8 +346,12 @@ struct VerseTextView: UIViewRepresentable {
         /// Last-rendered red-letter setting; compared in updateUIView to know when the
         /// base attributed string must be rebuilt with/without the Jesus-words colour.
         var redLetters:           Bool = false
+        /// Маркери приміток, з якими побудований поточний рядок — джерело правди про те,
+        /// чи стоїть у тексті глиф † (див. contentChanged в updateUIView).
+        var footnoteKeys:         Set<String> = []
         var onVerseTap:           () -> Void
         var onWordTap:            (VerseSegment) -> Void
+        var onFootnoteTap:        (String, CGRect) -> Void
         /// Cached base string (text + styles + highlight). Rebuilt only when content changes.
         var baseAttributedString: NSAttributedString = NSAttributedString()
 
@@ -347,16 +376,64 @@ struct VerseTextView: UIViewRepresentable {
 
         init(parsed: ParsedVerse, highlightColor: String?,
              onVerseTap: @escaping () -> Void,
-             onWordTap:  @escaping (VerseSegment) -> Void) {
+             onWordTap:  @escaping (VerseSegment) -> Void,
+             onFootnoteTap: @escaping (String, CGRect) -> Void = { _, _ in }) {
             self.parsed         = parsed
             self.highlightColor = highlightColor
             self.onVerseTap     = onVerseTap
             self.onWordTap      = onWordTap
+            self.onFootnoteTap  = onFootnoteTap
         }
 
         @objc func handleTap(_ gr: UITapGestureRecognizer) {
             guard gr.state == .ended else { return }
+
+            // Хрестик перехоплює тап ДО відкриття bottom sheet вірша: інакше примітка
+            // була б недосяжна — вірш займає весь рядок, і будь-який тап діставався б йому.
+            if let tv = gr.view as? UITextView,
+               let (marker, rect) = footnoteHit(in: tv, at: gr.location(in: tv)) {
+                // Хаптика рівня selection (ADR-032): це показ, а не перехід і не запис —
+                // легше за lightTransition, який належить входу в Study Mode й крос-рефам.
+                Haptics.selectionChanged()
+                onFootnoteTap(marker, rect)
+                return
+            }
+
             onVerseTap()
+        }
+
+        /// Маркер примітки під точкою тапу + прямокутник глифа (для якоря поповера).
+        ///
+        /// Глиф † — це один символ у `.caption2`, тобто цільова зона ~8×11 pt, утричі менша
+        /// за мінімальні 44×44 з HIG. Тому шукаємо не лише під пальцем, а й у сусідніх
+        /// позиціях: `closestPosition(to:)` віддає найближчу межу символу, і залежно від
+        /// того, з якого боку торкнулись, це може бути індекс ДО або ПІСЛЯ хрестика.
+        /// Без цього допуску тап «майже точно в хрестик» відкривав би sheet вірша.
+        ///
+        /// Прямокутник беремо з `firstRect(for:)` по діапазону самого глифа — це дає
+        /// поповеру якір на хрестику, а не на всьому вірші.
+        private func footnoteHit(in tv: UITextView, at point: CGPoint) -> (String, CGRect)? {
+            guard let text = tv.attributedText, text.length > 0 else { return nil }
+            let charIdx = charIndex(in: tv, at: point)
+
+            // Порядок кандидатів значущий: точний індекс ПЕРШИЙ, сусідній зліва — лише як
+            // запасний. Так тап просто по хрестику завжди дає свій маркер, а допуск працює
+            // тільки тоді, коли під пальцем маркера немає.
+            // Межа допуску (заміряно 2026-08-08): у корпусі є РІВНО ОДИН вірш із двома
+            // анкерами поспіль (`</f><f>`). Тільки там дотик трохи лівіше другого хрестика
+            // відкриє перший. Ціна помилки — показана сусідня примітка, тож звужувати
+            // допуск заради одного вірша означало б зламати влучання в решті 1 436 анкерів.
+            for candidate in [charIdx, charIdx - 1] where candidate >= 0 && candidate < text.length {
+                guard let marker = text.attribute(.footnoteMarker, at: candidate,
+                                                  effectiveRange: nil) as? String else { continue }
+                let glyphRange = NSRange(location: candidate, length: 1)
+                guard let start = tv.position(from: tv.beginningOfDocument, offset: candidate),
+                      let end   = tv.position(from: tv.beginningOfDocument,
+                                              offset: candidate + glyphRange.length),
+                      let range = tv.textRange(from: start, to: end) else { continue }
+                return (marker, tv.firstRect(for: range))
+            }
+            return nil
         }
 
         @objc func handleLongPress(_ gr: UILongPressGestureRecognizer) {

@@ -1,0 +1,123 @@
+osis	genre	chapter	verse	slot	n_tokens	surface	xlit	strong	morph	gloss_macula	gloss_en	gloss_display	gloss_bsb	head_strong	head_morph	head_lemma	head_pos	freq_slot_ot	tier	uk_ohienko_verse	uk_ohienko_numbering	uk_gromov_verse	uk_gromov_numbering	uk
+1CH	генеалогія	1	1	1	1	אָדָ֥ם	ʾāḏām	0121	Np	Adam	Adam	Adam	Adam	0121	Np	אָדָם	noun	3	mid		direct		direct	
+1CH	генеалогія	1	1	2	1	שֵׁ֖ת	šēṯ	8352	Np	Seth	Seth	Seth	Seth	8352	Np	שֵׁת	noun	6	mid		direct		direct	
+1CH	генеалогія	1	1	3	1	אֱנֽוֹשׁ׃	ʾĕnôš:	0583	Np	Enosh	Enosh	Enosh	Enosh	0583	Np	אֱנוֹשׁ	noun	6	mid		direct		direct	
+1CH	генеалогія	1	2	1	1	קֵינָ֥ן	qênān	7018	Np	Kenan	Kenan	Kenan	Kenan	7018	Np	קֵינָן	noun	5	mid		direct		direct	
+1CH	генеалогія	1	2	2	1	מַהֲלַלְאֵ֖ל	mahălalʾēl	4111	Np	Mahalalel	Mahalalel	Mahalalel	Mahalalel	4111	Np	מַהֲלַלְאֵל	noun	5	mid		direct		direct	
+1CH	генеалогія	1	2	3	1	יָֽרֶד׃	yāreḏ:	3382	Np	Jared	Jared	Jared	Jared	3382	Np	יֶרֶד	noun	6	mid		direct		direct	
+DEU	закон/сповідь	6	4	1	1	שְׁמַ֖ע	šəmaʿ	8085	Vqv2ms	hear	hear	hear	Hear	8085	Vqv2ms	שָׁמַע	verb	35	mid		direct		direct	
+DEU	закон/сповідь	6	4	2	1	יִשְׂרָאֵ֑ל	yiśrāʾēl	3478	Np	O.Israel	Israel	O Israel	O Israel	3478	Np	יִשְׂרָאֵל	noun	41	mid		direct		direct	
+DEU	закон/сповідь	6	4	3	1	יְהוָ֥ה	yəhwāh	3068	Np	Yahweh	Lord	Yahweh	The LORD	3068	Np	יהוה	noun	3197	head		direct		direct	
+DEU	закон/сповідь	6	4	4	2	אֱלֹהֵ֖ינוּ		0430+5105a	Ncmpc·Sp1cp	God.our	God our	God our	our God	0430	Ncmpc	אֱלֹהִים	noun	119	head		direct		direct	
+DEU	закон/сповідь	6	4	6	1	אֶחָֽד׃	ʾeḥāḏ:	0259	Acmsa	[is].one	one	one	is One	0259	Acmsa	אֶחָד	adjective	2	tail		direct		direct	
+DEU	закон/сповідь	6	5	1	2	וְאָ֣הַבְתָּ֔	ʾāhaḇtā	2050b+0157	C·Vqq2ms	and.you.will.love	and love	and will love	And you shall love	0157	Vqq2ms	אָהֵב	verb	4	mid		direct		direct	
+DEU	закон/сповідь	6	5	2	1	אֵ֖ת	ʾēṯ	0853	To	(et)		(et)		0853	To	אֵת	particle	7014	head		direct		direct	
+DEU	закон/сповідь	6	5	4	2	אֱלֹהֶ֑יךָ		0430+3509b	Ncmpc·Sp2ms	God.your	God your	God your	your God	0430	Ncmpc	אֱלֹהִים	noun	304	head		direct		direct	
+DEU	закон/сповідь	6	5	5	2	בְּכָל־	ḵol-	0871a+3605	R·Ncmsc	with.all	with all	with all	with all	3605	Ncmsc	כֹּל	noun	58	head		direct		direct	
+DEU	закон/сповідь	6	5	6	2	לְבָבְךָ֥		3824+3509b	Ncmsc·Sp2ms	heart.your	heart your	heart your	your heart	3824	Ncmsc	לֵבָב	noun	33	mid		direct		direct	
+DEU	закон/сповідь	6	5	7	3	וּבְכָל־	ḵol-	2050b+0871a+3605	C·R·Ncmsc	and.with.all	and with all	and with all	with all	3605	Ncmsc	כֹּל	noun	25	mid		direct		direct	
+DEU	закон/сповідь	6	5	8	2	נַפְשְׁךָ֖		5315+3509b	Ncbsc·Sp2ms	being.your	soul your	being your	your soul	5315	Ncbsc	נֶפֶשׁ	noun	7	mid		direct		direct	
+DEU	закон/сповідь	6	5	10	2	מְאֹדֶֽךָ׃		3966+3509b	Ncmsc·Sp2ms	strength.your	might your	strength your	your strength	3966	Ncmsc	מְאֹד	noun	1	tail		direct		direct	
+DEU	закон/сповідь	6	6	1	2	וְהָי֞וּ	hāyû	2050b+1961	C·Vqq3cp	and.they.will.be	and be	and will be	are to be	1961	Vqq3cp	הָיָה	verb	52	head		direct		direct	
+GEN	наратив	22	1	1	2	וַיְהִ֗י	yəhiy	2050b+1961	C·Vqw3ms	and.it.was	and happened	and was		1961	Vqw3ms	הָיָה	verb	549	head		direct		direct	
+GEN	наратив	22	1	2	1	אַחַר֙	ʾaḥar	0310	R	after	after	after	Some time later	0310	R	אַחַר	preposition	295	head		direct		direct	
+GEN	наратив	22	1	3	2	הַדְּבָרִ֣ים	dəḇāriym	1886a+1697	Td·Ncmpa	the.things	the things	the things	. . .	1697	Ncmpa	דָּבָר	noun	27	mid		direct		direct	
+GEN	наратив	22	1	5	3	וְהָ֣אֱלֹהִ֔ים	ʾĕlōhiym	2050b+1886a+0430	C·Td·Ncmpa	and.(the).God	that the God	and (the) God	God	0430	Ncmpa	אֱלֹהִים	noun	7	mid		direct		direct	
+GEN	наратив	22	1	6	1	נִסָּ֖ה	nissāh	5254	Vpp3ms	he.put.to.the.test	tested	put to the test	tested	5254	Vpp3ms	נָסָה	verb	1	tail		direct		direct	
+GEN	наратив	22	1	8	1	אַבְרָהָ֑ם	ʾaḇrāhām	0085	Np	Abraham	Abraham	Abraham	Abraham	0085	Np	אַבְרָהָם	noun	97	head		direct		direct	
+GEN	наратив	22	1	9	2	וַיֹּ֣אמֶר	yyōʾmer	2050b+0559	C·Vqw3ms	and.he.said	and said	and said	and said	0559	Vqw3ms	אָמַר	verb	2021	head		direct		direct	
+GEN	наратив	22	1	10	2	אֵלָ֔יו		0413+2050c	R·Sp3ms	to.him	to him	to him	to him	0413	R	אֶל	preposition	379	head		direct		direct	
+GEN	наратив	22	1	11	1	אַבְרָהָ֖ם	ʾaḇrāhām	0085	Np	O.Abraham	Abraham	O Abraham	Abraham	0085	Np	אַבְרָהָם	noun	2	tail		direct		direct	
+GEN	наратив	22	1	13	2	הִנֵּֽנִי׃		2009+2967a	Tm·Sp1cs	here.I.[am]	here I	here	Here I am	2009	Tm	הִנֵּה	particle	26	mid		direct		direct	
+GEN	наратив	22	2	2	1	קַח־	qaḥ-	3947	Vqv2ms	take	take	take	Take	3947	Vqv2ms	לָקַח	verb	55	head		direct		direct	
+GEN	наратив	22	2	5	2	בִּנְךָ֨		1121+3509b	Ncmsc·Sp2ms	son.your	son your	son your	your son	1121	Ncmsc	בֵּן	noun	23	mid		direct		direct	
+GEN	наратив	22	2	7	2	יְחִֽידְךָ֤		3173+3509b	Aamsc·Sp2ms	your.only.[son]	only your	your only	your only	3173	Aamsc	יָחִיד	adjective	3	mid		direct		direct	
+GEN	наратив	22	2	9	1	אָהַ֨בְתָּ֙	ʾāhaḇətā	0157	Vqp2ms	you.love	love	love	you love	0157	Vqp2ms	אָהֵב	verb	4	mid		direct		direct	
+GEN	наратив	22	2	16	2	הַמֹּרִיָּ֑ה	mmōriyyāh	1886a+4179	Td·Np	of.(the).Moriah	the Moriah	of (the) Moriah	of Moriah	4179	Np	מֹרִיָּה	noun	2	tail		direct		direct	
+GEN	наратив	22	2	17	3	וְהַעֲלֵ֤הוּ		2050b+5927+1930a	C·Vhv2ms·Sp3ms	and.offer.him.up	and offer him	and offer him up	Offer him	5927	Vhv2ms	עָלָה	verb	1	tail		direct		direct	
+GEN	наратив	22	2	24	1	אֹמַ֥ר	ʾōmar	0559	Vqi1cs	I.will.tell	tell	will tell	[God] said	0559	Vqi1cs	אָמַר	verb	2	tail		direct		direct	
+GEN	наратив	22	3	15	2	וַיְבַקַּע֙	yəḇaqqaʿ	2050b+1234	C·Vpw3ms	and.he.cut	and cut	and cut	He split	1234	Vpw3ms	בָּקַע	verb	1	tail		direct		direct	
+ISA	пророцтво	53	4	1	1	אָכֵ֤ן	ʾāḵēn	0403	D	nevertheless	surely	nevertheless	Surely	0403	D	אָכֵן	adverb	8	mid		direct		direct	
+ISA	пророцтво	53	4	2	2	חֳלָיֵ֨נוּ֙		2483+5105a	Ncmpc·Sp1cp	sicknesses.our	sicknesses our	sicknesses our	our infirmities	2483	Ncmpc	חֳלִי	noun	1	tail		direct		direct	
+ISA	пророцтво	53	4	3	1	ה֣וּא	hûʾ	1931	Pp3ms	he	he	he	He	1931	Pp3ms	הוּא	pronoun	523	head		direct		direct	
+ISA	пророцтво	53	4	4	1	נָשָׂ֔א	nāśāʾ	5375	Vqp3ms	he.bore	bore	bore	took up	5375	Vqp3ms	נָשָׂא	verb	2	tail		direct		direct	
+ISA	пророцтво	53	4	5	3	וּמַכְאֹבֵ֖ינוּ		2050b+4341+5105a	C·Ncmpc·Sp1cp	and.pains.our	and sorrows our	and pains our	our sorrows	4341	Ncmpc	מַכְאוֹב	noun	1	tail		direct		direct	
+ISA	пророцтво	53	4	6	2	סְבָלָ֑ם		5445+3963a	Vqp3ms·Sp3mp	he.carried.them	carried them	he carried them	and carried	5445	Vqp3ms	סָבַל	verb	1	tail		direct		direct	
+ISA	пророцтво	53	4	7	2	וַאֲנַ֣חְנוּ	ʾănaḥənû	2050b+0587	C·Pp1cp	and.we	yet we	and we	yet we	0587	Pp1cp	אֲנַחְנוּ	pronoun	31	mid		direct		direct	
+ISA	пророцтво	53	4	8	2	חֲשַׁבְנֻ֔הוּ		2803+1930a	Vqp1cp·Sp3ms	we.considered.him	esteemed him	we considered him	considered Him	2803	Vqp1cp	חָשַׁב	verb	1	tail		direct		direct	
+ISA	пророцтво	53	4	9	1	נָג֛וּעַ	nāḡûᵃʿ	5060	Vqsmsa	stricken	stricken	stricken	stricken	5060	Vqsmsa	נָגַע	verb	2	tail		direct		direct	
+ISA	пророцтво	53	4	11	1	אֱלֹהִ֖ים	ʾĕlōhiym	0430	Ncmpa	of.God	God	of God	by God	0430	Ncmpa	אֱלֹהִים	noun	120	head		direct		direct	
+ISA	пророцтво	53	5	1	2	וְהוּא֙	hûʾ	2050b+1931	C·Pp3ms	and.he	but he	and he	But He	1931	Pp3ms	הוּא	pronoun	192	head		direct		direct	
+ISA	пророцтво	53	5	8	2	עָלָ֔יו		5921+2050c	R·Sp3ms	[was].on.him	upon him	on him	was upon Him	5921	R	עַל	preposition	5	mid		direct		direct	
+ISA	пророцтво	53	5	11	2	לָֽנוּ׃		3807a+5105a	R·Sp1cp	to.us	to we	to us		3807a	R	לְ	preposition	121	head		direct		direct	
+ISA	пророцтво	53	6	1	2	כֻּלָּ֨נוּ֙		3605+5105a	Ncmsc·Sp1cp	of.us.all	all we	of us all	We all	3605	Ncmsc	כֹּל	noun	12	mid		direct		direct	
+ISA	пророцтво	53	6	2	3	כַּצֹּ֣אן	ṣṣōʾn	3509a+1886a+6629	Rd·Td·Ncbsa	like.(the).sheep	like the sheep	like (the) sheep	like sheep	6629	Ncbsa	צֹאן	noun	4	mid		direct		direct	
+ISA	пророцтво	53	6	4	1	אִ֥ישׁ	ʾiyš	0376	Ncmsa	each	each	each	each one	0376	Ncmsa	אִישׁ	noun	134	head		direct		direct	
+ISA	пророцтво	53	6	7	2	וַֽיהוָה֙	yhwāh	2050b+3068	C·Np	and.Yahweh	and LORD	and Yahweh	and the LORD	3068	Np	יהוה	noun	98	head		direct		direct	
+ISA	пророцтво	53	6	11	1	עֲוֺ֥ן	ʿăwōn	5771	Ncbsc	the.iniquity	iniquity	the iniquity	the iniquity	5771	Ncbsc	עָוֺן	noun	24	mid		direct		direct	
+JON	наратив+діалог	1	1	1	2	וַֽיְהִי֙	yəhî	2050b+1961	C·Vqw3ms	and.it.came	now came	and came	came	1961	Vqw3ms	הָיָה	verb	90	head		direct		direct	
+JON	наратив+діалог	1	1	2	1	דְּבַר־	dəḇar-	1697	Ncmsc	the.word	word	the word	Now the word	1697	Ncmsc	דָּבָר	noun	205	head		direct		direct	
+JON	наратив+діалог	1	1	3	1	יְהוָ֔ה	yəhwāh	3068	Np	of.Yahweh	LORD	of Yahweh	of the LORD	3068	Np	יהוה	noun	1911	head		direct		direct	
+JON	наратив+діалог	1	1	5	1	יוֹנָ֥ה	yônāh	3124	Np	Jonah	Jonah	Jonah	Jonah	3124	Np	יוֹנָה	noun	16	mid		direct		direct	
+JON	наратив+діалог	1	1	6	1	בֶן־	ḇen-	1121	Ncmsc	the.son	son	the son	son	1121	Ncmsc	בֵּן	noun	1210	head		direct		direct	
+JON	наратив+діалог	1	1	7	1	אֲמִתַּ֖י	ʾămittay	0573	Np	of.Amittai	Amittai	of Amittai	of Amittai	0573	Np	אֲמִתַּי	noun	2	tail		direct		direct	
+JON	наратив+діалог	1	1	8	1	לֵ	lē	3807a	R	(cmp)	to	(cmp)		3807a	R	לְ	preposition	926	head		direct		direct	
+JON	наратив+діалог	1	2	1	1	ק֠וּם	qûm	6965	Vqv2ms	arise	get up	arise	Get up	6965	Vqv2ms	קוּם	verb	53	head		direct		direct	
+JON	наратив+діалог	1	2	4	1	נִֽינְוֵ֛ה	niynəwēh	5210	Np	Nineveh	Nineveh	Nineveh	of Nineveh	5210	Np	נִינְוֵה	noun	8	mid		direct		direct	
+JON	наратив+діалог	1	2	6	2	הַגְּדוֹלָ֖ה	gəḏôlāh	1886a+1419	Td·Aafsa	(the).great	the great	(the) great	the great	1419	Aafsa	גָּדוֹל	adjective	29	mid		direct		direct	
+JON	наратив+діалог	1	2	7	2	וּקְרָ֣א	qərāʾ	2050b+7121	C·Vqv2ms	and.call.out	and cry out	and call out	and preach	7121	Vqv2ms	קָרָא	verb	2	tail		direct		direct	
+JON	наратив+діалог	1	2	10	1	עָלְתָ֥ה	ʿāləṯāh	5927	Vqp3fs	it.has.come.up	come up	has come up	has come up	5927	Vqp3fs	עָלָה	verb	1	tail		direct		direct	
+JON	наратив+діалог	1	2	11	2	רָעָתָ֖ם		7451b+3963a	Ncfsc·Sp3mp	wickedness.their	wickedness their	wickedness their	its wickedness	7451b	Ncfsc	רָעָה	noun	7	mid		direct		direct	
+JON	наратив+діалог	1	3	3	2	לִבְרֹ֣חַ	ḇərōᵃḥ	3807a+1272	R·Vqc	to.flee	to flee	to flee	to flee	1272	Vqc	בָּרַח	verb	3	mid		direct		direct	
+JON	наратив+діалог	1	3	4	2	תַּרְשִׁ֔ישָׁה		8659+1886c	Np·Sd	to.Tarshish	Tarshish to	to Tarshish	to Tarshish	8659	Np	תַּרְשִׁישׁ	noun	4	mid		direct		direct	
+JON	наратив+діалог	1	3	10	1	אָנִיָּ֣ה׀	ʾāniyyāh	0591	Ncfsa	a.ship	ship	a ship	a ship	0591	Ncfsa	אֳנִיָּה	noun	1	tail		direct		direct	
+JON	наратив+діалог	1	3	11	1	בָּאָ֣ה	bāʾāh	0935	Vqrfsa	[which.was].about.to.go	going	about to go	bound	0935	Vqrfsa	בּוֹא	verb	1	tail		direct		direct	
+JON	наратив+діалог	1	3	14	2	שְׂכָרָ֜הּ		7939+1886d	Ncmsc·Sp3fs	fare.its	fare his	fare its	the fare	7939	Ncmsc	שָׂכָר	noun	1	tail		direct		direct	
+LEV	закон	19	17	1	1	לֹֽא־	lōʾ-	3808	Tn	not	not	not	You must not	3808	Tn	לֹא	particle	3138	head		direct		direct	
+LEV	закон	19	17	2	1	תִשְׂנָ֥א	ṯiśnāʾ	8130	Vqi2ms	you.will.hate	hate	will hate	harbor hatred	8130	Vqi2ms	שָׂנֵא	verb	1	tail		direct		direct	
+LEV	закон	19	17	4	2	אָחִ֖יךָ		0251+3509b	Ncmsc·Sp2ms	brother.your	brother your	brother your	against your brother	0251	Ncmsc	אָח	noun	30	mid		direct		direct	
+LEV	закон	19	17	5	3	בִּלְבָבֶ֑ךָ		0871a+3824+3509b	R·Ncmsc·Sp2ms	in.heart.your	in heart your	in heart your	in your heart	3824	Ncmsc	לֵבָב	noun	10	mid		direct		direct	
+LEV	закон	19	17	6	1	הוֹכֵ֤חַ	hôḵēᵃḥ	3198	Vha	surely.(rebuke)	to rebuke	surely (rebuke)	Directly rebuke	3198	Vha	יָכַח	verb	2	tail		direct		direct	
+LEV	закон	19	17	7	1	תּוֹכִ֨יחַ֙	tôḵiyḥa	3198	Vhi2ms	you.will.rebuke	reprove	will rebuke	Directly rebuke	3198	Vhi2ms	יָכַח	verb	1	tail		direct		direct	
+LEV	закон	19	17	9	2	עֲמִיתֶ֔ךָ		5997+3509b	Ncmsc·Sp2ms	citizen.your.fellow	neighbor your	citizen your fellow	your neighbor	5997	Ncmsc	עָמִית	noun	3	mid		direct		direct	
+LEV	закон	19	17	10	2	וְלֹא־	lōʾ-	2050b+3808	C·Tn	and.not	so not	and not	You must not	3808	Tn	לֹא	particle	1582	head		direct		direct	
+LEV	закон	19	17	11	1	תִשָּׂ֥א	ṯiśśāʾ	5375	Vqi2ms	you.will.bear	incur	will bear	incur	5375	Vqi2ms	נָשָׂא	verb	2	tail		direct		direct	
+LEV	закон	19	17	12	2	עָלָ֖יו		5921+2050c	R·Sp3ms	on.him	because of him	on him	on account of him	5921	R	עַל	preposition	163	head		direct		direct	
+LEV	закон	19	17	13	1	חֵֽטְא׃	ḥēṭəʾ:	2399	Ncmsa	sin	guilt	sin	guilt	2399	Ncmsa	חֵטְא	noun	11	mid		direct		direct	
+LEV	закон	19	18	2	1	תִקֹּ֤ם	ṯiqqōm	5358	Vqi2ms	you.will.avenge.yourself	take vengeance	will avenge yourself	seek revenge	5358	Vqi2ms	נָקַם	verb	1	tail		direct		direct	
+LEV	закон	19	18	4	1	תִטֹּר֙	ṯiṭṭōr	5201	Vqi2ms	you.will.keep	bear a grudge	will keep	or bear a grudge	5201	Vqi2ms	נָטַר	verb	1	tail		direct		direct	
+LEV	закон	19	18	6	1	בְּנֵ֣י	bənēy	1121	Ncmpc	the.sons	sons	the sons	against any	1121	Ncmpc	בֵּן	noun	227	head		direct		direct	
+LEV	закон	19	18	7	2	עַמֶּ֔ךָ		5971+3509b	Ncmsc·Sp2ms	your.people.your	people your	your people your	of your people	5971	Ncmsc	עַם	noun	20	mid		direct		direct	
+LEV	закон	19	18	10	2	כָּמ֑וֹךָ		3644+3509b	R·Sp2ms	like.yourself	as yourself	like yourself	as yourself	3644	R	כְּמוֹ	preposition	3	mid		direct		direct	
+LEV	закон	19	18	11	1	אֲנִ֖י	ʾăniy	0589	Pp1cs	I	I	I	I	0589	Pp1cs	אֲנִי	pronoun	642	head		direct		direct	
+LEV	закон	19	18	12	1	יְהוָֽה׃	yəhwāh:	3068	Np	[am].Yahweh	LORD	Yahweh	am the LORD	3068	Np	יהוה	noun	162	head		direct		direct	
+PRO	мудрість	3	5	1	1	בְּטַ֣ח	bəṭaḥ	0982	Vqv2ms	trust	trust	trust	Trust	0982	Vqv2ms	בָּטַח	verb	3	mid		direct		direct	
+PRO	мудрість	3	5	5	2	לִבֶּ֑ךָ		3820+3509b	Ncmsc·Sp2ms	heart.your	heart your	heart your	your heart	3820	Ncmsc	לֵב	noun	39	mid		direct		direct	
+PRO	мудрість	3	5	6	2	וְאֶל־	ʾel-	2050b+0413	C·R	and.to	and on	and to	in	0413	R	אֶל	preposition	270	head		direct		direct	
+PRO	мудрість	3	5	7	2	בִּֽ֝ינָתְךָ֗		0998+3509b	Ncfsc·Sp2ms	understanding.your.own	understanding your own	understanding your own	your own understanding	0998	Ncfsc	בִּינָה	noun	1	tail		direct		direct	
+PRO	мудрість	3	5	8	1	אַל־	ʾal-	0408	Tn	do.not	not	do not	not	0408	Tn	אַל	particle	427	head		direct		direct	
+PRO	мудрість	3	5	9	1	תִּשָּׁעֵֽן׃	tiššāʿēn:	8172	VNj2ms	depend	lean	depend	and lean	8172	VNj2ms	שָׁעַן	verb	1	tail		direct		direct	
+PRO	мудрість	3	6	1	2	בְּכָל־	ḵol-	0871a+3605	R·Ncmsc	in.all	in all	in all	in all	3605	Ncmsc	כֹּל	noun	183	head		direct		direct	
+PRO	мудрість	3	6	2	2	דְּרָכֶ֥יךָ		1870+3509b	Ncbpc·Sp2ms	ways.your	ways your	ways your	your ways	1870	Ncbpc	דֶּרֶךְ	noun	10	mid		direct		direct	
+PRO	мудрість	3	6	3	2	דָעֵ֑הוּ		3045+1930a	Vqv2ms·Sp3ms	acknowledge.him	acknowledge him	acknowledge him	acknowledge Him	3045	Vqv2ms	יָדַע	verb	1	tail		direct		direct	
+PRO	мудрість	3	6	5	1	יְיַשֵּׁ֥ר	yəyaššēr	3474	Vpi3ms	he.will.make.straight	make ~ straight	will make straight	will make	3474	Vpi3ms	יָשַׁר	verb	1	tail		direct		direct	
+PRO	мудрість	3	6	6	2	אֹֽרְחֹתֶֽיךָ׃		0734+3509b	Ncbpc·Sp2ms	paths.your	paths your	paths your	your paths {straight}	0734	Ncbpc	אֹרַח	noun	3	mid		direct		direct	
+PRO	мудрість	3	7	2	1	תְּהִ֣י	təhiy	1961	Vqj2ms	be	be	be	Be	1961	Vqj2ms	הָיָה	verb	7	mid		direct		direct	
+PRO	мудрість	3	7	3	1	חָכָ֣ם	ḥāḵām	2450	Aamsa	wise	wise	wise	wise	2450	Aamsa	חָכָם	adjective	22	mid		direct		direct	
+PRO	мудрість	3	7	4	3	בְּעֵינֶ֑יךָ		0871a+5869+3509b	R·Ncbdc·Sp2ms	in.your.own.eyes	in eyes your own	in your own eyes	in your own eyes	5869	Ncbdc	עַיִן	noun	2	tail		direct		direct	
+PRO	мудрість	3	7	8	2	וְס֣וּר	sûr	2050b+5493	C·Vqv2ms	and.turn.aside	and turn away	and turn aside	and turn away	5493	Vqv2ms	סוּר	verb	1	tail		direct		direct	
+PSA	поезія	23	1	1	1	מִזְמ֥וֹר	mizmôr	4210	Ncmsa	a.psalm	psalm	a psalm	A Psalm	4210	Ncmsa	מִזְמוֹר	noun	57	head		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	1	2	2	לְדָוִ֑ד	ḏāwiḏ	3807a+1732	R·Np	of.David	of David	of David	of David	1732	Np	דָּוִד	noun	80	head		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	1	4	2	רֹ֝עִ֗י		7473+2967a	Vqrmsc·Sp1cs	[is].my.shepherd	shepherd my	my shepherd		7473	Vqrmsc	רָעָה	verb	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	1	6	1	אֶחְסָֽר׃	ʾeḥsār:	2637	Vqi1cs	I.lack	want	lack	want	2637	Vqi1cs	חָסֵר	verb	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	1	2	בִּנְא֣וֹת	nəʾôṯ	0871a+4999	R·Ncfpc	in.pastures	in pastures	in pastures	pastures	4999	Ncfpc	נָוָה	noun	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	2	1	דֶּ֭שֶׁא	dešeʾ	1877	Ncmsa	of.fresh.grass	green	of fresh grass	in green	1877	Ncmsa	דֶּשֶׁא	noun	5	mid		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	3	2	יַרְבִּיצֵ֑נִי		7257+5204a	Vhi3ms·Sp1cs	he.makes.me.lie.down	lie down me	he makes me lie down	He makes me lie down	7257	Vhi3ms	רָבַץ	verb	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	4	1	עַל־	ʿal-	5921	R	at	beside	at	beside	5921	R	עַל	preposition	130	head		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	5	1	מֵ֖י	mēy	4325	Ncmpc	waters	waters	waters	waters	4325	Ncmpc	מַיִם	noun	4	mid		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	6	1	מְנֻח֣וֹת	mənuḥôṯ	4496	Ncbpa	of.rest(s)	quiet	of rest(s)	quiet	4496	Ncbpa	מְנוּחָה	noun	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	2	7	2	יְנַהֲלֵֽנִי׃		5095+5204a	Vpi3ms·Sp1cs	he.leads.me	leads me	he leads me	He leads me	5095	Vpi3ms	נָהַל	verb	1	tail		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	3	1	2	נַפְשִׁ֥י		5315+2967a	Ncbsc·Sp1cs	self.my	soul my	self my	my soul	5315	Ncbsc	נֶפֶשׁ	noun	70	head		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	3	5	1	צֶ֝֗דֶק	ṣeḏeq	6664	Ncmsa	of.righteousness	righteousness	of righteousness	of righteousness	6664	Ncmsa	צֶדֶק	noun	21	mid		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	3	6	1	לְמַ֣עַן	ləmaʿan	4616	R	for.the.sake.of	for ~ sake	for the sake of	for the sake	4616	R	לְמַעַן	preposition	34	mid		synodal(23→22)		synodal(23→22)	
+PSA	поезія	23	3	7	2	שְׁמֽוֹ׃		8034+2050c	Ncmsc·Sp3ms	name.his	name’s his	name his	of His name	8034	Ncmsc	שֵׁם	noun	120	head		synodal(23→22)		synodal(23→22)	

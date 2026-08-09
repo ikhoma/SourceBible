@@ -122,7 +122,7 @@ Refs stored in **canonical/English numbering**, resolved to the user's translati
 
 Bundled resource `Resources/notification_verses.json`. Teasers are **our original UX copy**, not verbatim translation quotes. Schema per verse: `id, ref, tag, strongs_id?, tool, teaser{en,uk}`.
 
-> **Note (2026-07-31):** this is now a **design choice, not a licensing constraint.** The UK licence blocker is gone — Ohienko (UBIO) is CC BY-SA by direct УБТ/UBS grant (ADR-029, unblocked 2026-07-31), and UBIO already ships in core `sourcebible.db`. Verbatim UK verse quoting in teasers is therefore **available** if we want it. Keeping teasers as original invitational copy stays defensible on brand grounds — a teaser should invite into the tool, not substitute for opening the verse — but that is now Ivan's product call, not something forced by legal. If we do quote verbatim, CC BY-SA attribution is already satisfied by the Menu → About licence list.
+> **Note (2026-07-31):** this is now a **design choice, not a licensing constraint.** The UK licence blocker is gone — Ohienko (UBIO) is CC BY-SA 3.0 by direct УБТ/UBS grant (ADR-029, unblocked 2026-07-31), and UBIO already ships in core `sourcebible.db`. Verbatim UK verse quoting in teasers is therefore **available** if we want it. Keeping teasers as original invitational copy stays defensible on brand grounds — a teaser should invite into the tool, not substitute for opening the verse — but that is now Ivan's product call, not something forced by legal. If we do quote verbatim, CC BY-SA 3.0 attribution is already satisfied by the Menu → About licence list.
 
 ### 8.1 `deep_dive` (≈8 — premium, front-loaded)
 
@@ -202,7 +202,7 @@ tap → NotificationDelegate.didReceive(userInfo)
 
 ## 14. Open Questions
 
-- ~~**UK verse text licence (blocking for any verbatim UK quote).**~~ **RESOLVED 2026-07-31.** Ohienko (UBIO) is licensed CC BY-SA by direct grant from УБТ/UBS covering pre-1991 editions, incl. the 1988 edition we bundle (ADR-029 unblocked; attribution added to Menu → About). Nothing in this spec is legally gated any more. What remains is a product question, not a legal one: **do UK `encourage` teasers stay original invitational copy, or quote UBIO verbatim?** Spec currently assumes original copy (§8). *(Owner: Ivan — product call.)*
+- ~~**UK verse text licence (blocking for any verbatim UK quote).**~~ **RESOLVED 2026-07-31.** Ohienko (UBIO) is licensed CC BY-SA 3.0 by direct grant from УБТ/UBS covering pre-1991 editions, incl. the 1988 edition we bundle (ADR-029 unblocked; attribution added to Menu → About). Nothing in this spec is legally gated any more. What remains is a product question, not a legal one: **do UK `encourage` teasers stay original invitational copy, or quote UBIO verbatim?** Spec currently assumes original copy (§8). *(Owner: Ivan — product call.)*
 - **First "study moment" definition for the soft-ask** — first word-study open only, or any of original/lexicon/commentary/cross-ref? Ties to ADR-022 `recordFeatureUse`. *(Owner: Ivan / eng.)*
 - **Default cadence value** for month-1 vs steady-state given the 8+14 seed. *(Owner: data, tune post-launch.)*
 - **Holdout size** for causal retention read without starving the treatment. *(Owner: data.)*

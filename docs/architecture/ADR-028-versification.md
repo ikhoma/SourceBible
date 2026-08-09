@@ -1,7 +1,13 @@
 # ADR-028: Версифікація — курований довідник замість евристики
 
-**Status:** Proposed
+**Status:** Accepted — фаза 1 і фаза 2 реалізовані (статус виправлено 2026-08-07 lint-ом)
 **Date:** 2026-07-14
+**Реалізація (заміряно в базі 2026-08-07):** `verse_org` = **155 621 рядок** (рівно очікуване),
+таблиці `verse_map` у базі **немає**, `findBestMaculaVerse` у коді **немає**.
+Фаза 2 (крос-рефи + конкорданс через reverse-хоп) виконана — див.
+`docs/features/fable-brief-crossref-verse_org.md`.
+⛔ Цей ADR стояв «Proposed», тоді як на ньому трималася вся версифікація застосунку —
+найдорожча брехня статусу з знайдених; звідси `scripts/lint_docs.py`.
 **Deciders:** Ivan
 **Supersedes:** `build_verse_map.py` / `align_chapter()`, таблицю `verse_map`, `ReaderViewModel.findBestMaculaVerse()`
 **Пов'язані:** ADR-016 (Original pill), ADR-020 (Hebrew translit validation), `docs/db_build.md` (розділ verse_map)

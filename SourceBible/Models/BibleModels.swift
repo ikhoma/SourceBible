@@ -45,6 +45,13 @@ struct BibleVerse: Identifiable {
     /// Stored as a String to avoid a circular import; resolve via HighlightColor.from(_:).
     var highlightColor: String? = nil
     var parsed: ParsedVerse? = nil  // nil тільки для sample data без парсингу
+    /// Примітки перекладача для цього вірша: маркер (`[2]`) → готовий до показу текст.
+    /// Заповнює `DatabaseService.loadChapter` із таблиці `footnote` (UBIO/RST).
+    ///
+    /// Порожній словник — нормальний стан: у KJV/ASV/NASB цих приміток немає взагалі, а
+    /// в UBIO 6.9% анкерів (92 з 1 329) не мають рядка в `footnote`. Рідер малює хрестик
+    /// ЛИШЕ там, де запис є (`VerseTextView`), інакше тап відкривав би порожнечу.
+    var footnotes: [String: String] = [:]
 }
 
 // Manual Hashable — exclude `parsed` and `words` (expensive, not needed for equality)

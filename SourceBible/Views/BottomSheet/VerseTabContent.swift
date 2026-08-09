@@ -328,12 +328,19 @@ struct OriginalWordsView: View {
                 lexicalClass: root.lexicalClass,
                 slot: root.slot,
                 // NB: xlit_slot is a SLOT-level value (the combined translit of the whole
-                // word, e.g. "lā-’ō-wr"), so read it from whichever token in the slot carries
-                // it — NOT from the head. build_db.py currently writes it onto the token IT
-                // considers the root, which is the leading preposition (same stale rule this
-                // view just stopped using). Reading `root.xlitSlot` would therefore find nil
-                // on the noun and silently downgrade the display to the bare token xlit
-                // ("’ō-wr"). Once build_db.py adopts headToken's rule this still holds.
+                // word, e.g. "lā-’ō-wr"), so any token in the slot that carries it carries
+                // the same string. `_apply_bh_hebrew_translit` in build_db.py writes it to
+                // EVERY non-helper token of the slot and skips helper morphemes (H871a,
+                // H2050b, …) so those keep their own short xlit. compactMap therefore drops
+                // the helper nils and .first lands on a real value.
+                //
+                // Corrected 2026-08-05: this comment used to claim build_db.py wrote
+                // xlit_slot onto "the token it considers the root, which is the leading
+                // preposition", and that `root.xlitSlot` would find nil. That was never what
+                // the code did. Verified against the 24-verse pilot sample: 0 of 259 slots
+                // have a helper as head, and 0 slots are all-helper, so `root.xlitSlot` and
+                // `.first` cannot disagree here. `.first` is kept because it stays correct
+                // if the helper set ever changes; it is not a workaround.
                 xlitSlot: tokens.compactMap(\.xlitSlot).first
             )
         }

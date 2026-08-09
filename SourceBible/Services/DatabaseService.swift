@@ -161,6 +161,10 @@ final class DatabaseService: @unchecked Sendable {
             WHERE translation = ? AND book_id = ? AND chapter = ?
             ORDER BY verse
             """
+        // One extra query for the whole chapter (see loadFootnotes) — cheap, and it means a
+        // tap on a † never hits the DB while the reader is scrolling.
+        let footnotes = loadFootnotes(bookId: bookId, chapter: chapter, translation: translation)
+
         query(sql, bindings: [translation, bookId, chapter]) { stmt in
             let verseNum = Int(sqlite3_column_int(stmt, 0))
             let rawText  = string(stmt, 1)
@@ -168,19 +172,70 @@ final class DatabaseService: @unchecked Sendable {
             let parsed   = VerseParser.parse(verseId: id, rawText: rawText)
             verses.append(BibleVerse(id: id, bookId: bookId, chapter: chapter,
                                      number: verseNum, text: parsed.plainText,
-                                     words: [], parsed: parsed))
+                                     words: [], parsed: parsed,
+                                     footnotes: footnotes[id] ?? [:]))
         }
         return verses
     }
 
-    /// Load the text of a single verse (for parallel translations tab).
+    /// Translator footnotes for a whole chapter: verseId → (marker → plain text).
+    ///
+    /// One query per chapter, not per verse: the notes are sparse (UBIO has 1 329 anchors in
+    /// the entire Bible, RST 100) and a chapter's worth is a handful of short rows — median
+    /// note length is 42 characters. Loading them with the chapter means tapping a † never
+    /// touches the DB.
+    ///
+    /// `marker` matches the `<f>…</f>` anchor text in `verse.text` verbatim (`[2]`), which is
+    /// what `VerseParser` stores as `VerseSegment.footnoteAnchorId`.
+    ///
+    /// Only UBIO and RST carry these. KJV's `<n>…</n>` notes are a DIFFERENT mechanism —
+    /// inline in the verse text, no anchor, parsed into `ParsedVerse.footnotes` — and are not
+    /// in this table.
+    func loadFootnotes(bookId: String, chapter: Int,
+                       translation: String) -> [String: [String: String]] {
+        guard isAvailable else { return [:] }
+        var result: [String: [String: String]] = [:]
+        // Ключ — `(chapter_from, verse_from)`, і це не спрощення, а вимір (2026-08-08):
+        // із 1 312 приміток 69 охоплюють кілька віршів і 3 — кілька глав, але **в усіх 72
+        // анкер `<f>` стоїть саме у verse_from**. Тобто діапазон описує, скільки тексту
+        // примітка пояснює, а не де вона причеплена.
+        // ⛔ Не «виправляти» на пошук за діапазоном: це причепило б одну примітку до всіх
+        // віршів проміжку, і хрестик з'явився б там, де в тексті анкера немає.
+        let sql = """
+            SELECT verse_from, marker, text FROM footnote
+            WHERE translation = ? AND book_id = ? AND chapter_from = ?
+            """
+        query(sql, bindings: [translation, bookId, chapter]) { stmt in
+            let verseNum = Int(sqlite3_column_int(stmt, 0))
+            let marker   = string(stmt, 1)
+            let text     = string(stmt, 2).strippingFootnoteHTML()
+            guard !marker.isEmpty, !text.isEmpty else { return }
+            result["\(bookId)|\(chapter)|\(verseNum)", default: [:]][marker] = text
+        }
+        return result
+    }
+
+    /// Плоский текст одного вірша для показу — паралельні переклади й картки закладок.
+    ///
+    /// Читає `text_clean`, а не `text` + зняття розмітки в рантаймі (ADR-034).
+    ///
+    /// ⛔ Тут до 2026-08-08 лишався `VerseParser.stripTags(text)` — останній рантайм-стрипер
+    /// у кодовій базі. Він не був битим (`VerseParser` завжди був правильний), але робив
+    /// інваріант ADR-034 неправдою і давав видиму розбіжність: парсер навмисно показує †
+    /// на місці `<f>`, а колонка його викидає, тож ОДИН І ТОЙ САМИЙ вірш мав хрестик у
+    /// паралельних і не мав у крос-рефах. Тепер усі поверхні плоского тексту читають одну
+    /// колонку.
+    ///
+    /// `COALESCE` не потрібен: колонка `NOT NULL` (`build_db.py`, схема `verse`).
     func loadVerseText(bookId: String, chapter: Int, verse: Int, translation: String) -> String? {
         guard isAvailable else { return nil }
         var result: String?
-        let sql = "SELECT text FROM verse WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?"
+        let sql = """
+            SELECT text_clean FROM verse
+            WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
+            """
         query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
-            let rawText = string(stmt, 0)
-            result = VerseParser.stripTags(rawText)
+            result = string(stmt, 0)
         }
         return result
     }
@@ -370,12 +425,19 @@ final class DatabaseService: @unchecked Sendable {
     }
 
     // MARK: - Bible Text Markup Cleaner
-
-    /// Thin wrapper kept for call-site backward compatibility.
-    /// Canonical logic lives in String+BibleMarkup.swift → String.strippingBibleMarkup().
-    static func stripBibleMarkup(_ raw: String) -> String {
-        raw.strippingBibleMarkup()
-    }
+    //
+    // ⛔ ВИДАЛЕНО (ADR-034). Тут був `stripBibleMarkup(_:)` — рантайм-зняття розмітки для
+    // концордансу, крос-рефів, паралельних перекладів і сніпета пошуку.
+    //
+    // Не відроджувати. Плоский текст вірша для показу має ОДНЕ джерело — `verse.text_clean`,
+    // побудований на збірці. Друга реалізація тих самих правил у Swift розійшлася з
+    // Python-боком і роками показувала чуже: 261 вірш просочував СЛОВО з багатономерного
+    // тега (`<S>8147, Joshua82</S>` → «…are like two, Joshua fawns…»), 1 330 показували
+    // маркер виноски `[2]` як текст. Рідер при цьому був правильний (він іде через
+    // `VerseParser`), тому дефект і не помічали.
+    //
+    // Якщо новій поверхні потрібен текст вірша — `SELECT text_clean`, а не `text` + strip.
+    // `text` лишається джерелом для парсера (структура, тапи по словах).
 
     // MARK: - Concordance (all verses for a Strong's number)
 
@@ -415,7 +477,12 @@ final class DatabaseService: @unchecked Sendable {
                 COALESCE(vo.chapter, w.chapter) AS display_chapter,
                 COALESCE(vo.verse,   w.verse)   AS display_verse,
                 COALESCE(v.text, v_fb.text) AS resolved_text,
-                CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback
+                CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback,
+                -- Display text comes from the DB, not from a runtime strip (ADR-034).
+                -- `text` is still selected above because the Strong's highlighting in
+                -- WordTabContent needs the MARKUP (it walks segments); the two are not
+                -- interchangeable — one is for reading, one is for structure.
+                COALESCE(v.text_clean, v_fb.text_clean) AS resolved_clean
             FROM word w
             LEFT JOIN verse_org vo    ON vo.translation    = ?
                                      AND vo.org_book_id    = w.book_id
@@ -447,7 +514,7 @@ final class DatabaseService: @unchecked Sendable {
             let chapter      = Int(sqlite3_column_int(stmt, 3))   // display_chapter
             let displayVerse = Int(sqlite3_column_int(stmt, 4))   // display_verse
             let rawText     = optString(stmt, 5) ?? ""
-            let text        = DatabaseService.stripBibleMarkup(rawText)
+            let text        = optString(stmt, 7) ?? ""   // resolved_clean — ADR-034
             let isFallback  = sqlite3_column_int(stmt, 6) != 0
             // Skip entries where neither translation has verse text.
             guard !text.isEmpty else { return }
@@ -541,7 +608,10 @@ final class DatabaseService: @unchecked Sendable {
             SELECT COALESCE(vo.chapter, w.chapter) AS display_chapter,
                    COALESCE(vo.verse,   w.verse)   AS display_verse,
                    COALESCE(v.text, v_fb.text)     AS resolved_text,
-                   CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback
+                   CASE WHEN v.text IS NULL AND v_fb.text IS NOT NULL THEN 1 ELSE 0 END AS is_fallback,
+                   -- Display text from the DB (ADR-034); `text` above stays for the
+                   -- Strong's-highlighting path, which needs the markup.
+                   COALESCE(v.text_clean, v_fb.text_clean) AS resolved_clean
             FROM word w
             LEFT JOIN verse_org vo    ON vo.translation    = ?
                                      AND vo.org_book_id    = w.book_id
@@ -569,6 +639,7 @@ final class DatabaseService: @unchecked Sendable {
             var displayChapter = row.chapter
             var displayVerse   = row.verse
             var rawText        = ""
+            var cleanText      = ""
             var isFallback     = false
 
             query(exampleSQL, bindings: [
@@ -580,10 +651,11 @@ final class DatabaseService: @unchecked Sendable {
                 displayVerse   = Int(sqlite3_column_int(stmt, 1))
                 rawText        = optString(stmt, 2) ?? ""
                 isFallback     = sqlite3_column_int(stmt, 3) != 0
+                cleanText      = optString(stmt, 4) ?? ""   // resolved_clean — ADR-034
             }
 
             // Skip if no verse text found in either translation.
-            let text = DatabaseService.stripBibleMarkup(rawText)
+            let text = cleanText
             guard !text.isEmpty else { continue }
 
             let short   = bookShortNames[row.bookId] ?? BibleBookNames.short(for: row.bookId)
@@ -660,11 +732,16 @@ final class DatabaseService: @unchecked Sendable {
     }
 
     /// Single verse text lookup (raw markup, unstripped). nil when absent.
+    /// Display-ready text of one verse.
+    ///
+    /// Reads `text_clean`, not `text` (ADR-034): the markup-free copy is built once at DB
+    /// build time, so nothing here strips anything at runtime. Its only caller is the
+    /// cross-reference list, which shows plain text and never needs the tags.
     private func verseText(bookId: String, chapter: Int, verse: Int,
                            translation: String) -> String? {
         var text: String?
         let sql = """
-            SELECT text FROM verse
+            SELECT text_clean FROM verse
             WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
             """
         query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
@@ -770,7 +847,8 @@ final class DatabaseService: @unchecked Sendable {
                 verseText(bookId: target.book, chapter: target.chapter,
                           verse: target.verse, translation: fallbackTranslation)
 
-            let text       = DatabaseService.stripBibleMarkup(readerText ?? fbText ?? "")
+            // `verseText` already returns `text_clean` — no runtime strip (ADR-034).
+            let text       = readerText ?? fbText ?? ""
             let isFallback = readerText == nil && fbText != nil
             let short      = bookShortNames[display.bookId] ?? BibleBookNames.short(for: display.bookId)
             let ref        = "\(short) \(display.chapter):\(display.verse)"
@@ -910,10 +988,38 @@ final class DatabaseService: @unchecked Sendable {
     ///   "love" → MATCH '"love"*'  finds "love", "loved", "lovely" etc.
     ///   "God is" → MATCH '"God is"*' finds exact phrase prefix.
     ///
-    /// Results are ranked by FTS5 BM25 relevance (rowid tiebreak keeps LIMIT/OFFSET
-    /// pagination deterministic — BM25 rank ties would otherwise reshuffle between
-    /// pages). The highlight() function returns the full verse text with matched
-    /// tokens wrapped in ❮…❯ so the UI can highlight them.
+    /// A phrase requires the indexed tokens to be ADJACENT, so `verse_fts` must be built
+    /// over `verse.text_clean` (markup-free) and never over the raw `verse.text`: inline
+    /// `<S>1234</S>` tokenizes to `S | 1234 | S` between two real words and silently kills
+    /// every multi-word query while single words keep working — that asymmetry is exactly
+    /// what made bug-035 read as "multi-word search is broken". See ADR-008, amendment
+    /// 2026-08-06.
+    ///
+    /// Results come back in CANONICAL order — book → chapter → verse (ADR-008,
+    /// amendment 2026-08-07). BM25 (`ORDER BY rank`) was dropped: in a corpus where all
+    /// 31k verses share one genre, relevance degenerates into verse length, so the reader
+    /// got an order they could not reconstruct (a query for "Душа" opened Pr 13:4, then
+    /// Ez 18:4, then Lev 7:27, then Pr 19:15 again).
+    ///
+    /// ⛔ Book order is PER-TRANSLATION (`book_name.sort_order`), NOT `book.num`. RST puts
+    /// 21 books elsewhere — the catholic epistles (Jas, 1–2 Pe, 1–3 Jn, Jud) come BEFORE
+    /// the Pauline ones, per the Synodal tradition. `book.num` would hand an RST reader the
+    /// Protestant order, i.e. search would contradict the reader within the same
+    /// translation (ADR-018).
+    ///
+    /// ⛔ `LEFT JOIN` + `COALESCE`, never `INNER JOIN`: an inner join would silently DROP
+    /// results for any (book, translation) pair missing a `book_name` row. Coverage is
+    /// complete today (66 × 5, zero orphan verses) but the schema does not guarantee it,
+    /// and a vanished book is a worse defect than a wrong order.
+    ///
+    /// Faster than the ranked version, not slower — BM25 has to be computed per match,
+    /// `sort_order` only read (measured: `"the"*` KJV 63.7 → 47.4 ms; the same query at
+    /// OFFSET 2000, i.e. deep infinite scroll, 83.7 → 33.5 ms). The old
+    /// `verse_fts.rowid` tiebreak is gone: (book, chapter, verse) is unique within a
+    /// translation, so pagination is deterministic by construction.
+    ///
+    /// The highlight() function returns the full verse text with matched tokens wrapped
+    /// in ❮…❯ so the UI can highlight them.
     ///
     /// `bookIds` (optional) restricts results to a set of books — used by the search
     /// Testament/Book filters. `limit`/`offset` page through the full result set.
@@ -939,20 +1045,25 @@ final class DatabaseService: @unchecked Sendable {
                    highlight(verse_fts, 0, '❮', '❯') AS snip
             FROM verse_fts
             JOIN verse v ON v.rowid = verse_fts.rowid
+            JOIN book b ON b.id = v.book_id
+            LEFT JOIN book_name bn ON bn.book_id = v.book_id
+                                  AND bn.translation_id = v.translation
             WHERE verse_fts MATCH ?
               AND v.translation = ?
               \(bookClause)
-            ORDER BY rank, verse_fts.rowid
+            ORDER BY COALESCE(bn.sort_order, b.num - 1), v.chapter, v.verse
             LIMIT ? OFFSET ?
             """
         query(sql, bindings: bindings) { stmt in
             let bookId  = string(stmt, 0)
             let chapter = Int(sqlite3_column_int(stmt, 1))
             let verse   = Int(sqlite3_column_int(stmt, 2))
-            // FTS5 snippet() returns raw verse text including <S>N</S> markup.
-            // Strip markup before storing — ❮…❯ highlight markers use non-ASCII
-            // angle brackets (U+276E/U+276F) so strippingBibleMarkup() leaves them intact.
-            let snip    = string(stmt, 3).strippingBibleMarkup()
+            // highlight() reads verse_fts column 0 = `verse.text_clean`, which is
+            // markup-free by the build invariant (bug-035). No runtime strip: the guard that
+            // used to sit here was removed with the rest of the runtime stripper (ADR-034).
+            // If a stale DB ever slips in, markup shows up in snippets — visible and
+            // self-diagnosing, unlike a guard that quietly papers over a broken build.
+            let snip    = string(stmt, 3)
             results.append(SearchResult(
                 id: "\(bookId)|\(chapter)|\(verse)",
                 reference: makeRef(bookId, chapter, verse, bookShortNames),
@@ -1017,16 +1128,53 @@ final class DatabaseService: @unchecked Sendable {
 
     // MARK: Autocomplete suggestions
 
-    /// Words from `search_terms` matching a lowercase prefix (≥1 char), ordered by frequency.
-    /// Uses GLOB for index-friendly prefix scan. Terms stored lowercase → caller must lowercase input.
-    func suggestTerms(prefix: String, limit: Int = 8) -> [String] {
-        guard isAvailable, prefix.count >= 1 else { return [] }
+    /// Words from `search_terms` matching a lowercase prefix (≥1 char), ordered by frequency,
+    /// restricted to ONE language. GLOB keeps the prefix scan index-friendly (the plan stays
+    /// `SEARCH search_terms USING PRIMARY KEY (term>? AND term<?)`). Terms are stored
+    /// lowercase → the caller's prefix is lowercased here.
+    ///
+    /// `lang` is `translation.language` (`en`/`ru`/`uk`) — see `languageForTranslation`.
+    /// Before ADR-008 amendment 2026-08-07 the dictionary was SHARED across all five
+    /// translations, and that produced two defects the user hit directly:
+    ///   `се*` → себе, себя, сердце, серед, сего, серце — Russian and Ukrainian interleaved;
+    ///   and suggestions that led to ZERO results, because the term came from RST while
+    ///   `searchByText` filters `AND v.translation = ?` and searched UBIO. Suggestions and
+    ///   search were running over different sets.
+    ///
+    /// Keyed by LANGUAGE, not translation: KJV/ASV/NASB would otherwise get three nearly
+    /// identical English dictionaries, while the actual mixing is between languages. Adding
+    /// German or Spanish now needs no change here — the new translation brings its own
+    /// language and splits itself off.
+    ///
+    /// Filtering by language is also FASTER, not a tax: `lang` cuts candidates BEFORE the
+    /// `ORDER BY freq` temp b-tree, which is the only part of this query that can lag
+    /// (measured: `а*` 0.335 → 0.113 ms; long prefixes are within noise either way).
+    ///
+    /// An unknown/empty `lang` returns [] rather than falling back to every language —
+    /// silence beats a suggestion list from the wrong alphabet.
+    func suggestTerms(prefix: String, lang: String, limit: Int = 8) -> [String] {
+        guard isAvailable, prefix.count >= 1, !lang.isEmpty else { return [] }
         var terms: [String] = []
-        query("SELECT term FROM search_terms WHERE term GLOB ? ORDER BY freq DESC LIMIT ?",
-              bindings: [prefix.lowercased() + "*", limit]) { stmt in
+        query("""
+              SELECT term FROM search_terms
+              WHERE term GLOB ? AND lang = ?
+              ORDER BY freq DESC LIMIT ?
+              """,
+              bindings: [prefix.lowercased() + "*", lang, limit]) { stmt in
             terms.append(string(stmt, 0))
         }
         return terms
+    }
+
+    /// `translation.language` for a translation id ("UBIO" → "uk"). Empty when unknown —
+    /// callers treat that as "no suggestions" (see `suggestTerms`).
+    func languageForTranslation(_ id: String) -> String {
+        guard isAvailable else { return "" }
+        var lang = ""
+        query("SELECT language FROM translation WHERE id = ?", bindings: [id]) { stmt in
+            lang = string(stmt, 0)
+        }
+        return lang
     }
 
     // MARK: Private search helpers
@@ -1043,6 +1191,11 @@ final class DatabaseService: @unchecked Sendable {
 
     /// Builds a safe FTS5 MATCH expression with prefix matching.
     /// Phrase (multi-word) and single-word inputs both handled; quotes are escaped.
+    ///
+    /// The quoted form makes this a PHRASE query — a deliberate trade: word order is
+    /// enforced, so "тени долиною" must NOT match a verse reading "долиною … тени".
+    /// `NEAR()` would loosen that and was rejected for it (ADR-008, amendment 2026-08-06);
+    /// the cost of keeping phrases is that the index may carry no markup tokens.
     private func makeFTSQuery(_ raw: String) -> String {
         let escaped = raw.replacingOccurrences(of: "\"", with: "\"\"")
         return "\"\(escaped)\"*"

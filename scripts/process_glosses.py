@@ -16,6 +16,59 @@ Pipeline (Hebrew words only; Greek returned as-is):
     Stage 4  — Fix construct chain order: "heart your" → "your heart"
     Stage 5  — Normalize remaining dots: "and to.peace" → "and to peace"
     Stage 6  — Proper noun safety net: preserve canonical capitalization
+    Stage 7  — Never emit NULL for a non-empty gloss (see below)
+    Stage 8  — Sweep stray bracket characters split across tokens (see below)
+
+Stage 7: brackets must not reach the screen (added 2026-08-05)
+-------------------------------------------------------------
+Returning None for a gloss the pipeline emptied looks harmless and is not:
+`DatabaseService.loadWords` reads
+`COALESCE(gloss_display, gloss_macula, gloss)`, so a NULL renders the RAW
+value with its brackets and dots. Measured on the real database — 1 386 Hebrew
+rows, 1 381 of them sharing a slot with a meaningful token, so the reader saw
+"[which] creeps", "[the] living", "[people]".
+
+Stage 7 keeps the rule stage 2 already implies: bracketed text is dropped while
+something else survives ("[is].the" → "the"); when nothing survives, the bracket
+characters come off and the words stay ("[which]" → "which", "I.[am]" → "I am").
+If even that is empty the result is "" — never None.
+
+Stage 8: bracket spans split across tokens (added 2026-08-05)
+------------------------------------------------------------
+Stage 2 matches a balanced `[...]` pair, and Macula splits bracketed spans across
+tokens the same way it splits glosses: "[those" on one row and "be]" on another,
+"the.[one" here and "who].touches" there. Per row the bracket is unbalanced, so
+the regex cannot see it — 2 503 rows reached the screen with half a bracket
+(1 198 with a lone "[", 1 305 with a lone "]").
+
+Since the other half lives on a different row there is no span to delete, so the
+characters are swept and the words kept: "the.[one" → "the one", "who].touches"
+→ "who touches".
+
+Stage 4 also runs ACROSS a display slot (added 2026-08-05)
+----------------------------------------------------------
+Stages 1-6 work on one row, i.e. one Macula token. Stage 4 was written for the
+Hebrew construct chain — "heart your" → "your heart" — but that phrase almost
+never sits inside a single token: the noun and its pronominal suffix are two
+tokens sharing one `word.slot`, and the app renders a slot as ONE word by joining
+the per-token `gloss_display` values with a space
+(`VerseTabContent.displayWords`).
+
+Measured on the 24-verse pilot sample: stage 4 could fire inside a token 1 time
+in 398, while the cross-token case occurred 31 times in 259 slots. So the stage
+was effectively dead in the case it was written for, and Deut 6:4-6 rendered
+"God our", "heart your", "being your", "strength your" in all five places.
+
+The slot pass reassigns within a slot: the reordered phrase goes on the head
+token and the suffix row is set to EMPTY STRING, so the app's join yields the
+phrase once. Empty string, not NULL, is load-bearing — `DatabaseService.loadWords`
+reads `COALESCE(w.gloss_display, w.gloss_macula, w.gloss)`, so NULL would fall
+back to `gloss_macula` ("your") and render "your heart your".
+
+A suffix row's `gloss_display` therefore no longer describes that row alone. That
+is already how Macula's own `gloss` column behaves — it chops a slot-level phrase
+across tokens, which is why the suffix token in Ps 51:7 carries "conceived.me"
+while the verb carries "she". The unit of an English gloss here is the slot.
 """
 
 import re
@@ -68,6 +121,32 @@ _RE_SUBJ_PREFIX = re.compile(                 # optional "and/or/but " + pronoun
 )
 
 # ---------------------------------------------------------------------------
+# Stage 7 — brackets must never reach the screen
+# ---------------------------------------------------------------------------
+
+def unbracket(raw):
+    # type: (Optional[str]) -> str
+    """Last resort when stages 1-6 emptied the gloss. Returns "" never None.
+
+    Returning None hands the row to `COALESCE(gloss_display, gloss_macula,
+    gloss)` in `DatabaseService.loadWords`, which then renders the RAW value —
+    brackets and dots included. Measured on the real database: 1 386 Hebrew rows
+    did exactly that, 1 381 of them sharing a slot with a meaningful token, so
+    the reader saw "[which] creeps", "[the] living", "[people]".
+
+    The rule is the one stage 2 already implies, stated for the whole string:
+    bracketed text is English supplied around a gloss, so it is DROPPED while
+    something else survives ("[is].the" → "the"). When nothing survives, the
+    bracketed text is the token's only meaning, so the brackets come off and the
+    words stay ("[which]" → "which", "I.[am]" → "I am"). Deleting it would blank
+    a real word; keeping the brackets shows editorial notation to a reader who
+    never asked for it.
+    """
+    text = (raw or "").replace("[", "").replace("]", "").replace(".", " ")
+    return " ".join(text.split())
+
+
+# ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
@@ -97,7 +176,10 @@ def synthesize(
     text = _RE_BRACKET.sub("", text)        # then any remaining "[...]"
     text = text.strip()
     if not text:
-        return None
+        # Whole gloss was bracketed → stage 7, not None. This early return is
+        # what kept "[the]" / "[which]" / "[people]" showing raw brackets in the
+        # UI even after stage 7 existed: the function left before reaching it.
+        return unbracket(raw)
 
     # Stage 3: strip dot-encoded subject pronoun prefix.
     # "he.created" → "created"; "and he.said" → "and said"; "let.it.be" → unchanged
@@ -134,7 +216,103 @@ def synthesize(
             # e.g. "of david" → "of David"
             text = " ".join(parts[:-1]) + " " + canonical
 
-    return text if text else None
+    # Stage 7 — see unbracket() and the module docstring.
+    if not text:
+        return unbracket(raw)
+
+    # Stage 8: sweep stray bracket characters.
+    #
+    # Stage 2 only matches a BALANCED pair, and Macula splits bracketed spans
+    # across tokens exactly as it splits glosses: "[those" sits on one token and
+    # "be]" on another, "the.[one" here and "who].touches" there. Per token the
+    # bracket is unbalanced, so `\[.*?\]` cannot see it, and 2 503 rows reached
+    # the screen with a half-bracket. Measured on the real database: 1 198 rows
+    # carried a lone "[", 1 305 a lone "]".
+    #
+    # Dropping the characters and keeping the words is the only repair available:
+    # the other half of the pair is on a different row, so there is no span to
+    # delete. "the.[one" → "the one", "who].touches" → "who touches".
+    if "[" in text or "]" in text:
+        text = " ".join(text.replace("[", "").replace("]", "").split())
+        if not text:
+            return ""
+
+    return text
+
+
+# ---------------------------------------------------------------------------
+# Stage 4 across a display slot
+# ---------------------------------------------------------------------------
+
+def is_enclitic(morph, lexical_class):
+    # type: (Optional[str], Optional[str]) -> bool
+    """Mirrors VerseTabContent.isEnclitic."""
+    if (lexical_class or "") == "x":
+        return True
+    return (morph or "").startswith("S")
+
+
+def head_index(toks):
+    # type: (List[Tuple]) -> int
+    """Index of the last non-enclitic token — VerseTabContent.headToken."""
+    for i in range(len(toks) - 1, -1, -1):
+        if not is_enclitic(toks[i][1], toks[i][2]):
+            return i
+    return len(toks) - 1
+
+
+def reorder_slot(toks, vals):
+    # type: (List[Tuple], List[Optional[str]]) -> List[Optional[str]]
+    """Apply the construct-chain reorder across one display slot.
+
+    `toks` is [(row_id, morph, lexical_class), …] in reading order; `vals` the
+    already per-token-synthesised glosses. Returns a new list of the same length.
+
+    Fires only when the LAST non-empty gloss in the slot is a suffix pronoun and
+    something precedes it — the same condition stage 4 uses inside a token, just
+    evaluated over the slot the reader actually sees. Anything else is returned
+    untouched, so single-token slots and verb+suffix slots (`he.leads.me`, whose
+    tail is not a possessive) behave exactly as before.
+    """
+    if len(toks) < 2:
+        return vals
+    idx = [i for i, v in enumerate(vals) if (v or "").strip()]
+    if len(idx) < 2:
+        return vals
+
+    last = idx[-1]
+    tail = (vals[last] or "").strip()
+    if tail.lower() not in SUFFIX_PRONOUNS:
+        return vals
+    # The possessive must actually be carried by a suffix token; a standalone word
+    # that merely looks like one is not a construct chain.
+    if not is_enclitic(toks[last][1], toks[last][2]):
+        return vals
+
+    hi = head_index(toks)
+    if hi == last:                       # head IS the possessive — nothing to move
+        return vals
+
+    # The possessive goes immediately before the HEAD, not in front of the whole
+    # slot. A leading preposition or conjunction keeps its place: "in heart your"
+    # must become "in your heart", not "your in heart", and "and pains our" must
+    # become "and our pains". Getting this wrong shipped both of those to the
+    # screen for one build.
+    before = [(vals[i] or "").strip() for i in idx if i < hi]
+    after = [(vals[i] or "").strip() for i in idx if hi < i < last]
+    head_val = (vals[hi] or "").strip()
+    phrase = " ".join([w for w in before if w] + [tail] +
+                      ([head_val] if head_val else []) +
+                      [w for w in after if w])
+    phrase = " ".join(phrase.split())
+    if not phrase:
+        return vals
+
+    out = list(vals)
+    for i in idx:
+        out[i] = ""                      # empty string, NOT None — see module docstring
+    out[hi] = phrase
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -156,10 +334,14 @@ def add_column_if_missing(conn):
 
 def fetch_rows(conn):
     # type: (sqlite3.Connection) -> List[Tuple]
+    """Ordered by (book, chapter, verse, position) so tokens of one slot are
+    contiguous — the slot pass groups on adjacency, exactly as the view does."""
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, gloss_macula, gloss, strongs_id, language
+        SELECT id, gloss_macula, gloss, strongs_id, language,
+               book_id, chapter, verse, slot, morph, lexical_class
         FROM   word
+        ORDER  BY book_id, chapter, verse, position
     """)
     return cur.fetchall()
 
@@ -197,16 +379,47 @@ def main():
     print("  Processing {:,} rows...".format(total))
 
     BATCH_SIZE = 5000
-    batch   = []
-    changed = 0
+    batch    = []
+    changed  = 0
+    reordered = 0
 
-    for idx, (row_id, gloss_macula, gloss_short, strongs_id, language) in enumerate(rows, 1):
+    # Slot accumulator. A slot is a run of adjacent rows sharing
+    # (book_id, chapter, verse, slot); NULL slot (Greek) never groups.
+    cur_key  = None
+    cur_toks = []        # [(row_id, morph, lexical_class), …]
+    cur_vals = []        # synthesised gloss per token
+    cur_raws = []
+
+    def emit():
+        """Apply the slot pass and queue the slot's rows."""
+        nonlocal changed, reordered, batch
+        if not cur_toks:
+            return
+        out = reorder_slot(cur_toks, cur_vals)
+        if out != cur_vals:
+            reordered += 1
+        for (rid, _m, _c), val, raw in zip(cur_toks, out, cur_raws):
+            batch.append((val, rid))
+            if val != raw:
+                changed += 1
+
+    for idx, r in enumerate(rows, 1):
+        (row_id, gloss_macula, gloss_short, strongs_id, language,
+         book_id, chapter, verse, slot, morph, lexical_class) = r
         raw    = gloss_macula or gloss_short
         result = synthesize(raw, strongs_id, language or "")
 
-        batch.append((result, row_id))
-        if result != raw:
-            changed += 1
+        key = None if slot is None else (book_id, chapter, verse, slot)
+        if key is None or key != cur_key:
+            emit()
+            cur_toks, cur_vals, cur_raws = [], [], []
+            cur_key = key
+        cur_toks.append((row_id, morph, lexical_class))
+        cur_vals.append(result)
+        cur_raws.append(raw)
+        if key is None:                  # standalone row, nothing to group with
+            emit()
+            cur_toks, cur_vals, cur_raws = [], [], []
 
         if len(batch) >= BATCH_SIZE:
             flush_batch(conn, batch)
@@ -216,11 +429,13 @@ def main():
             pct = idx * 100 // total
             print("  {:,}/{:,} ({}%)".format(idx, total, pct))
 
+    emit()
     if batch:
         flush_batch(conn, batch)
 
     conn.close()
-    print("  Done. {:,} rows changed.".format(changed))
+    print("  Done. {:,} rows changed, {:,} slot(s) reordered across tokens."
+          .format(changed, reordered))
 
 
 if __name__ == "__main__":

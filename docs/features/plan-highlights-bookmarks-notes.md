@@ -1,5 +1,7 @@
 # Implementation Plan: Highlights, Bookmarks, Notes Updates
 
+**Status:** Draft
+
 **Based on:** `spec-highlights-bookmarks-notes.md`  
 **Date:** 2026-05-22  
 **Stack:** SwiftUI + GRDB, iOS 16+

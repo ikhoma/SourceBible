@@ -1,5 +1,7 @@
 # Product Decision — Trust-First Authentication Strategy for Bible App
 
+**Status:** Accepted
+
 ## Status
 Accepted
 

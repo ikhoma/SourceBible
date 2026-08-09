@@ -7,7 +7,8 @@ build_strongs_roots.py  (ADR-030)
 `derivation` словників OpenScriptures і записує його в таблицю `strongs`.
 
 Запускати НА MAC (база — APFS sparse-файл; у Linux-пісочниці не читати/не писати).
-Python 3.9.
+Python 3.10+ (project minimum, see CLAUDE.md — the old "write for 3.9" rule was
+withdrawn 2026-08-05; `rebuild.sh` gates the version with a non-zero exit).
 
 Використання:
     python3 scripts/build_strongs_roots.py sourcebible.db

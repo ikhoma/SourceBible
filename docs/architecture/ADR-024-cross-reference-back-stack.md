@@ -1,6 +1,9 @@
 # ADR-024 — Cross-Reference Back-Stack Navigation
 
-**Status:** Proposed (2026-06-21)
+**Status:** Accepted (реалізовано; статус виправлено 2026-08-07 lint-ом)
+**Date:** 2026-06-21
+**Реалізація:** `crossRefBackStack` у `ReaderViewModel.swift` (6 місць); ADR-032 спирається
+на крок назад по стеку як на чинну поведінку (`lightTransition()`)
 **Amends:** `spec-study-mode-redesign.md` (R4 — leading toolbar морфінг; R7 — вихід зі Study Mode)
 **Related:** ADR-005 (AppNavigationRouter — cross-tab навігація), ADR-021 (Study Mode pinning/sizing)
 

@@ -1,5 +1,7 @@
 # Product Decision — Analytics (Mixpanel)
 
+**Status:** Proposed (потребує підпису Ivan)
+
 ## Status
 Proposed (потребує підпису Ivan)
 

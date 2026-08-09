@@ -1,6 +1,6 @@
 # Fable Run-Brief — ALL verse_map consumers → verse_org (ADR-028 Phase 2)
 
-**Status:** Ready for autonomous run
+**Status:** Done — прогін виконано (заміряно 2026-08-07: `verse_map` у базі немає, `verse_org` = 155 621 рядок)
 **Date:** 2026-07-15 (розширено з «крос-рефи» на ВСІ споживачі verse_map)
 **Реалізує:** ADR-028 (verse_org) — фаза 2: мігрувати ВСІ споживачі verse_map, потім DROP
 **Гілка:** окремий worktree/branch (CLAUDE.md autonomous mode) — НЕ прямо в `work`

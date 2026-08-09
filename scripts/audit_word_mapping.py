@@ -14,7 +14,7 @@
 #   python3 scripts/audit_word_mapping.py sourcebible.db            # all books
 #   python3 scripts/audit_word_mapping.py sourcebible.db GEN        # one book
 #
-# Writes scripts/word_mapping_issues.tsv (full flagged list). Python 3.9 compatible.
+# Writes scripts/word_mapping_issues.tsv (full flagged list). Python 3.10+ (CLAUDE.md).
 
 import os
 import re

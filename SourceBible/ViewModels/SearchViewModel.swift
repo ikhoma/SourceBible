@@ -149,8 +149,14 @@ final class SearchViewModel: ObservableObject {
 
     // MARK: - Suggestions
 
-    /// Debounced autocomplete from `search_terms` table (120ms).
-    func updateSuggestions(for prefix: String) {
+    /// Debounced autocomplete from `search_terms` (120ms), restricted to the language of
+    /// the translation being searched (ADR-008, amendment 2026-08-07).
+    ///
+    /// `translation` is the SEARCH translation (the filter chip's, which may differ from
+    /// the reader's) — the language is resolved from it, not from the UI language: the user
+    /// can read an English Bible with a Ukrainian interface, and the suggestions must match
+    /// the text being searched, not the chrome.
+    func updateSuggestions(for prefix: String, translation: String) {
         suggestTask?.cancel()
 
         let trimmed = prefix.trimmingCharacters(in: .whitespaces)
@@ -162,8 +168,20 @@ final class SearchViewModel: ObservableObject {
         suggestTask = Task {
             try? await Task.sleep(for: .milliseconds(120))
             guard !Task.isCancelled else { return }
-            suggestions = db.suggestTerms(prefix: trimmed)
+            suggestions = db.suggestTerms(prefix: trimmed,
+                                         lang: self.language(for: translation))
         }
+    }
+
+    /// Cached `translation.language` lookup — the suggestion path runs on every keystroke
+    /// (after debounce), and the mapping is 5 rows that never change at runtime.
+    private var languageCache: [String: String] = [:]
+
+    private func language(for translation: String) -> String {
+        if let cached = languageCache[translation] { return cached }
+        let lang = db.languageForTranslation(translation)
+        languageCache[translation] = lang
+        return lang
     }
 
     // MARK: - Recent queries

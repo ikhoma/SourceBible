@@ -1,5 +1,7 @@
 # Verse Versification System Design
 
+**Status:** Draft (передує ADR-028; курований `verse_org` замінив цей підхід)
+
 Canonical mapping між схемами нумерації віршів у SourceBible iOS app.
 
 ---

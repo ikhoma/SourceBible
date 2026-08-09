@@ -41,7 +41,7 @@ We are grateful to everyone who made this scholarship freely available.
 - TBESH / TBESG — Translators Brief Lexicon of Extended Strong's (Hebrew / Greek), STEPBible.org — CC BY 4.0
 
 **Translations**
-- Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA · Wikisource
+- Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA 3.0 · Wikisource
 - King James Version (KJV) — Public Domain
 - American Standard Version (ASV) — Public Domain
 - Russian Synodal Translation (RST) — Public Domain
@@ -91,7 +91,7 @@ We are grateful to everyone who made this scholarship freely available.
 - TBESH / TBESG — Translators Brief Lexicon of Extended Strong's (Hebrew / Greek), STEPBible.org — CC BY 4.0
 
 **Переклади**
-- Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA · Вікіджерела
+- Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA 3.0 · Вікіджерела
 - King James Version (KJV) — суспільне надбання
 - American Standard Version (ASV) — суспільне надбання
 - Синодальний переклад (RST) — суспільне надбання
