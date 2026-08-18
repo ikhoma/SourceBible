@@ -588,10 +588,16 @@ struct ConcordanceView: View {
     let entry: StrongsEntry
     @EnvironmentObject private var vm:     ReaderViewModel
     @Environment(\.sessionTracker) private var tracker
+    // Мова інтерфейсу для plural-правил (bug-041), не системна.
+    @Environment(\.locale) private var locale
 
     var body: some View {
+        // bug-041: було `String(format:)` без plural-правил — «2 випадків» замість «2 випадки».
+        // Ключ тепер має plural-варіації, а локаль передається ЯВНО: swizzle підміняє бандл,
+        // але не `Locale.current`, тож без неї CLDR узяв би англійські правила (заміряно).
         let totalLabel = String(
             format: NSLocalizedString(MorphKey.usageTotalCount, comment: ""),
+            locale: locale,
             entry.totalCount
         )
         return PillSection(verbatimTitle: totalLabel) {
@@ -643,6 +649,8 @@ struct ConcordanceView: View {
 private struct BookUsageRow: View {
     let group: BookUsageGroup
     let strongsId: String
+    // Мова інтерфейсу для plural-правил (bug-041), не системна.
+    @Environment(\.locale) private var locale
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -651,8 +659,10 @@ private struct BookUsageRow: View {
                 ReferenceLabel("\(group.bookName) \(group.example.chapter):\(group.example.verse)")
                 Spacer(minLength: 8)
                 // "1 Occurrence in this Book" / "5 Occurrences in this Book"
-                Text(String.localizedStringWithFormat(
-                    NSLocalizedString(MorphKey.usageBookCount, comment: ""),
+                // Локаль явно — див. bug-041: `localizedStringWithFormat` бере системну.
+                Text(String(
+                    format: NSLocalizedString(MorphKey.usageBookCount, comment: ""),
+                    locale: locale,
                     group.count
                 ))
                 .font(.footnote)

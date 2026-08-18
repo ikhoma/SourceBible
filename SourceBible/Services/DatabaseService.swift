@@ -795,6 +795,59 @@ final class DatabaseService: @unchecked Sendable {
         return out
     }
 
+    /// Verse text in other translations, aligned through `verse_org` (ADR-028).
+    ///
+    /// Parallel translations are a CROSS-TRANSLATION surface: the reader's verse NUMBER
+    /// means nothing in a translation with another versification scheme. The identity
+    /// lookup this replaced (one `loadVerseText` per translation, bug-036) showed the
+    /// NEIGHBOURING verse — measured on the shipped DB: 2 705 KJV verses wrong in the
+    /// RST row, 3 367 in the UBIO row, and Psalms wrong by a whole chapter in both
+    /// (RST and UBIO Psalters are LXX-numbered). Where the number does not exist in the
+    /// target at all, `compactMap` silently dropped the row (KJV HOS 13:16 → RST 14:1).
+    ///
+    /// Two curated hops — the same pair the Original pill and cross-references use:
+    /// reader verse → original (Macula) ref → that target translation's own verse.
+    ///
+    /// - Returns: text per translation id. A translation is ABSENT from the result when it
+    ///   has no verse for this original ref — an honest gap instead of a wrong verse.
+    /// - Fallbacks: no `verse_org` row at all (DB predates ADR-028) or an explicit
+    ///   "no original" mapping (`org_*` NULL — 32 verses corpus-wide) → identity, i.e.
+    ///   the old behaviour for exactly those verses and nothing else.
+    /// - N:M: `orgRef`/`translationRef` take the first row of a curated ordering.
+    ///   Measured: no verse in the DB maps to >1 original, and only 2–3 originals per
+    ///   translation are split across two verses, so the first row is the whole story.
+    func loadParallelVerseTexts(bookId: String, chapter: Int, verse: Int,
+                                source: String, targets: [String]) -> [String: String] {
+        guard isAvailable else { return [:] }
+
+        let (sawRows, org) = orgRef(bookId: bookId, chapter: chapter, verse: verse,
+                                   translation: source)
+
+        /// Same book/chapter/verse in `translation` — the reader's own row and the
+        /// pre-`verse_org` fallback.
+        func identityText(_ translation: String) -> String? {
+            verseText(bookId: bookId, chapter: chapter, verse: verse, translation: translation)
+        }
+
+        var out: [String: String] = [:]
+        for target in targets {
+            // The reader's own translation needs no hop; neither does a verse we cannot
+            // hop from (no mapping row, or no original counterpart).
+            if target == source || !sawRows || org == nil {
+                if let text = identityText(target) { out[target] = text }
+                continue
+            }
+            guard let org,
+                  let ref = translationRef(orgBookId: org.bookId, orgChapter: org.chapter,
+                                           orgVerse: org.verse, translation: target),
+                  let text = verseText(bookId: ref.bookId, chapter: ref.chapter,
+                                       verse: ref.verse, translation: target)
+            else { continue }
+            out[target] = text
+        }
+        return out
+    }
+
     // MARK: - Cross References
 
     func loadCrossReferences(bookId: String, chapter: Int, verse: Int,

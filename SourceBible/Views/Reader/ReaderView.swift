@@ -96,9 +96,11 @@ struct ReaderView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                     }
+                    // ux-020: bounds are the CANON's, not the book's — the chevron stays
+                    // live at chapter 1 of any book except Genesis (ADR-026 amend 2026-08-17).
                     .disabled(vm.activeSheet == .verse
                               ? vm.navPrevDisabled
-                              : vm.currentChapter <= 1)
+                              : !vm.canGoPrevChapter)
                     .accessibilityLabel(Text(prevChevronA11yKey))
 
                     Button {
@@ -113,7 +115,7 @@ struct ReaderView: View {
                     }
                     .disabled(vm.activeSheet == .verse
                               ? vm.navNextDisabled
-                              : vm.currentChapter >= vm.currentBook.chapterCount)
+                              : !vm.canGoNextChapter)
                     .accessibilityLabel(Text(nextChevronA11yKey))
                 }
 
@@ -212,7 +214,9 @@ struct ReaderView: View {
     /// The pre-ADR-026 reader (iOS 18 fallback): one chapter scroll + edge-only swipe.
     @ViewBuilder
     private var legacyReader: some View {
-        ChapterScrollContent(chapter: vm.currentChapter)
+        // Cross-book stepping comes free here: the edge swipe calls the same
+        // prev/nextChapter, which now walk the canon-wide sequence (ux-020).
+        ChapterScrollContent(ref: vm.currentChapterRef)
 
         // Edge swipe gesture for chapter navigation.
         // UIScreenEdgePanGestureRecognizer fires from the hardware screen
@@ -230,10 +234,15 @@ struct ReaderView: View {
 // MARK: - Chapter scroll content (the REAL chapter view)
 
 /// Verbatim extraction of the pre-spike classicReader scroll block (ADR-026:
-/// the container above may change, THIS view must not), parameterized by
-/// `chapter` so pager containers can host adjacent pages. Verses come from
+/// the container above may change, THIS view must not), parameterized by a
+/// `ChapterRef` so pager containers can host adjacent pages. Verses come from
 /// vm.versesForPage — the live vm.verses for the current chapter, a
 /// non-published prefetch for neighbors.
+///
+/// ux-020 (ADR-026 amend 2026-08-17): the parameter is a BOOK+chapter pair, not a bare
+/// chapter number. Paging crosses book boundaries, so an adjacent page can belong to the
+/// next book — every read below must come from `ref.book`, never `vm.currentBook`, or the
+/// neighbour page renders the wrong book's cover, heading and verses.
 struct ChapterScrollContent: View {
     @EnvironmentObject var vm: ReaderViewModel
     // Locale dependency kept for BibleBookNames fallback paths (see ReaderView).
@@ -242,7 +251,10 @@ struct ChapterScrollContent: View {
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
 
-    let chapter: Int
+    let ref: ReaderViewModel.ChapterRef
+
+    private var chapter: Int { ref.chapter }
+    private var book: BibleBook { ref.book }
 
     // True when the book cover should be shown (chapter 1 of any book, not hidden).
     private var showsBookCover: Bool {
@@ -250,7 +262,7 @@ struct ChapterScrollContent: View {
     }
 
     var body: some View {
-        let verses = vm.versesForPage(chapter)
+        let verses = vm.versesForPage(ref)
         ScrollViewReader { proxy in
 
             let sheetOpen = vm.activeSheet == .verse
@@ -264,25 +276,25 @@ struct ChapterScrollContent: View {
                                         // flush at the scroll's top edge (just below the
                                         // toolbar) and scrolls away normally when a verse pins.
                                         BookCoverView(
-                                            bookId: vm.currentBook.id,
-                                            bookName: vm.translationBookNames[vm.currentBook.id]?.long
-                                                ?? BibleBookNames.full(for: vm.currentBook.id),
-                                            chapterCount: vm.currentBook.chapterCount
+                                            bookId: book.id,
+                                            bookName: vm.translationBookNames[book.id]?.long
+                                                ?? BibleBookNames.full(for: book.id),
+                                            chapterCount: book.chapterCount
                                         )
                                         .padding(.top, -12)
                                         .padding(.horizontal, -16)
                                         .padding(.bottom, 20)
                                     } else {
                                         // Cover hidden: regular Large Title (original layout)
-                                        Text(vm.translationBookNames[vm.currentBook.id]?.long
-                                             ?? BibleBookNames.full(for: vm.currentBook.id))
+                                        Text(vm.translationBookNames[book.id]?.long
+                                             ?? BibleBookNames.full(for: book.id))
                                             .font(titleFontStyle.bookLargeTitleFont)
                                             .frame(maxWidth: .infinity, alignment: .center)
                                             .padding(.bottom, 16)
                                     }
                                 }
 
-                                Text(vm.chapterHeading(for: chapter))
+                                Text(vm.chapterHeading(for: ref))
                                     .font(titleFontStyle.chapterHeadingFont)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.bottom, 16)

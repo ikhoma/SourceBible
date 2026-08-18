@@ -27,9 +27,13 @@ enum BookCoverData {
 
     // MARK: - Public API
 
-    static func info(for bookId: String, chapterCount: Int) -> CoverInfo {
+    /// `locale` — мова ІНТЕРФЕЙСУ (`\.locale` з середовища, яку `SourceBibleApp` виставляє
+    /// з `appLanguage`), а не системна. Потрібна для вибору форми множини: swizzle
+    /// `LocalizedBundle` підміняє БАНДЛ, але не `Locale.current`, тож без явної локалі
+    /// CLDR застосував би АНГЛІЙСЬКІ правила до українських рядків (bug-041).
+    static func info(for bookId: String, chapterCount: Int, locale: Locale) -> CoverInfo {
         CoverInfo(
-            subtitle:  subtitle(for: bookId, chapterCount: chapterCount),
+            subtitle:  subtitle(for: bookId, chapterCount: chapterCount, locale: locale),
             imageName: coverImages[bookId]
         )
     }
@@ -119,11 +123,26 @@ enum BookCoverData {
 
     // MARK: - Subtitle ("<Section> · <N> Chapters")
 
-    private static func subtitle(for bookId: String, chapterCount: Int) -> String {
-        let unit     = chapterCount == 1
-            ? NSLocalizedString("cover.chapter", comment: "")
-            : NSLocalizedString("cover.chapters", comment: "")
-        let chapters = "\(chapterCount) \(unit)"
+    /// bug-041: this was a `count == 1 ? singular : plural` ternary — the ENGLISH rule.
+    /// Ukrainian has three forms, so 2/3/4 came out as «3 розділів» instead of «3 розділи».
+    /// The form is now chosen by CLDR from the plural variations of `cover.chapters_count`
+    /// in `Localizable.xcstrings`, not by an `if` here.
+    ///
+    /// ⛔ Не повертати тернар і не збирати рядок із числа та окремого слова: будь-яка нова
+    /// мова (пол./рос./чеськ. — теж три форми) зламає його знову. Кількість → у plural-ключ.
+    ///
+    /// `NSLocalizedString` (not `String(localized:)`) because only that path goes through the
+    /// `LocalizedBundle` swizzle and follows the in-app language — see bug-025.
+    /// `String(format:locale:)` (NOT `String.localizedStringWithFormat`, and NOT
+    /// `String(format:)`): the first argument-less form pins the rule engine to
+    /// `Locale.current` = the SYSTEM language, and that measurably produced «3 розділу» —
+    /// English rules (3 → other) applied to the Ukrainian table. The interface locale must
+    /// be passed in. See bug-041.
+    private static func subtitle(for bookId: String, chapterCount: Int, locale: Locale) -> String {
+        let chapters = String(
+            format: NSLocalizedString("cover.chapters_count", comment: "Cover subtitle: N chapters"),
+            locale: locale,
+            chapterCount)
         let section  = sectionTitle(for: bookId)
         return section.isEmpty ? chapters : "\(section) · \(chapters)"
     }

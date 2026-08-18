@@ -468,34 +468,55 @@
     "Contact" : {
 
     },
-    "cover.chapter" : {
+    "cover.chapters_count" : {
+      "comment" : "Cover subtitle: N chapters",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chapter"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Chapter"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Chapters"
+                }
+              }
+            }
           }
         },
         "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "розділ"
-          }
-        }
-      }
-    },
-    "cover.chapters" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chapters"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "розділів"
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld розділи"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld розділів"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld розділ"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld розділу"
+                }
+              }
+            }
           }
         }
       }
@@ -4088,55 +4109,54 @@
         }
       }
     },
-    "search.results_count" : {
-      "comment" : "%lld = number of search results",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld results"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld результатів"
-          }
-        }
-      }
-    },
     "search.results_count %lld" : {
-      "comment" : "%lld = number of search results",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld results"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld result"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld results"
+                }
+              }
+            }
           }
         },
         "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld результатів"
-          }
-        }
-      }
-    },
-    "search.results_count_max %lld" : {
-      "comment" : "%lld = capped result count (search hit the 150-result limit)",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "First %lld results"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перші %lld результатів"
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld результати"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld результатів"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld результат"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld результату"
+                }
+              }
+            }
           }
         }
       }
@@ -5277,36 +5297,55 @@
         }
       }
     },
-    "word.usage.count" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld occurrences in the Bible"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld входжень у Біблії"
-          }
-        }
-      }
-    },
     "word.usage.total_count" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld occurrences in the Bible"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld occurrence in the Bible"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld occurrences in the Bible"
+                }
+              }
+            }
           }
         },
         "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld випадків у Біблії"
+          "variations" : {
+            "plural" : {
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld випадки у Біблії"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld випадків у Біблії"
+                }
+              },
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld випадок у Біблії"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld випадку у Біблії"
+                }
+              }
+            }
           }
         }
       }

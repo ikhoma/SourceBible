@@ -41,7 +41,7 @@ struct BookCoverView: View {
     private let textColor = Color(red: 0.984, green: 0.980, blue: 0.973)
 
     private var coverData: BookCoverData.CoverInfo {
-        BookCoverData.info(for: bookId, chapterCount: chapterCount)
+        BookCoverData.info(for: bookId, chapterCount: chapterCount, locale: locale)
     }
 
     var body: some View {

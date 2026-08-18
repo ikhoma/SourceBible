@@ -144,7 +144,6 @@ enum MorphKey {
     static let emptyNoData            = "word.empty.no_data"
     static let emptyTapHint           = "word.empty.tap_hint"
     /// Interpolated: "42 occurrences in the Bible" — legacy key, kept for reference
-    static let usageCount             = "word.usage.count"
     /// Interpolated: true total count — "6 512 випадків у Біблії"
     static let usageTotalCount        = "word.usage.total_count"
     /// Pluralized: "1 Occurrence in this Book" / "5 Occurrences in this Book"
