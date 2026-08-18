@@ -38,6 +38,13 @@ echo "\n▸ Indexing verse_org reverse hop (original → translation)..."
 # build_versification.py on purpose (additive, no row data touched).
 sqlite3 sourcebible.db "CREATE INDEX IF NOT EXISTS idx_verse_org_rev ON verse_org(translation, org_book_id, org_chapter, org_verse);"
 
+echo "\n▸ Verifying parallel-translation alignment (ADR-028, bug-036)..."
+# Панель «Переклади» читає вірш ІНШОГО перекладу, тож мусить іти через verse_org, а не
+# через той самий номер. Гейт перевіряє еталони (Пісн 1:15, Пс 51, Еккл 5:1, Дан 4:1,
+# Ос 13:16, 2Кор 11:33, 1Хр 5:27), контролі, де зсуву бути НЕ може, покриття мапінгу
+# і матрицю розходжень проти замороженої базової. `set -e` спиняє білд ДО cp у бандл.
+python3 scripts/verify_parallel_alignment.py sourcebible.db
+
 echo "\n▸ Importing commentaries..."
 python3 scripts/import_commentaries.py sourcebible.db
 

@@ -293,22 +293,24 @@ class ReaderViewModel: ObservableObject {
 
     /// Full chapter heading shown at the top of the reader — "Psalm 23" for Psalms, "Chapter 5" for everything else.
     /// Derives the heading word from the current translation's language so it's always native to the translation.
-    var chapterHeading: String { chapterHeading(for: currentChapter) }
+    var chapterHeading: String { chapterHeading(for: currentChapterRef) }
 
-    /// Heading for an arbitrary chapter of the current book. Needed by the ADR-026
-    /// chapter-paging spikes, where a prefetched adjacent page renders its own heading.
-    func chapterHeading(for chapter: Int) -> String {
+    /// Heading for an arbitrary chapter page. Takes a `ChapterRef`, not a bare chapter
+    /// number: since the pager crosses book boundaries (ADR-026 amendment 2026-08-17) an
+    /// adjacent page may belong to ANOTHER book, and the Psalms special case has to follow
+    /// that page's book — not `currentBook`.
+    func chapterHeading(for ref: ChapterRef) -> String {
         let lang = currentTranslation.language
-        if currentBook.id == "PSA" {
+        if ref.book.id == "PSA" {
             switch lang {
-            case "ru", "uk": return "Псалом \(chapter)"
-            default:         return "Psalm \(chapter)"
+            case "ru", "uk": return "Псалом \(ref.chapter)"
+            default:         return "Psalm \(ref.chapter)"
             }
         } else {
             switch lang {
-            case "ru": return "Глава \(chapter)"
-            case "uk": return "Розділ \(chapter)"
-            default:   return "Chapter \(chapter)"
+            case "ru": return "Глава \(ref.chapter)"
+            case "uk": return "Розділ \(ref.chapter)"
+            default:   return "Chapter \(ref.chapter)"
             }
         }
     }
@@ -669,16 +671,132 @@ class ReaderViewModel: ObservableObject {
         }
     }
 
-    func prevChapter() {
-        guard currentChapter > 1 else { return }
-        currentChapter -= 1
+    // MARK: - Chapter sequence across the whole canon (ADR-026 amendment 2026-08-17)
+    //
+    // ux-020: reading straight through used to stop at the last chapter of a book — the
+    // reader then had to open the picker and hunt for the next one. The page unit is no
+    // longer "chapter number inside the current book" but a `ChapterRef` addressed by a
+    // GLOBAL chapter ordinal over the canon, so Mal 4 → Mat 1 is just the next page.
+    //
+    // Order comes from `allBooks` (`ORDER BY num`, canonical). ⛔ Not `book_name.sort_order`
+    // (ADR-018) — all five shipped translations are the same Protestant canon and that
+    // column feeds search ordering. If a translation with a DIFFERENT book order is ever
+    // added, this sequence must switch to `sort_order`, or the pager will walk the wrong way.
+
+    /// One page of the reader: which book, which chapter of it.
+    struct ChapterRef: Equatable {
+        let book: BibleBook
+        let chapter: Int
+    }
+
+    /// Books that form the paging sequence.
+    ///
+    /// ⛔ Falls back to the CURRENT book alone while `allBooks` is still empty — it loads
+    /// asynchronously after init, and the reader renders before that lands. Without this
+    /// fallback the cold-launch pager asks for a page the sequence cannot yet describe,
+    /// `hosting(for:)` returns nil, `setViewControllers` is never called, and the reader
+    /// shows a BLANK page with both chevrons disabled until an unrelated state change
+    /// happens to re-run `updateUIViewController` (caught in review 2026-08-17, before
+    /// merge). The fallback is exactly the pre-ux-020 behaviour: bounds = this book.
+    private var sequenceBooks: [BibleBook] {
+        allBooks.contains(where: { $0.id == currentBook.id }) ? allBooks : [currentBook]
+    }
+
+    /// Cached prefix sums of `chapterCount`, rebuilt when the sequence changes identity.
+    private var chapterOffsetsCache: (bookIds: [String], offsets: [Int], total: Int)?
+
+    private var chapterOffsets: (offsets: [Int], total: Int) {
+        let ids = sequenceBooks.map(\.id)
+        if let cache = chapterOffsetsCache, cache.bookIds == ids {
+            return (cache.offsets, cache.total)
+        }
+        var offsets: [Int] = []
+        var running = 0
+        offsets.reserveCapacity(sequenceBooks.count)
+        for book in sequenceBooks {
+            offsets.append(running)
+            running += book.chapterCount
+        }
+        chapterOffsetsCache = (ids, offsets, running)
+        return (offsets, running)
+    }
+
+    /// Every chapter of the canon, in order (1 189 for the Protestant 66).
+    var totalChapterCount: Int { chapterOffsets.total }
+
+    var currentChapterRef: ChapterRef { ChapterRef(book: currentBook, chapter: currentChapter) }
+
+    /// Position of a chapter in the canon-wide sequence; nil for an unknown book.
+    func globalChapterIndex(bookId: String, chapter: Int) -> Int? {
+        let books = sequenceBooks
+        guard let bookIdx = books.firstIndex(where: { $0.id == bookId }) else { return nil }
+        let book = books[bookIdx]
+        guard chapter >= 1, chapter <= book.chapterCount else { return nil }
+        return chapterOffsets.offsets[bookIdx] + (chapter - 1)
+    }
+
+    var currentGlobalChapterIndex: Int {
+        if let index = globalChapterIndex(bookId: currentBook.id, chapter: currentChapter) {
+            return index
+        }
+        // Transient inconsistency only: `currentBook` and `currentChapter` are two separate
+        // @Published properties, so a commit that changes both is observable for an instant
+        // as (new book, old chapter) — e.g. Matthew/150 while leaving Ps 150. Clamp INTO the
+        // current book. ⛔ Never fall back to 0: index 0 is a VALID page (Genesis 1), so the
+        // pager would quietly slide the reader to the start of the Bible and the next swipe
+        // would persist that as the reading position (caught in review 2026-08-17).
+        return globalChapterIndex(bookId: currentBook.id, chapter: 1) ?? 0
+    }
+
+    /// Inverse hop: which book+chapter sits at this position. nil outside the canon —
+    /// that nil is what makes the pager stop cleanly at Gen 1 and Rev 22.
+    func chapterRef(atGlobalIndex index: Int) -> ChapterRef? {
+        let books = sequenceBooks
+        let (offsets, total) = chapterOffsets
+        guard index >= 0, index < total, !books.isEmpty else { return nil }
+        // Binary search for the last book whose offset is <= index.
+        var low = 0, high = books.count - 1, found = 0
+        while low <= high {
+            let mid = (low + high) / 2
+            if offsets[mid] <= index { found = mid; low = mid + 1 } else { high = mid - 1 }
+        }
+        let book = books[found]
+        return ChapterRef(book: book, chapter: index - offsets[found] + 1)
+    }
+
+    /// Canon ends are hard stops (product decision 2026-08-17): no Rev 22 → Gen 1 wrap,
+    /// because an accidental swipe landing in Genesis costs more than the yearly-plan
+    /// convenience it would buy.
+    var canGoPrevChapter: Bool { currentGlobalChapterIndex > 0 }
+    var canGoNextChapter:  Bool { currentGlobalChapterIndex < totalChapterCount - 1 }
+
+    /// Jump to a page by its canon-wide position — the single entry point the pager and
+    /// the chevrons share, so crossing a book boundary works identically on both paths
+    /// (and on the iOS 18 legacy reader, which has no pager at all).
+    func goToChapter(globalIndex index: Int) {
+        guard let ref = chapterRef(atGlobalIndex: index) else { return }
+        if ref.book.id != currentBook.id { currentBook = ref.book }
+        currentChapter = ref.chapter
         loadChapter()
     }
 
+    /// State-only commit of a page the pager has ALREADY rendered (ADR-026 hard rule:
+    /// `loadChapter()`'s `@Published` re-map is deferred one runloop tick by the caller,
+    /// never run during the settle). Carries the book because a swipe can settle in the
+    /// next one (ux-020).
+    func commitPagedChapter(_ ref: ChapterRef) {
+        if ref.book.id != currentBook.id { currentBook = ref.book }
+        currentChapter = ref.chapter
+    }
+
+    func prevChapter() {
+        guard canGoPrevChapter else { return }
+        goToChapter(globalIndex: currentGlobalChapterIndex - 1)
+    }
+
     func nextChapter() {
-        guard currentChapter < currentBook.chapterCount else { return }
-        currentChapter += 1
-        loadChapter()
+        guard canGoNextChapter else { return }
+        goToChapter(globalIndex: currentGlobalChapterIndex + 1)
     }
 
     // MARK: - Cross-Reference Back Stack (ADR-024)
@@ -805,21 +923,25 @@ class ReaderViewModel: ObservableObject {
     /// rule: no loadChapter()/@Published re-map during the page transition).
     /// The current chapter returns the live `verses` (so highlight changes render);
     /// adjacent pages get a cached direct DB read.
-    func versesForPage(_ chapter: Int) -> [BibleVerse] {
-        if chapter == currentChapter,
-           let first = verses.first, first.bookId == currentBook.id, first.chapter == chapter {
+    ///
+    /// Takes a `ChapterRef`: a neighbouring page may live in another book since the pager
+    /// crosses book boundaries (ADR-026 amendment 2026-08-17). Reading `currentBook` here
+    /// would render the next book's chapter 1 with THIS book's verses.
+    func versesForPage(_ ref: ChapterRef) -> [BibleVerse] {
+        if ref.book.id == currentBook.id, ref.chapter == currentChapter,
+           let first = verses.first, first.bookId == ref.book.id, first.chapter == ref.chapter {
             return verses
         }
         #if DEBUG
         // Previews run on sample data — never touch DatabaseService for adjacent pages.
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
-            return chapter == currentChapter ? verses : []
+            return (ref.book.id == currentBook.id && ref.chapter == currentChapter) ? verses : []
         }
         #endif
-        let key = "\(currentBook.id)|\(chapter)|\(currentTranslation.id)"
+        let key = "\(ref.book.id)|\(ref.chapter)|\(currentTranslation.id)"
         if let cached = pageVersesCache[key] { return cached }
-        let loaded = db.loadChapter(bookId: currentBook.id,
-                                    chapter: chapter,
+        let loaded = db.loadChapter(bookId: ref.book.id,
+                                    chapter: ref.chapter,
                                     translation: currentTranslation.id)
             .map { v in
                 BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
@@ -871,13 +993,24 @@ class ReaderViewModel: ObservableObject {
         }
     }
 
-    /// Returns verse text in all available translations.
+    /// Returns verse text in all available translations, aligned by versification.
+    ///
+    /// ADR-028 / bug-036: the number of the verse on screen is NOT a valid key in a
+    /// translation with another scheme, so this goes through `verse_org` (reader verse →
+    /// original ref → that translation's own verse) instead of reading the same number
+    /// out of every translation. Identity lookup put the neighbouring verse in the RST
+    /// and UBIO rows (Song 1:15, Ecc 5:1, Dan 4:1) and the wrong psalm entirely in both.
+    ///
+    /// Display order stays `availableTranslations`; a translation with no verse for this
+    /// original ref is omitted rather than shown with someone else's text.
     func loadParallelVerses() -> [VerseTranslation] {
         guard let verse = selectedVerse else { return [] }
+        let texts = db.loadParallelVerseTexts(bookId: verse.bookId, chapter: verse.chapter,
+                                              verse: verse.number,
+                                              source: currentTranslation.id,
+                                              targets: availableTranslations.map(\.id))
         return availableTranslations.compactMap { t in
-            guard let text = db.loadVerseText(bookId: verse.bookId, chapter: verse.chapter,
-                                               verse: verse.number, translation: t.id)
-            else { return nil }
+            guard let text = texts[t.id] else { return nil }
             return VerseTranslation(id: t.id, translation: t, text: text)
         }
     }
