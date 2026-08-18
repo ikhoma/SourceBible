@@ -41,7 +41,8 @@ struct ChapterPagerView: UIViewControllerRepresentable {
         pvc.delegate = context.coordinator
         context.coordinator.vm = vm
         context.coordinator.pageVC = pvc
-        context.coordinator.showChapter(vm.currentChapter, animated: false, direction: .forward)
+        context.coordinator.showPage(at: vm.currentGlobalChapterIndex,
+                                     animated: false, direction: .forward)
         return pvc
     }
 
@@ -54,11 +55,14 @@ struct ChapterPagerView: UIViewControllerRepresentable {
 
         // External chapter change (chevron / book picker / cross-ref / resume):
         // animate the native slide for a ±1 step, snap for far jumps.
-        if co.displayedChapter != vm.currentChapter, !co.isTransitioning {
-            let delta = vm.currentChapter - co.displayedChapter
-            co.showChapter(vm.currentChapter,
-                           animated: abs(delta) == 1,
-                           direction: delta > 0 ? .forward : .reverse)
+        // ux-020: the comparison is on the CANON-WIDE index, so the last chapter of a book
+        // and the first of the next differ by exactly 1 and get the same animated slide.
+        let target = vm.currentGlobalChapterIndex
+        if co.displayedIndex != target, !co.isTransitioning {
+            let delta = target - co.displayedIndex
+            co.showPage(at: target,
+                        animated: abs(delta) == 1,
+                        direction: delta > 0 ? .forward : .reverse)
         }
     }
 
@@ -69,28 +73,30 @@ struct ChapterPagerView: UIViewControllerRepresentable {
 
         weak var pageVC: UIPageViewController?
         var vm: ReaderViewModel?
-        /// Chapter currently shown by the page VC (may lead vm.currentChapter
-        /// for one tick while a swipe commit syncs the VM).
-        var displayedChapter: Int = 0
+        /// Canon-wide index of the page the page VC shows (may lead the VM for one
+        /// tick while a swipe commit syncs it). ux-020: an INDEX over all chapters of
+        /// the canon, not a chapter number inside the current book.
+        var displayedIndex: Int = -1
         /// True while setViewControllers' programmatic animation is in flight —
-        /// updateUIViewController must not re-enter showChapter mid-slide.
+        /// updateUIViewController must not re-enter showPage mid-slide.
         var isTransitioning = false
 
-        /// Hosting page for one chapter; nil outside the book bounds (this is
-        /// what makes the pager stop cleanly at chapter 1 / chapterCount).
-        func hosting(for chapter: Int) -> UIViewController? {
-            guard let vm, chapter >= 1, chapter <= vm.currentBook.chapterCount else { return nil }
+        /// Hosting page for one canon position; nil past Gen 1 / Rev 22 — that nil is
+        /// what makes the pager stop cleanly at the ENDS OF THE CANON (before ux-020 it
+        /// stopped at every book boundary, which is exactly what testers hit).
+        func hosting(for globalIndex: Int) -> UIViewController? {
+            guard let vm, let ref = vm.chapterRef(atGlobalIndex: globalIndex) else { return nil }
             let host = UIHostingController(
-                rootView: ChapterScrollContent(chapter: chapter).environmentObject(vm)
+                rootView: ChapterScrollContent(ref: ref).environmentObject(vm)
             )
             host.view.backgroundColor = .clear
-            host.view.tag = chapter          // page identity for the dataSource
+            host.view.tag = globalIndex      // page identity for the dataSource
             return host
         }
 
-        func showChapter(_ chapter: Int, animated: Bool, direction: UIPageViewController.NavigationDirection) {
-            guard let pageVC, let page = hosting(for: chapter) else { return }
-            displayedChapter = chapter
+        func showPage(at globalIndex: Int, animated: Bool, direction: UIPageViewController.NavigationDirection) {
+            guard let pageVC, let page = hosting(for: globalIndex) else { return }
+            displayedIndex = globalIndex
             isTransitioning = animated
             pageVC.setViewControllers([page], direction: direction, animated: animated) { [weak self] _ in
                 MainActor.assumeIsolated {
@@ -142,13 +148,15 @@ struct ChapterPagerView: UIViewControllerRepresentable {
             guard completed,
                   let current = pageViewController.viewControllers?.first,
                   let vm else { return }
-            let chapter = current.view.tag
-            displayedChapter = chapter
-            guard chapter != vm.currentChapter else { return }
-            // Commit the chapter now; defer the loadChapter @Published re-map one
+            let index = current.view.tag
+            displayedIndex = index
+            guard index != vm.currentGlobalChapterIndex,
+                  let ref = vm.chapterRef(atGlobalIndex: index) else { return }
+            // Commit the page now; defer the loadChapter @Published re-map one
             // runloop tick so it never runs during the settle (ADR-026 hard rule —
             // the page already renders its own prefetched verses).
-            vm.currentChapter = chapter
+            // ux-020: the commit carries the BOOK too — a settle can land in the next one.
+            vm.commitPagedChapter(ref)
             DispatchQueue.main.async { [weak self] in
                 self?.vm?.loadChapter()
                 self?.attachContentScrollView()
