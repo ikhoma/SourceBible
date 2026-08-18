@@ -50,6 +50,27 @@ Python 3.10+ (мінімум проєкту, CLAUDE.md). READ-ONLY: нічого
                 у Swift без документа, ця перевірка не побачить — там працює правило
                 кінця сесії в CLAUDE.md.
 
+  C5  SYNC      `docs/project-memory.md` оновлено пізніше, ніж його копію перенесли
+                в knowledge claude.ai-Проєкту.
+
+                Снапшот живе у ДВОХ місцях: файл у репо (читається, лише коли агент
+                під'єднав папку) і копія в knowledge Проєкту (вантажиться автоматично
+                в КОЖЕН чат, без мосту, з будь-якої машини). Git у knowledge не
+                пушить — перенос ручний.
+
+                Заміряно 2026-08-10: репо було від 10.08, хмара — від 20.07. Три тижні
+                розриву, і сесія, що чесно стартувала з автозавантаженого снапшота,
+                бачила Огієнка «BLOCKED», Python 3.9 і Phase B «відкладено» — усе
+                неправдиве. Це та сама хвороба, що C1 (одна правда у двох місцях),
+                але з гіршою асиметрією: копію, якої скрипт НЕ бачить, читають усі
+                й завжди.
+
+                ⚠️ Скрипт не має доступу до knowledge claude.ai і не може подивитись,
+                що там лежить. Він порівнює два рядки В САМОМУ файлі: «Останнє
+                оновлення» проти «Перенесено в knowledge Проєкту». Другий оновлює той,
+                хто справді зробив перенос. Це маркер чесності, а не доказ — але він
+                робить розрив ВИДИМИМ, а невидимий розрив і був причиною.
+
 Кожен провал друкує ОЧІКУВАНЕ ПОРУЧ З ОТРИМАНИМ — бо еталон теж буває хибним
 (урок 2026-08-04: два з сімнадцяти якорів були записані перевернутими, і скрипт
 «падав» на власній правильній поведінці).
@@ -319,12 +340,60 @@ def check_log(rep: Report) -> None:
             )
 
 
+SNAPSHOT = DOCS / "project-memory.md"
+UPDATED_RE = re.compile(r"Останнє оновлення:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*")
+SYNCED_RE = re.compile(r"Перенесено в knowledge Проєкту:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*")
+
+SYNC_HINT = (
+    "Перенос робить агент у чаті Проєкту (project_write на claude/project-memory.md), "
+    "після чого оновлює тут рядок «Перенесено в knowledge Проєкту». "
+    "Крок входить в операцію LINT — див. docs/WIKI.md."
+)
+
+
+def check_sync(rep: Report) -> None:
+    if not SNAPSHOT.exists():
+        rep.fail("SYNC", "docs/project-memory.md",
+                 expected="файл існує", actual="файла немає")
+        return
+
+    text = SNAPSHOT.read_text(encoding="utf-8")
+    upd, syn = UPDATED_RE.search(text), SYNCED_RE.search(text)
+    rep.checked += 1
+
+    if not upd:
+        rep.fail("SYNC", "docs/project-memory.md",
+                 expected="рядок «Останнє оновлення: **РРРР-ММ-ДД**»",
+                 actual="рядка немає або дата не у форматі",
+                 hint="Без дати оновлення розрив із хмарою не обчислити.")
+        return
+
+    if not syn:
+        rep.fail("SYNC", "docs/project-memory.md",
+                 expected="рядок «Перенесено в knowledge Проєкту: **РРРР-ММ-ДД**»",
+                 actual=f"рядка немає; оновлено {upd.group(1)}, дата переносу невідома",
+                 hint=SYNC_HINT)
+        return
+
+    # ISO-дати порівнюються лексикографічно.
+    if syn.group(1) < upd.group(1):
+        rep.fail("SYNC", "docs/project-memory.md",
+                 expected=f"перенос не старіший за оновлення ({upd.group(1)})",
+                 actual=f"оновлено {upd.group(1)}, перенесено {syn.group(1)} — "
+                        "у хмарі стара картина, і саме її читає кожен новий чат",
+                 hint=SYNC_HINT)
+
+
 CHECKS = {
     "status": check_status,
     "orphan": check_orphans,
     "broken": check_broken,
     "log": check_log,
+    "sync": check_sync,
 }
+
+# Перевірки, яким не потрібні рядки INDEX.
+NO_ROWS = {"log", "sync"}
 
 
 def main() -> int:
@@ -339,7 +408,7 @@ def main() -> int:
 
     for name in wanted:
         fn = CHECKS[name]
-        fn(rep) if name == "log" else fn(rows, rep)
+        fn(rep) if name in NO_ROWS else fn(rows, rep)
 
     print("=" * 72)
     print("  LINT пам'яті — docs/ проти коду й самих себе")
