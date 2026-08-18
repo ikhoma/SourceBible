@@ -46,6 +46,24 @@ struct VerseBottomSheetView: View {
         vm.selectedVerse ?? fallbackVerse
     }
 
+    /// Identity of WHAT the scrollable area is showing — the SUBJECT, not just the tab.
+    ///
+    /// bug-039 / bug-040: this key used to carry only the pill / sub-tab, so switching
+    /// pills reset the scroll but moving to another WORD (chevrons, long-press) or another
+    /// VERSE (chevrons) did not — the reader landed mid-article, scrolled to where the
+    /// previous word's entry happened to be. `currentTranslation` belongs here for the same
+    /// reason: `VerseTabContent` reloads its data on that change (`onChange(of:)`), so the
+    /// content is new and the old offset is just as wrong.
+    ///
+    /// ⛔ Adding a data source that reloads this area? Put its identity here too — otherwise
+    /// the content changes under a stale scroll offset and the bug is back.
+    private var scrollSubjectId: String {
+        let subject: String = vm.bottomSheetMode == .verse
+            ? "verse-\(versePill)-\(verse.id)"
+            : "word-\(wordSubTab)-\(vm.selectedWord?.id ?? vm.selectedSegment?.id.uuidString ?? "none")"
+        return "\(subject)-\(vm.currentTranslation.id)"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             sheetHeader
@@ -60,7 +78,7 @@ struct VerseBottomSheetView: View {
                 }
             }
             // Changing id recreates the ScrollView → scroll position always resets to top
-            .id(vm.bottomSheetMode == .verse ? "verse-\(versePill)" : "word-\(wordSubTab)")
+            .id(scrollSubjectId)
         }
         .background(colorTheme.sheetBackground)
         // R3: constant detent SET — the system re-resolves StudySheetDetent's
