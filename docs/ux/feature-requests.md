@@ -14,6 +14,7 @@ Distinct from:
 | id | Request | Reporters | Impact / Effort | Target | Source |
 |---|---|---|---|---|---|
 | ux-017 | Browse & sort commentaries by theme/tags (heart, relationships, temptation…) as an independent feature, like the Plans-tab tags | Viacheslav | low / high | **v1.5** | [UX review 16](https://docs.google.com/document/d/1mS_fVVAlaM3BsKHlW5q84kFV3n8R5JJLOktVQgGbACo) |
+| ux-021 | Red letters (Jesus' words) in ASV — the module ships **0 `<J>` tags of 31 085 verses**, so the toggle silently does nothing there. Three paths: **A** synthesise `<J>` from KJV via Strong's overlap (2 038 of 2 042 verses align; 1 404 whole-verse, 647 partial → need span alignment + low-confidence report), **B** gate/hide the toggle for translations with no markup (safety net, do regardless — otherwise any future unmarked translation reproduces this), **C** source a licence-compatible ASV module that ships `<J>`. Measurements live in `docs/bugs/done/bug-017.md` | oleksiukviacheslav | medium / medium | **v1.1** | [BUG REPORT (Drive)](https://docs.google.com/document/d/1R8dNe8zTJgVcPPvscq2cjoICaRyPopYGL4PZxoBe4do) |
 
 ## Unscheduled candidates (from Sprint 1, decide milestone later)
 

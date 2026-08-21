@@ -5112,6 +5112,22 @@
     "We bridge the gap between modern readers and the world of the biblical text." : {
 
     },
+    "word.definition.unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No definition available for this sub-entry"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для цього підзапису визначення немає"
+          }
+        }
+      }
+    },
     "word.empty.no_data" : {
       "extractionState" : "stale",
       "localizations" : {

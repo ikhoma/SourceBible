@@ -385,6 +385,35 @@ final class DatabaseService: @unchecked Sendable {
         var entry: StrongsEntry?
         query(sql, bindings: [id]) { stmt in entry = buildEntry(from: stmt) }
 
+        // ⛔ bug-046 — визначення, що насправді належить БАЗОВОМУ номеру, не можна
+        // показувати як власне визначення підзапису. H2617a — це חֶסֶד II «ганьба»
+        // (Лев 20:17, Прип 14:34), а база несе «kindness», тобто ПРОТИЛЕЖНЕ значення,
+        // подане як факт. Заміряно 2026-08-19: 444 підзаписи, 5 947 вживань.
+        //
+        // Гасимо тут, у єдиному джерелі, щоб усі споживачі поводились однаково.
+        // Порожньо чесніше за правдоподібний хибний текст: користувач бачить, що даних
+        // немає, замість читати чуже значення (CLAUDE.md: «Порожньо + fallback чесніше,
+        // ніж збережена помилка»).
+        //
+        // ⛔ НЕ «лагодити» це зсувом суфіксів Macula→TBESH. Перевірено на корпусі:
+        // зсув виграє 82 випадки, програє 41, у 265 із 388 сигналу немає. Правильні
+        // дані в TBESH існують (H2617b = «shame»), але зіставлення двох схем нумерації —
+        // куроване рішення, а не формула (пор. ADR-028, який відкинув евристичну verse_map).
+        if let e = entry, StrongsDefinitionTrust.isUntrusted(id) {
+            entry = StrongsEntry(
+                id: e.id,
+                originalWord: e.originalWord,
+                transliteration: e.transliteration,
+                xlitSimple: e.xlitSimple,
+                pronunciation: e.pronunciation,
+                partOfSpeech: e.partOfSpeech,
+                shortDefinition: "",
+                semanticRange: [],
+                fullDefinition: "",
+                concordance: []
+            )
+        }
+
         // If the sub-entry has no long_def, try to fall back to the base entry's definition.
         // SAFETY CHECK: only fall back when the sub-entry and base entry share the same
         // first Hebrew/Greek character — i.e. they are true lexical variants of the same root.
@@ -396,7 +425,8 @@ final class DatabaseService: @unchecked Sendable {
         //   H835  = אֶשֶׁר (happiness), H835a = אַשְׁרֵי (blessed)  — related ✓
         //   H3887 = לוּץ (scorn),  H3887a = לֵצִים (scorners)      — related ✓
         // Comparing first character reliably distinguishes these cases.
-        if let e = entry, e.fullDefinition.isEmpty, baseId != id {
+        if let e = entry, e.fullDefinition.isEmpty, baseId != id,
+           !StrongsDefinitionTrust.isUntrusted(id) {
             var baseEntry: StrongsEntry?
             query(sql, bindings: [baseId]) { stmt in baseEntry = buildEntry(from: stmt) }
             if let b = baseEntry, !b.fullDefinition.isEmpty {
@@ -454,14 +484,37 @@ final class DatabaseService: @unchecked Sendable {
         }
         var entries: [ConcordanceEntry] = []
 
-        // Strip a trailing letter suffix so H835a and H835 both resolve to the
-        // same base and we match all Macula sub-entries (H835, H835a, H835b …).
-        let base: String = {
-            guard let last = strongsId.last, last.isLetter,
-                  let prev = strongsId.dropLast().last, prev.isNumber
-            else { return strongsId }
-            return String(strongsId.dropLast())
-        }()
+        // ⛔ bug-045 — group by the EXACT `strongs_id`. Do NOT strip the suffix here.
+        //
+        // The suffix is part of the lexeme's identity, not decoration: in `word`,
+        // H2617 = hesed I "faithful love" (245 occurrences) and H2617a = hesed II
+        // "disgrace" (2: Lev 20:17, Prov 14:34) are DIFFERENT WORDS. Stripping merged
+        // them, so Usage for "lovingkindness" listed "it is a wicked thing".
+        // Measured 2026-08-18: 169 972 occurrences sit on 1 008 suffixed ids, and the
+        // pattern is always one dominant sense plus crumbs — H871 = 1 (a town) vs
+        // H871a = 15 539 (the preposition b-). Stripping on H871 would have returned
+        // 15 539 hits for a place name.
+        //
+        // Suffix stripping stays legitimate in exactly ONE place: the bridge from a
+        // TAGGED TRANSLATION segment (which writes bare numbers, `<S>2617</S>`) to a
+        // Macula word — `ReaderViewModel.resolvedMaculaBase`. `loadStrongs` keeps the
+        // requested id on the returned entry (`id: e.id`), so what arrives here is
+        // always the full Macula id.
+        //
+        // ⛔ Do NOT "improve" this by merging variants that share a lemma or a
+        // definition: bug-046 measured the sub-entry definitions to be unreliable
+        // (558 of 1 008 carry the base entry's short_def), so such a rule would
+        // silently merge hesed back together.
+        //
+        // Sub-entries that Macula split off the SAME word are re-joined through the
+        // generated `StrongsMergeMap` (bug-045, buckets A+B): merge only when the
+        // `word.lemma` sets are IDENTICAL and the `word.gloss` sets OVERLAP.
+        // H835/H835a (אַשְׁרֵי — one word, split by tagging) merge; H2617/H2617a
+        // (hesed I "faithful love" vs hesed II "disgrace") do NOT, because their
+        // glosses are disjoint. Anything absent from the map matches exactly.
+        // ⛔ Regenerate after any DB rebuild: python3 scripts/build_strongs_merge_map.py
+        let mergeIds = StrongsMergeMap.expand(strongsId)
+        let idPlaceholders = Array(repeating: "?", count: mergeIds.count).joined(separator: ", ")
 
         // Reverse verse_org lookup (original→translation, ADR-028) for each translation,
         // then verse join using the translated chapter AND verse — the word table is
@@ -500,15 +553,15 @@ final class DatabaseService: @unchecked Sendable {
                                 AND v_fb.chapter = COALESCE(vo_fb.chapter, w.chapter)
                                 AND v_fb.verse   = COALESCE(vo_fb.verse, w.verse)
                                 AND v_fb.translation = ?
-            WHERE (w.strongs_id = ?
-               OR (w.strongs_id GLOB ? || '[a-z]'
-                   AND length(w.strongs_id) = length(?) + 1))
+            WHERE w.strongs_id IN (\(idPlaceholders))
             ORDER BY w.book_id, w.chapter, w.verse
             LIMIT ?
             """
-        query(sql, bindings: [translation, fallbackTranslation,
-                              translation, fallbackTranslation,
-                              base, base, base, limit]) { stmt in
+        var concordanceBindings: [Any] = [translation, fallbackTranslation,
+                                          translation, fallbackTranslation]
+        concordanceBindings.append(contentsOf: mergeIds)
+        concordanceBindings.append(limit)
+        query(sql, bindings: concordanceBindings) { stmt in
             let bookId      = string(stmt, 0)
             // cols 1–2 = w.chapter / w.verse (original numbering) — not used for display
             let chapter      = Int(sqlite3_column_int(stmt, 3))   // display_chapter
@@ -533,8 +586,9 @@ final class DatabaseService: @unchecked Sendable {
     /// Returns the true total occurrence count across the whole Bible plus a
     /// per-book breakdown (count + first-occurrence example verse) for a Strong's ID.
     ///
-    /// - Parameter strongsId: Raw Strong's ID including any sub-entry suffix (e.g. "H835a").
-    ///   The method strips the suffix internally so H835 and H835a are treated as the same root.
+    /// - Parameter strongsId: The EXACT Macula Strong's ID, sub-entry suffix included
+    ///   (e.g. "H835a"). Matched verbatim — H835 and H835a are different lexemes and are
+    ///   counted separately (bug-045). See the note in the body before changing this.
     /// - Returns: A tuple of the total distinct-verse count and an array of BookUsageGroup,
     ///   one per Bible book that contains the word, sorted in canonical order.
     func loadBookUsageGroups(
@@ -552,15 +606,11 @@ final class DatabaseService: @unchecked Sendable {
             #endif
         }
 
-        // Strip trailing letter suffix: H835a → H835 (same logic as loadConcordance).
-        let base: String = {
-            guard let last = strongsId.last, last.isLetter,
-                  let prev = strongsId.dropLast().last, prev.isNumber
-            else { return strongsId }
-            return String(strongsId.dropLast())
-        }()
-
-        let strongsFilter = "(w.strongs_id = ? OR (w.strongs_id GLOB ? || '[a-z]' AND length(w.strongs_id) = length(?) + 1))"
+        // Same rule as loadConcordance — see the bug-045 note there, including the
+        // StrongsMergeMap re-join for sub-entries Macula split off the same word.
+        let mergeIds = StrongsMergeMap.expand(strongsId)
+        let idPlaceholders = Array(repeating: "?", count: mergeIds.count).joined(separator: ", ")
+        let strongsFilter = "w.strongs_id IN (\(idPlaceholders))"
 
         // --- Query A: total word token count across the whole Bible ---
         // COUNT(*) counts every word token — consistent with the standard reference count
@@ -571,7 +621,7 @@ final class DatabaseService: @unchecked Sendable {
             FROM word w
             WHERE \(strongsFilter)
             """
-        query(totalSQL, bindings: [base, base, base]) { stmt in
+        query(totalSQL, bindings: mergeIds) { stmt in
             total = Int(sqlite3_column_int(stmt, 0))
         }
 
@@ -592,7 +642,7 @@ final class DatabaseService: @unchecked Sendable {
             GROUP BY w.book_id
             ORDER BY b.num
             """
-        query(groupSQL, bindings: [base, base, base]) { stmt in
+        query(groupSQL, bindings: mergeIds) { stmt in
             let bookId  = string(stmt, 0)
             let count   = Int(sqlite3_column_int(stmt, 1))
             let firstCV = Int(sqlite3_column_int(stmt, 2))
@@ -642,11 +692,12 @@ final class DatabaseService: @unchecked Sendable {
             var cleanText      = ""
             var isFallback     = false
 
-            query(exampleSQL, bindings: [
+            var exampleBindings: [Any] = [
                 translation, fallbackTranslation, translation, fallbackTranslation,
-                row.bookId, row.chapter, row.verse,
-                base, base, base
-            ]) { stmt in
+                row.bookId, row.chapter, row.verse
+            ]
+            exampleBindings.append(contentsOf: mergeIds)
+            query(exampleSQL, bindings: exampleBindings) { stmt in
                 displayChapter = Int(sqlite3_column_int(stmt, 0))
                 displayVerse   = Int(sqlite3_column_int(stmt, 1))
                 rawText        = optString(stmt, 2) ?? ""

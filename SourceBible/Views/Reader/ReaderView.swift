@@ -147,36 +147,41 @@ struct ReaderView: View {
                 // anything passed here goes stale — see geometry note above).
                 // Only the static presentation modifiers stay here.
                 //
-                // presentationBackgroundInteraction(.enabled) is here ONLY to kill
-                // the system dimming/shadow over the background (it was covering
-                // the pinned verse). The background reader is still locked via
-                // .scrollDisabled, so the old swipe-leak problem cannot return.
+                // ⚠️ CORRECTED 2026-08-18 (bug-030). The comment that stood here claimed
+                // presentationBackgroundInteraction(.enabled) is what kills the system
+                // dimming over the background. It does NOT — and that false claim is
+                // precisely what misled code review #7.
                 //
-                // ✅ INTENTIONAL — DO NOT remove or restrict (e.g. .enabled(upThrough:)).
-                // This is by design (code review #7, 2026-06-17): restricting it brings
-                // back the background dimming that overlapped the pinned verse — the exact
-                // bug this replaced. It is unbounded on purpose. The only side effect is
-                // that taps in the area ABOVE the sheet still reach the reader (verified
-                // acceptable: re-tapping a visible verse just re-pins it). Leave as-is.
+                // What actually un-dims the sheet is
+                // `sheet.largestUndimmedDetentIdentifier`, set in StudySheetDetentApplier
+                // (StudySheetDetent.swift). UIKit honours that property ONLY when the
+                // identifier names a detent that is present in `sheet.detents`. The applier
+                // replaces the whole detent set, so before bug-030 the identifier SwiftUI
+                // had installed was an orphan and the undimming silently never applied:
+                // the sheet stayed fully modal — visible dimming, and on iOS 18 a tap on
+                // the toolbar dismissed it instead of reaching the chevrons.
+                //
+                // This modifier stays as the SwiftUI-side declaration of intent, and must
+                // still NOT be restricted (e.g. .enabled(upThrough:)) — code review #7's
+                // observation was correct even though its explanation was not: any detent
+                // named there mismatches the runtime "studySheet" identifier and the
+                // dimming comes back. The load-bearing invariant lives next to the fix,
+                // in StudySheetDetent.swift — not here.
+                //
+                // Known side effect, accepted: taps in the area ABOVE the sheet reach the
+                // reader — re-tapping a visible verse just re-pins it.
                 if let verse = vm.selectedVerse {
-                    if #available(iOS 18.0, *) {
-                        VerseBottomSheetView(verse: verse)
-                            .environmentObject(vm)
-                            .environmentObject(notesVM)
-                            .environmentObject(bookmarksVM)
-                            .environmentObject(router)
-                            .presentationDragIndicator(.visible)
-                            .presentationBackgroundInteraction(.enabled)
-                            .presentationSizing(.page)
-                    } else {
-                        VerseBottomSheetView(verse: verse)
-                            .environmentObject(vm)
-                            .environmentObject(notesVM)
-                            .environmentObject(bookmarksVM)
-                            .environmentObject(router)
-                            .presentationDragIndicator(.visible)
-                            .presentationBackgroundInteraction(.enabled)
-                    }
+                    // Deployment target is iOS 18.0 (CLAUDE.md), so the former
+                    // `if #available(iOS 18.0, *)` was always true and its else-branch was
+                    // unreachable. Removed 2026-08-18 (bug-030, «Мертвий код, помічений поруч»).
+                    VerseBottomSheetView(verse: verse)
+                        .environmentObject(vm)
+                        .environmentObject(notesVM)
+                        .environmentObject(bookmarksVM)
+                        .environmentObject(router)
+                        .presentationDragIndicator(.visible)
+                        .presentationBackgroundInteraction(.enabled)
+                        .presentationSizing(.page)
                 }
             }
         }

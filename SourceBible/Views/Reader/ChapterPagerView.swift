@@ -57,13 +57,8 @@ struct ChapterPagerView: UIViewControllerRepresentable {
         // animate the native slide for a ±1 step, snap for far jumps.
         // ux-020: the comparison is on the CANON-WIDE index, so the last chapter of a book
         // and the first of the next differ by exactly 1 and get the same animated slide.
-        let target = vm.currentGlobalChapterIndex
-        if co.displayedIndex != target, !co.isTransitioning {
-            let delta = target - co.displayedIndex
-            co.showPage(at: target,
-                        animated: abs(delta) == 1,
-                        direction: delta > 0 ? .forward : .reverse)
-        }
+        // ⛔ bug-043 — the request is DEFERRED, never dropped. See `requestPage`.
+        co.requestPage(vm.currentGlobalChapterIndex)
     }
 
     // MARK: - Coordinator
@@ -81,6 +76,24 @@ struct ChapterPagerView: UIViewControllerRepresentable {
         /// updateUIViewController must not re-enter showPage mid-slide.
         var isTransitioning = false
 
+        /// True between a swipe starting (`willTransitionTo`) and settling
+        /// (`didFinishAnimating`). Programmatic navigation must NOT call
+        /// setViewControllers while a gesture is live — that is the suspected trigger
+        /// for the swallowed completion in bug-042.
+        private var isInteracting = false
+
+        /// Canon-wide index the VM asked for while a transition or swipe was in flight.
+        /// Replayed once the way is clear (bug-043) — the request waits, it is not lost.
+        private var pendingTarget: Int?
+
+        /// Monotonic id of the in-flight INTERACTIVE swipe (bug-043 watchdog).
+        private var interactionToken: UInt64 = 0
+
+        /// Monotonic id of the in-flight programmatic transition (bug-042 watchdog).
+        /// Lets a late watchdog tell "my transition is still stuck" from "a newer
+        /// transition has since started", so it never clears someone else's latch.
+        private var transitionToken: UInt64 = 0
+
         /// Hosting page for one canon position; nil past Gen 1 / Rev 22 — that nil is
         /// what makes the pager stop cleanly at the ENDS OF THE CANON (before ux-020 it
         /// stopped at every book boundary, which is exactly what testers hit).
@@ -94,14 +107,71 @@ struct ChapterPagerView: UIViewControllerRepresentable {
             return host
         }
 
+        /// Single entry point for VM-driven navigation.
+        ///
+        /// ⛔ bug-043 — if a transition or an interactive swipe is in flight, the target
+        /// is REMEMBERED and replayed, not discarded. Before this, `updateUIViewController`
+        /// simply skipped the call: the VM had already moved (cross-ref, book picker,
+        /// search result), the page had not, and nothing ever reconciled them. The user
+        /// tapped a reference and silently stayed put.
+        func requestPage(_ target: Int) {
+            guard displayedIndex != target else { return }
+            guard !isTransitioning, !isInteracting else {
+                pendingTarget = target
+                return
+            }
+            let delta = target - displayedIndex
+            showPage(at: target,
+                     animated: abs(delta) == 1,
+                     direction: delta > 0 ? .forward : .reverse)
+        }
+
+        /// Replay a target parked by `requestPage`. Called from every place a latch
+        /// comes down — completion, watchdog, swipe settle — so no path leaves it stuck.
+        private func flushPending() {
+            guard let target = pendingTarget else { return }
+            pendingTarget = nil
+            requestPage(target)
+        }
+
         func showPage(at globalIndex: Int, animated: Bool, direction: UIPageViewController.NavigationDirection) {
             guard let pageVC, let page = hosting(for: globalIndex) else { return }
             displayedIndex = globalIndex
             isTransitioning = animated
+
+            // ⛔ bug-042 — the latch MUST have a way down that does not depend on UIKit.
+            //
+            // `isTransitioning` was raised here and lowered ONLY in the completion below.
+            // UIPageViewController is known to skip that completion when
+            // setViewControllers lands during an in-flight interactive gesture, or when
+            // the container is off-window. One missed completion and the latch stays up
+            // for the rest of the session: `updateUIViewController` then drops EVERY
+            // programmatic navigation through `!co.isTransitioning` — cross-refs, the
+            // book picker, search results, resume-position. The VM updates, the page does
+            // not, and there is no error to see. It reads as "the app froze on this
+            // chapter".
+            //
+            // The watchdog trades a rare, recoverable glitch for an unrecoverable one:
+            // if it fires while the slide really is still running, the worst case is a
+            // re-entered showPage mid-slide (a visual stutter). A stuck latch has no
+            // worst case — it never heals. 1 s is far above the ~300 ms page animation,
+            // so a healthy transition always completes first.
+            if animated {
+                transitionToken &+= 1
+                let token = transitionToken
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(1))
+                    guard let self, self.isTransitioning, self.transitionToken == token else { return }
+                    self.isTransitioning = false
+                    self.flushPending()
+                }
+            }
+
             pageVC.setViewControllers([page], direction: direction, animated: animated) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.isTransitioning = false
                     self?.attachContentScrollView()
+                    self?.flushPending()
                 }
             }
             if !animated { attachContentScrollView() }
@@ -131,6 +201,33 @@ struct ChapterPagerView: UIViewControllerRepresentable {
             // page (top), so this covers the interactive-swipe path only.
             // NOTE (product): delete this hook to get "peek forward, come back
             // to where you were" instead — record in PDR if ever wanted.
+            // Only a GESTURE marks interaction. `willTransitionTo` also fires for
+            // programmatic transitions on some iOS versions, and those never get a
+            // `didFinishAnimating` — setting the flag there would strand it (the very
+            // shape of bug-042).
+            //
+            // ⛔ This latch needs its OWN way down, and it cannot borrow the one in
+            // `showPage`. Found in review 2026-08-21, before the first commit: if
+            // `didFinishAnimating` never arrives, `isInteracting` stays raised →
+            // `requestPage` parks every target instead of calling `showPage` → the
+            // programmatic watchdog is never scheduled → nothing can lower the latch.
+            // A deadlock identical in shape to bug-042, under a new name.
+            //
+            // 3 s, not 1: an interactive swipe legitimately outlasts the ~300 ms
+            // programmatic animation, and firing early would let programmatic
+            // navigation cut into a live gesture — the thing this flag exists to stop.
+            if !isTransitioning {
+                isInteracting = true
+                interactionToken &+= 1
+                let token = interactionToken
+                Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(3))
+                    guard let self, self.isInteracting, self.interactionToken == token else { return }
+                    self.isInteracting = false
+                    self.flushPending()
+                }
+            }
+
             for vc in pendingViewControllers {
                 if let scroll = Self.findVerticalScrollView(in: vc.view) {
                     scroll.setContentOffset(
@@ -145,11 +242,22 @@ struct ChapterPagerView: UIViewControllerRepresentable {
                                 didFinishAnimating finished: Bool,
                                 previousViewControllers: [UIViewController],
                                 transitionCompleted completed: Bool) {
+            isInteracting = false
             guard completed,
                   let current = pageViewController.viewControllers?.first,
-                  let vm else { return }
+                  let vm else { flushPending(); return }
             let index = current.view.tag
             displayedIndex = index
+
+            // ⛔ bug-043 — a target that arrived DURING the swipe outranks the swipe.
+            // Committing the swiped index here would overwrite the newer intent: the
+            // user taps a cross-reference mid-gesture and lands on the neighbouring
+            // chapter instead, with nothing to suggest the tap was discarded.
+            if pendingTarget != nil {
+                flushPending()
+                return
+            }
+
             guard index != vm.currentGlobalChapterIndex,
                   let ref = vm.chapterRef(atGlobalIndex: index) else { return }
             // Commit the page now; defer the loadChapter @Published re-map one

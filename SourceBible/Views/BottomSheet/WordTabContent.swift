@@ -350,6 +350,14 @@ struct WordMeaningView: View {
                     Text(entry.shortDefinition)
                         .font(.callout)
                         .foregroundStyle(.primary)
+                } else if StrongsDefinitionTrust.isUntrusted(entry.id) {
+                    // bug-046: визначення цього підзапису в базі належить базовому
+                    // номеру й може означати протилежне. Показуємо чесну порожнечу,
+                    // а не чужий текст. Лема, транслітерація й морфологія — дані
+                    // Macula, вони справні й лишаються на місці.
+                    Text("word.definition.unavailable")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 12)

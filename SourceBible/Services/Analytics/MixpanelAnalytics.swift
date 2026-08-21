@@ -52,7 +52,14 @@ final class MixpanelAnalytics: AnalyticsService, @unchecked Sendable {
             return
         }
         // trackAutomaticEvents: false — we own the full event taxonomy (spec §Event Taxonomy).
-        Mixpanel.initialize(token: token, trackAutomaticEvents: false)
+        // serverURL travels WITH the token — see resolvedServerURL. Without it the SDK
+        // defaults to api.mixpanel.com (US) and events for an EU project are dropped
+        // server-side with no client-visible error.
+        Mixpanel.initialize(
+            token: token,
+            trackAutomaticEvents: false,
+            serverURL: Self.resolvedServerURL
+        )
         #if DEBUG
         // Spec §Тестування до TestFlight: log every event to Xcode console in DEBUG.
         Mixpanel.mainInstance().loggingEnabled = true
@@ -100,6 +107,25 @@ final class MixpanelAnalytics: AnalyticsService, @unchecked Sendable {
         #else
         return isTestFlight ? AnalyticsConfiguration.mixpanelBetaToken
                             : AnalyticsConfiguration.mixpanelProdToken
+        #endif
+    }
+
+    /// Mixpanel ingest endpoints. Residency is chosen when a project is CREATED and can
+    /// never be changed — so the region is a property of the token, not of the build.
+    private static let usIngest = "https://api.mixpanel.com"
+    private static let euIngest = "https://api-eu.mixpanel.com"
+
+    /// Endpoint for this build. MUST be kept in sync with `resolvedToken` above:
+    /// every token here has to point at the region its own project lives in.
+    /// Prod = EU (project 4054606). Dev/Beta are still the original US projects —
+    /// decision 2026-08-18: they are NOT being migrated, because the privacy policy
+    /// makes no residency claim and moving them would strand the existing beta history.
+    /// If a project is ever recreated in another region, change its line here too.
+    static var resolvedServerURL: String {
+        #if DEBUG
+        return usIngest
+        #else
+        return isTestFlight ? usIngest : euIngest
         #endif
     }
 

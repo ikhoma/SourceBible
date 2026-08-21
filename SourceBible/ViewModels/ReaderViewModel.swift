@@ -69,7 +69,29 @@ class ReaderViewModel: ObservableObject {
     // Highlights (via unified UserDataStore)
     let store: UserDataStoreProtocol
     /// verseId → HighlightColor.rawValue for the current chapter + translation.
-    @Published var highlightColors: [String: String] = [:]
+    @Published var highlightColors: [String: String] = [:] {
+        didSet {
+            // ⛔ bug-044 — THIS is the only thing that can make a cached page stale.
+            //
+            // `pageVersesCache` is keyed "book|chapter|translation", so a chapter or
+            // translation change cannot invalidate anything: entries for other keys are
+            // simply never read. The one value baked into the cached `BibleVerse` but
+            // absent from the key is `highlightColor` — so the cache must die exactly
+            // when the highlight map changes, and at no other time.
+            //
+            // Hooking the property (not the call sites) makes this hold for EVERY source
+            // of change — the reader's own palette, and edits arriving from the Notes or
+            // Bookmarks screens.
+            //
+            // The `!=` guard is what makes it work: `loadChapter()` reassigns this map on
+            // every page settle, and without the comparison every settle would still wipe
+            // the cache — the original bug under a new name.
+            if highlightColors != oldValue {
+                pageVersesCache.removeAll()
+                pageVersesCacheOrder.removeAll()
+            }
+        }
+    }
 
     // Reading-position persistence (spec-reader-resume-position.md).
     private let positionStore: ReadingPositionStore
@@ -916,8 +938,18 @@ class ReaderViewModel: ObservableObject {
     /// ADR-026 spike prefetch cache: verses for adjacent pager pages, keyed
     /// "book|chapter|translation". Intentionally NOT @Published — pages read it
     /// during body evaluation; a publish would re-render the heavy reader body.
-    /// Cleared by loadChapter() so highlights/translation changes re-derive it.
+    /// Invalidated ONLY when `highlightColors` actually changes (see its `didSet`) —
+    /// chapter and translation are part of the key, so they need no clearing (bug-044).
     private var pageVersesCache: [String: [BibleVerse]] = [:]
+
+    /// Insertion order for `pageVersesCache`, oldest first — used to bound it.
+    private var pageVersesCacheOrder: [String] = []
+
+    /// How many chapter pages to keep. The pager itself needs current ± 1; the rest is
+    /// headroom for paging back and forth without re-reading. Bounded because bug-044
+    /// removed the blanket clear on every settle — without a cap, a long reading session
+    /// would accumulate every chapter it passed through.
+    private static let pageVersesCacheLimit = 12
 
     /// Verses for one pager page WITHOUT touching @Published state (ADR-026 hard
     /// rule: no loadChapter()/@Published re-map during the page transition).
@@ -950,15 +982,25 @@ class ReaderViewModel: ObservableObject {
                            parsed: v.parsed)
             }
         pageVersesCache[key] = loaded
+        pageVersesCacheOrder.append(key)
+        if pageVersesCacheOrder.count > Self.pageVersesCacheLimit {
+            let evicted = pageVersesCacheOrder.removeFirst()
+            pageVersesCache.removeValue(forKey: evicted)
+        }
         return loaded
     }
 
     func loadChapter() {
         isLoading = true
         errorMessage = nil
-        // ADR-026: chapter/translation/highlight state is changing — drop the pager
-        // prefetch cache so adjacent pages re-derive from the fresh state.
-        pageVersesCache.removeAll()
+        // ⛔ bug-044 — no blanket cache clear here.
+        //
+        // This runs after EVERY page settle (deferred one runloop tick), so the old
+        // `pageVersesCache.removeAll()` killed the neighbours' entries exactly when the
+        // neighbours had just been mounted and were about to be shown: the cache never
+        // survived to serve the case it exists for. Invalidation now lives in
+        // `highlightColors.didSet`, which is the only state that can actually stale an
+        // entry.
         // SQLite reads with in-memory cache take <1ms — no background thread needed.
         // Avoids all Swift 6 actor-isolation issues with Task.detached.
         highlightColors = store.highlightColors(translation: currentTranslation.id)
@@ -1194,6 +1236,23 @@ class ReaderViewModel: ObservableObject {
 
     /// Converts "S1234" placeholder → "H1234" (Old Testament) or "G1234" (New Testament).
     /// Already-prefixed ids ("H…" / "G…") pass through unchanged.
+    ///
+    /// ⛔ bug-048 — do NOT route NASB extended numbers (9000+) through
+    /// `nasbExtendedOverride` here. Tried 2026-08-19, REVERTED.
+    ///
+    /// That map exists for word↔segment MATCHING (`resolvedMaculaBase`), not for
+    /// lexicon lookup. Measured over the whole NASB module: of 2 555 places where the
+    /// mapped target has a definition, only 384 (15%) share a word with the English
+    /// term next to the tag — 85% disagree, and not subtly: «villages» → H871
+    /// «Atharim», «equipped» → H3641 «Calneh», «Edom» → H1886 «Dothan».
+    ///
+    /// The same wrongness is harmless in matching (a number that fits nothing just
+    /// leaves the word non-clickable — a soft, invisible failure) and toxic here
+    /// (the user reads a confident, wrong meaning). Applying it would have undone
+    /// exactly what bug-046 fixed: empty is honest, plausible-and-wrong is not.
+    ///
+    /// The H9000+ gap therefore needs DATA — a real extended→Macula correspondence —
+    /// not a reuse of this map. See bug-048.
     private func resolveStrongsId(_ raw: String, bookId: String) -> String {
         guard raw.hasPrefix("S") else { return raw }
         let testament = allBooks.first(where: { $0.id == bookId })?.testament ?? .old
