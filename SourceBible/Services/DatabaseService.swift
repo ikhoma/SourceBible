@@ -731,13 +731,36 @@ final class DatabaseService: @unchecked Sendable {
 
     // MARK: - Versification hops (verse_org, ADR-028)
 
-    /// Forward hop: first original-language (Macula) ref a translation verse maps to.
+    /// Forward hop: the ANCHOR original-language (Macula) ref a translation verse maps to.
     ///
     /// - Returns: `sawRows == false` → the DB predates `verse_org`; callers keep
     ///   identity (the old behavior for that verse). `org == nil` with `sawRows` →
     ///   the verse explicitly has no original-text counterpart (org_* NULL, e.g.
-    ///   RST ROM 16:24 or KJV NEH 7:68). N:M merges: rows are ordered by
-    ///   (org_chapter, org_verse) and the first non-NULL is taken.
+    ///   RST ROM 16:24 or KJV NEH 7:68).
+    ///
+    /// ## Merged verses (one translation verse ⇒ several originals)
+    ///
+    /// Rows are ordered by `(org_chapter, org_verse)` and the FIRST non-NULL is taken.
+    /// That is a DECISION, not an accident of the data — record it before changing it.
+    ///
+    /// This hop exists to answer "which verse in ANOTHER translation is this one?"
+    /// (parallel translations, cross-references). For that question a merged verse needs
+    /// exactly one anchor, and the first original is the right one: hopping it back
+    /// through `translationRef` lands on the verse that CONTAINS it, which is the same
+    /// verse for every original in the merge. Concatenating targets here would be wrong —
+    /// it would ask the target translation for two verses and get two rows of text where
+    /// the reader sees one.
+    ///
+    /// ⛔ The surface that must show ALL originals is the Original pill, and it does:
+    /// `loadOriginalWords` iterates every row and concatenates. Do not "unify" the two —
+    /// they answer different questions.
+    ///
+    /// ⚠️ bug-050 — an earlier version of this comment claimed "measured: no verse in the
+    /// DB maps to >1 original, so the first row is the whole story". That was true of the
+    /// SHIPPED DATA and false of the domain: the JSON mapping source silently dropped the
+    /// left half of every merge (`mappedVerses` is an object, and the `.vrs` original
+    /// expresses one⇒two by repeating the key). 17 verses are affected. The claim is
+    /// removed because a fix to the data must NOT quietly invalidate a code comment.
     private func orgRef(bookId: String, chapter: Int, verse: Int, translation: String)
         -> (sawRows: Bool, org: (bookId: String, chapter: Int, verse: Int)?) {
         var sawRows = false
@@ -864,9 +887,9 @@ final class DatabaseService: @unchecked Sendable {
     /// - Fallbacks: no `verse_org` row at all (DB predates ADR-028) or an explicit
     ///   "no original" mapping (`org_*` NULL — 32 verses corpus-wide) → identity, i.e.
     ///   the old behaviour for exactly those verses and nothing else.
-    /// - N:M: `orgRef`/`translationRef` take the first row of a curated ordering.
-    ///   Measured: no verse in the DB maps to >1 original, and only 2–3 originals per
-    ///   translation are split across two verses, so the first row is the whole story.
+    /// - Merged verses: `orgRef`/`translationRef` take the first row of a curated
+    ///   ordering — the anchor. See the reasoning on `orgRef`; ⛔ do not "fix" this to
+    ///   concatenate, a parallel row shows ONE verse per translation by construction.
     func loadParallelVerseTexts(bookId: String, chapter: Int, verse: Int,
                                 source: String, targets: [String]) -> [String: String] {
         guard isAvailable else { return [:] }

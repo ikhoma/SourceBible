@@ -71,6 +71,8 @@ across tokens, which is why the suffix token in Ps 51:7 carries "conceived.me"
 while the verb carries "she". The unit of an English gloss here is the slot.
 """
 
+import io
+import os
 import re
 import sqlite3
 import sys
@@ -82,6 +84,64 @@ from typing import Optional, List, Tuple
 
 # Particles with no English translation — displayed as em dash.
 UNTRANSLATABLE = {"H853"}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Курований шар (bug-051)
+# ─────────────────────────────────────────────────────────────────────────
+# Є токени, для яких у Macula глоса НЕМАЄ ЗОВСІМ — порожньо і в TSV `gloss`,
+# і в TSV `english`, і в атрибуті `gloss` у lowfat XML. Синтезувати з нічого
+# не можна, а залити «найчастішим глосом того самого Strong's» — гірше, ніж
+# лишити порожньо: глос контекстний (bug-049), і модальне значення нестабільне
+# (H6440 «before» — лише 23% вживань). Тому такі місця курують руками.
+#
+# Файл має НАЙВИЩИЙ пріоритет: перекриває будь-що, що синтезували стадії 1-8.
+REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CURATED  = os.path.join(REPO_DIR, "data", "glosses", "curated-glosses.tsv")
+
+
+def load_curated():
+    # type: () -> dict
+    """word.id -> (surface, gloss). Порожній dict, якщо файлу немає."""
+    out = {}
+    if not os.path.exists(CURATED):
+        return out
+    fh = io.open(CURATED, encoding="utf-8")
+    for ln in fh:
+        ln = ln.rstrip("\n")
+        if not ln or ln.startswith("#"):
+            continue
+        f = ln.split("\t")
+        if len(f) < 3:
+            continue
+        out[f[0]] = (f[1], f[2])
+    fh.close()
+    return out
+
+
+def verify_curated(conn, curated):
+    # type: (sqlite3.Connection, dict) -> None
+    """Падає, якщо id зник або surface розійшовся.
+
+    Без цієї перевірки перенумерація позицій при перезбірці мовчки поклала б
+    курований глос на ЧУЖЕ слово — помилка, яку на екрані не відрізнити від
+    правильного результату.
+    """
+    problems = []
+    cur = conn.cursor()
+    for wid, (surface, _gloss) in sorted(curated.items()):
+        row = cur.execute("SELECT surface FROM word WHERE id = ?", (wid,)).fetchone()
+        if row is None:
+            problems.append("%s — рядка немає в word" % wid)
+        elif row[0] != surface:
+            problems.append("%s — у БД «%s», у файлі «%s»" % (wid, row[0], surface))
+    if problems:
+        sys.stderr.write("\n✗ curated-glosses.tsv розійшовся з базою:\n")
+        for x in problems[:20]:
+            sys.stderr.write("    " + x + "\n")
+        if len(problems) > 20:
+            sys.stderr.write("    … ще %d\n" % (len(problems) - 20))
+        sys.stderr.write("  Звір позиції перед тим, як писати глоси.\n\n")
+        sys.exit(1)
 
 # Subject pronouns Macula prepends to verb glosses with a dot.
 # "he.created" → "created"; "and he.said" → "and said"
@@ -373,6 +433,11 @@ def main():
 
     add_column_if_missing(conn)
 
+    curated = load_curated()
+    if curated:
+        verify_curated(conn, curated)
+        print("  Курованих глосів: {} (звірено з surface)".format(len(curated)))
+
     print("  Fetching word rows...")
     rows = fetch_rows(conn)
     total = len(rows)
@@ -408,6 +473,9 @@ def main():
          book_id, chapter, verse, slot, morph, lexical_class) = r
         raw    = gloss_macula or gloss_short
         result = synthesize(raw, strongs_id, language or "")
+        # Курований шар — після всіх стадій, перекриває їхній результат.
+        if row_id in curated:
+            result = curated[row_id][1]
 
         key = None if slot is None else (book_id, chapter, verse, slot)
         if key is None or key != cur_key:

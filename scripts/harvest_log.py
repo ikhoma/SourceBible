@@ -31,10 +31,24 @@ git пише «що», LOG хоче «чому», і між ними не бул
                 Не потребує оголошувати «спринт закінчено»: одиниця — ДАТА, а не
                 спринт. Запис за день росте, поки баги закриваються.
 
-  3. КАНДИДАТИ  сабджекти з маркерами відкинутої альтернативи («а не», «замість»,
-                «відкочено», «відхилено», «натомість», «прибрано»). Це підказка,
-                НЕ факт: рішення закриває альтернативу, і ваша власна мова це
-                вже позначає. Виводяться окремим блоком «перевірити».
+  3. КАНДИДАТИ  два незалежні тригери, обидва — підказка, НЕ факт. Виводяться
+                окремим блоком «перевірити».
+
+                (а) МАРКЕР — сабджект несе слід відкинутої альтернативи («а не»,
+                    «замість», «відкочено», «відхилено», «натомість», «прибрано»).
+                    Рішення закриває альтернативу, і ваша власна мова це вже
+                    позначає.
+
+                (б) ОБСЯГ — коміт чіпає ≥15 файлів, а тіло практично порожнє.
+                    Додано 2026-08-24 після ретро: за 16 днів маркерний тригер
+                    підняв НУЛЬ кандидатів, тоді як два змістовні коміти пройшли
+                    без трейлера — `2b6028d` (72 файли, «Search fixes, versification
+                    model update…») і `22b3781` (39 файлів, «Various Bug Fixes…»).
+                    Обидва невидимі для (а) ЗА ПОБУДОВОЮ: маркер шукається в тексті,
+                    а таких комітів текст і не має. Тобто (а) ловить те, що й так
+                    стоїть поруч із трейлером, і сліпий саме до найризикованішого
+                    класу — кількаденне звалище під generic-сабджектом. Обсяг —
+                    єдиний сигнал, який у такого коміта лишається.
 
 ⛔ Чернетка — не запис. Формулювання «чому» лишається за людиною; скрипт лише не дає
    дню зникнути безслідно.
@@ -61,6 +75,16 @@ CANDIDATE_MARKERS = [
     "прибрано", "більше не", "скасовано", "instead of", "rejected",
 ]
 
+# Тригер «обсяг без пояснення»: широкий коміт із порожнім тілом.
+# 15 файлів — під двома пропущеними комітами (39 і 72) і над усіма ремонтними
+# з тієї ж вибірки (найбільший — 2 файли), тож поріг не бере шуму. 40 символів —
+# щоб «WIP» чи «rebuild» не рахувалися за пояснення.
+BULK_FILES = 15
+THIN_BODY = 40
+
+# Рядок списку файлів у `--name-status`: статус, опційне число (R100), TAB.
+FILE_LINE_RE = re.compile(r"^[A-Z]\d*\t", re.MULTILINE)
+
 TRAILER_RE = re.compile(r"^(Decision|Refs|Рішення)\s*:\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
 BUG_DONE_RE = re.compile(r"^R\d*\t\S*?(bug-[\w-]+\.md)\tdocs/bugs/done/\1$", re.MULTILINE)
 BUG_ADD_RE = re.compile(r"^A\tdocs/bugs/done/(bug-[\w-]+)\.md$", re.MULTILINE)
@@ -74,11 +98,29 @@ class Commit:
     decisions: list[str] = field(default_factory=list)
     refs: list[str] = field(default_factory=list)
     bugs_closed: list[str] = field(default_factory=list)
+    files_changed: int = 0
+    body_len: int = 0
+
+    @property
+    def has_marker(self) -> bool:
+        low = self.subject.lower()
+        return any(m in low for m in CANDIDATE_MARKERS)
+
+    @property
+    def is_bulk_silent(self) -> bool:
+        """Широко чіпає код і нічого про це не каже."""
+        return self.files_changed >= BULK_FILES and self.body_len < THIN_BODY
 
     @property
     def is_candidate(self) -> bool:
-        low = self.subject.lower()
-        return any(m in low for m in CANDIDATE_MARKERS)
+        return self.has_marker or self.is_bulk_silent
+
+    @property
+    def candidate_reason(self) -> str:
+        """Чому коміт підняли — інакше в блоці «перевірити» видно що, але не нащо."""
+        if self.has_marker:
+            return "маркер у сабджекті"
+        return f"{self.files_changed} файлів, тіло порожнє"
 
 
 def git(*args: str) -> str:
@@ -124,7 +166,19 @@ def collect(since: str | None) -> list[Commit]:
             continue
         sha, date, subject = parts[0].strip(), parts[1], parts[2]
         tail = SEP_FLD.join(parts[3:])          # тіло коміту + список файлів
-        c = Commit(sha=sha[:9], date=date, subject=subject)
+        # Розділяємо тіло і список файлів: у merge-комітів списку немає взагалі,
+        # тож files_changed=0 і тригер обсягу на них не спрацює — це навмисно,
+        # merge не несе власного рішення.
+        # ⛔ Не `sub()`: регекс матчить лише ПРЕФІКС рядка (статус+TAB), тож заміна
+        # на порожнє лишила б у тілі шляхи файлів і роздула body_len — тригер
+        # обсягу не спрацював би НІКОЛИ саме на широких комітах. Ділимо порядково.
+        file_lines = [l for l in tail.splitlines() if FILE_LINE_RE.match(l)]
+        body_only = "\n".join(l for l in tail.splitlines() if not FILE_LINE_RE.match(l))
+        c = Commit(
+            sha=sha[:9], date=date, subject=subject,
+            files_changed=len(file_lines),
+            body_len=len(body_only.strip()),
+        )
         for kind, val in TRAILER_RE.findall(tail):
             (c.refs if kind.lower() == "refs" else c.decisions).append(val)
         c.bugs_closed = [Path(m).stem for m in BUG_DONE_RE.findall(tail)] + BUG_ADD_RE.findall(tail)
@@ -173,7 +227,7 @@ def draft_parts(commits: list[Commit]) -> tuple[str, str]:
 
         if cands:
             cand_blocks.append(f"\n  ─── {date} · перевірити: схоже на рішення, але трейлера немає ───")
-            cand_blocks.extend(f"    {c.sha}  {c.subject}" for c in cands)
+            cand_blocks.extend(f"    {c.sha}  {c.subject}\n              ↳ {c.candidate_reason}" for c in cands)
 
     return "\n".join(entries), "\n".join(cand_blocks)
 

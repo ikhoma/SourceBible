@@ -20,6 +20,13 @@ scripts/.cache/
 !data/versification/
 !data/versification/**
 
+# EXCEPTION: curated gloss overrides are small and hand-derived (bug-051) —
+# MUST be tracked, else a fresh checkout silently loses them: process_glosses.py
+# treats a missing file as "{}" (no error), empty slots regress 160→307, and
+# rebuild.sh hard-fails later at check_gloss_coverage.py's budget gate instead.
+!data/glosses/
+!data/glosses/**
+
 # ── macOS ─────────────────────────────────────────────────────
 .DS_Store
 **/.DS_Store

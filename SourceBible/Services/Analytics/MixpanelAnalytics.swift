@@ -42,29 +42,44 @@ final class MixpanelAnalytics: AnalyticsService, @unchecked Sendable {
 
     /// Initialize the Mixpanel SDK and opt in. Call only after consent is ON. Idempotent.
     func enable() {
-        if started {
-            Mixpanel.mainInstance().optInTracking()
-            return
+        if !started {
+            let token = Self.resolvedToken
+            guard !token.isEmpty else {
+                print("[MixpanelAnalytics] ⚠️ Token empty for this build — fill the matching MIXPANEL_*_TOKEN in Config/Secrets.xcconfig and rebuild")
+                return
+            }
+            // trackAutomaticEvents: false — we own the full event taxonomy (spec §Event Taxonomy).
+            // serverURL travels WITH the token — see resolvedServerURL. Without it the SDK
+            // defaults to api.mixpanel.com (US) and events for an EU project are dropped
+            // server-side with no client-visible error.
+            Mixpanel.initialize(
+                token: token,
+                trackAutomaticEvents: false,
+                serverURL: Self.resolvedServerURL
+            )
+            #if DEBUG
+            // Spec §Тестування до TestFlight: log every event to Xcode console in DEBUG.
+            Mixpanel.mainInstance().loggingEnabled = true
+            #endif
+            started = true
         }
-        let token = Self.resolvedToken
-        guard !token.isEmpty else {
-            print("[MixpanelAnalytics] ⚠️ Token empty for this build — fill the matching MIXPANEL_*_TOKEN in Config/Secrets.xcconfig and rebuild")
-            return
-        }
-        // trackAutomaticEvents: false — we own the full event taxonomy (spec §Event Taxonomy).
-        // serverURL travels WITH the token — see resolvedServerURL. Without it the SDK
-        // defaults to api.mixpanel.com (US) and events for an EU project are dropped
-        // server-side with no client-visible error.
-        Mixpanel.initialize(
-            token: token,
-            trackAutomaticEvents: false,
-            serverURL: Self.resolvedServerURL
-        )
+
+        // The opt-out flag is persisted by the SDK ACROSS LAUNCHES, so a fresh
+        // initialize() inherits an earlier opt-out and then silently drops every
+        // event — no error, no callback, nothing in the console. Clearing it here is
+        // the only way back: enable() is called only when consent is already ON.
+        //
+        // Guarded on hasOptedOutTracking() on purpose: an unconditional
+        // optInTracking() would emit a $opt_in event on EVERY cold launch.
+        //
+        // And no `distinctId:` argument on purpose either — that overload identifies
+        // internally, which would make this the second place that names the user.
+        // Identity is assigned in exactly one place: SourceBibleApp.
+        guard Mixpanel.mainInstance().hasOptedOutTracking() else { return }
+        Mixpanel.mainInstance().optInTracking()
         #if DEBUG
-        // Spec §Тестування до TestFlight: log every event to Xcode console in DEBUG.
-        Mixpanel.mainInstance().loggingEnabled = true
+        print("[MixpanelAnalytics] ✓ persisted opt-out cleared — tracking restored")
         #endif
-        started = true
     }
 
     /// Consent revoked: opt out so the SDK drops queued + future events. No-op if never started.

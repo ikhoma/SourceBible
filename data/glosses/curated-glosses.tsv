@@ -1,0 +1,173 @@
+# curated-glosses.tsv — курований шар глосів (bug-051)
+#
+# НАЙВИЩИЙ пріоритет: перекриває gloss_display, який синтезує process_glosses.py.
+# Потрібен там, де в Macula глоса НЕМАЄ ЗОВСІМ — ні в TSV `gloss`, ні в TSV `english`,
+# ні в атрибуті `gloss` у lowfat XML. Перевірено 2026-08-26 для всіх рядків нижче.
+#
+# ⛔ Автозалив «за найчастішим глосом того самого Strong's» СВІДОМО не робимо:
+#    глос контекстний (редакторське правило, bug-049), а модальне значення нестабільне
+#    (H6440 «before» — лише 23% вживань). Тільки ручна курація.
+#
+# Формат (TAB): id <TAB> surface <TAB> gloss <TAB> reason
+#   id      — word.id, тобто BOOK|глава|вірш|позиція
+#   surface — контрольна копія word.surface. Білд ПАДАЄ на розбіжності: якщо
+#             перенумерація зсунула позиції, глос мовчки ліг би на чуже слово.
+#
+# Стиль — як у решти грецьких глосів Macula: рядкові в середині речення,
+# «-» для артикля, який не перекладається, [квадратні] для доданого.
+
+# ── ACT 13:39 — ядро вірша; клаузу «від усього» KJV переносить із 13:38 ─────────────────────────────────────────
+ACT|13|39|1	ἐν	in	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+ACT|13|39|2	τούτῳ	Him	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+ACT|13|39|3	πᾶς	everyone	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+ACT|13|39|4	ὁ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+ACT|13|39|5	πιστεύων	believing	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+ACT|13|39|6	δικαιοῦται	is justified	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+
+# ── MRK 16:99 — КОРОТКЕ закінчення Марка; єдиний оригінал у корпусі, недосяжний із жодного перекладу ─────────────────────────────────────────
+MRK|16|99|1	Πάντα	All things	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|2	δὲ	however	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|3	τὰ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|4	παρηγγελμένα	having been commanded	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|5	τοῖς	to those	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|6	περὶ	around	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|7	τὸν	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|8	Πέτρον	Peter	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|9	συντόμως	briefly	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|10	ἐξήγγειλαν	they reported	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|11	Μετὰ	After	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|12	δὲ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|13	ταῦτα	these things	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|14	καὶ	also	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|15	αὐτὸς	Himself	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|16	ὁ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|17	Ἰησοῦς	Jesus	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|18	ἀπὸ	from	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|19	ἀνατολῆς	east	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|20	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|21	ἄχρι	as far as	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|22	δύσεως	west	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|23	ἐξαπέστειλεν	sent out	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|24	δι’	through	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|25	αὐτῶν	them	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|26	τὸ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|27	ἱερὸν	sacred	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|28	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|29	ἄφθαρτον	imperishable	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|30	κήρυγμα	proclamation	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|31	τῆς	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|32	αἰωνίου	of eternal	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+MRK|16|99|33	σωτηρίας	salvation	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+
+# ── REV 9:20 ─────────────────────────────────────────
+REV|9|20|1	καὶ	And	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|2	οἱ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|3	λοιποὶ	rest	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|4	τῶν	of the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|5	ἀνθρώπων	men	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|6	οἳ	who	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|7	οὐκ	not	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|8	ἀπεκτάνθησαν	were killed	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|9	ἐν	by	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|10	ταῖς	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|11	πληγαῖς	plagues	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|12	ταύταις	these	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|13	οὐδὲ	nor	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|14	μετενόησαν	did they repent	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|15	ἐκ	of	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|16	τῶν	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|17	ἔργων	works	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|18	τῶν	of the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|19	χειρῶν	hands	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|20	αὐτῶν	of them	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|21	ἵνα	that	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|22	μὴ	not	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|23	προσκυνήσουσιν	they will worship	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|24	τὰ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|25	δαιμόνια	demons	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|26	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|27	τὰ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|28	εἴδωλα	idols	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|29	τὰ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|30	χρυσᾶ	golden	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|31	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|32	τὰ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|33	ἀργυρᾶ	silver	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|34	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|35	τὰ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|36	χαλκᾶ	bronze	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|37	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|38	τὰ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|39	λίθινα	stone	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|40	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|41	τὰ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|42	ξύλινα	wooden	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|43	ἃ	which	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|44	οὔτε	neither	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|45	βλέπειν	to see	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|46	δύνανται	are able	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|47	οὔτε	nor	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|48	ἀκούειν	to hear	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|49	οὔτε	nor	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|9|20|50	περιπατεῖν	to walk	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+
+# ── REV 20:4 — 58 слів, найбільша діра в корпусі ─────────────────────────────────────────
+REV|20|4|1	Καὶ	And	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|2	εἶδον	I saw	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|3	θρόνους	thrones	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|4	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|5	ἐκάθισαν	they sat	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|6	ἐπ’	upon	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|7	αὐτούς	them	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|8	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|9	κρίμα	judgment	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|10	ἐδόθη	was given	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|11	αὐτοῖς	to them	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|12	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|13	τὰς	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|14	ψυχὰς	souls	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|15	τῶν	of those	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|16	πεπελεκισμένων	having been beheaded	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|17	διὰ	on account of	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|18	τὴν	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|19	μαρτυρίαν	testimony	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|20	Ἰησοῦ	of Jesus	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|21	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|22	διὰ	on account of	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|23	τὸν	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|24	λόγον	word	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|25	τοῦ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|26	Θεοῦ	of God	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|27	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|28	οἵτινες	those who	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|29	οὐ	not	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|30	προσεκύνησαν	did worship	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|31	τὸ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|32	θηρίον	beast	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|33	οὐδὲ	nor	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|34	τὴν	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|35	εἰκόνα	image	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|36	αὐτοῦ	of him	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|37	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|38	οὐκ	not	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|39	ἔλαβον	did receive	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|40	τὸ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|41	χάραγμα	mark	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|42	ἐπὶ	upon	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|43	τὸ	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|44	μέτωπον	forehead	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|45	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|46	ἐπὶ	upon	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|47	τὴν	the	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|48	χεῖρα	hand	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|49	αὐτῶν	of them	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|50	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|51	ἔζησαν	they lived	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|52	καὶ	and	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|53	ἐβασίλευσαν	reigned	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|54	μετὰ	with	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|55	τοῦ	-	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|56	Χριστοῦ	Christ	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|57	χίλια	a thousand	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+REV|20|4|58	ἔτη	years	джерело порожнє в Macula (TSV gloss+english, lowfat XML) — курація 2026-08-26
+

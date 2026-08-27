@@ -69,9 +69,23 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
     // MARK: - Shared no-op instance
     // Single throwaway tracker used as the default before the live one is injected
     // (EnvironmentKey default + VM property defaults). Avoids allocating a fresh
-    // tracker per VM. nonisolated(unsafe): never mutated, only used from @MainActor.
-    // swiftlint:disable:next nonisolated_unsafe
-    nonisolated(unsafe) static let noop = SessionTracker(analytics: NoopAnalytics.shared)
+    // tracker per VM.
+    //
+    // `nonisolated`, NOT `nonisolated(unsafe)`, and NOT bare — all three differ:
+    //   bare                 → under SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor this
+    //                          static let is inferred @MainActor, and
+    //                          AnalyticsEnvironmentKey's `nonisolated static let
+    //                          defaultValue: SessionTracker = .noop` then fails with
+    //                          "main actor-isolated default value in a nonisolated
+    //                          context". Measured 2026-08-26 — this is a build error.
+    //   nonisolated(unsafe)  → works, but the compiler flags the `(unsafe)` as
+    //                          needless: SessionTracker is @unchecked Sendable, so
+    //                          the unchecked variant buys nothing.
+    //   nonisolated          → what we want. Severs the @MainActor inference, keeps
+    //                          the Sendable check. Clean build, no warning.
+    // The compiler's fix-it ("consider removing it") is half right: drop `(unsafe)`,
+    // keep `nonisolated`. Taking the fix-it literally breaks the build.
+    nonisolated static let noop = SessionTracker(analytics: NoopAnalytics.shared)
 
     // MARK: - Init
 

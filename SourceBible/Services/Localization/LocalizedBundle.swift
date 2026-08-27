@@ -28,18 +28,25 @@ import Foundation
 // and that isolation propagates to ALL file-scope globals in this file — including
 // `let` constants of `Sendable` types like NSLock.
 //
-// The Swift compiler emits a warning "'nonisolated(unsafe)' is unnecessary for a
-// constant with 'Sendable' type 'NSLock'" — this warning is INCORRECT in this
-// specific context. Removing nonisolated(unsafe) from _lbLock causes four
-// "Main actor-isolated let '_lbLock' cannot be referenced from a nonisolated context"
-// errors at every _lbLock.withLock call site. The annotation is required.
+// The annotation severs that @MainActor inference chain so the nonisolated overrides
+// (localizedString, activate, warmCache, install) can reach these globals. Thread
+// safety is provided by _lbLock itself; @unchecked Sendable on the class documents
+// this intentional trade-off.
 //
-// nonisolated(unsafe) severs the @MainActor inference chain on all three globals
-// so that the nonisolated overrides (localizedString, activate, warmCache, install)
-// can access them freely. Thread safety is provided by _lbLock itself; @unchecked
-// Sendable on the class documents this intentional trade-off.
-// swiftlint:disable:next nonisolated_unsafe
-private nonisolated(unsafe) let _lbLock = NSLock()
+// The lock is `nonisolated`, the two vars are `nonisolated(unsafe)` — the asymmetry
+// is deliberate, not an oversight. On the lock the compiler emits "'nonisolated(unsafe)'
+// is unnecessary for a constant with 'Sendable' type 'NSLock', consider removing it".
+// That warning is HALF right, and an earlier revision of this comment got it wrong in
+// the other direction by calling it simply incorrect:
+//   • `(unsafe)` really is needless here — NSLock is Sendable and this is a `let`,
+//     so the unchecked variant buys nothing.
+//   • but taking the fix-it literally and deleting the whole annotation re-isolates
+//     the global to @MainActor and breaks the four `_lbLock.withLock` call sites.
+// Correct resolution: keep `nonisolated`, drop `(unsafe)`. Measured 2026-08-26 on the
+// twin case in SessionTracker.noop — bare = build error, `nonisolated` = clean build.
+// The two vars keep `(unsafe)`: they are mutable, so the warning does not apply to them
+// and the unchecked opt-out is what actually carries them.
+private nonisolated let _lbLock = NSLock()
 // swiftlint:disable:next nonisolated_unsafe
 private nonisolated(unsafe) var _lbLanguage: String          = "en"
 // swiftlint:disable:next nonisolated_unsafe

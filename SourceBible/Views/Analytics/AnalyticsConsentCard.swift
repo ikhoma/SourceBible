@@ -6,7 +6,7 @@
 //
 // Persistence:
 //   - "analyticsConsentShown"  (Bool) — true after shown once, never show again
-//   - "analyticsEnabled"       (Bool) — user's live choice; default ON
+//   - "analyticsEnabled"       (Bool) — user's live choice; дефолт регіональний
 //
 // ⚠️ ЗГОДА МУСИТЬ БУТИ ЯВНОЮ (перероблено 2026-08-03).
 //
@@ -18,16 +18,18 @@
 //    раз, шлях назад — перемикач у Меню.
 //
 // 2. Свайп вниз не чіпав `analyticsEnabled`, тобто закрити не читаючи
-//    означало лишити дефолт. Дефолт реєструється в `SourceBibleApp.init` як
-//    `MixpanelAnalytics.isTestFlight` (PDR D4: TestFlight/dev → ON, App Store
-//    → OFF), тож у релізі мовчазної згоди НЕ було — але в TestFlight була.
-//    Тепер будь-яке закриття без явного вибору = відмова, однаково в усіх
-//    збірках: згода існує тільки як affirmative action.
+//    означало лишити дефолт — а дефолт міг бути ON. Мовчазної згоди бути не
+//    може, тож `onDismiss` тепер пише значення ЗАВЖДИ.
 //
-//    ⚠️ Побічний ефект для TestFlight: тестер, який змахнув шіт, вимикає собі
-//    аналітику, хоча PDR D4 робив її для тестерів opt-out. Свідомий розмін —
-//    однозначність семантики проти телеметрії кількох тестерів; шлях назад є
-//    в Меню.
+// ⚠️ ЩО САМЕ пише — залежить від регіону (PDR D6, `AnalyticsConsentPolicy`):
+//    ЄЕЗ/GB → `false` (немає affirmative action — немає згоди).
+//    Решта світу → `true` (картка там ПОВІДОМЛЯЄ, а не питає; закрити ≠ відмовити,
+//    відмова живе на кнопці «Не ділитися» і в Меню).
+//
+// ⛔ І в жодному разі не «лишити як є, нічого не писати». Ключ мусить існувати
+//    після картки в ОБОХ гілках, інакше дефолт переобчислюється на кожному
+//    запуску, і згода тихо перемкнеться, щойно людина змінить Region у Settings.
+//    Написане один раз — залипає, і це навмисно.
 //
 // ⛔ Не прибирати `onDismiss` і не покладатись на дефолт у цьому шляху —
 // це поверне пункт 2.
@@ -40,7 +42,7 @@ struct AnalyticsConsentCard: View {
     @Binding var isPresented: Bool
     /// Ставиться лише явним тапом. Усе решта (свайп, тап поза шітом) — відмова.
     @Binding var decisionMade: Bool
-    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = AnalyticsConsentPolicy.defaultConsent
 
     var body: some View {
         VStack(spacing: 16) {
@@ -153,7 +155,7 @@ struct AnalyticsConsentModifier: ViewModifier {
     // .environment(\.colorTheme) in SourceBibleApp: the later modifier wraps the chain,
     // so it is an ancestor and the value flows down.
     @Environment(\.colorTheme) private var colorTheme
-    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = AnalyticsConsentPolicy.defaultConsent
     @State private var showSheet = false
     @State private var sheetHeight: CGFloat = 300
     @State private var decisionMade = false
@@ -253,10 +255,10 @@ struct AnalyticsConsentModifier: ViewModifier {
                     presentIfReady()
                 }
             }
-            // onDismiss ловить свайп вниз і тап поза шітом. Без явного вибору
-            // згоди немає — гасимо аналітику. Див. пункт 2 у шапці файлу.
+            // onDismiss ловить свайп вниз і тап поза шітом. Пишемо регіональний
+            // дефолт ЯВНО — не лишаємо ключ порожнім. Див. пункт 2 у шапці файлу.
             .sheet(isPresented: $showSheet, onDismiss: {
-                if !decisionMade { analyticsEnabled = false }
+                if !decisionMade { analyticsEnabled = AnalyticsConsentPolicy.defaultConsent }
             }) {
                 AnalyticsConsentCard(isPresented: $showSheet, decisionMade: $decisionMade)
                     .presentationDetents([.height(sheetHeight)])

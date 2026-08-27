@@ -12,7 +12,7 @@ struct MenuView: View {
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
     @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = AppLanguage.defaultTranslationId
-    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = AnalyticsConsentPolicy.defaultConsent
     @Environment(\.locale) private var locale
     // Дефолт `@AppStorage` спрацьовує, поки ключа НЕМА — а він пишеться лише
     // коли людина відкриє пікер мови. Жорсткий "en" тут означав, що на

@@ -1,0 +1,83 @@
+# ЧЕРНЕТКА — ЩО ЩЕ НЕ ПІДПИСАНО. 27 рядків уже пішли в overrides.tsv 2026-08-26.
+#
+# ── 1. 15 віршів Textus Receptus (59 рядків) — Іван НЕ підписав, поставив умову:
+#    «зроби гарний empty state з поясненням що цього тексту немає в оригіналі
+#     із зазначенням що в нас взято за оригінал».
+#    Рядок org=«-» — технічна передумова цього empty state (він мусить відрізняти
+#    «оригіналу нема» від «мапінг не знайдено»). Чекає на UX-рішення.
+#
+# ── 2. MAT 21:29 (3 рядки) — Іван відхилив «лишаємо»: «не відповідає жодному».
+#    Переміряно за грецькими ПОВЕРХНЯМИ (глоси Macula 29/30 переставлені):
+#      грец. 21:29 = Ἐγὼ κύριε καὶ οὐκ ἀπῆλθεν    — «іду, пане» і НЕ пішов
+#      грец. 21:30 = Οὐ θέλω ὕστερον … ἀπῆλθεν    — «не хочу», потім розкаявся і пішов
+#      ASV/KJV/RST 21:29 = відмова → пішов   (= відповідь із грец. 21:30)
+#      ASV/KJV/RST 21:30 = «іду, пане» → не пішов (= відповідь із грец. 21:29 + рамка «до другого»)
+#    Це РУКОПИСНИЙ ВАРІАНТ, не версифікація: відповіді синів помінялися місцями,
+#    але рамка «підійшов до другого» лишилась у грец. 21:30. Бієкції немає.
+#    Потрібне рішення Івана — див. чат.
+#
+# ── 3. REV 20:7 (1 рядок) — Іван: «так тут чисте злиття, якщо залишити як є то
+#    втрачаємо другу половину». Підтверджено: RST 20:7 → грец. 20:7 = 0.35,
+#    грец. 20:8 = 0.65, разом 1.00. Відкладено до фічі «два оригінали».
+#
+
+KJV	MAT	17	21	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MAT	17	21	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MAT	17	21	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MAT	17	21	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MAT	18	11	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MAT	18	11	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MAT	18	11	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MAT	18	11	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MAT	23	14	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MAT	23	14	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MAT	23	14	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MAT	23	14	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MRK	7	16	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MRK	7	16	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MRK	7	16	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MRK	7	16	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MRK	9	44	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MRK	9	44	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MRK	9	44	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MRK	9	44	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MRK	9	46	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MRK	9	46	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MRK	9	46	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MRK	9	46	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MRK	11	26	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MRK	11	26	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MRK	11	26	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MRK	11	26	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	MRK	15	28	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	MRK	15	28	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	MRK	15	28	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	MRK	15	28	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	LUK	17	36	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	LUK	17	36	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	LUK	17	36	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	LUK	17	36	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	LUK	23	17	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	LUK	23	17	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	LUK	23	17	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	LUK	23	17	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	ACT	8	37	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	ACT	8	37	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	ACT	8	37	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	ACT	8	37	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	ACT	15	34	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	ACT	15	34	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	ACT	15	34	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	ACT	15	34	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	ACT	24	7	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	ACT	24	7	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	ACT	24	7	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	ACT	24	7	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	ACT	28	29	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	ACT	28	29	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	ACT	28	29	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	ACT	28	29	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+KJV	ROM	16	24	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+NASB	ROM	16	24	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+UBIO	ROM	16	24	-	-	-	вірш Textus Receptus, відсутній у критичному тексті (Macula)
+RST	REV	20	7	REV	20	7	RST 20:7 зливає грец. 20:7+20:8 (звільнення сатани + вихід обманювати народи). Потребує окремого рішення

@@ -51,6 +51,12 @@ python3 scripts/import_commentaries.py sourcebible.db
 echo "\n▸ Synthesizing glosses..."
 python3 scripts/process_glosses.py sourcebible.db
 
+echo "\n▸ Checking gloss coverage (bug-051)..."
+# Рахує ДИСПЛЕЙНІ СЛОВА, не токени: склейка слотів гасить 91% порожніх токенів,
+# тож токенна метрика показала б регресію там, де користувач нічого не бачить.
+# Плюс пастка на H853: суфіксне אֹתָם мусить лишатись «them», а не «— them».
+python3 scripts/check_gloss_coverage.py sourcebible.db
+
 echo "\n▸ Regenerating Strong's merge map (bug-045)..."
 # StrongsMergeMap.swift виведений із word.lemma / word.gloss, тобто з ЦІЄЇ бази.
 # Без перегенерації він описував би стан, якого вже немає, і конкорданс мовчки

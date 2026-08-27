@@ -18,7 +18,7 @@ struct SourceBibleApp: App {
     // Read once at init; runtime changes handled via .onChange in body.
     // Consent ON (any build) → MixpanelAnalytics; OFF → NoopAnalytics (zero network).
     // No #if BETA gating — Mixpanel runs in beta AND prod (PDR-Analytics-Mixpanel D3).
-    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = true
+    @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = AnalyticsConsentPolicy.defaultConsent
     let analytics: any AnalyticsService
 
     // MARK: - Session Tracker
@@ -53,10 +53,12 @@ struct SourceBibleApp: App {
 
     init() {
         // ── Analytics init ────────────────────────────────────────────────────
-        // Consent default (PDR D4): TestFlight/dev → ON (opt-out); App Store → OFF (opt-in).
+        // Consent default (PDR D6, замінює D4): РЕГІОНАЛЬНИЙ, а не за типом збірки.
+        // ЄЕЗ/GB → OFF (opt-in); решта світу → ON (opt-out). Уся логіка й аргументи —
+        // в `AnalyticsConsentPolicy`, тут лише виконання.
         // Registered as a UserDefaults default so AppStorage + the read below pick it up
         // before the user has touched the toggle.
-        let defaultConsent = MixpanelAnalytics.isTestFlight
+        let defaultConsent = AnalyticsConsentPolicy.defaultConsent
         UserDefaults.standard.register(defaults: [AppStorageKeys.analyticsEnabled: defaultConsent])
         let enabled = UserDefaults.standard.object(forKey: AppStorageKeys.analyticsEnabled) as? Bool ?? defaultConsent
 

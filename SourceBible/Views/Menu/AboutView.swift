@@ -139,59 +139,103 @@ struct AboutView: View {
         if uk {
             return [
                 LicenseGroup(title: "Тексти мовами оригіналу", items: [
-                    "Macula Hebrew і Macula Greek — Clear Bible, Inc. — ліцензія MIT",
-                    "Іврит: Ленінградський кодекс · Грека: Nestle 1904",
+                    "MACULA Hebrew і MACULA Greek Linguistic Datasets — © 2022–2024 Biblica, Inc. — CC BY 4.0",
+                    "github.com/Clear-Bible/macula-hebrew · github.com/Clear-Bible/macula-greek",
+                    "Іврит: Ленінградський кодекс (Tanach.us) · Грека: Nestle 1904",
+                    "Westminster Hebrew Syntax — The J. Alan Groves Center — CC BY 4.0",
+                    "OpenScriptures Hebrew Bible — CC BY 4.0",
+                ]),
+                LicenseGroup(title: "Глоси та транслітерація", items: [
+                    "Cherith Glosses for the Hebrew Old Testament and the Greek New Testament, Andi Wu — © Cherith Analytics — CC BY 4.0",
+                    "SILHA references marked \"SILHA\" are from SIL Hebrew-English Glosses and Annotations for the Westminster Leningrad Codex of the Hebrew Bible, Copyright 2020 SIL International®",
+                    "Berean Interlinear Bible — транслітерації та грецькі глоси — суспільне надбання",
                 ]),
                 LicenseGroup(title: "Лексикони", items: [
                     "Словники Стронга (єврейський і грецький) — суспільне надбання",
-                    "TBESH / TBESG — STEPBible.org — CC BY 4.0",
+                    "TBESH / TBESG — STEPBible.org, на основі праці Tyndale House Cambridge — CC BY 4.0",
+                    "Glosses were created by Tyndale scholars",
+                    "Hebrew meanings are based on the Abridged BDB by Online Bible, © Larry Pierce of OnlineBible.net",
+                    "Greek meanings are based on Abbott-Smith, with Middle Liddell where Abbott-Smith lacks an entry",
                 ]),
                 LicenseGroup(title: "Переклади", items: [
-                    "Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA 3.0 · Вікіджерела",
-                    "King James Version (KJV) — суспільне надбання",
+                    "Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA 4.0 · Вікіджерела",
+                    "King James Version (KJV) — суспільне надбання. У Великій Британії права на Authorized Version належать Короні й адмініструються патентовласником Корони, Cambridge University Press",
                     "American Standard Version (ASV) — суспільне надбання",
                     "Синодальний переклад (RST) — суспільне надбання",
                 ]),
                 LicenseGroup(title: "Коментарі", items: [
                     "Жан Кальвін, Коментарі — суспільне надбання",
                     "Метью Генрі, Коментар на всю Біблію — суспільне надбання",
-                    "Чарльз Сперджен, Скарбниця Давида — ліцензія MIT",
+                    "Чарльз Сперджен, Скарбниця Давида — CC0 1.0",
                     "Джон Овен, Тлумачення Послання до Євреїв — суспільне надбання",
                 ]),
                 LicenseGroup(title: "Перехресні посилання", items: [
                     "OpenBible.info — CC BY 4.0",
                 ]),
+                LicenseGroup(title: "Версифікація", items: [
+                    "Мапінги версифікації — Copenhagen Alliance — CC BY-SA 4.0",
+                ]),
                 LicenseGroup(title: "Ілюстрації", items: [
                     "Гюстав Доре, гравюри з La Sainte Bible (1866) — суспільне надбання",
+                ]),
+                LicenseGroup(title: "Шрифт", items: [
+                    "Cormorant, Christian Thalmann / Catharsis Fonts — SIL Open Font License 1.1",
+                ]),
+                LicenseGroup(title: "Програмні компоненти", items: [
+                    "GRDB.swift — ліцензія MIT",
+                    "Mixpanel Swift SDK — ліцензія Apache 2.0",
+                    "json-logic-swift — ліцензія MIT",
                 ]),
             ]
         }
         return [
             LicenseGroup(title: "Original-language texts", items: [
-                "Macula Hebrew & Macula Greek — Clear Bible, Inc. — MIT License",
-                "Hebrew: Westminster Leningrad Codex · Greek: Nestle 1904",
+                "MACULA Hebrew & MACULA Greek Linguistic Datasets — © 2022–2024 Biblica, Inc. — CC BY 4.0",
+                "github.com/Clear-Bible/macula-hebrew · github.com/Clear-Bible/macula-greek",
+                "Hebrew: Westminster Leningrad Codex (Tanach.us) · Greek: Nestle 1904",
+                "Westminster Hebrew Syntax — The J. Alan Groves Center — CC BY 4.0",
+                "OpenScriptures Hebrew Bible — CC BY 4.0",
+            ]),
+            LicenseGroup(title: "Glosses & transliteration", items: [
+                "Cherith Glosses for the Hebrew Old Testament and the Greek New Testament, by Andi Wu — © Cherith Analytics — CC BY 4.0",
+                "SILHA references marked \"SILHA\" are from SIL Hebrew-English Glosses and Annotations for the Westminster Leningrad Codex of the Hebrew Bible, Copyright 2020 SIL International®",
+                "Berean Interlinear Bible — transliterations and Greek glosses — Public Domain",
             ]),
             LicenseGroup(title: "Lexicons", items: [
                 "Strong's Hebrew & Greek Dictionaries — Public Domain",
-                "TBESH / TBESG — STEPBible.org — CC BY 4.0",
+                "TBESH / TBESG — STEPBible.org, based on work at Tyndale House Cambridge — CC BY 4.0",
+                "Glosses were created by Tyndale scholars",
+                "Hebrew meanings are based on the Abridged BDB by Online Bible, © Larry Pierce of OnlineBible.net",
+                "Greek meanings are based on Abbott-Smith, with Middle Liddell where Abbott-Smith lacks an entry",
             ]),
             LicenseGroup(title: "Translations", items: [
-                "Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA 3.0 · Wikisource",
-                "King James Version (KJV) — Public Domain",
+                "Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA 4.0 · Wikisource",
+                "King James Version (KJV) — Public Domain. In the United Kingdom, rights in the Authorized Version are vested in the Crown and administered by the Crown's patentee, Cambridge University Press",
                 "American Standard Version (ASV) — Public Domain",
                 "Russian Synodal Translation (RST) — Public Domain",
             ]),
             LicenseGroup(title: "Commentaries", items: [
                 "John Calvin, Commentaries — Public Domain",
                 "Matthew Henry, Commentary on the Whole Bible — Public Domain",
-                "Charles H. Spurgeon, The Treasury of David — MIT License",
+                "Charles H. Spurgeon, The Treasury of David — CC0 1.0",
                 "John Owen, Exposition of the Epistle to the Hebrews — Public Domain",
             ]),
             LicenseGroup(title: "Cross-references", items: [
                 "OpenBible.info Topic & Cross-Reference Data — CC BY 4.0",
             ]),
+            LicenseGroup(title: "Versification", items: [
+                "Versification mappings — Copenhagen Alliance — CC BY-SA 4.0",
+            ]),
             LicenseGroup(title: "Illustrations", items: [
                 "Gustave Doré, engravings from La Sainte Bible (1866) — Public Domain",
+            ]),
+            LicenseGroup(title: "Typeface", items: [
+                "Cormorant, by Christian Thalmann / Catharsis Fonts — SIL Open Font License 1.1",
+            ]),
+            LicenseGroup(title: "Software", items: [
+                "GRDB.swift — MIT License",
+                "Mixpanel Swift SDK — Apache License 2.0",
+                "json-logic-swift — MIT License",
             ]),
         ]
     }
