@@ -7,7 +7,6 @@ audit_versification.py — незалежний аудит таблиці verse_
 перевіряє її ззовні, нічого не знаючи про схеми й довідники.
 
 ⛔ READ-ONLY. Відкриває базу в режимі ro+immutable. Нічого не пише.
-⛔ Python: без синтаксису 3.10+ (сумісність із rebuild.sh).
 
 Оракули
 ───────
@@ -52,7 +51,6 @@ import re
 import sqlite3
 import sys
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -220,7 +218,6 @@ def audit_translation(con, tr, macula, signed):
         stats["перевірено O2"] += 1
         if best_v != ov and (best_score - base) >= MARGIN and base < WEAK:
             stats["A2"] += 1
-            union = coverage(rare, (ob, oc, ov), macula)  # плейсхолдер, перерахуємо нижче
             o1 = macula.get((ob, oc, ov), set()) - COMMON_STRONGS
             o2 = macula.get((ob, oc, best_v), set()) - COMMON_STRONGS
             union = len(rare & (o1 | o2)) / float(len(rare))

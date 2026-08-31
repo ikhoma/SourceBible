@@ -153,6 +153,9 @@ struct AboutView: View {
                 LicenseGroup(title: "Лексикони", items: [
                     "Словники Стронга (єврейський і грецький) — суспільне надбання",
                     "TBESH / TBESG — STEPBible.org, на основі праці Tyndale House Cambridge — CC BY 4.0",
+                    // Наступні три рядки лишаються англійською навмисно: це обов'язкова
+                    // атрибуція джерела, яку вимагає шапка файлу TBESH/TBESG від Online
+                    // Bible (див. legal/dataset-license-audit.md, розділ P2) — required verbatim.
                     "Glosses were created by Tyndale scholars",
                     "Hebrew meanings are based on the Abridged BDB by Online Bible, © Larry Pierce of OnlineBible.net",
                     "Greek meanings are based on Abbott-Smith, with Middle Liddell where Abbott-Smith lacks an entry",
@@ -204,6 +207,8 @@ struct AboutView: View {
             LicenseGroup(title: "Lexicons", items: [
                 "Strong's Hebrew & Greek Dictionaries — Public Domain",
                 "TBESH / TBESG — STEPBible.org, based on work at Tyndale House Cambridge — CC BY 4.0",
+                // Required verbatim: the TBESH/TBESG source file's own header requires this
+                // exact attribution to Online Bible (see legal/dataset-license-audit.md, P2).
                 "Glosses were created by Tyndale scholars",
                 "Hebrew meanings are based on the Abridged BDB by Online Bible, © Larry Pierce of OnlineBible.net",
                 "Greek meanings are based on Abbott-Smith, with Middle Liddell where Abbott-Smith lacks an entry",

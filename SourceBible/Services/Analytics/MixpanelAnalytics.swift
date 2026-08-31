@@ -4,8 +4,10 @@
 // Live Mixpanel implementation — compiled in ALL build configurations.
 // Consent-gated lazy init (PDR D3/D4): the SDK is NOT loaded at construction.
 // enable() initializes it (only after consent ON); until then every method no-ops
-// and nothing is sent. disable() opts out. Prod is opt-in (default OFF); beta/dev
-// default ON. Token per build chosen by isTestFlight (PDR D5).
+// and nothing is sent. disable() opts out. Default consent is REGIONAL, not
+// build-type-based (PDR D6, see AnalyticsConsentPolicy): opt-in (default OFF)
+// in the EEA/UK, opt-out (default ON) everywhere else — the same rule in prod
+// and beta/dev. Token per build chosen by isTestFlight (PDR D5).
 //
 // Outside this file: zero direct Mixpanel usage; all calls go through AnalyticsService.
 //

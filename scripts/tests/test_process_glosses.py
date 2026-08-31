@@ -365,5 +365,74 @@ class SlotPassTest(unittest.TestCase):
                          % trailing_after)
 
 
+class TestCuratedOverrideRelocation(unittest.TestCase):
+    """Курований шар (`curated-glosses.tsv`) пишеться в `result` ДО того, як
+    рядок іде у `cur_vals` для `reorder_slot` (`process_glosses.py main()`,
+    `if row_id in curated: result = curated[row_id][1]`, ПЕРЕД тим, як
+    значення потрапляє у слот) — сам `reorder_slot` не знає, який токен
+    курований, і при спрацюванні construct-chain-мержу об'єднує ВСІ непорожні
+    значення слота в один рядок на HEAD-токені, а решту обнуляє (`out[i] = ""`).
+
+    Курований глос, підвішений на НЕ-head токені такого слоту, технічно
+    переноситься на ЧУЖИЙ row_id: рядок, на який куратор насправді цілився,
+    у базі лишається порожнім, а курований текст спливає на іншому слові.
+    `verify_curated` звіряє лише surface проти `word.id` — цього сценарію
+    вона не ловить, бо curated-рядок і далі коректно існує в базі, просто
+    його ЗНАЧЕННЯ переписане слот-проходом.
+
+    Реальний слот: LEV 19:17 slot 5, той самий 3-токенний ланцюжок
+    ("in" + "heart" + "your"), що й у test_leading_particle_keeps_its_place.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.slots = slots_of(read_tsv(FIXTURE))
+
+    def test_curated_gloss_on_leading_token_relocates_to_head_row(self):
+        group = self.slots[("LEV", "19", "17", 5)]
+        toks = [(r["strong"], r["morph"], r["lexical_class"]) for r in group]
+        vals = [pg.synthesize(r["gloss_macula"], "H" + r["strong"], "H")
+                for r in group]
+
+        # Курований override на ПЕРШОМУ (не-head) токені — прийменник "in",
+        # row-id "0871a" — саме так вносить куратор у main().
+        curated_row_id = toks[0][0]
+        self.assertEqual(curated_row_id, "0871a")
+        vals[0] = "CURATED-BY-HAND"
+
+        out = pg.reorder_slot(toks, vals)
+
+        head_idx = pg.head_index(toks)
+        self.assertEqual(toks[head_idx][0], "3824",
+                         "head token must be the noun, not the curated row")
+
+        # Курований текст фізично перенісся на чужий row_id ("3824", noun)...
+        self.assertIn("CURATED-BY-HAND", out[head_idx])
+        # ...а рядок, на який куратор насправді цілився, лишився порожнім —
+        # в застосунку це показало б ПУСТЕ слово там, де мав бути курований глос.
+        self.assertEqual(out[0], "",
+                         "curated row_id=%r ended up %r instead of blank — "
+                         "if this ever changes, the relocation this test "
+                         "documents no longer happens and the docstring/finding "
+                         "is stale" % (curated_row_id, out[0]))
+
+    def test_curated_gloss_on_head_token_survives_merged(self):
+        """Контраст: курований HEAD-токен ("heart") не втрачається — лишається
+        на своєму row_id, просто об'єднаний із сусідніми словами слота."""
+        group = self.slots[("LEV", "19", "17", 5)]
+        toks = [(r["strong"], r["morph"], r["lexical_class"]) for r in group]
+        vals = [pg.synthesize(r["gloss_macula"], "H" + r["strong"], "H")
+                for r in group]
+
+        head_idx = pg.head_index(toks)
+        self.assertEqual(toks[head_idx][0], "3824")
+        vals[head_idx] = "CURATED-HEART"
+
+        out = pg.reorder_slot(toks, vals)
+        self.assertIn("CURATED-HEART", out[head_idx])
+        self.assertNotEqual(out[head_idx], "",
+                            "curated head token must not be blanked")
+
+
 if __name__ == "__main__":
     unittest.main()

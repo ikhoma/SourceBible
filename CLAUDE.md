@@ -170,12 +170,17 @@ Swift 6 strict concurrency — це налаштування компілято�
 **Bundle отримав `@MainActor` в iOS 26 SDK.** Будь-який `Bundle` subclass успадковує `@MainActor`.
 → Всі overrides + static methods, що мають бути доступні з non-main-actor контексту, **обов'язково** маркувати `nonisolated`.
 → Мutaбельний стан виносити у **file-private globals** з `nonisolated(unsafe) var`, НЕ як `static var` на класі (статичні члени класу успадковують `@MainActor` inference).
-→ `let` константи Sendable-типів (`NSLock`, etc.) у тому ж файлі — **також потребують `nonisolated(unsafe)`**, бо `@MainActor` inference поширюється на file-scope globals. Компілятор може видавати warning "unnecessary" — ігнорувати, без анотації буде error.
+→ `let` константи Sendable-типів (`NSLock`, etc.) у тому ж файлі — потребують `nonisolated`,
+**БЕЗ** `(unsafe)`: сам `nonisolated` розриває `@MainActor`-inference, а `(unsafe)` на Sendable
+`let` нічого не додає, і компілятор позначає її як зайву (`'nonisolated(unsafe)' is unnecessary
+for a constant with 'Sendable' type…`). Без жодної анотації — error. Заміряно 2026-08-26 на
+двох незалежних близнюкових кейсах: `LocalizedBundle.swift` (`_lbLock: NSLock`) і
+`SessionTracker.noop` (`static let` типу `@unchecked Sendable`) — в обох `nonisolated let`
+компілюється чисто, без жодного warning; підтверджено повним білдом проєкту 2026-08-31.
 
 ```swift
 // ✅ Правильно
-// swiftlint:disable:next nonisolated_unsafe
-private nonisolated(unsafe) let _lock = NSLock()   // let Sendable — теж потребує анотації!
+private nonisolated let _lock = NSLock()           // let Sendable — nonisolated, БЕЗ (unsafe)
 // swiftlint:disable:next nonisolated_unsafe
 private nonisolated(unsafe) var _state: String = ""
 
@@ -189,10 +194,12 @@ final class MyBundle: Bundle {
     private static var _state = ""   // ← заразить весь клас
 }
 
-// ❌ Неправильно — let без nonisolated(unsafe) в файлі з Bundle subclass
-// Компілятор видає warning "unnecessary" — але це помилкове попередження.
-// Без анотації: "Main actor-isolated let cannot be referenced from nonisolated context"
+// ❌ Неправильно — let зовсім без nonisolated у файлі з Bundle subclass
+// "Main actor-isolated let cannot be referenced from nonisolated context"
 private let _lock = NSLock()
+
+// ⚠️ Компілюється, але зайве — компілятор сам пропонує прибрати `(unsafe)`
+private nonisolated(unsafe) let _lock = NSLock()
 ```
 
 ### Closures з @escaping та instance methods
