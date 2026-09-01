@@ -1,6 +1,6 @@
 # plan-ios18-compat: iOS 18 Compatibility Refactor — Safe Half (Fable) + Deferred Sprint
 
-**Status:** Phase A — DONE ✅ (2026-07-06) | **Phase B — TARGET FLIPPED 2026-07-31, QA відкрите** (гілка `ios18-target-flip`)
+**Status:** Phase A — DONE ✅ (2026-07-06) | **Phase B — TARGET FLIPPED 2026-07-31, ручне QA із чекліста закрито 2026-08-28** (гілка `ios18-target-flip`). Лишається: iPhone XS (немає симулятора, потрібен фізичний пристрій — не перевірявся), і сам App Store реліз.
 
 > **Вердикт Phase A (2026-07-06).** Compiler-oracle аудит (target=18.0) → **0 unguarded iOS 26 викликів**; guard-покриття вже 100%. Фінальний diff **порожній**, target лишається 26.4. Debug + Release + **Archive** зелені; iOS 18 sim smoke-run OK (1 екран); iOS 26 sim без змін. Незалежно підтверджено: чистий git-tree, жодних `#if BETA`/device сліпих зон. **Компіляційний** ризик Phase B знято повністю; **runtime/QA** ризик лишається на Phase B. Fable-звіт: `report-ios18-compat-phase-a.md`.
 **Date:** 2026-07-06
@@ -148,7 +148,7 @@ Default = Sonnet; ескалація на Opus тільки для fallback-рі
 6. [x] Fable: Debug + **Archive** зелені; run на iOS 26 sim; (доказ) run на iOS 18 sim. — Archive зібрано (Ivan, 2026-07-06).
 7. [x] Fable: підготувати diff + короткий звіт. — `report-ios18-compat-phase-a.md`.
 8. [x] Ivan: ревʼю. — merge н/д (diff порожній).
-9. [~] **Phase B → compat-спринт:** flip target 26.4→18.0 ✅ 2026-07-31; iOS 18 runtime/QA ✅ 2026-08-02 (16 Pro, SE 3rd gen, 16); **Archive ✅ 2026-08-02**. Лишились: SPM min-target check, UK-локалізація на 18, iPhone XS (немає симулятора), реліз.
+9. [~] **Phase B → compat-спринт:** flip target 26.4→18.0 ✅ 2026-07-31; iOS 18 runtime/QA ✅ 2026-08-02 (16 Pro, SE 3rd gen, 16); **Archive ✅ 2026-08-02**; SPM min-target check ✅ 2026-08-28; UK-локалізація на 18 ✅ 2026-08-28 (TestFlight-тестери, iPhone 13 + iPhone 16, 0 репортів); full-surface свайп ✅ 2026-08-28. Лишились: iPhone XS (немає симулятора, фізичний пристрій не перевірявся), реліз.
 
 ---
 
@@ -259,7 +259,13 @@ sheet'а не прибиралось. Одна причина: `largestUndimmedD
   Заразом перевірено iPhone 16 (393×852).
   ~~найвужчий екран у пулі iOS 18; ADR-021 має незакритий~~
   «SE-validation pending» саме по `detentTopOffset`. Не перевірявся.
-- **Full-surface свайп** перегортання (перевірено лише чеврон; PDR-Page-Turn-Gesture-Zone
-  має rollback-клаузу саме на конфлікт свайпу з тапом/лонгпресом).
-- **SPM min-target check.**
-- Локалізація UI на UK при iOS 18 (перевірялось лише EN).
+- [x] **Full-surface свайп** перегортання — ✅ перевірено 2026-08-28, працює, конфлікту з
+  тапом/лонгпресом не виявлено. Rollback-клауза PDR-Page-Turn-Gesture-Zone не знадобилась.
+- [x] **SPM min-target check** — ✅ перевірено 2026-08-28: `Package.swift` усіх чотирьох
+  залежностей нижче за target 18.0 — GRDB.swift `.iOS(.v13)`, mixpanel-swift `.iOS(.v12)`,
+  mixpanel-swift-common `.iOS(.v12)`, json-logic-swift `.iOS(.v11)`. Підтверджено й емпірично:
+  два зелені Archive на target=18.0 (2026-08-02 і 2026-08-28) — конфлікт лінкера дав би збій збірки.
+- [x] **Локалізація UI на UK при iOS 18** — ✅ покрито TestFlight-тестерами на реальних
+  пристроях: `popovych.maria.o@gmail.com` (iPhone 13, iOS 18.7.2, 7 сесій), `nikita.dzyba13@gmail.com`
+  (iPhone 16, iOS 18.7.8, 41 сесія) — build 1.0 (6), 0 crashes / 0 feedback. Не сценарний UI-walkthrough
+  (ADR-007 checklist E), а реальне використання без репортів — приймається як покриття для цього пункту.

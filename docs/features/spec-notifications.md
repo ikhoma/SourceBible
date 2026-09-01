@@ -4,7 +4,7 @@
 **Date:** 2026-07-31
 **Owner:** Ivan
 **Implements:** [[ADR-031-notifications]]
-**Related:** ADR-012 (user data) · ADR-022 (analytics) · ADR-025 (AppPreferences) · ADR-005 (AppNavigationRouter) · ADR-028 (verse_org) · ADR-029 (UK licence) · `spec-reader-resume-position` · impl-reference `~/.agents/skills/push-notifications`
+**Related:** ADR-012 (user data) · ADR-022 (analytics) · ADR-025 (AppPreferences) · ADR-005 (AppNavigationRouter) · ADR-028 (verse_org) · ADR-029 (UK licence) · ADR-038 (donation prompt — see §7.3) · `spec-reader-resume-position` · impl-reference `~/.agents/skills/push-notifications`
 
 ---
 
@@ -118,6 +118,23 @@ Refs stored in **canonical/English numbering**, resolved to the user's translati
 
 ### 7.2 Channel B — see the seed pool (§8) for per-verse teasers.
 
+### 7.3 Full-authorization soft-ask (pre-permission screen)
+
+**Status: draft copy, proposed 2026-09-01 (UX/psychology research pass), not yet Ivan-reviewed.** Shown in-app **before** the OS system dialog — `upgradeToFullAuthorization()` fires only if the user accepts this screen (double-permission pattern: a decline here does not burn the OS's one-shot prompt, unlike calling `requestAuthorization()` bare). Fires at the trigger resolved in §14 (first **completed** word-study). Personalized with the just-studied word — specificity outperforms generic copy in permission-request research (sources below).
+
+| Variant | EN | UK |
+|---|---|---|
+| 1 — thread framing (closer to brand voice) | **Don't lose this thread.** You just saw {word} ({strongs}) in its original {language} — that's the kind of thing most Bible apps never show you. We'll send an occasional nudge back to studies like this if you drift away. Never daily, always about *your* work.<br>[Keep me in the loop] · [Not now] | **Не загуби цю нитку.** Ти щойно побачив {word} ({strongs}) в оригіналі {мова} — таке рідко показує звичайний застосунок Біблії. Ми зрідка нагадаємо повернутись до подібних досліджень, якщо відволічешся. Ніколи не щодня, завжди про *твою* роботу.<br>[Так, нагадуй] · [Не зараз] |
+| 2 — shorter, lower cognitive load | **You just went one layer deeper.** {word} in {ref} — the original text says more than the translation shows. Want a gentle reminder to pick this back up if you get busy?<br>[Yes, remind me] · [Maybe later] | **Ти щойно зазирнув на рівень глибше.** {word} у {ref} — оригінал каже більше, ніж переклад. Нагадати обережно повернутись, якщо забудеш?<br>[Так, нагадуй] · [Може пізніше] |
+
+Recommend A/B at launch. Variant 1 fits the "not a mass devotional app" brand voice more closely (ADR-031 §Контекст); variant 2 minimizes request fatigue via a shorter ask (NN/g).
+
+**Technical note:** unlike `NSLocationUsageDescription`, `UNUserNotificationCenter` has no custom purpose-string — the OS dialog itself is always the generic "SourceBible Would Like to Send You Notifications." All value-framing work applies to this pre-permission screen only, not the system prompt that follows it.
+
+**Cross-ref:** see ADR-038 §Відкриті питання for an unresolved edge case — this soft-ask and the donation soft-ask (`CommunityView`) could in rare cases fall in the same session.
+
+**Research sources (permission-request timing & copy):** [Growth.Design — Hopper](https://growth.design/case-studies/hopper-permission-requests-ux) · [Growth.Design — Too Good To Go](https://growth.design/case-studies/too-good-to-go-onboarding) · [NN/g — permission requests](https://www.nngroup.com/articles/permission-requests/) · [NN/g — push notification mistakes](https://www.nngroup.com/articles/push-notification/) · [Braze — push primer](https://www.braze.com/resources/articles/whats-a-push-primer) · [PushEngage](https://www.pushengage.com/ios-push-notification-permission/) · [Clearview](https://blog.clearview.team/2026/notification-permission-priming/) · [Stéphanie Walter](https://stephaniewalter.design/blog/the-ultimate-guide-to-not-fck-up-push-notifications/) · [Appcues](https://www.appcues.com/blog/mobile-permission-priming)
+
 ## 8. Curated Verse Pool (starter seed)
 
 Bundled resource `Resources/notification_verses.json`. Teasers are **our original UX copy**, not verbatim translation quotes. Schema per verse: `id, ref, tag, strongs_id?, tool, teaser{en,uk}`.
@@ -203,7 +220,7 @@ tap → NotificationDelegate.didReceive(userInfo)
 ## 14. Open Questions
 
 - ~~**UK verse text licence (blocking for any verbatim UK quote).**~~ **RESOLVED 2026-07-31.** Ohienko (UBIO) is licensed CC BY-SA 3.0 by direct grant from УБТ/UBS covering pre-1991 editions, incl. the 1988 edition we bundle (ADR-029 unblocked; attribution added to Menu → About). Nothing in this spec is legally gated any more. What remains is a product question, not a legal one: **do UK `encourage` teasers stay original invitational copy, or quote UBIO verbatim?** Spec currently assumes original copy (§8). *(Owner: Ivan — product call.)*
-- **First "study moment" definition for the soft-ask** — first word-study open only, or any of original/lexicon/commentary/cross-ref? Ties to ADR-022 `recordFeatureUse`. *(Owner: Ivan / eng.)*
+- **First "study moment" definition for the soft-ask** — **Proposed resolution 2026-09-01** (UX research, not yet Ivan-confirmed): narrow — first **completed** word-study only (opened + meaningful dwell, not a stray tap), not commentary/cross-ref/lexicon. Rationale: word-study is this product’s own unique-value aha moment (ADR-031 already names it as such); broadening the trigger across 4 feature types risks diluting a specific aha moment the way Too Good To Go’s onboarding diluted its own (growth.design case study — see §7.3 sources). Still ties to ADR-022 `recordFeatureUse` for the completion signal. Copy draft for the accompanying soft-ask — §7.3. *(Owner: Ivan — confirm or override.)*
 - **Default cadence value** for month-1 vs steady-state given the 8+14 seed. *(Owner: data, tune post-launch.)*
 - **Holdout size** for causal retention read without starving the treatment. *(Owner: data.)*
 - **Evening delivery window** — fixed (e.g. 19:00 local) for MVP, or learned from active hour (P1)? *(Owner: Ivan.)*

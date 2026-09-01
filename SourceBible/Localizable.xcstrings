@@ -3600,10 +3600,36 @@
       }
     },
     "picker.no_book_found" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No book found"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Книгу не знайдено"
+          }
+        }
+      }
     },
     "picker.no_book_found.hint" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the spelling or try a different name."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перевірте написання або спробуйте іншу назву."
+          }
+        }
+      }
     },
     "picker.search_book" : {
       "localizations" : {
