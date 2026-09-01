@@ -489,6 +489,8 @@ struct CommentaryDetailView: View {
     let verseId: String
     @Environment(\.sessionTracker) private var tracker
     @EnvironmentObject private var readerVM: ReaderViewModel
+    @EnvironmentObject private var notesVM:  NotesViewModel
+    @EnvironmentObject private var router:   AppNavigationRouter
 
     /// Parsed from verseId "BOOK|chapter|verse"
     private var verseComponents: (bookId: String, chapter: Int, verse: Int)? {
@@ -499,29 +501,47 @@ struct CommentaryDetailView: View {
         return (String(parts[0]), ch, vs)
     }
 
+    /// "Ps 1:3" or "Ps 1:1–3" once the section is loaded — WITHOUT the
+    /// theologian name. Single source of truth shared by `detailTitle` (nav
+    /// bar) and `CommentaryQuoteShareFormatter` (Share attribution), so the
+    /// reference string is computed exactly once (ADR-037 §3).
+    private var refLabel: String {
+        guard let vc = verseComponents else { return "" }
+        let book = readerVM.shortBookName(for: vc.bookId)
+        guard let sec = section else { return "\(book) \(vc.chapter):\(vc.verse)" }
+        if sec.startChapter == sec.endChapter {
+            if sec.startVerse == sec.endVerse {
+                return "\(book) \(sec.startChapter):\(sec.startVerse)"
+            }
+            return "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endVerse)"
+        }
+        return "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endChapter):\(sec.endVerse)"
+    }
+
     /// "Ps 1:3 — J. Calvin" or "Ps 1:1–3 — J. Calvin" once the section is loaded.
     private var detailTitle: String {
-        guard let vc = verseComponents else { return theologian.shortName }
-        let book = readerVM.shortBookName(for: vc.bookId)
-        let ref: String
-        if let sec = section {
-            if sec.startChapter == sec.endChapter {
-                if sec.startVerse == sec.endVerse {
-                    ref = "\(book) \(sec.startChapter):\(sec.startVerse)"
-                } else {
-                    ref = "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endVerse)"
-                }
-            } else {
-                ref = "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endChapter):\(sec.endVerse)"
-            }
-        } else {
-            ref = "\(book) \(vc.chapter):\(vc.verse)"
-        }
-        return "\(ref) — \(theologian.shortName)"
+        guard verseComponents != nil else { return theologian.shortName }
+        return "\(refLabel) — \(theologian.shortName)"
     }
 
     @State private var section: CommentarySection? = nil
     @State private var isLoaded = false
+    /// 0 = шапка розгорнута (стан на відкритті), 1 = повністю колапснута.
+    /// Керується scroll-offset-ом тіла коментаря — двостейтова анімована
+    /// шапка (рішення Івана, ADR-037 Action Item 0).
+    @State private var headerCollapseProgress: CGFloat = 0
+    @State private var activeSheet: ActiveSheet? = nil
+
+    private enum ActiveSheet: Identifiable {
+        case share(String)
+        case note(NoteWithBlocks)
+        var id: String {
+            switch self {
+            case .share(let text): return "share-\(text.hashValue)"
+            case .note(let note):  return "note-\(note.note.id)"
+            }
+        }
+    }
 
     var body: some View {
         Group {
@@ -530,28 +550,35 @@ struct CommentaryDetailView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let sec = section {
-                // Has commentary — scrollable page with theologian header
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(spacing: 14) {
-                            Image(theologian.imageName)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 52, height: 52)
-                                .clipShape(Circle())
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(LocalizedStringKey(theologian.nameKey)).font(.headline)
-                                Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
+                // Has commentary — theologian header (2-state, scroll-driven
+                // collapse) + native-selectable commentary body filling the
+                // rest of the sheet. The body IS the scroll container
+                // (SelectableCommentaryTextView.isScrollEnabled = true) — no
+                // SwiftUI ScrollView wraps it (ADR-037 §1).
+                VStack(spacing: 0) {
+                    theologianHeader
+                    Divider()
+                    SelectableCommentaryTextView(
+                        text: sec.text,
+                        onShareRequested: { quote in
+                            let formatted = CommentaryQuoteShareFormatter.format(
+                                quote: quote,
+                                theologianShortName: theologian.shortName,
+                                ref: refLabel)
+                            activeSheet = .share(formatted)
+                        },
+                        onAddToNoteRequested: { quote in
+                            let note = notesVM.openNewNote(
+                                attachedToQuote: quote,
+                                theologianId: theologian.id,
+                                verseId: verseId)
+                            activeSheet = .note(note)
+                        },
+                        onScroll: { offset in
+                            headerCollapseProgress = min(max(offset / 60, 0), 1)
                         }
-                        Divider()
-                        // Use UITextView for commentary body — SwiftUI Text() silently
-                        // fails to render very large strings (Owen sections can exceed
-                        // 230,000 characters). UITextView handles arbitrary length text.
-                        CommentaryTextView(text: sec.text)
-                    }
-                    .padding(20)
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else {
                 // No commentary for this verse — full-screen centered empty state
@@ -574,47 +601,74 @@ struct CommentaryDetailView: View {
         .task(id: verseId) {
             await loadCommentary()
         }
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .share(let text):
+                ActivityShareSheet(activityItems: [text])
+            case .note(let note):
+                // Явне re-injection — той самий патерн, що VerseBottomSheetView
+                // використовує для NoteEditorView (ADR-037 Action Item 7): цей
+                // sheet — ТРЕТІЙ рівень стеку (рідер → Study Mode sheet →
+                // commentary sheet → note editor), і презентація не покладається
+                // на автоматичне поширення environment крізь усі три межі.
+                NoteEditorView(noteWithBlocks: note)
+                    .environmentObject(notesVM)
+                    .environmentObject(router)
+                    .environmentObject(readerVM)
+                    .presentationDetents([.large])
+                    .onDisappear {
+                        notesVM.isEditorPresented = false
+                        notesVM.refresh()
+                    }
+            }
+        }
+    }
+
+    // MARK: - Theologian header (2-state, scroll-driven collapse)
+
+    /// Продовжує plaнно, а не перемикається дискретно: розмір аватара,
+    /// висота/прозорість рядка "era · style" і вертикальний padding
+    /// інтерполюються по headerCollapseProgress (0…1). Це і є плавна
+    /// анімація переходу між "розгорнуто" (0, на відкритті) і "колапснуто"
+    /// (1, після ~60pt скролу) — саме двостейтова поведінка, яку описав
+    /// Іван, реалізована як безперервна трансформація, а не resize-стрибок.
+    private var theologianHeader: some View {
+        let progress   = headerCollapseProgress
+        let avatarSize = 52 - (52 - 24) * progress
+        let vPadding   = 14 - (14 - 8) * progress
+        let subtitleH  = 16 * (1 - progress)
+
+        return HStack(spacing: 14) {
+            Image(theologian.imageName)
+                .resizable()
+                .scaledToFill()
+                .frame(width: avatarSize, height: avatarSize)
+                .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                Text(LocalizedStringKey(theologian.nameKey))
+                    .font(progress > 0.5 ? .subheadline.weight(.semibold) : .headline)
+                Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .opacity(1 - progress)
+                    .frame(height: max(0, subtitleH))
+                    .clipped()
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, vPadding)
     }
 
     @MainActor
     private func loadCommentary() async {
         isLoaded = false
         section = nil
+        headerCollapseProgress = 0
         defer { isLoaded = true }  // always mark loaded, even if guard/early-return fires
         guard let vc = verseComponents else { return }
         section = DatabaseService.shared.loadCommentary(
             bookId: vc.bookId, chapter: vc.chapter, verse: vc.verse,
             source: theologian.id.capitalized  // "Calvin", "Henry", etc.
         )
-    }
-}
-
-// MARK: - CommentaryTextView
-
-/// Paragraph-split commentary renderer.
-///
-/// SwiftUI `Text` silently fails on very large strings — Owen's Heb 1:1-2
-/// is ~231,000 characters, which SwiftUI can't lay out in a single pass.
-/// Splitting on paragraph breaks and rendering each chunk as a separate `Text`
-/// keeps individual views small while `LazyVStack` defers off-screen rendering,
-/// making it performant for any commentary length.
-private struct CommentaryTextView: View {
-    let text: String
-
-    private var paragraphs: [String] {
-        text.components(separatedBy: "\n\n")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-    }
-
-    var body: some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, para in
-                Text(para)
-                    .font(.body)
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
     }
 }

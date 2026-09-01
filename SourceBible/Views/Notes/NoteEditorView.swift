@@ -50,6 +50,21 @@ struct NoteEditorView: View {
                         }
                     }
 
+                    // Commentary quote context card(s) — tap to jump to that verse
+                    // in the Reader. ADR-037 §5/§6: .quote block finally gets a
+                    // renderer (schema-ready since ADR-012, no UI consumer before).
+                    ForEach(quoteBlocks, id: \.id) { block in
+                        if let content = decodeQuoteBlock(block) {
+                            QuoteContextCard(theologianId: content.theologianId,
+                                              verseId: content.verseId,
+                                              text: content.text)
+                                .onTapGesture {
+                                    dismiss()
+                                    router.requestNavigation(to: content.verseId)
+                                }
+                        }
+                    }
+
                     // Note text editor — plain, no background; auto-sizes to content
                     NoteTextEditor(text: $textBody, contentHeight: $editorHeight)
                         .frame(height: editorHeight)
@@ -96,9 +111,17 @@ struct NoteEditorView: View {
         noteWithBlocks.blocks.filter { $0.type == .verse }
     }
 
+    private var quoteBlocks: [NoteBlock] {
+        noteWithBlocks.blocks.filter { $0.type == .quote }
+    }
+
     private var navigationTitle: String {
         if let block = verseBlocks.first,
            let content = decodeVerseBlock(block) {
+            return verseRef(from: content.verseId)
+        }
+        if let block = quoteBlocks.first,
+           let content = decodeQuoteBlock(block) {
             return verseRef(from: content.verseId)
         }
         return NSLocalizedString("action.note", comment: "")
@@ -106,6 +129,11 @@ struct NoteEditorView: View {
 
     private func decodeVerseBlock(_ block: NoteBlock) -> VerseBlockContent? {
         try? JSONDecoder().decode(VerseBlockContent.self,
+                                  from: Data(block.content.utf8))
+    }
+
+    private func decodeQuoteBlock(_ block: NoteBlock) -> QuoteBlockContent? {
+        try? JSONDecoder().decode(QuoteBlockContent.self,
                                   from: Data(block.content.utf8))
     }
 
@@ -291,6 +319,51 @@ private struct VerseContextCard: View {
         guard parts.count == 3 else { return verseId }
         let short = readerVM.shortBookName(for: String(parts[0]))
         return "\(short) \(parts[1]):\(parts[2])"
+    }
+}
+
+// MARK: - Quote Context Card
+// Commentary-selection quote attached via CommentaryDetailView's "Додати в
+// нотатку" action (ADR-037). Mirrors VerseContextCard styling, with the
+// theologian's short name folded into the reference label and the quote
+// text italicized to distinguish it from a verse snapshot at a glance.
+
+private struct QuoteContextCard: View {
+    let theologianId: String
+    let verseId: String
+    let text: String
+
+    @EnvironmentObject private var readerVM: ReaderViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ReferenceLabel(refLabel)
+
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(Color(.separator))
+                    .frame(width: 4)
+                    .padding(.vertical, 2)
+                Text(text)
+                    .font(.callout)
+                    .italic()
+                    .foregroundStyle(.primary)
+            }
+        }
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var refLabel: String {
+        let parts = verseId.split(separator: "|")
+        guard parts.count == 3 else { return verseId }
+        let short = readerVM.shortBookName(for: String(parts[0]))
+        return "\(short) \(parts[1]):\(parts[2]) — \(theologianShortName)"
+    }
+
+    private var theologianShortName: String {
+        Theologian.all.first(where: { $0.id == theologianId })?.shortName
+            ?? theologianId.capitalized
     }
 }
 

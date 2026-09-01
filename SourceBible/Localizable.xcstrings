@@ -468,6 +468,23 @@
     "Contact" : {
 
     },
+    "commentary.menu.addToNote" : {
+      "comment" : "Selection menu action on commentary text: attach the quote to a new note",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to Note"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Додати в нотатку"
+          }
+        }
+      }
+    },
     "cover.chapters_count" : {
       "comment" : "Cover subtitle: N chapters",
       "localizations" : {
