@@ -13,7 +13,10 @@
 // (iOS 16+) — НЕ buildMenu(with:)/UIMenuBuilder, той API не застосовується до
 // меню виділення тексту (лише до UIMenuSystem.main/.context). Системний Share
 // прибирається дефензивним фільтром suggestedActions (недокументований як
-// жорсткий контракт — QA Action Item 9 в ADR-037).
+// жорсткий контракт — QA Action Item 9 в ADR-037). Writing Tools приховано
+// офіційним UITextView.writingToolsBehavior = .none (плюс дефензивний
+// фільтр про всяк випадок); Translate перегруповано в один ряд з Copy
+// (Ivan, 2026-09-01).
 
 import SwiftUI
 import UIKit
@@ -40,6 +43,22 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
         tv.textContainerInset = UIEdgeInsets(top: 16, left: 20, bottom: 20, right: 20)
         tv.delegate           = context.coordinator
         tv.attributedText     = context.coordinator.attributedString
+        // tintColor drives BOTH the selection handles/caret AND the selected-
+        // range highlight in UITextView — one property, both asks (Ivan,
+        // 2026-09-01). System default (label/system blue) → app's own brand
+        // blue (HighlightColor.swift, single source of truth, same color used
+        // for word-tap tint elsewhere in the reader). Not touching alpha: UIKit
+        // applies its own translucency to the highlight from tintColor already,
+        // so opacity stays exactly what it was — only the hue changes.
+        tv.tintColor           = .appBlue
+        // Приховуємо Writing Tools повністю (Ivan, 2026-09-01) — офіційний,
+        // задокументований спосіб: UITextView.writingToolsBehavior, iOS 18+.
+        // Мінімальний deployment target проєкту й так iOS 18, тому без
+        // #available. Пункт «Writing Tools» у suggestedActions теж
+        // фільтруємо нижче в Coordinator про всяк випадок, тим самим
+        // дефензивним стилем, що і Share (жоден системний ідентифікатор тут
+        // не задокументований як гарантований контракт).
+        tv.writingToolsBehavior = .none
         return tv
     }
 
@@ -115,16 +134,18 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
 
             let selected = (plain as NSString).substring(with: range)
 
-            // Прибираємо ГОЛИЙ системний Share (без атрибуції) — заміняємо його
-            // своїм нижче. Дефензивна подвійна перевірка: системний Share у
-            // suggestedActions може прийти або як UIMenu(.share), або як
-            // UIAction з ідентифікатором "share" — жоден варіант не
-            // задокументований як гарантований контракт (ADR-037 §2 QA note).
-            let filtered = suggestedActions.filter { element in
-                if let menu = element as? UIMenu, menu.identifier == .share { return false }
-                if let action = element as? UIAction, action.identifier.rawValue == "share" { return false }
-                return true
-            }
+            // Ivan, 2026-09-01: «Копіювання та переклад з системних вистачить»
+            // — з усього suggestedActions лишаємо ТІЛЬКИ Copy і Translate,
+            // решту (Look Up, Search Web, Share, Writing Tools і будь-що ще
+            // системне) свідомо ігноруємо. Це allowlist, а не denylist: явно
+            // ВИТЯГУЄМО потрібні два елементи (можливо, вкладені в підменю
+            // Look Up — там типово лежать Look Up/Translate/Search Web
+            // разом), а не перелічуємо все, що треба прибрати — так нові
+            // системні пункти в майбутніх iOS не просочаться самі по собі.
+            let (translateAction, afterTranslate) = extractElement(
+                from: suggestedActions, identifierContains: "translate", titles: ["Translate"])
+            let (copyAction, _) = extractElement(
+                from: afterTranslate, identifierContains: "copy", titles: ["Copy"])
 
             let share = UIAction(title: NSLocalizedString("action.share", comment: "")) { [weak self] _ in
                 self?.onShareRequested(selected)
@@ -134,9 +155,63 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
             }
             let ourActions = UIMenu(options: .displayInline, children: [share, addToNote])
 
-            // Copy/Look Up/Translate/Search Web лишаються як є, у своєму
-            // порядку; наша група стає туди, де раніше був системний Share.
-            return UIMenu(children: filtered + [ourActions])
+            var copyTranslateChildren: [UIMenuElement] = []
+            if let copyAction { copyTranslateChildren.append(copyAction) }
+            if let translateAction { copyTranslateChildren.append(translateAction) }
+            let copyTranslateGroup: [UIMenuElement] = copyTranslateChildren.isEmpty
+                ? []
+                : [UIMenu(options: .displayInline, children: copyTranslateChildren)]
+
+            // Порядок: Copy+Translate (якщо знайшлись) → наша група
+            // Share/Додати в нотатку. Усе інше системне — не потрапляє.
+            return UIMenu(children: copyTranslateGroup + [ourActions])
+        }
+
+        /// Системний пункт меню за ідентифікатором АБО заголовком — жоден з
+        /// двох не задокументований як гарантований контракт для системних
+        /// пунктів меню виділення тексту, тож перевіряємо обидва (той самий
+        /// дефензивний стиль, що і фільтр Share вище).
+        private func isSystemAction(_ element: UIMenuElement, identifierContains needle: String, titles: [String]) -> Bool {
+            let idMatch: Bool
+            if let menu = element as? UIMenu {
+                idMatch = menu.identifier.rawValue.lowercased().contains(needle)
+            } else if let action = element as? UIAction {
+                idMatch = action.identifier.rawValue.lowercased().contains(needle)
+            } else {
+                idMatch = false
+            }
+            if idMatch { return true }
+            return titles.contains { element.title.caseInsensitiveCompare($0) == .orderedSame }
+        }
+
+        /// Витягує перший елемент, що відповідає ідентифікатору/заголовку —
+        /// або на верхньому рівні, або як дитину одного з вкладених UIMenu
+        /// (Translate типово лежить всередині групи Look Up/Search Web).
+        /// Повертає знайдений елемент і решту дерева без нього; підменю, з
+        /// якого забрали дитину, лишається зі своїми іншими дітьми
+        /// (`UIMenu.replacingChildren`), а якщо дітей не лишилось — підменю
+        /// прибирається повністю.
+        private func extractElement(from elements: [UIMenuElement], identifierContains needle: String, titles: [String]) -> (UIMenuElement?, [UIMenuElement]) {
+            var found: UIMenuElement?
+            var result: [UIMenuElement] = []
+
+            for element in elements {
+                if found == nil, isSystemAction(element, identifierContains: needle, titles: titles) {
+                    found = element
+                    continue
+                }
+                if found == nil, let menu = element as? UIMenu,
+                   let childMatch = menu.children.first(where: { isSystemAction($0, identifierContains: needle, titles: titles) }) {
+                    found = childMatch
+                    let remainingChildren = menu.children.filter { $0 !== childMatch }
+                    if !remainingChildren.isEmpty {
+                        result.append(menu.replacingChildren(remainingChildren))
+                    }
+                    continue
+                }
+                result.append(element)
+            }
+            return (found, result)
         }
 
         // UITextViewDelegate успадковує UIScrollViewDelegate — призначення

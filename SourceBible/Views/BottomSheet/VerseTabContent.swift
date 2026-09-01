@@ -45,8 +45,21 @@ struct VerseTabView: View {
     }
 
     private func loadData() {
-        refs      = vm.loadCrossReferences()
-        parallels = vm.loadParallelVerses()
+        // bug-052: Cross References is the pill the sheet opens on (VerseBottomSheetView
+        // .versePill default) — load it eagerly so it's what's actually on screen the
+        // moment the sheet appears, no flash of empty state. Translations isn't shown
+        // until the user switches pills, so it can trail by a tick without anyone
+        // noticing; on a cold-cache first tap after (re)install that keeps its read
+        // from competing with the content the user is actually looking at.
+        DebugTiming.mark("VerseTabView.loadData START")
+        refs = vm.loadCrossReferences()
+        DebugTiming.mark("loadCrossReferences RETURNED (\(refs.count) refs)")
+        Task {
+            await Task.yield()
+            DebugTiming.mark("deferred loadParallelVerses START")
+            parallels = vm.loadParallelVerses()
+            DebugTiming.mark("deferred loadParallelVerses END")
+        }
     }
 }
 
@@ -463,14 +476,12 @@ struct CommentariesView: View {
             }
         }
         .sheet(item: $selectedTheologian) { t in
+            // Close button lives INSIDE CommentaryDetailView now — grouped with
+            // the avatar+title row, not a separate system toolbar item (Ivan,
+            // 2026-09-01, Figma node-id=1512:9180: close X + portrait + title
+            // are one row, not X-in-nav-bar above a second header row).
             NavigationStack {
                 CommentaryDetailView(theologian: t, verseId: verseId)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            // Консистентний X-close для всіх sheet-ів (SheetCloseButton)
-                            SheetCloseButton { selectedTheologian = nil }
-                        }
-                    }
             }
             // The stacked commentary sheet defaults to the system sheet surface
             // (white / systemBackground), which ignored the theme — it stayed cold
@@ -488,6 +499,7 @@ struct CommentaryDetailView: View {
     let theologian: Theologian
     let verseId: String
     @Environment(\.sessionTracker) private var tracker
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var readerVM: ReaderViewModel
     @EnvironmentObject private var notesVM:  NotesViewModel
     @EnvironmentObject private var router:   AppNavigationRouter
@@ -502,9 +514,10 @@ struct CommentaryDetailView: View {
     }
 
     /// "Ps 1:3" or "Ps 1:1–3" once the section is loaded — WITHOUT the
-    /// theologian name. Single source of truth shared by `detailTitle` (nav
-    /// bar) and `CommentaryQuoteShareFormatter` (Share attribution), so the
-    /// reference string is computed exactly once (ADR-037 §3).
+    /// theologian name. Single source of truth shared by `detailTitle`
+    /// (rendered in `commentaryNavBar`) and `CommentaryQuoteShareFormatter`
+    /// (Share attribution), so the reference string is computed exactly
+    /// once (ADR-037 §3).
     private var refLabel: String {
         guard let vc = verseComponents else { return "" }
         let book = readerVM.shortBookName(for: vc.bookId)
@@ -518,10 +531,18 @@ struct CommentaryDetailView: View {
         return "\(book) \(sec.startChapter):\(sec.startVerse)–\(sec.endChapter):\(sec.endVerse)"
     }
 
-    /// "Ps 1:3 — J. Calvin" or "Ps 1:1–3 — J. Calvin" once the section is loaded.
+    /// "Ps 1:3 — John Calvin" or "Ps 1:1–3 — John Calvin" once the section is
+    /// loaded. Rendered as the title line INSIDE `commentaryNavBar` (grouped
+    /// with the portrait, next to the close button) — this is the ONLY place
+    /// the theologian's name is displayed; there is no separate system nav
+    /// title text anymore (Ivan, 2026-09-01, Figma node-id=1512:9180: close X
+    /// + portrait + ref+name + era/style are ONE grouped row, not a plain
+    /// centered nav title above a second header). Full name, not `shortName`.
+    /// Also set as `.navigationTitle` (bar hidden — kept for VoiceOver/system
+    /// chrome only, not visually rendered).
     private var detailTitle: String {
-        guard verseComponents != nil else { return theologian.shortName }
-        return "\(refLabel) — \(theologian.shortName)"
+        guard verseComponents != nil else { return theologian.fullName }
+        return "\(refLabel) — \(theologian.fullName)"
     }
 
     @State private var section: CommentarySection? = nil
@@ -530,6 +551,11 @@ struct CommentaryDetailView: View {
     /// Керується scroll-offset-ом тіла коментаря — двостейтова анімована
     /// шапка (рішення Івана, ADR-037 Action Item 0).
     @State private var headerCollapseProgress: CGFloat = 0
+    /// Дискретний стейт, похідний від `headerCollapseProgress` (progress
+    /// доходить до 1). Continuous progress саме по собі не годиться для
+    /// хаптики — вона мала б спрацьовувати щокадру скролу; цей прапорець
+    /// фіксує лише сам ПЕРЕХІД між двома станами шапки (Іван, 2026-09-01).
+    @State private var isHeaderCollapsed = false
     @State private var activeSheet: ActiveSheet? = nil
 
     private enum ActiveSheet: Identifiable {
@@ -544,20 +570,26 @@ struct CommentaryDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if !isLoaded {
-                // Loading spinner — centered in the full sheet
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let sec = section {
-                // Has commentary — theologian header (2-state, scroll-driven
-                // collapse) + native-selectable commentary body filling the
-                // rest of the sheet. The body IS the scroll container
-                // (SelectableCommentaryTextView.isScrollEnabled = true) — no
-                // SwiftUI ScrollView wraps it (ADR-037 §1).
-                VStack(spacing: 0) {
-                    theologianHeader
-                    Divider()
+        // commentaryNavBar replaces the system nav bar entirely (close X +
+        // portrait + title grouped in one row, per Ivan's Figma reference) —
+        // it sits outside the loading/content/empty switch because the
+        // theologian + ref are known synchronously (refLabel falls back to
+        // the raw verse when `section` isn't loaded yet), so the identity
+        // row and close button are available immediately, not just once
+        // commentary text has loaded.
+        VStack(spacing: 0) {
+            commentaryNavBar
+            Divider()
+            Group {
+                if !isLoaded {
+                    // Loading spinner
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let sec = section {
+                    // Has commentary — native-selectable commentary body filling
+                    // the rest of the sheet. The body IS the scroll container
+                    // (SelectableCommentaryTextView.isScrollEnabled = true) — no
+                    // SwiftUI ScrollView wraps it (ADR-037 §1).
                     SelectableCommentaryTextView(
                         text: sec.text,
                         onShareRequested: { quote in
@@ -575,26 +607,38 @@ struct CommentaryDetailView: View {
                             activeSheet = .note(note)
                         },
                         onScroll: { offset in
-                            headerCollapseProgress = min(max(offset / 60, 0), 1)
+                            let progress = min(max(offset / 60, 0), 1)
+                            headerCollapseProgress = progress
+                            let collapsed = progress >= 1
+                            if collapsed != isHeaderCollapsed {
+                                isHeaderCollapsed = collapsed
+                                // Легкий перехід стану шапки — той самий семантичний
+                                // випадок, що відкриття Study Mode чи перемикання
+                                // закладки (Haptics.swift), не continuous-скрол-шум.
+                                Haptics.lightTransition()
+                            }
                         }
                     )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else {
-                // No commentary for this verse — full-screen centered empty state
-                VStack(spacing: 16) {
-                    Image(systemName: "text.book.closed")
-                        .font(.system(size: 48)).foregroundStyle(.quaternary)
-                    VStack(spacing: 4) {
-                        Text("verse.commentary.unavailable")
-                            .font(.callout).foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                } else {
+                    // No commentary for this verse — centered empty state
+                    VStack(spacing: 16) {
+                        Image(systemName: "text.book.closed")
+                            .font(.system(size: 48)).foregroundStyle(.quaternary)
+                        VStack(spacing: 4) {
+                            Text("verse.commentary.unavailable")
+                                .font(.callout).foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: 200)
                     }
-                    .frame(maxWidth: 200)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        // Bar hidden — commentaryNavBar replaces it visually; navigationTitle
+        // stays set for VoiceOver / system chrome (multitasking window title
+        // etc.), it just isn't the thing rendering the text on screen anymore.
+        .toolbar(.hidden, for: .navigationBar)
         .navigationTitle(detailTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { tracker.recordFeatureUse(.commentary) }
@@ -624,38 +668,64 @@ struct CommentaryDetailView: View {
         }
     }
 
-    // MARK: - Theologian header (2-state, scroll-driven collapse)
+    // MARK: - Commentary nav bar (close X + portrait + title, grouped — 2-state, scroll-driven collapse)
 
-    /// Продовжує plaнно, а не перемикається дискретно: розмір аватара,
-    /// висота/прозорість рядка "era · style" і вертикальний padding
-    /// інтерполюються по headerCollapseProgress (0…1). Це і є плавна
-    /// анімація переходу між "розгорнуто" (0, на відкритті) і "колапснуто"
-    /// (1, після ~60pt скролу) — саме двостейтова поведінка, яку описав
-    /// Іван, реалізована як безперервна трансформація, а не resize-стрибок.
-    private var theologianHeader: some View {
-        let progress   = headerCollapseProgress
-        let avatarSize = 52 - (52 - 24) * progress
-        let vPadding   = 14 - (14 - 8) * progress
-        let subtitleH  = 16 * (1 - progress)
+    /// Replaces the system nav bar entirely: close button, portrait, and
+    /// title are ONE grouped row (Ivan, 2026-09-01, Figma node-id=1512:9180)
+    /// — not a plain centered `.navigationTitle` text with a separate
+    /// avatar+name row underneath it (that read as a duplicate title).
+    ///
+    /// Two-state, continuous not discrete: avatar size / row padding /
+    /// caption opacity+height interpolate by headerCollapseProgress (0…1)
+    /// — same expanded/collapsed behavior as before (ADR-037 Action Item 0),
+    /// just merged into one row. `detailTitle` (ref — full name) is the
+    /// permanent element — it does the job a collapsed inline nav title
+    /// would have done, so it never fades; only the portrait and the
+    /// "era · style" caption animate away on scroll.
+    private var commentaryNavBar: some View {
+        let progress    = headerCollapseProgress
+        let avatarSize  = 52 * (1 - progress)
+        let vPadding    = 14 - (14 - 8) * progress
+        let captionH    = 15 * (1 - progress)
 
         return HStack(spacing: 14) {
+            Button {
+                Haptics.selectionChanged()
+                dismiss()
+            } label: {
+                ZStack {
+                    Circle().fill(Color(.systemGray5))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color(.systemGray))
+                }
+                .frame(width: 30, height: 30)
+            }
+            .accessibilityLabel(Text("action.close"))
+            .frame(width: 44, height: 44)
+
             Image(theologian.imageName)
                 .resizable()
                 .scaledToFill()
                 .frame(width: avatarSize, height: avatarSize)
                 .clipShape(Circle())
-            VStack(alignment: .leading, spacing: 4) {
-                Text(LocalizedStringKey(theologian.nameKey))
-                    .font(progress > 0.5 ? .subheadline.weight(.semibold) : .headline)
+                .opacity(1 - progress)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(detailTitle)
+                    .font(.headline)
+                    .lineLimit(1)
                 Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
                     .font(.caption).foregroundStyle(.secondary)
                     .opacity(1 - progress)
-                    .frame(height: max(0, subtitleH))
+                    .frame(height: max(0, captionH))
                     .clipped()
             }
+
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
+        .padding(.leading, 8)
+        .padding(.trailing, 20)
         .padding(.vertical, vPadding)
     }
 
@@ -664,6 +734,7 @@ struct CommentaryDetailView: View {
         isLoaded = false
         section = nil
         headerCollapseProgress = 0
+        isHeaderCollapsed = false  // new verse — header opens fresh, no haptic on this reset
         defer { isLoaded = true }  // always mark loaded, even if guard/early-return fires
         guard let vc = verseComponents else { return }
         section = DatabaseService.shared.loadCommentary(

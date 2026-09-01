@@ -155,6 +155,14 @@ extension Theologian {
     var shortName: String {
         NSLocalizedString("theologian.\(id).short", value: id.capitalized, comment: "")
     }
+
+    /// Full display name for the merged commentary nav title, e.g. "John Calvin" /
+    /// "Жан Кальвін" — reuses `nameKey` (already the full-name localization key,
+    /// see the doc comment on `nameKey` above), same NSLocalizedString-not-
+    /// String(localized:) reasoning as `shortName` (ADR-006).
+    var fullName: String {
+        NSLocalizedString(nameKey, value: id.capitalized, comment: "")
+    }
 }
 
 // MARK: - Sample / Preview Data
