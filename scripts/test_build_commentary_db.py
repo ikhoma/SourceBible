@@ -233,6 +233,40 @@ def test_owen_heb_1_1_2_patch_present(db):
     assert "patch" in origin
 
 
+def test_owen_chapter_overview_has_synthesized_heading(db):
+    """Ivan's decision 2026-09-02: Owen's chapter overviews have NO heading
+    in the raw source (unlike Henry's own 'BOOK NAME / CHAP. N.') — a
+    heading in Henry's own style must be synthesized so a reader can tell
+    the overview apart from the verse-specific commentary that follows."""
+    row = db.execute(
+        "SELECT text FROM comments WHERE source='Owen' AND book_id='HEB' "
+        "AND start_chapter=2 AND start_verse=0"
+    ).fetchone()
+    assert row is not None, "Owen chapter 2 overview missing"
+    assert row[0].startswith("HEBREWS\n\nCHAPTER 2 — OVERVIEW\n\n"), row[0][:80]
+
+
+def test_owen_book_intro_has_synthesized_heading(db):
+    row = db.execute(
+        "SELECT text FROM comments WHERE source='Owen' AND book_id='HEB' "
+        "AND start_chapter=0 AND start_verse=0"
+    ).fetchone()
+    assert row is not None, "Owen book-level intro missing"
+    assert row[0].startswith("HEBREWS\n\nINTRODUCTION\n\n"), row[0][:80]
+
+
+def test_henry_chapter_overview_heading_untouched(db):
+    """Sanity check: Henry already has its own native heading — the Owen-only
+    heading synthesis must not double it up or otherwise alter it."""
+    row = db.execute(
+        "SELECT text FROM comments WHERE source='Henry' AND book_id='GEN' "
+        "AND start_chapter=1 AND start_verse=0"
+    ).fetchone()
+    assert row is not None
+    assert row[0].startswith("G E N E S I S\n\nCHAP. I.\n\n"), row[0][:80]
+    assert row[0].count("CHAP. I.") == 1, "heading must not be duplicated"
+
+
 # ============================================================
 #  Pure-function unit tests (no built DB required)
 # ============================================================
@@ -487,47 +521,81 @@ def test_org_resolver_verse_zero_anchors_via_chapter_v1(tmp_path):
     )
 
 
-def test_insert_section_chapter_intro_indexed_across_whole_chapter():
-    """Opus review S4 (part 2): a verse=0 chapter-intro section indexed ONLY
-    at verse=0 is unreachable by any ordinary verse-based lookup — which
-    defeated the entire purpose of importing Owen's 13 chapter overviews.
-    It must also be indexed across every verse of the (org) chapter."""
+def test_insert_section_chapter_intro_indexed_only_at_org_chapter_verse_one():
+    """Opus review S4 (part 2), revised per Ivan's decision 2026-09-02: a
+    verse=0 chapter-intro section indexed ONLY at verse=0 is unreachable by
+    any ordinary verse-based lookup — but fanning it out across the WHOLE
+    chapter (an earlier version of this fix) made it resurface on every
+    verse, indistinguishable from real verse-specific commentary. It must
+    surface exactly once: at verse 1 of the ORG chapter, where the reader
+    naturally encounters it before the verse-specific commentary.
+
+    Uses a mapping where native chapter 1's own v1 (via the verse=0 special
+    case) resolves to a DIFFERENT org chapter (5) than the native chapter
+    number, to prove the index lands on the ORG chapter's own verse 1 — not
+    on whatever org verse native chapter 1's verse 1 happens to map to (a
+    real failure mode: native/org chapter boundaries don't always align, so
+    that mapping can land on an arbitrary org verse, not verse 1)."""
     con, cur = _fresh_comment_db()
-    org = FakeOrg(mapping={("HEB", 1, 0): ("HEB", 1, 0)}, max_verses={("HEB", 1): 14})
+    # FakeOrg is a plain passthrough (unlike the real OrgResolver, it does
+    # NOT special-case verse=0 by looking up v1) — so org_start_ch is
+    # controlled directly via the (book,chapter,0) mapping entry, simulating
+    # "this native chapter's intro anchors to org chapter 5".
+    org = FakeOrg(
+        mapping={("HEB", 1, 0): ("HEB", 5, 0), ("HEB", 1, 1): ("HEB", 5, 26)},
+        max_verses={},
+    )
     key = bcd.insert_section(
         cur, org, "Owen", "en", "HEB", 1, 0, 1, 0, "chapter overview text",
         origin="unit-test", translation_status="source",
     )
-    verses = {v for (_k, _b, ch, v) in
-              cur.execute("SELECT * FROM comment_verses WHERE key=?", (key,)).fetchall()}
-    assert verses == set(range(0, 15)), f"expected verses 0..14 indexed, got {sorted(verses)}"
+    rows = cur.execute("SELECT book_id, chapter, verse FROM comment_verses WHERE key=?", (key,)).fetchall()
+    assert rows == [("HEB", 5, 1)], (
+        f"expected exactly one row at org chapter 5 verse 1 (not verse 26, "
+        f"where native chapter 1's own verse 1 happens to map), got {rows}"
+    )
 
 
-def test_insert_section_book_level_intro_no_phantom_verse():
-    """Second-round review finding N3: a BOOK-level intro (start_chapter=0,
-    e.g. Owen's 'Volumes 1 and 2 provide a thorough introduction...') has no
-    verse_org chapter to fan out across — org.max_verse(book_id, 0) is
-    genuinely None. The old `or max(end_vs, 1)` fallback treated that None
-    as 'expand to at least verse 1', fabricating a phantom (book, 0, 1)
-    index row that exists nowhere in verse_org. With no real chapter to fan
-    out across, only the literal verse=0 marker should be indexed."""
+def test_insert_section_book_level_intro_indexed_at_org_chapter_one_verse_one():
+    """Second-round review finding N3, revised per Ivan's decision
+    2026-09-02: a BOOK-level intro (start_chapter=0, e.g. Owen's 'Volumes 1
+    and 2 provide a thorough introduction...') used to fabricate a phantom
+    (book, 0, 1) index row (N3) or sit unreachable at (book, 0, 0). Now it
+    surfaces at the book's natural entry point — org chapter 1, verse 1 —
+    same principle as the chapter-overview case above."""
     con, cur = _fresh_comment_db()
-    org = FakeOrg(mapping={("HEB", 0, 0): ("HEB", 0, 0)}, max_verses={})  # no chapter-0 mapping
+    org = FakeOrg(mapping={}, max_verses={})  # chapter 0 never resolves -> native fallback
     key = bcd.insert_section(
         cur, org, "Owen", "en", "HEB", 0, 0, 0, 0, "book-level intro text",
         origin="unit-test", translation_status="source",
     )
-    verses = {v for (_k, _b, ch, v) in
-              cur.execute("SELECT * FROM comment_verses WHERE key=?", (key,)).fetchall()}
-    assert verses == {0}, f"expected only verse=0 indexed (no phantom fan-out), got {sorted(verses)}"
+    rows = cur.execute("SELECT book_id, chapter, verse FROM comment_verses WHERE key=?", (key,)).fetchall()
+    assert rows == [("HEB", 1, 1)], f"expected only chapter 1 verse 1 indexed, got {rows}"
 
 
-def test_no_phantom_verse_one_at_chapter_zero_in_db(db):
-    """DB-level regression guard for N3."""
-    n = db.execute(
-        "SELECT count(*) FROM comment_verses WHERE chapter=0 AND verse=1"
-    ).fetchone()[0]
-    assert n == 0, f"{n} phantom (book, 0, 1) index rows found — verse_org has no such coordinate"
+def test_no_chapter_zero_index_rows_in_db(db):
+    """DB-level regression guard: chapter=0 must never appear in
+    comment_verses — both the old phantom-verse-1 bug (N3) and the bare
+    verse=0 marker are gone now that book-level intros anchor to (book,1,1)."""
+    n = db.execute("SELECT count(*) FROM comment_verses WHERE chapter=0").fetchone()[0]
+    assert n == 0, f"{n} comment_verses rows still at chapter=0 (should anchor to chapter 1, verse 1)"
+
+
+def test_no_chapter_or_book_intro_indexed_at_verse_zero_or_across_whole_chapter(db):
+    """DB-level regression guard for the revised S4/N3 design: a chapter- or
+    book-intro section (comments.start_verse=0) must index EXACTLY ONE
+    comment_verses row (verse 1 of its chapter), never the bare verse=0
+    marker and never a full-chapter fan-out."""
+    rows = db.execute("SELECT key FROM comments WHERE start_verse=0").fetchall()
+    assert rows, "expected at least some verse=0 (chapter/book intro) sections"
+    bad = []
+    for (key,) in rows:
+        verses = db.execute(
+            "SELECT chapter, verse FROM comment_verses WHERE key=?", (key,)
+        ).fetchall()
+        if len(verses) != 1 or verses[0][1] != 1:
+            bad.append((key, verses))
+    assert not bad, f"{len(bad)} intro sections not indexed as exactly one verse-1 row: {bad[:5]}"
 
 
 # ============================================================

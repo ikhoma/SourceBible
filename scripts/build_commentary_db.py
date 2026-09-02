@@ -74,6 +74,18 @@ def load_canon_order(core_db_path):
     return [r[0] for r in rows]
 
 
+def load_book_names_en(core_db_path):
+    """book_id -> English display name (e.g. 'HEB' -> 'Hebrews'), for
+    synthesizing chapter-overview/book-intro headings for sources that don't
+    already have one in the raw text (see import_owen)."""
+    con = sqlite3.connect(f"file:{core_db_path}?mode=ro", uri=True)
+    try:
+        rows = con.execute("SELECT id, name_en FROM book").fetchall()
+    finally:
+        con.close()
+    return dict(rows)
+
+
 # The REAL MyBible book_number sequence — NOT a plain (position * 10). It has
 # gaps reserved for non-canonical books between OT sections (Ezra-Nehemiah ->
 # Esther skips 170/180; Song of Solomon -> Isaiah skips 270/280; etc.), so
@@ -311,31 +323,41 @@ def insert_section(cur, org, source, language, book_id, start_ch, start_vs,
          reviewed_at),
     )
 
+    if start_ch == end_ch and start_vs == 0:
+        # Chapter-intro / book-intro section (Opus review S4, revised per
+        # Ivan's decision 2026-09-02): a bare verse=0 index entry is never
+        # reachable by an ordinary verse lookup, which defeats the entire
+        # point of importing these (Owen's 13 chapter overviews + book
+        # intro, Henry's ~1254 section intros, Edwards' 15).
+        #
+        # An earlier version of this fan-out spread the section across
+        # EVERY verse of the chapter, so it resurfaced on every single verse
+        # read — indistinguishable from genuine verse-specific commentary.
+        # Ivan's call: show it ONLY at the reader's natural entry point —
+        # verse 1 of the ORG chapter for a chapter overview, verse 1 of ORG
+        # chapter 1 for a book-level intro (start_ch==0) — with a heading
+        # (see import_owen's synthesized headings for sources that don't
+        # already have one, e.g. Henry's own "BOOK NAME / CHAP. N."), so the
+        # reader sees the overview once before the verse-specific commentary
+        # that follows as its own separate section.
+        #
+        # This intentionally does NOT go through to_org_or_fallback(start_ch,
+        # 1) — native and org chapter boundaries don't always align (a
+        # native chapter can start partway into what is already an org
+        # chapter), so native verse 1 can land on an arbitrary org verse
+        # number, not org verse 1. org_start_ch/org_start_book (computed
+        # above, anchoring the comments row itself) already identify the
+        # correct ORG chapter; we index directly at verse 1 of THAT chapter.
+        idx_ch = 1 if start_ch == 0 else org_start_ch
+        cur.execute(
+            "INSERT OR IGNORE INTO comment_verses(key,book_id,chapter,verse) "
+            "VALUES(?,?,?,?)",
+            (key, org_start_book, idx_ch, 1),
+        )
+        return key
+
     if start_ch == end_ch:
-        if start_vs == 0:
-            # Chapter-intro section (Opus review S4): a bare verse=0 index
-            # entry is never reachable by an ordinary verse lookup, which
-            # defeats the entire point of importing these (Owen's 13 chapter
-            # overviews, Henry's ~1254 section intros). Index it across
-            # every verse of the chapter it anchors to, in addition to the
-            # literal verse=0 marker, so it surfaces when reading any verse
-            # in that chapter.
-            #
-            # Second-round review finding N3: start_ch==0 is a BOOK-level
-            # intro (not a chapter overview) and has no verse_org chapter to
-            # fan out across at all — org.max_verse(book_id, 0) correctly
-            # returns None. The old `or max(end_vs, 1)` fallback treated
-            # that None as "expand to at least verse 1" instead of "don't
-            # fan out", fabricating a phantom (book, 0, 1) index row that
-            # exists nowhere in verse_org. If there's no real chapter to
-            # fan out across, index only the literal verse=0 marker.
-            mv = org.max_verse(book_id, start_ch)
-            if mv is None:
-                chapters = [(start_ch, 0, 0)]
-            else:
-                chapters = [(start_ch, 0, max(end_vs, mv))]
-        else:
-            chapters = [(start_ch, start_vs, end_vs)]
+        chapters = [(start_ch, start_vs, end_vs)]
     else:
         chapters = [(start_ch, start_vs, org.max_verse(book_id, start_ch) or start_vs)]
         for mid_ch in range(start_ch + 1, end_ch):
@@ -583,16 +605,29 @@ def import_henry(cur, org, new_mybible_path, old_zip_path, book_num_to_id):
     return total
 
 
-def import_owen(cur, org, new_mybible_path, old_cmtx_path):
+def import_owen(cur, org, new_mybible_path, old_cmtx_path, book_names):
     """New MyBible source (book_number=650, Hebrews only) + manual patch:
     Heb 1:1-2 is the OLD .cmtx source's very first row, verbatim (missing
     entirely from the New source — verified 2026-09-01)."""
+    heb_name = book_names.get("HEB", "HEB").upper()
     con = sqlite3.connect(f"file:{new_mybible_path}?mode=ro", uri=True)
     total = 0
     try:
         cur2 = con.cursor()
         for ch_from, vs_from, ch_to, vs_to, text in mybible_ranges(cur2, 650, "HEB", org):
             clean = strip_p_tag_format(text)
+            if vs_from == 0:
+                # Owen's chapter overviews (13) and book-level intro have NO
+                # heading in the raw source at all (unlike Henry's own
+                # "BOOK NAME / CHAP. N." — see commentary-sources-audit.md).
+                # Ivan's decision 2026-09-02: synthesize one in Henry's own
+                # style, so a reader can tell an overview apart from the
+                # verse-specific commentary that follows as its own section.
+                if ch_from == 0:
+                    heading = f"{heb_name}\n\nINTRODUCTION\n\n"
+                else:
+                    heading = f"{heb_name}\n\nCHAPTER {ch_from} — OVERVIEW\n\n"
+                clean = heading + clean
             key = insert_section(
                 cur, org, "Owen", "en", "HEB", ch_from, vs_from, ch_to, vs_to,
                 clean, origin="MyBible:Owen-c", translation_status="source",
@@ -786,6 +821,7 @@ def main():
     org = OrgResolver(args.core_db)
     canon_order = load_canon_order(args.core_db)
     book_num_to_id = mybible_book_num_to_id(canon_order)
+    book_names = load_book_names_en(args.core_db)
 
     con = sqlite3.connect(args.out)
     cur = con.cursor()
@@ -822,7 +858,7 @@ def main():
         # --- Owen ---
         print("Importing Owen (MyBible New source + Heb 1:1-2 patch)...")
         owen_path = extract_one(new / "Owen-c.commentaries.zip", "Owen-c.commentaries.SQLite3", "owen")
-        n = import_owen(cur, org, owen_path, str(data / "OwenHebrews-commentary.cmtx"))
+        n = import_owen(cur, org, owen_path, str(data / "OwenHebrews-commentary.cmtx"), book_names)
         actual = source_row_count(cur, "Owen")
         print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
         sources_meta.append({"source": "Owen", "origin": "MyBible:Owen-c+patch", "n_sections": actual})
