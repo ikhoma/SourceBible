@@ -37,6 +37,7 @@ Usage (run on Mac only):
 
 import argparse
 import hashlib
+import html
 import os
 import re
 import sqlite3
@@ -138,11 +139,23 @@ class OrgResolver:
                 self._max_verse[key] = vs
 
     def resolve(self, book_id, chapter, verse):
-        """(org_book_id, org_chapter, org_verse) or None (chapter-level intro,
-        verse=0, or a genuinely unmapped verse — caller falls back to
-        translation-anchored native coordinates per Invariant 1)."""
+        """(org_book_id, org_chapter, org_verse) or None (a genuinely unmapped
+        verse — caller falls back to translation-anchored native coordinates
+        per Invariant 1).
+
+        verse=0 (a chapter-intro section, e.g. Owen's 13 chapter overviews)
+        is resolved via v1 of that chapter to find the correct ORG chapter,
+        then anchored at org_verse=0 — NOT a bare native-coordinate fallback.
+        Opus review S4: falling back to the native chapter number is wrong
+        whenever native and org chapter counts diverge for that book (e.g.
+        native Malachi has 4 chapters, org Malachi only has 3 — a naive
+        fallback would anchor the section to a chapter that doesn't exist)."""
         if verse == 0:
-            return None
+            v1 = self._map.get((book_id, chapter, 1))
+            if v1 is None:
+                return None
+            org_book, org_chapter, _org_verse = v1
+            return (org_book, org_chapter, 0)
         return self._map.get((book_id, chapter, verse))
 
     def max_verse(self, book_id, chapter):
@@ -204,6 +217,18 @@ def insert_section(cur, org, source, language, book_id, start_ch, start_vs,
     if not text or not text.strip():
         return None
 
+    # S7: validate the range direction before doing anything else. A source
+    # data error (found: one Spurgeon-VE row, HEB 9:18 -> 9:6) would otherwise
+    # be stored inverted and unvalidated. Swap and warn rather than silently
+    # keep an end < start range.
+    if (end_ch, end_vs) < (start_ch, start_vs):
+        print(
+            f"WARNING: inverted range for {source} {book_id} "
+            f"{start_ch}:{start_vs}-{end_ch}:{end_vs} — swapping start/end",
+            file=sys.stderr,
+        )
+        start_ch, start_vs, end_ch, end_vs = end_ch, end_vs, start_ch, start_vs
+
     def to_org_or_fallback(ch, vs):
         r = org.resolve(book_id, ch, vs)
         return r if r is not None else (book_id, ch, vs)
@@ -222,19 +247,50 @@ def insert_section(cur, org, source, language, book_id, start_ch, start_vs,
     # Disambiguate on a genuine collision (two DIFFERENT texts mapping to the
     # same natural key — found in Calvin-c.commentaries.PATCHED.SQLite3: 28 of
     # 490 same-reference duplicate rows have differing text, not just harmless
-    # verbatim repeats). An identical-text collision is a true no-op dedup;
-    # a differing-text collision gets a numbered suffix so BOTH survive as
-    # separate sections rather than one silently overwriting the other.
-    key = base_key
-    suffix = 1
-    while True:
-        existing = cur.execute("SELECT text FROM comments WHERE key=?", (key,)).fetchone()
-        if existing is None:
-            break
-        if existing[0] == text:
-            return key  # identical duplicate — nothing to insert, key already correct
-        suffix += 1
-        key = f"{base_key}-{suffix}"
+    # verbatim repeats). An identical-text collision is a true no-op dedup.
+    #
+    # A differing-text collision is resolved by a DETERMINISTIC TOTAL ORDER
+    # over the colliding texts' own content hashes — never by "whoever
+    # arrived first" — so the outcome is the same regardless of the source
+    # table's row order, which SQLite does not guarantee to be stable across
+    # rebuilds/platforms (Opus review S9 — ADR-027 Invariant 2 requires
+    # stable natural keys). The text with the lexicographically smaller
+    # sha256 hash always holds the bare base_key; any other colliding text
+    # always holds `base_key-<its own hash prefix>`. If a text with a
+    # smaller hash than the current base_key occupant arrives later, the
+    # existing occupant is REKEYED out of the way first, so the final
+    # assignment converges to the same outcome no matter the arrival order.
+    existing = cur.execute("SELECT text FROM comments WHERE key=?", (base_key,)).fetchone()
+    if existing is None:
+        key = base_key
+    elif existing[0] == text:
+        return base_key  # identical duplicate — nothing to insert
+    else:
+        new_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        old_hash = hashlib.sha256(existing[0].encode("utf-8")).hexdigest()
+        if new_hash < old_hash:
+            old_key = f"{base_key}-{old_hash[:8]}"
+            clash = cur.execute("SELECT text FROM comments WHERE key=?", (old_key,)).fetchone()
+            if clash is not None and clash[0] != existing[0]:
+                raise RuntimeError(
+                    f"unresolvable 3-way key collision for {source} {book_id} "
+                    f"{start_ch}:{start_vs}-{end_ch}:{end_vs}"
+                )
+            if clash is None:
+                cur.execute("UPDATE comments SET key=? WHERE key=?", (old_key, base_key))
+                cur.execute("UPDATE comment_verses SET key=? WHERE key=?", (old_key, base_key))
+            key = base_key
+        else:
+            key = f"{base_key}-{new_hash[:8]}"
+            existing2 = cur.execute("SELECT text FROM comments WHERE key=?", (key,)).fetchone()
+            if existing2 is not None:
+                if existing2[0] == text:
+                    return key  # identical duplicate under the disambiguated key
+                raise RuntimeError(
+                    f"unresolvable key collision for {source} {book_id} "
+                    f"{start_ch}:{start_vs}-{end_ch}:{end_vs} (hash collision on top "
+                    f"of a natural-key collision)"
+                )
 
     cur.execute(
         "INSERT INTO comments(key,source,language,book_id,"
@@ -246,7 +302,18 @@ def insert_section(cur, org, source, language, book_id, start_ch, start_vs,
     )
 
     if start_ch == end_ch:
-        chapters = [(start_ch, start_vs, end_vs)]
+        if start_vs == 0:
+            # Chapter-intro section (Opus review S4): a bare verse=0 index
+            # entry is never reachable by an ordinary verse lookup, which
+            # defeats the entire point of importing these (Owen's 13 chapter
+            # overviews, Henry's ~1254 section intros). Index it across
+            # every verse of the chapter it anchors to, in addition to the
+            # literal verse=0 marker, so it surfaces when reading any verse
+            # in that chapter.
+            mv = org.max_verse(book_id, start_ch) or max(end_vs, 1)
+            chapters = [(start_ch, 0, max(end_vs, mv))]
+        else:
+            chapters = [(start_ch, start_vs, end_vs)]
     else:
         chapters = [(start_ch, start_vs, org.max_verse(book_id, start_ch) or start_vs)]
         for mid_ch in range(start_ch + 1, end_ch):
@@ -284,18 +351,38 @@ def mybible_ranges(cur, book_number, book_id, org):
     the chapter."""
     rows = cur.execute(
         "SELECT chapter_number_from, verse_number_from, chapter_number_to, "
-        "verse_number_to, text FROM commentaries WHERE book_number=? "
-        "ORDER BY chapter_number_from, verse_number_from",
+        "verse_number_to, text, rowid FROM commentaries WHERE book_number=? "
+        "ORDER BY chapter_number_from, verse_number_from, rowid",
         (book_number,),
     ).fetchall()
     n = len(rows)
-    for i, (ch_from, vs_from, ch_to, vs_to, text) in enumerate(rows):
+    for i, (ch_from, vs_from, ch_to, vs_to, text, _rowid) in enumerate(rows):
         if ch_to is not None and vs_to is not None:
             yield ch_from, vs_from, ch_to, vs_to, text
             continue
-        if i + 1 < n and rows[i + 1][0] == ch_from:
-            end_vs = rows[i + 1][1] - 1
-        else:
+        # S8: this branch assumes the section never crosses a chapter
+        # boundary when verse_number_to is NULL. True of every file checked
+        # this session (0 occurrences) — fail loudly instead of silently
+        # dropping the tail of the range if that ever changes.
+        if ch_to is not None and ch_to != ch_from:
+            raise RuntimeError(
+                f"mybible_ranges: book_number={book_number} {ch_from}:{vs_from} "
+                f"has chapter_number_to={ch_to} but verse_number_to is NULL — "
+                f"the single-chapter end-inference below would silently drop "
+                f"the multi-chapter span (Opus review S8)."
+            )
+        # S6: find the next row that genuinely STARTS LATER in this chapter
+        # (skip over same-verse duplicate/overlapping rows) — comparing only
+        # against the immediate next row let a same-start duplicate collapse
+        # this range to a single verse and silently drop real coverage.
+        end_vs = None
+        for j in range(i + 1, n):
+            if rows[j][0] != ch_from:
+                break
+            if rows[j][1] > vs_from:
+                end_vs = rows[j][1] - 1
+                break
+        if end_vs is None:
             end_vs = org.max_verse(book_id, ch_from) or vs_from
         if end_vs < vs_from:
             end_vs = vs_from
@@ -349,10 +436,12 @@ def strip_henry_new_html(html: str) -> str:
 
 
 def _unescape_entities(text: str) -> str:
-    text = text.replace("&nbsp;", " ").replace("&amp;", "&")
-    text = text.replace("&lt;", "<").replace("&gt;", ">")
-    text = text.replace("&quot;", '"').replace("&#39;", "'").replace("&apos;", "'")
-    return text
+    """Decode both named (&amp;, &nbsp;, ...) and numeric (&#945;, &#x3b1;, ...)
+    HTML entities. The old hand-rolled version only handled 7 named entities
+    and silently left ~72k numeric entities undecoded (mostly Greek/Hebrew
+    script in Calvin's quotations) — html.unescape() handles the full set."""
+    text = text.replace("&nbsp;", " ")
+    return html.unescape(text)
 
 
 def _collapse_whitespace(text: str) -> str:
@@ -364,15 +453,21 @@ def _collapse_whitespace(text: str) -> str:
 def fix_single_newline_artifact(text: str) -> str:
     """Heal text that came through one of the OLD strippers (_strip_henry_html
     / _strip_rtf), which convert every HTML tag / RTF control word to a bare
-    '\n' (never '\n\n') — producing hundreds of mid-sentence line breaks
+    '\n' — producing hundreds of mid-sentence line breaks
     (commentary-sources-audit.md, доповнення 2026-09-01). We reuse those old
     functions ONLY to extract the two manual patches (Luke 16:19-31, Heb
     1:1-2) from their old sources, so the same artifact would otherwise leak
     into those two sections even though the New MyBible sources are clean of
-    it. Since the old strippers never produce a genuine '\n\n' paragraph
-    break, every '\n' they emit is this artifact — collapse all of them to a
-    single space, leaving one continuous, readable paragraph."""
-    text = re.sub(r"\n+", " ", text)
+    it.
+
+    CORRECTION (post Opus-review, 2026-09-02): the old strippers do also
+    produce a meaningful number of GENUINE '\n\n' paragraph breaks (measured:
+    101 in Owen's patch, 99 in Henry's patch) — an earlier version of this
+    function collapsed those too, turning both patches into a single
+    231k/40k-char wall of text. Only a LONE single '\n' (not adjacent to
+    another '\n') is the artifact; an existing '\n\n' is real structure and
+    must survive untouched."""
+    text = re.sub(r"(?<!\n)\n(?!\n)", " ", text)
     return re.sub(r" {2,}", " ", text).strip()
 
 
@@ -431,8 +526,8 @@ def import_henry(cur, org, new_mybible_path, old_zip_path, book_num_to_id):
 
     # Patch: Luke 16:19-31 from the old source.
     with zipfile.ZipFile(old_zip_path) as z:
-        html = z.read("MHC42016.HTM").decode("latin-1", errors="replace")
-    sects = legacy._henry_extract_sections(html)
+        raw_html = z.read("MHC42016.HTM").decode("latin-1", errors="replace")
+    sects = legacy._henry_extract_sections(raw_html)
     patch = next((tx for vs, tx in sects if min(vs) == 19 and max(vs) == 31), None)
     if patch is None:
         raise RuntimeError("Henry Luke 16:19-31 patch section not found in old source")
@@ -572,11 +667,37 @@ def import_edwards(cur, org, mybible_path, book_num_to_id):
 #  module_info (Amendment 2026-09-01 — language-bundle level, not one author)
 # ============================================================
 
+def source_row_count(cur, source):
+    """Actual `comments` row count for one source — the ground truth, unlike
+    an importer's raw per-call counter (which overcounts by the number of
+    identical-text dedup no-ops it returned a key for; Opus review S5: e.g.
+    Calvin's counter said 13564 while only 13281 rows actually exist)."""
+    return cur.execute("SELECT count(*) FROM comments WHERE source=?", (source,)).fetchone()[0]
+
+
+# ADR-027 §1 requires module_info to carry schema_version/min_app_version
+# (line: "module_info(name, value) -- author, version, schema_version,
+# min_app_version, book_versions(JSON)"). Amendment 2026-09-01 rescoped
+# module_info to the language-bundle level but did not drop this
+# requirement (Opus review S10). Bump SCHEMA_VERSION whenever the table
+# shape or key semantics of comments/comment_verses/module_info changes.
+SCHEMA_VERSION = 1
+MIN_APP_VERSION = "1.0.0"
+
+
 def write_module_info(cur, sources):
     import json
     import datetime
 
     cur.execute("INSERT INTO module_info(name,value) VALUES('language', ?)", ("en",))
+    cur.execute(
+        "INSERT INTO module_info(name,value) VALUES('schema_version', ?)",
+        (str(SCHEMA_VERSION),),
+    )
+    cur.execute(
+        "INSERT INTO module_info(name,value) VALUES('min_app_version', ?)",
+        (MIN_APP_VERSION,),
+    )
     cur.execute(
         "INSERT INTO module_info(name,value) VALUES('sources', ?)",
         (json.dumps(sources, ensure_ascii=False),),
@@ -585,6 +706,13 @@ def write_module_info(cur, sources):
         "INSERT INTO module_info(name,value) VALUES('built_at', ?)",
         (datetime.datetime.now(datetime.timezone.utc).isoformat(),),
     )
+    # NOTE (Opus review S10, not yet resolved): this field is named
+    # book_versions per the ADR-027 §1 contract, but currently holds section
+    # COUNTS per source/book, not version identifiers — the ADR's intended
+    # semantics for incremental/OTA book updates are not implemented yet.
+    # Left as-is (documented follow-up in commentary-sources-audit.md)
+    # since v1 ships as one non-OTA per-language file with no per-book
+    # update mechanism to version against.
     book_versions = {}
     for row in cur.execute("SELECT source, book_id, count(*) FROM comments GROUP BY source, book_id"):
         book_versions.setdefault(row[0], {})[row[1]] = row[2]
@@ -637,42 +765,48 @@ def main():
         print("Importing Calvin (MyBible-PATCHED, sole source)...")
         calvin_path = str(new / "Calvin-c.commentaries.PATCHED.SQLite3")
         n = import_calvin(cur, org, calvin_path, book_num_to_id)
-        print(f"  {n} sections")
-        sources_meta.append({"source": "Calvin", "origin": "MyBible:Calvin-c.PATCHED", "n_sections": n})
+        actual = source_row_count(cur, "Calvin")
+        print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
+        sources_meta.append({"source": "Calvin", "origin": "MyBible:Calvin-c.PATCHED", "n_sections": actual})
 
         # --- Henry ---
         print("Importing Henry (MyBible New source + Luke 16:19-31 patch)...")
         henry_path = extract_one(new / "Henry-c.commentaries.zip", "MHWBC.commentaries.SQLite3", "henry")
         n = import_henry(cur, org, henry_path, str(data / "matthew_henry.zip"), book_num_to_id)
-        print(f"  {n} sections")
-        sources_meta.append({"source": "Henry", "origin": "MyBible:Henry-c(MHWBC)+patch", "n_sections": n})
+        actual = source_row_count(cur, "Henry")
+        print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
+        sources_meta.append({"source": "Henry", "origin": "MyBible:Henry-c(MHWBC)+patch", "n_sections": actual})
 
         # --- Owen ---
         print("Importing Owen (MyBible New source + Heb 1:1-2 patch)...")
         owen_path = extract_one(new / "Owen-c.commentaries.zip", "Owen-c.commentaries.SQLite3", "owen")
         n = import_owen(cur, org, owen_path, str(data / "OwenHebrews-commentary.cmtx"))
-        print(f"  {n} sections")
-        sources_meta.append({"source": "Owen", "origin": "MyBible:Owen-c+patch", "n_sections": n})
+        actual = source_row_count(cur, "Owen")
+        print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
+        sources_meta.append({"source": "Owen", "origin": "MyBible:Owen-c+patch", "n_sections": actual})
 
         # --- Spurgeon: Treasury of David (unchanged) ---
         print("Importing Spurgeon - Treasury of David (unchanged source)...")
         n = import_spurgeon_tod(cur, org, str(data / "chspurgeon-tod-main.zip"))
-        print(f"  {n} sections")
-        sources_meta.append({"source": "Spurgeon-TOD", "origin": "chspurgeon-tod-main.zip", "n_sections": n})
+        actual = source_row_count(cur, "Spurgeon-TOD")
+        print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
+        sources_meta.append({"source": "Spurgeon-TOD", "origin": "chspurgeon-tod-main.zip", "n_sections": actual})
 
         # --- Spurgeon: Verse Expositions (new) ---
         print("Importing Spurgeon - Verse Expositions (new work)...")
         spurgeon_ve_path = extract_one(new / "Spurgeon-c.commentaries.zip", "Spurg-c.commentaries.SQLite3", "spurgeon_ve")
         n = import_spurgeon_ve(cur, org, spurgeon_ve_path, book_num_to_id)
-        print(f"  {n} sections")
-        sources_meta.append({"source": "Spurgeon-VE", "origin": "MyBible:Spurgeon-c(VE)", "n_sections": n})
+        actual = source_row_count(cur, "Spurgeon-VE")
+        print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
+        sources_meta.append({"source": "Spurgeon-VE", "origin": "MyBible:Spurgeon-c(VE)", "n_sections": actual})
 
         # --- Edwards (new author) ---
         print("Importing Edwards (new author)...")
         edwards_path = extract_one(new / "Edwards-c.commentaries.zip", "Edw-c.commentaries.SQLite3", "edwards")
         n = import_edwards(cur, org, edwards_path, book_num_to_id)
-        print(f"  {n} sections")
-        sources_meta.append({"source": "Edwards", "origin": "MyBible:Edwards-c", "n_sections": n})
+        actual = source_row_count(cur, "Edwards")
+        print(f"  {actual} sections ({n} insert calls, {n - actual} dedup no-ops)")
+        sources_meta.append({"source": "Edwards", "origin": "MyBible:Edwards-c", "n_sections": actual})
 
     write_module_info(cur, sources_meta)
     con.commit()
