@@ -280,3 +280,54 @@ org-якорення через `verse_org` (Інваріант 1) уже дає
 - Якщо трафік болить → sub-book дельти замість повної книги.
 - Якщо потрібен маркетплейс сторонніх модулів → криптопідпис + curated-реєстр обов'язкові.
 - Якщо перекладів багато мовами → `translation_status` розшириться в повноцінний перекладацький workflow (можливо, окремий інструмент вичитки поверх майстра). **Перший крок зроблено Amendment 2026-09-01** (`language`-колонка, EN↔UK фолбек через ATTACH+UNION); повноцінний workflow (окремий інструмент вичитки) лишається відкритим, коли перекладів стане кілька одночасно.
+
+
+---
+
+## Amendment 2026-09-02 — Swift-інтеграція нової `commentaries-en.db`: заплановано, не виконано
+
+Виявлено при підготовці кроку 2 плану (`build_commentary_db.py`) до підключення в застосунку —
+пряма перевірка живого Swift-коду (`StrongsModels.swift`, `VerseTabContent.swift`,
+`DatabaseService.swift`), не припущення. **Нічого з розділу нижче ще не закодовано — CLAUDE.md
+правило #1: потрібне окреме явне «зроби це» на Swift, незалежно від дозволу на
+`scripts/build_commentary_db.py`.**
+
+### Проблема 1 — Сперджен: два твори, один `source`-запит
+
+`DatabaseService.loadCommentary` викликається з `source: theologian.id.capitalized`
+(`VerseTabContent.swift:742`) — для Сперджена це рядок `"Spurgeon"`. У новій БД такого
+`source` нема: є `"Spurgeon-TOD"` (Treasury of David) і `"Spurgeon-VE"` (Verse Expositions).
+Без зміни коду коментарі Сперджена мовчки зникнуть з усього застосунку в момент підключення
+нової бази (не крash — просто 0 рядків на кожен запит).
+
+### Проблема 2 — дублікат опису в Stacked Sheet
+
+`Theologian` (`StrongsModels.swift:73`) має один рядок «era · style» на автора (напр.
+«16th c. · Text & theology»). Цей самий рядок показується двічі: у списку коментарів
+(`VerseTabContent.swift:455`) і в заголовку Stacked Sheet (`:718`) — буквально той самий
+текст, не два різних.
+
+### Проблема 3 — Едвардс відсутній у моделі
+
+`Theologian.all` (`StrongsModels.swift:146`) = `[calvin, henry, spurgeon, owen]`. Новий автор
+з БД (Edwards, 856 секцій) там не значиться — без нового `Theologian.edwards` (+ аватарка,
++ локалізація `name`/`era`/`style` у `Localizable.xcstrings`) його коментарі ніде не
+з'являться, хоча дані вже в базі.
+
+### Рішення (Іван, 2026-09-02) — модель «твір» (Work) окремо від «автор» (Theologian)
+
+Один крок вирішує проблеми 1 і 2 одночасно: ввести `CommentaryWork` — `sourceKey` (точний
+рядок БД: `"Spurgeon-TOD"`, `"Spurgeon-VE"`, `"Calvin"`, …), прив'язку до `theologianId`,
+локалізовану назву твору (`titleKey`, напр. «Treasury of David» / «Verse Expositions of the
+Bible»). Список коментарів лишається по автору з «era · style» як зараз (не чіпати);
+Stacked Sheet header замість повторення «era · style» показує `titleKey` — і Сперджен
+автоматично перестає ламатись, бо запит іде вже по `work.sourceKey`, а не по
+`theologian.id.capitalized`.
+
+**Файли, які це зачепить:** `StrongsModels.swift` (новий `CommentaryWork`, або works як масив
+на `Theologian`), `VerseTabContent.swift` (список/вибір + Stacked Sheet header), виклик
+`DatabaseService.loadCommentary` (параметр `source:`). Плюс окремо, незалежно від Work-моделі:
+новий `Theologian.edwards` + аватарка + рядки локалізації (проблема 3).
+
+**Статус: заплановано, не виконано.** Виконати одразу після фінальної збірки/верифікації
+`commentaries-en.db` — окремим явним «зроби це» на Swift.
