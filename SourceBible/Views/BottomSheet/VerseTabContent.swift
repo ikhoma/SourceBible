@@ -524,6 +524,17 @@ struct CommentaryDetailView: View {
         guard let vc = verseComponents else { return "" }
         let book = readerVM.shortBookName(for: vc.bookId)
         guard let sec = section else { return "\(book) \(vc.chapter):\(vc.verse)" }
+        // Chapter/book-level overview sections are anchored to build-time sentinel
+        // coordinates, not a real displayable range: startVerse == 0 always (a
+        // book-level intro also has startChapter == 0) — see build_commentary_db.py
+        // insert_section's N4 fan-out. Showing them raw produced "Ps 0:0" for a
+        // Psalms book intro (Ivan, manual test, 2026-09-02) instead of the verse
+        // the reader is actually looking at. The section's own heading text
+        // already says "OVERVIEW"/"INTRODUCTION", so just show the reader's
+        // real position here.
+        if sec.startVerse == 0 {
+            return "\(book) \(vc.chapter):\(vc.verse)"
+        }
         if sec.startChapter == sec.endChapter {
             if sec.startVerse == sec.endVerse {
                 return "\(book) \(sec.startChapter):\(sec.startVerse)"
