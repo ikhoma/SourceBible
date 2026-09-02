@@ -41,6 +41,14 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
         tv.isScrollEnabled    = true
         tv.backgroundColor    = .clear
         tv.textContainerInset = UIEdgeInsets(top: 16, left: 20, bottom: 20, right: 20)
+        // SwiftUI's own VStack already reserves space above the home indicator
+        // for this view's frame (no .ignoresSafeArea() anywhere in this sheet),
+        // so UIKit's automatic content-inset adjustment was ADDING a second,
+        // redundant safe-area inset on top of the 20pt above — the two stacked
+        // into an oversized gap under the last line of text (Ivan, manual test,
+        // 2026-09-02). SwiftUI already owns safe-area placement here; UIKit
+        // doesn't need to guess at it too.
+        tv.contentInsetAdjustmentBehavior = .never
         tv.delegate           = context.coordinator
         tv.attributedText     = context.coordinator.attributedString
         // tintColor drives BOTH the selection handles/caret AND the selected-
