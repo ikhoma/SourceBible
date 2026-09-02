@@ -1,15 +1,35 @@
 // SelectableCommentaryTextView.swift
 // SourceBible
 //
-// UIViewRepresentable, що рендерить тіло коментаря як ОДИН скролячий UITextView
-// (не пораграфний LazyVStack — див. ADR-037). isScrollEnabled = true: сам
-// UITextView є скрол-контейнером, батьківський SwiftUI не додає ще один
-// ScrollView навколо. Це і знімає обмеження SwiftUI Text на дуже довгих рядках
-// (Calvin PSA 150:6 ≈ 329k символів — найбільша відома секція, ADR-037 §1),
-// і дозволяє тягнути виділення через межу абзаців, як в Apple Books.
+// Тіло коментаря — SwiftUI ScrollView + LazyVStack з групою НЕ-скролячих
+// UITextView-чанків (замість одного великого скролячого UITextView, як було
+// до 2026-09-02 — див. ADR-037 §1). Причина заміни: один UITextView з усім
+// текстом секції одразу ламався на справді величезних секціях (Оуен, Євр
+// 1:1-2 ≈ 231 000 символів — біла сторінка; Генрі Євр 11:4-31 ≈ 62 000 —
+// гальмує скрол). Це РЕГРЕС відносно оригінального фіксу з коміту 9ef6ec1
+// (4 червня) — тодішній per-paragraph LazyVStack+Text — який ADR-037 замінив
+// заради нативного виділення тексту через межу абзаців, не переперевіривши
+// на цьому ж великому кейсі (баг знайдено повторно Іваном, manual test,
+// 2026-09-02, /engineering:debug).
 //
-// Меню виділення: власні пункти «Поділитися» / «Додати в нотатку» додаються
-// через UITextViewDelegate.textView(_:editMenuForTextIn:suggestedActions:)
+// Компроміс цього фіксу: абзаци групуються у чанки по ~12 000 символів
+// (buildChunks) — 94.5% реальних секцій (виміряно на commentaries-en.db,
+// 23 275 секцій) вкладаються в ОДИН чанк, тобто нуль візуальних змін проти
+// попередньої поведінки. Лише вироджені секції (Оуен, Генрі) розбиваються
+// на кілька чанків; найгірший випадок (Оуен, Євр 3:7-11, 282 543 символи) —
+// 25 чанків замість одного нерендерабельного блоку. Ціна: виділення тексту
+// НЕ тягнеться через межу чанка (та сама ціна, що мав оригінальний
+// per-paragraph фікс 9ef6ec1 — компроміс узгоджено з Іваном, 2026-09-02).
+//
+// Кожен чанк — свій маленький isScrollEnabled=false UITextView (сам не
+// скролиться, розмір визначається sizeThatFits — стандартний спосіб
+// авто-висоти UITextView у SwiftUI); скролить зовнішній ScrollView. Прогрес
+// колапсу шапки (onScroll) тепер рахується з offset-у ЦЬОГО зовнішнього
+// ScrollView через iOS 18 onScrollGeometryChange, а не з внутрішнього
+// scrollViewDidScroll одного UITextView, як було раніше.
+//
+// Меню виділення на кожному чанку: власні пункти «Поділитися» / «Додати в
+// нотатку» через UITextViewDelegate.textView(_:editMenuForTextIn:suggestedActions:)
 // (iOS 16+) — НЕ buildMenu(with:)/UIMenuBuilder, той API не застосовується до
 // меню виділення тексту (лише до UIMenuSystem.main/.context). Системний Share
 // прибирається дефензивним фільтром suggestedActions (недокументований як
@@ -21,43 +41,128 @@
 import SwiftUI
 import UIKit
 
-struct SelectableCommentaryTextView: UIViewRepresentable {
+struct SelectableCommentaryTextView: View {
 
     let text: String
     /// Викликається з обраним рядком, коли натиснуто «Поділитися».
     var onShareRequested: (String) -> Void
     /// Викликається з обраним рядком, коли натиснуто «Додати в нотатку».
     var onAddToNoteRequested: (String) -> Void
-    /// Вертикальний contentOffset — джерело для анімованого колапсу шапки теолога
-    /// у CommentaryDetailView (двостейтова шапка, рішення Івана).
+    /// Вертикальний scroll-offset ЗОВНІШНЬОГО ScrollView — джерело для
+    /// анімованого колапсу шапки теолога у CommentaryDetailView (двостейтова
+    /// шапка, рішення Івана).
     var onScroll: (CGFloat) -> Void = { _ in }
 
-    // MARK: UIViewRepresentable
+    /// Максимум символів на чанк — 12 000, узгоджено з Іваном 2026-09-02
+    /// (94.5% секцій = 1 чанк; найгірший реальний кейс, Оуен Євр 3:7-11,
+    /// 282 543 символи → 25 чанків по ~11 тис.).
+    private static let chunkBudget = 12_000
+
+    private var chunks: [NSAttributedString] {
+        Self.buildChunks(from: text, budget: Self.chunkBudget)
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(chunks.indices, id: \.self) { i in
+                    CommentaryChunkTextView(
+                        attributedText: chunks[i],
+                        onShareRequested: onShareRequested,
+                        onAddToNoteRequested: onAddToNoteRequested
+                    )
+                }
+            }
+            .padding(EdgeInsets(top: 16, leading: 20, bottom: 20, trailing: 20))
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            geo.contentOffset.y + geo.contentInsets.top
+        } action: { _, newValue in
+            onScroll(newValue)
+        }
+    }
+
+    /// Групує абзаци (розділені "\n\n") у чанки, кожен ≤ `budget` символів
+    /// (крім одиничного абзацу, що сам по собі перевищує бюджет — тоді він
+    /// стає власним чанком, як є). Індекс абзацу рахується ГЛОБАЛЬНО через
+    /// усі чанки (не скидається на межі чанка), тому paragraphSpacingBefore
+    /// застосовується однаково і всередині чанка, і на межі між чанками —
+    /// межа чанка (view boundary) лишається невидимою для читача.
+    ///
+    /// "\n" МІЖ абзацами — без нього TextKit бачить один суцільний абзац
+    /// (append() сам по собі не створює межу абзацу), тому
+    /// paragraphSpacingBefore ніколи не спрацьовував і текст виглядав одним
+    /// шматком без розбивки (Henry HEB, баг знайдений Іваном, 2026-09-02).
+    /// Без "\n" після ОСТАННЬОГО абзацу всього тексту — щоб не повернути
+    /// зайвий відступ знизу, щойно прибраний.
+    static func buildChunks(from text: String, budget: Int) -> [NSAttributedString] {
+        let paragraphs = text.components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !paragraphs.isEmpty else { return [] }
+
+        let font = UIFont.preferredFont(forTextStyle: .body)
+        var chunks: [NSAttributedString] = []
+        var current = NSMutableAttributedString()
+        var currentLen = 0
+
+        for (index, para) in paragraphs.enumerated() {
+            if currentLen > 0 && currentLen + para.count > budget {
+                chunks.append(current)
+                current = NSMutableAttributedString()
+                currentLen = 0
+            }
+
+            let style = NSMutableParagraphStyle()
+            style.lineSpacing = 4
+            if index > 0 { style.paragraphSpacingBefore = 12 }
+
+            let isLastParagraphOverall = index == paragraphs.count - 1
+            let piece = isLastParagraphOverall ? para : para + "\n"
+
+            current.append(NSAttributedString(string: piece, attributes: [
+                .font:            font,
+                .foregroundColor: UIColor.label,
+                .paragraphStyle:  style
+            ]))
+            currentLen += para.count
+        }
+        if current.length > 0 { chunks.append(current) }
+        return chunks
+    }
+}
+
+// MARK: - CommentaryChunkTextView (один нескролячий UITextView-чанк)
+
+/// Один чанк (група абзаців у межах char-бюджету), що рендериться власним
+/// UITextView з isScrollEnabled = false — розмір визначається sizeThatFits,
+/// сам чанк не скролиться, скролить батьківський ScrollView
+/// (SelectableCommentaryTextView.body). Той самий принцип, який ADR-037 вже
+/// підтвердив як безпечний для МАЛОГО вмісту — тут застосований по
+/// ~12К-шматках, а не по всьому документу відразу (яке ADR-037 відхилив
+/// саме тому, що весь документ одразу — це вже не малий вміст).
+private struct CommentaryChunkTextView: UIViewRepresentable {
+
+    let attributedText: NSAttributedString
+    var onShareRequested: (String) -> Void
+    var onAddToNoteRequested: (String) -> Void
 
     func makeUIView(context: Context) -> UITextView {
         let tv = UITextView()
         tv.isEditable         = false
         tv.isSelectable       = true
-        tv.isScrollEnabled    = true
+        tv.isScrollEnabled    = false
         tv.backgroundColor    = .clear
-        tv.textContainerInset = UIEdgeInsets(top: 16, left: 20, bottom: 20, right: 20)
-        // SwiftUI's own VStack already reserves space above the home indicator
-        // for this view's frame (no .ignoresSafeArea() anywhere in this sheet),
-        // so UIKit's automatic content-inset adjustment was ADDING a second,
-        // redundant safe-area inset on top of the 20pt above — the two stacked
-        // into an oversized gap under the last line of text (Ivan, manual test,
-        // 2026-09-02). SwiftUI already owns safe-area placement here; UIKit
-        // doesn't need to guess at it too.
-        tv.contentInsetAdjustmentBehavior = .never
+        tv.textContainerInset = .zero
+        tv.textContainer.lineFragmentPadding = 0
         tv.delegate           = context.coordinator
-        tv.attributedText     = context.coordinator.attributedString
-        // tintColor drives BOTH the selection handles/caret AND the selected-
-        // range highlight in UITextView — one property, both asks (Ivan,
-        // 2026-09-01). System default (label/system blue) → app's own brand
-        // blue (HighlightColor.swift, single source of truth, same color used
-        // for word-tap tint elsewhere in the reader). Not touching alpha: UIKit
-        // applies its own translucency to the highlight from tintColor already,
-        // so opacity stays exactly what it was — only the hue changes.
+        tv.attributedText      = attributedText
+        // tintColor драйвить і selection handles/caret, і підсвітку виділеного
+        // діапазону в UITextView — одна властивість, обидва запити (Ivan,
+        // 2026-09-01). Системний дефолт → фірмовий синій застосунку
+        // (HighlightColor.swift, єдине джерело правди, той самий колір, що і
+        // для тапу по слову деінде в рідері).
         tv.tintColor           = .appBlue
         // Приховуємо Writing Tools повністю (Ivan, 2026-09-01) — офіційний,
         // задокументований спосіб: UITextView.writingToolsBehavior, iOS 18+.
@@ -67,74 +172,39 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
         // дефензивним стилем, що і Share (жоден системний ідентифікатор тут
         // не задокументований як гарантований контракт).
         tv.writingToolsBehavior = .none
+        tv.setContentHuggingPriority(.required, for: .vertical)
         return tv
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
-        let coord = context.coordinator
-        // Перебудовуємо NSAttributedString лише коли текст справді змінився
-        // (нова секція/теолог), а не на кожен виклик updateUIView.
-        if coord.text != text {
-            coord.text             = text
-            coord.attributedString = Self.buildAttributedString(from: text)
-            tv.attributedText      = coord.attributedString
+        if tv.attributedText != attributedText {
+            tv.attributedText = attributedText
         }
-        coord.onShareRequested    = onShareRequested
-        coord.onAddToNoteRequested = onAddToNoteRequested
-        coord.onScroll            = onScroll
+        context.coordinator.onShareRequested    = onShareRequested
+        context.coordinator.onAddToNoteRequested = onAddToNoteRequested
+    }
+
+    /// isScrollEnabled = false робить UITextView саморозмірним по контенту —
+    /// це стандартний спосіб дати йому реальну (не 0) висоту всередині
+    /// SwiftUI-стеку без окремого скролу.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIScreen.main.bounds.width
+        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: fitted.height)
     }
 
     func makeCoordinator() -> Coordinator {
         let coord = Coordinator()
-        coord.text                 = text
-        coord.attributedString     = Self.buildAttributedString(from: text)
         coord.onShareRequested     = onShareRequested
         coord.onAddToNoteRequested = onAddToNoteRequested
-        coord.onScroll             = onScroll
         return coord
-    }
-
-    /// Зберігає той самий візуальний ритм між абзацами, що раніше давав
-    /// LazyVStack(spacing: 12), через paragraphSpacingBefore на кожному абзаці
-    /// крім першого.
-    static func buildAttributedString(from text: String) -> NSAttributedString {
-        let paragraphs = text.components(separatedBy: "\n\n")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        let font = UIFont.preferredFont(forTextStyle: .body)
-        let result = NSMutableAttributedString()
-
-        for (index, para) in paragraphs.enumerated() {
-            let style = NSMutableParagraphStyle()
-            style.lineSpacing = 4
-            if index > 0 { style.paragraphSpacingBefore = 12 }
-
-            // "\n" МІЖ абзацами — без нього TextKit бачить один суцільний
-            // абзац (append() сам по собі не створює межу абзацу), тому
-            // paragraphSpacingBefore ніколи не спрацьовував і текст виглядав
-            // одним шматком без розбивки (Henry HEB, баг знайдений Іваном,
-            // 2026-09-02). Без "\n" після ОСТАННЬОГО абзацу — щоб не
-            // повернути зайвий відступ знизу, щойно прибраний.
-            let piece = index < paragraphs.count - 1 ? para + "\n" : para
-
-            result.append(NSAttributedString(string: piece, attributes: [
-                .font:            font,
-                .foregroundColor: UIColor.label,
-                .paragraphStyle:  style
-            ]))
-        }
-        return result
     }
 
     // MARK: Coordinator
 
-    final class Coordinator: NSObject, UITextViewDelegate, UIScrollViewDelegate {
-        var text: String = ""
-        var attributedString = NSAttributedString()
+    final class Coordinator: NSObject, UITextViewDelegate {
         var onShareRequested:     (String) -> Void = { _ in }
         var onAddToNoteRequested: (String) -> Void = { _ in }
-        var onScroll:             (CGFloat) -> Void = { _ in }
 
         // Кастомні пункти меню виділення. `range`/`suggestedActions` приходять
         // від делегата — НЕ читаємо textView.selectedRange (може розійтись у
@@ -228,13 +298,6 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
                 result.append(element)
             }
             return (found, result)
-        }
-
-        // UITextViewDelegate успадковує UIScrollViewDelegate — призначення
-        // цього ж coordinator у tv.delegate вже дає виклики scrollViewDidScroll,
-        // окремого delegate-слота не потрібно.
-        func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            onScroll(scrollView.contentOffset.y)
         }
     }
 }
