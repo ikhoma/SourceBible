@@ -33,6 +33,81 @@
 
 ---
 
+> ### 🔁 Амендмент 2026-09-02 — §1 переглянуто: скролящий `UITextView` теж не витримав, реалізовано з `commentaries-en.db` і живим manual QA
+>
+> §1 цього ADR (обраний Option D — **один скролящий `UITextView` на секцію**) реалізовано
+> (коміт `db40148`, після виокремлення `commentaries-en.db` за ADR-027), зібралось і
+> запустилось без помилок — але живе ручне тестування на реальному пристрої (Іван,
+> 2026-09-02, `/engineering:debug`) знайшло те, від чого Option A відмовились ще
+> 2026-08-27, тільки на меншому масштабі:
+>
+> - **Оуен, Євр. 1:1-2 (231 237 симв.) і 3:7-11 (282 543 симв.)** — білий екран, той самий
+>   симптом, що ADR цитує для Option A («крах `UITextView` при тапі вже від ~100k символів,
+>   різка деградація TextKit на великих документах»). Виявилось РЕГРЕСІЄЮ: комміт
+>   `9ef6ec1` (4 червня, до цього ADR) уже мав робочий фікс саме на цей кейс —
+>   per-paragraph `LazyVStack`+`Text`, явно прокоментований як обхід «SwiftUI `Text`
+>   мовчки не рендерить дуже довгі рядки». §1 замінив цю архітектуру заради крос-абзацного
+>   виділення, не перепровіривши на цьому ж найбільшому реальному кейсі — Option C′
+>   («запасний, якщо D впаде») якраз попереджав про цю ціну, просто ніхто не очікував,
+>   що D впаде так скоро.
+> - **Генрі, Євр. 11:4-31 (62 271 симв.)** — гальмує скрол; Сперджен (найбільша секція
+>   на порядок менша) — ні. Той самий клас проблеми, менш гостра форма.
+> - Окремо, **не масштабна проблема, а конкретний рядок коду:** `buildAttributedString`
+>   збирав абзаци через повторний `NSMutableAttributedString.append()` без жодного
+>   символу-роздільника між ними — TextKit бачив один суцільний абзац, тому
+>   `paragraphSpacingBefore` НІКОЛИ не спрацьовував («Генрі — все одним шматком без
+>   абзаців», і ширше — «пропадають пробіли між реченнями» на межі колишніх `\n\n`).
+>   Торкалось усіх джерел однаково, малопомітно на коротких секціях.
+>
+> **Рішення — не повернення до Option A, а Option C′ у м'якшому варіанті: групування,
+> не по-абзацний поділ.** `SelectableCommentaryTextView` (коміт `b9951f7`) — тепер SwiftUI
+> `View` (`ScrollView` + `LazyVStack`), а не `UIViewRepresentable`. `buildChunks()` групує
+> послідовні абзаци в чанки під бюджетом **12 000 символів** (не по одному абзацу на
+> `UITextView`, як буквальний Option C′) — виміряно на `commentaries-en.db` (23 275
+> секцій): **94.5% секцій лишаються ОДНИМ чанком**, нуль візуальної різниці проти §1;
+> Оуен Євр. 3:7-11 (найгірший випадок) → 25 чанків по ~11К; Генрі Євр. 11:4-31 → 6.
+> Кожен чанк — окремий `isScrollEnabled = false` `UITextView`
+> (`CommentaryChunkTextView`, розмір через `sizeThatFits`/`layoutManager.usedRect`,
+> коміт `9bbb4ef` — пряме читання `UITextView.sizeThatFits(_:)` повертало кешовану висоту
+> під СТАРУ ширину `textContainer` і обрізало хвіст останнього чанка, доки не змусили
+> перерахунок через `NSLayoutManager.usedRect(for:)` після `ensureLayout(for:)`), індекс
+> абзацу для `paragraphSpacingBefore` рахується ГЛОБАЛЬНО через усі чанки — межа чанка
+> невидима для читача.
+>
+> **Наслідки для §1 «Що дає одразу трьома ударами» — переоцінка:**
+> - «Ліниву верстку» — і досі правда, тепер на рівні чанка (~12К), не всього документа.
+> - «Нуль вкладених скролів» — **скасовано.** Тепер це ЯКРАЗ isScrollEnabled=false
+>   UITextView всередині SwiftUI `ScrollView` — та сама конфігурація, від якої §1
+>   відштовхувався як від ризикованої. Різниця, чому тут це працює: не ОДИН такий
+>   view на 329k символів (де сам масштаб — проблема), а МНОГО маленьких (~12К) —
+>   ризик, який ADR сам описував як притаманний МАСШТАБУ, а не самій конфігурації.
+> - «Крос-абзацне виділення» — **втрачено на межі чанка** (Option C′ це чесно попереджав
+>   з першого дня). Виділення всередині одного чанка — без обмежень. Узгоджено з Іваном
+>   до реалізації, приймається як ціна: 94.5% секцій — це взагалі неважливо (один чанк),
+>   і навіть у найгіршому випадку (Оуен) користувач і раніше не міг нормально прочитати
+>   секцію (білий екран), тож "не тягнеться через 25 меж" — про запас краще за "нічого".
+>
+> **Джерело офсету для колапсу шапки (§1, "Вирішено Іваном") змінюється відповідно:**
+> раніше — `UIScrollViewDelegate.scrollViewDidScroll` того самого `UITextView`, що і є
+> скрол-контейнер. Тепер немає одного `UIScrollView`-власника — скролить зовнішній SwiftUI
+> `ScrollView`. Джерело офсету — iOS 18 `.onScrollGeometryChange(for:of:action:)` на
+> цьому `ScrollView`, той самий `onScroll: (CGFloat) -> Void` контракт назовні в
+> `CommentaryDetailView` не змінився.
+>
+> **Побічний QA-фікс у тому ж раунді (коміт `62c562d`):** `Divider()` під
+> `commentaryNavBar` рендерився помітно темнішим на ~секунду одразу після відкриття sheet-а
+> (типова крихкість `Divider()` поруч із в'ю, що дає зайвий layout-тік одразу після
+> `.onAppear` — тут новий `ScrollView`), замінено на ручну волосяну лінію фіксованим
+> `Color(uiColor: .separator)`.
+>
+> **Що це означає для Action Items нижче:** item 0 і item 2 позначені виконаними з
+> приміткою — реалізація еволюціонувала від буквального тексту item 2 (один скролящий
+> `UITextView`) до описаного тут групованого варіанту; сигнатури й делегат-контракт item 3
+> (`editMenuForTextIn`) не змінились — переїхали з одного `Coordinator` на N
+> `Coordinator`-ів, по одному на чанк, той самий код.
+
+---
+
 ## Контекст
 
 Зараз тіло коментаря рендериться через `CommentaryTextView` (`SourceBible/Views/BottomSheet/VerseTabContent.swift`): звичайний SwiftUI `Text`, розбитий по `"\n\n"` на параграфи в `LazyVStack`. Розбивка — вимушена: SwiftUI `Text` мовчки не рендерить дуже довгі рядки. `.textSelection` ніде не увімкнено — користувач **не може** виділити чи скопіювати жодного слова з коментаря сьогодні.
@@ -354,20 +429,21 @@ func openNewNote(attachedToQuote text: String, theologianId: String, verseId: St
 
 ## Action Items
 
-0. [x] **Вирішено Іваном:** шапка богослова — двостанова (expanded/collapsed), анімований перехід, керований `contentOffset.y` того самого `UITextView`-скролу (деталі — §1, оновлений блок "Вирішено Іваном"). `Coordinator` реалізує і `UITextViewDelegate` (§2), і `UIScrollViewDelegate` (`scrollViewDidScroll`), прокидає офсет через `onScroll` замикання.
+0. [x] **Вирішено Іваном:** шапка богослова — двостанова (expanded/collapsed), анімований перехід, керований `contentOffset.y` того самого `UITextView`-скролу (деталі — §1, оновлений блок "Вирішено Іваном"). `Coordinator` реалізує і `UITextViewDelegate` (§2), і `UIScrollViewDelegate` (`scrollViewDidScroll`), прокидає офсет через `onScroll` замикання. **Оновлено Амендментом 2026-09-02:** джерело офсету — вже не `UIScrollViewDelegate` одного `UITextView`, а `.onScrollGeometryChange` зовнішнього SwiftUI `ScrollView` (чанкований рендер, §1). Контракт `onScroll: (CGFloat) -> Void` назовні — той самий.
 1. [ ] **Research already done — verify, don't redo:** звірити з живим заголовком iOS 26 SDK у Xcode рівно три сигнатури: `UITextViewDelegate.textView(_:editMenuForTextIn:suggestedActions:)`, `UIMenu(options:children:)`, `UIMenu.Identifier.share`. Документація прочитана 2026-08-27; лишилось підтвердити компіляцією, а не пошуком.
-2. [ ] Реалізувати `SelectableCommentaryTextView` — **скролящий** `UITextView` (`isScrollEnabled = true`), `NSAttributedString` зі збереженим міжабзацним інтервалом, кеш рядка в `Coordinator`. Перебудувати `CommentaryDetailView`: `VStack` = закріплена шапка + текст на решту висоти, замість `ScrollView`. Видалити `CommentaryTextView`.
-3. [ ] Меню виділення через `editMenuForTextIn` (§2): фільтр Share захищений з обох боків (`UIMenu` і `UIAction`), діапазон беремо з параметра делегата, підрядок — через `NSString.substring(with:)`.
+2. [x] Реалізовано (коміт `db40148`), потім переглянуто (Амендмент 2026-09-02, коміт `b9951f7`): `SelectableCommentaryTextView` — не один скролящий `UITextView`, а SwiftUI `ScrollView`+`LazyVStack` над груповими ~12К-символьними чанками (`buildChunks`), кожен свій `isScrollEnabled = false` `CommentaryChunkTextView`. `CommentaryDetailView` перебудовано як і планувалось: `VStack` = закріплена шапка + тіло на решту висоти. `CommentaryTextView` видалено.
+3. [x] Меню виділення через `editMenuForTextIn` (§2): фільтр Share захищений з обох боків (`UIMenu` і `UIAction`), діапазон беремо з параметра делегата, підрядок — через `NSString.substring(with:)`. Живе в `Coordinator` кожного чанка (Амендмент 2026-09-02) — той самий код, перенесений з одного `Coordinator` на N.
 4. [ ] `CommentaryQuoteShareFormatter` + презентація share sheet **через SwiftUI `.sheet` з `UIViewControllerRepresentable`-обгорткою `UIActivityViewController`** (§3) — так iPad-popover взагалі не задіяний. Якщо все ж прямий `present()` — обовʼязково `popoverPresentationController.sourceView` + `sourceRect` (якір: `textView.firstRect(for:)`), інакше крах на iPad.
 5. [ ] `NotesViewModel.openNewNote(attachedToQuote:theologianId:verseId:)` — з doc-коментарем про те, чому `isEditorPresented` НЕ виставляється. Передавати `theologian.id` (рядковий регістр!), не `.capitalized`. Заодно виправити застарілий doc-коментар `QuoteBlockContent.theologianId` (додати `owen`).
 6. [x] **Підтверджено Іваном — входить в обсяг, у тому ж коміті, що й створення:** `QuoteContextCard` у `NoteEditorView` (аналог `VerseContextCard`), `.quote` як джерело `navigationTitle`, гілка прев'ю в `NoteCardView`. Без цього кроку кнопка технічно working, але відкриває користувачу порожній редактор — не приймається як прийнятний перший зріз.
 7. [ ] Презентація `NoteEditorView` з `CommentaryDetailView`: власний `@State private var activeEditor: ActiveEditor?` слот (дзеркало `VerseBottomSheetView.ActiveEditor`), `.sheet(item:)`, явна ре-інʼєкція `.environmentObject(notesVM)` + `.environmentObject(router)` (як у `VerseBottomSheetView`), `.onDisappear { notesVM.refresh() }`. Це **третій** рівень sheet-стеку (рідер → Study Mode sheet → commentary sheet → note editor).
 8. [ ] Локалізація: **один** новий ключ `commentary.menu.addToNote` (EN+UK) у `Localizable.xcstrings`; для «Поділитися» перевикористати наявний `action.share`. ⛔ `NSLocalizedString`/`Text`, не `String(localized:)` (ADR-006). Гейт: `python3 scripts/lint_localization.py`.
-9. [ ] **QA на пристрої, обовʼязково:**
-   - `Calvin PSA 150:6` (329 343 символи, 3 293 абзаци) — відкриття, скрол, виділення, без фризу й графічних артефактів. Це **новий** еталон найгіршого випадку; `Owen HEB 1:1-2` (231k) — вторинний.
-   - неперервне перетягування виділення через межу абзаців;
-   - `suggestedActions`-фільтр справді прибирає системний Share і **зберігає** Look Up / Translate / Search Web поруч із нашими пунктами;
-   - Share sheet на **iPad** (обидва шляхи презентації, якщо обраний не рекомендований);
-   - stacked-sheet: `NoteEditorView` поверх commentary sheet-а поверх Study Mode sheet-а — три рівні; перевірити, що нижні sheet-и не складаються і що після Save список нотаток оновлений;
-   - нотатка з цитатою видно **і** в редакторі, **і** карткою в списку (§5);
-   - share-рядок укр. та англ. мовою (`shortName` локалізований, §3).
+9. [ ] **QA на пристрої, обовʼязково.** Частково зроблено manual QA 2026-09-02 (`/engineering:debug`, Амендмент вище) — позначено нижче; решта досі відкрита:
+   - [x] Оуен HEB 1:1-2 / 3:7-11 (231k/282k) — раніше білий екран, тепер відкривається й скролиться (Амендмент 2026-09-02). `Calvin PSA 150:6` (329 343 символи, найбільша відома секція) — **ще не перевірено окремо** на новому чанкованому рендері, лишається еталоном найгіршого випадку.
+   - [x] Генрі HEB 11:4-31 (гальмував скрол) і розбивка на абзаци (зникала повністю) — виправлено, підтверджено.
+   - [x] неперервне виділення в межах ОДНОГО чанка; через межу чанка — свідомо НЕ тягнеться (ціна Амендменту 2026-09-02, узгоджено).
+   - [ ] `suggestedActions`-фільтр — Look Up/Translate/Search Web поруч із нашими пунктами — не перевірено окремо цього раунду.
+   - [ ] Share sheet на **iPad**;
+   - [ ] stacked-sheet: `NoteEditorView` поверх commentary sheet-а поверх Study Mode sheet-а — три рівні;
+   - [ ] нотатка з цитатою видно **і** в редакторі, **і** карткою в списку (§5);
+   - [ ] share-рядок укр. та англ. мовою (`shortName` локалізований, §3).
