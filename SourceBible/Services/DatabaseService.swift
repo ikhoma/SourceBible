@@ -1102,7 +1102,16 @@ final class DatabaseService: @unchecked Sendable {
     func commentarySourcesAvailable(bookId: String) -> Set<String> {
         guard isCommentaryDbAvailable else { return [] }
         var sources = Set<String>()
-        query("SELECT DISTINCT source FROM commentary_en.comments WHERE book_id = ?",
+        // start_verse = 0 sentinel marks a book/chapter OVERVIEW section (ADR-027
+        // §N4), not a real per-verse comment — excluded here too, otherwise a
+        // theologian with ONLY overview coverage in this book would be offered
+        // as "available" and then show nothing when actually opened (Ivan,
+        // 2026-09-02: overviews add more noise than value for now, may revisit
+        // how to surface them later).
+        query("""
+            SELECT DISTINCT source FROM commentary_en.comments
+            WHERE book_id = ? AND start_verse != 0
+            """,
               bindings: [bookId]) { stmt in
             sources.insert(string(stmt, 0))
         }
@@ -1122,6 +1131,7 @@ final class DatabaseService: @unchecked Sendable {
             FROM commentary_en.comments c
             JOIN commentary_en.comment_verses cv ON cv.key = c.key
             WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
+              AND c.start_verse != 0
               AND c.text IS NOT NULL
               AND TRIM(c.text, char(32) || char(9) || char(10) || char(13)) <> ''
             """
@@ -1145,6 +1155,7 @@ final class DatabaseService: @unchecked Sendable {
             JOIN commentary_en.comment_verses cv ON cv.key = c.key
             WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
               AND c.source = ?
+              AND c.start_verse != 0
               AND c.text IS NOT NULL
               AND TRIM(c.text, char(32) || char(9) || char(10) || char(13)) <> ''
             ORDER BY c.key
