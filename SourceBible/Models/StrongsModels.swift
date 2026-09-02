@@ -82,6 +82,25 @@ struct Theologian: Identifiable {
     let imageName: String
 }
 
+/// One published work by a `Theologian`, keyed by the exact `comments.source`
+/// value it corresponds to in `commentaries-en.db` (ADR-027). Most theologians
+/// have exactly one; Spurgeon has two (The Treasury of David on Psalms, and his
+/// Verse Expositions elsewhere) — `loadCommentary` tried `source: theologian.id
+/// .capitalized` ("Spurgeon"), which matches neither "Spurgeon-TOD" nor
+/// "Spurgeon-VE", so Spurgeon's commentary silently never loaded (ADR-027,
+/// Amendment 2026-09-02). `CommentaryWork` fixes the source-string mismatch and
+/// gives `CommentaryDetailView` a `titleKey` to show in its header instead of
+/// repeating the "era · style" caption already shown in the commentary list row.
+struct CommentaryWork: Identifiable, Hashable {
+    /// == sourceKey. Stable identity for ForEach / sheet(item:).
+    let id: String
+    /// Exact `comments.source` value in `commentaries-en.db`.
+    let sourceKey: String
+    let theologianId: String
+    /// Localization key for the work's title, e.g. "commentary.work.calvin.title".
+    let titleKey: String
+}
+
 struct Commentary: Identifiable {
     let id: String
     let theologian: Theologian
@@ -143,7 +162,36 @@ extension Theologian {
         styleKey: "theologian.owen.style",
         imageName: "owen"
     ) }
-    static var all: [Theologian] { [calvin, henry, spurgeon, owen] }
+    /// Added ADR-027 Amendment 2026-09-02 — his 856 sections were already in
+    /// commentaries-en.db but unreachable in the UI (missing from `.all`).
+    static var edwards: Theologian { Theologian(
+        id: "edwards",
+        nameKey:  "theologian.edwards.name",
+        eraKey:   "theologian.edwards.era",
+        styleKey: "theologian.edwards.style",
+        imageName: "edwards"
+    ) }
+    static var all: [Theologian] { [calvin, henry, spurgeon, owen, edwards] }
+
+    /// This theologian's published work(s) — see `CommentaryWork`. Spurgeon is
+    /// the only one with more than one; everyone else has a single work whose
+    /// `sourceKey` is simply their capitalized id (unchanged DB convention).
+    var works: [CommentaryWork] {
+        switch id {
+        case "spurgeon":
+            return [
+                CommentaryWork(id: "Spurgeon-TOD", sourceKey: "Spurgeon-TOD",
+                                theologianId: id, titleKey: "commentary.work.spurgeon-tod.title"),
+                CommentaryWork(id: "Spurgeon-VE", sourceKey: "Spurgeon-VE",
+                                theologianId: id, titleKey: "commentary.work.spurgeon-ve.title"),
+            ]
+        default:
+            return [
+                CommentaryWork(id: id.capitalized, sourceKey: id.capitalized,
+                                theologianId: id, titleKey: "commentary.work.\(id).title"),
+            ]
+        }
+    }
 
     /// Abbreviated display name for use in compact headers, e.g. "Calvin" / "Кальвін".
     ///

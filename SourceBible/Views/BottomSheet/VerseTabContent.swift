@@ -417,7 +417,9 @@ struct CommentariesView: View {
     /// not merely somewhere in the book. Calvin's modules are patchy (ADR-027), so a
     /// book-level check offered him on verses he does not cover, opening an empty page.
     private var visibleTheologians: [Theologian] {
-        Theologian.all.filter { availableSources.contains($0.id.capitalized) }
+        Theologian.all.filter { t in
+            t.works.contains { availableSources.contains($0.sourceKey) }
+        }
     }
 
     var body: some View {
@@ -546,6 +548,10 @@ struct CommentaryDetailView: View {
     }
 
     @State private var section: CommentarySection? = nil
+    /// The specific work (ADR-027 `CommentaryWork`) the loaded section came
+    /// from — Spurgeon has two; `commentaryNavBar` shows its `titleKey`
+    /// instead of repeating the "era · style" caption from the commentary list.
+    @State private var loadedWork: CommentaryWork? = nil
     @State private var isLoaded = false
     /// 0 = шапка розгорнута (стан на відкритті), 1 = повністю колапснута.
     /// Керується scroll-offset-ом тіла коментаря — двостейтова анімована
@@ -715,11 +721,19 @@ struct CommentaryDetailView: View {
                 Text(detailTitle)
                     .font(.headline)
                     .lineLimit(1)
-                Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .opacity(1 - progress)
-                    .frame(height: max(0, captionH))
-                    .clipped()
+                Group {
+                    if let workTitleKey = loadedWork?.titleKey {
+                        Text(LocalizedStringKey(workTitleKey))
+                    } else {
+                        // Fallback before the section has loaded (or no coverage) —
+                        // same caption the commentary list row shows.
+                        Text("\(Text(LocalizedStringKey(theologian.eraKey))) · \(Text(LocalizedStringKey(theologian.styleKey)))")
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+                .opacity(1 - progress)
+                .frame(height: max(0, captionH))
+                .clipped()
             }
 
             Spacer(minLength: 0)
@@ -733,13 +747,24 @@ struct CommentaryDetailView: View {
     private func loadCommentary() async {
         isLoaded = false
         section = nil
+        loadedWork = nil
         headerCollapseProgress = 0
         isHeaderCollapsed = false  // new verse — header opens fresh, no haptic on this reset
         defer { isLoaded = true }  // always mark loaded, even if guard/early-return fires
         guard let vc = verseComponents else { return }
-        section = DatabaseService.shared.loadCommentary(
-            bookId: vc.bookId, chapter: vc.chapter, verse: vc.verse,
-            source: theologian.id.capitalized  // "Calvin", "Henry", etc.
-        )
+        // A theologian may have more than one work (Spurgeon: Treasury of David +
+        // Verse Expositions) — try each in turn and keep the first with actual
+        // coverage for this verse, same "first match wins" policy the old
+        // single-source query used (ORDER BY key LIMIT 1 within one work).
+        for work in theologian.works {
+            if let sec = DatabaseService.shared.loadCommentary(
+                bookId: vc.bookId, chapter: vc.chapter, verse: vc.verse,
+                source: work.sourceKey
+            ) {
+                section = sec
+                loadedWork = work
+                return
+            }
+        }
     }
 }

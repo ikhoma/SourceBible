@@ -50,6 +50,8 @@ final class DatabaseService: @unchecked Sendable {
     // nonisolated(unsafe): OpaquePointer не є Sendable, але db доступна лише
     // з одного потоку (singleton + deinit). Swift 6 вимагає явного маркування.
     nonisolated(unsafe) private var db: OpaquePointer?
+    /// True once `commentaries-en.db` (ADR-027) is ATTACHed as `commentary_en`.
+    nonisolated(unsafe) private var commentaryDbAttached = false
 
     private init() {
         #if DEBUG
@@ -80,11 +82,52 @@ final class DatabaseService: @unchecked Sendable {
             // rather than trying to guess which rows a tap will need.
             DatabasePrewarm.runInBackground(fileURL: url)
         }
+        attachCommentaryDatabase()
     }
 
     deinit { if db != nil { sqlite3_close(db) } }
 
     var isAvailable: Bool { db != nil }
+
+    /// True when `commentaries-en.db` is attached and ready for commentary queries.
+    /// Commentary lookups gate on this rather than `isAvailable`, since the main
+    /// `sourcebible.db` may be open while the (separate, optional) commentary
+    /// module failed to attach.
+    var isCommentaryDbAvailable: Bool { db != nil && commentaryDbAttached }
+
+    /// Attaches the standalone commentary module (ADR-027) as a second database
+    /// under the `commentary_en` schema name. `comments`/`comment_verses` live
+    /// ONLY in `commentaries-en.db` now (key-based schema, ADR-027 §1) — the
+    /// old comment_id/id-based copies still physically present inside
+    /// `sourcebible.db` are dead weight from before the split and are no
+    /// longer queried anywhere (Amendment 2026-09-02); a future full rebuild
+    /// of `sourcebible.db` can drop them.
+    ///
+    /// Per-language file today (`commentaries-en.db`); ADR-027 anticipates
+    /// per-work files later for size reasons. Attaching by filename means
+    /// that split needs no schema change, only more ATTACH calls here (mind
+    /// iOS's ATTACH limit — ADR-027 open item — if the file count grows).
+    private func attachCommentaryDatabase() {
+        guard db != nil else { return }
+        guard let url = Bundle.main.url(forResource: "commentaries-en", withExtension: "db") else {
+            print("⚠️ DatabaseService: commentaries-en.db not found in bundle — commentaries unavailable.")
+            return
+        }
+        let uri = "file://\(url.path)?immutable=1"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "ATTACH DATABASE ? AS commentary_en", -1, &stmt, nil) == SQLITE_OK else {
+            print("⚠️ DatabaseService: ATTACH prepare failed: \(dbError())")
+            return
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, uri, -1, SQLITE_TRANSIENT)
+        if sqlite3_step(stmt) == SQLITE_DONE {
+            commentaryDbAttached = true
+            print("✓ DatabaseService: commentaries-en.db attached at \(url.lastPathComponent)")
+        } else {
+            print("⚠️ DatabaseService: ATTACH failed: \(dbError())")
+        }
+    }
 
     // MARK: - Books
 
@@ -1057,9 +1100,9 @@ final class DatabaseService: @unchecked Sendable {
     /// section for the given book (e.g. {"Calvin", "Henry"}).
     /// Used to hide theologians with no coverage for the current book.
     func commentarySourcesAvailable(bookId: String) -> Set<String> {
-        guard isAvailable else { return [] }
+        guard isCommentaryDbAvailable else { return [] }
         var sources = Set<String>()
-        query("SELECT DISTINCT source FROM comments WHERE book_id = ?",
+        query("SELECT DISTINCT source FROM commentary_en.comments WHERE book_id = ?",
               bindings: [bookId]) { stmt in
             sources.insert(string(stmt, 0))
         }
@@ -1072,12 +1115,12 @@ final class DatabaseService: @unchecked Sendable {
     /// this verse; Calvin's modules are patchy (ADR-027). Offering such a source opened
     /// an empty detail page (bug-016), so the picker filters on this per-verse set.
     func commentarySourcesAvailable(bookId: String, chapter: Int, verse: Int) -> Set<String> {
-        guard isAvailable else { return [] }
+        guard isCommentaryDbAvailable else { return [] }
         var sources = Set<String>()
         let sql = """
             SELECT DISTINCT c.source
-            FROM comments c
-            JOIN comment_verses cv ON cv.comment_id = c.id
+            FROM commentary_en.comments c
+            JOIN commentary_en.comment_verses cv ON cv.key = c.key
             WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
               AND c.text IS NOT NULL
               AND TRIM(c.text, char(32) || char(9) || char(10) || char(13)) <> ''
@@ -1094,17 +1137,17 @@ final class DatabaseService: @unchecked Sendable {
     /// regardless of which verse triggered the lookup.
     /// Returns nil when no commentary exists for the requested verse.
     func loadCommentary(bookId: String, chapter: Int, verse: Int, source: String = "Calvin") -> CommentarySection? {
-        guard isAvailable else { return nil }
+        guard isCommentaryDbAvailable else { return nil }
         var result: CommentarySection?
         let sql = """
             SELECT c.text, c.start_chapter, c.start_verse, c.end_chapter, c.end_verse
-            FROM comments c
-            JOIN comment_verses cv ON cv.comment_id = c.id
+            FROM commentary_en.comments c
+            JOIN commentary_en.comment_verses cv ON cv.key = c.key
             WHERE cv.book_id = ? AND cv.chapter = ? AND cv.verse = ?
               AND c.source = ?
               AND c.text IS NOT NULL
               AND TRIM(c.text, char(32) || char(9) || char(10) || char(13)) <> ''
-            ORDER BY c.id
+            ORDER BY c.key
             LIMIT 1
             """
         query(sql, bindings: [bookId, chapter, verse, source]) { stmt in
