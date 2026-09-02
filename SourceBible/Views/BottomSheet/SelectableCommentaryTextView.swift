@@ -58,9 +58,17 @@ struct SelectableCommentaryTextView: View {
     /// 282 543 символи → 25 чанків по ~11 тис.).
     private static let chunkBudget = 12_000
 
-    private var chunks: [NSAttributedString] {
-        Self.buildChunks(from: text, budget: Self.chunkBudget)
-    }
+    /// Кешовані чанки — НЕ computed property (code review 2026-09-02, Critical
+    /// #1). `chunks` раніше рахувався наживо в `body`: `CommentaryDetailView`
+    /// пише `@State headerCollapseProgress` на КОЖЕН тік `onScroll` (навіть
+    /// без зміни значення), що перемальовує `CommentaryDetailView.body`, що
+    /// перебудовує цей `View` заново, що знову викликає його `body` — тобто
+    /// `buildChunks` (спліт+trim+побудова NSAttributedString під сотні
+    /// абзаців) ганяв на КОЖЕН кадр скролу. Той самий клас бага, що ADR-037
+    /// §1 явно попереджав ще для старої (одно-UITextView) версії: «Будувати
+    /// NSAttributedString один раз і кешувати... інакше кожен updateUIView =
+    /// повна верстка». Тепер рахуємо лише коли `text` дійсно змінюється.
+    @State private var chunks: [NSAttributedString] = []
 
     var body: some View {
         ScrollView {
@@ -81,6 +89,12 @@ struct SelectableCommentaryTextView: View {
         } action: { _, newValue in
             onScroll(newValue)
         }
+        .onAppear { rebuildChunksIfNeeded() }
+        .onChange(of: text) { _, _ in rebuildChunksIfNeeded() }
+    }
+
+    private func rebuildChunksIfNeeded() {
+        chunks = Self.buildChunks(from: text, budget: Self.chunkBudget)
     }
 
     /// Групує абзаци (розділені "\n\n") у чанки, кожен ≤ `budget` символів

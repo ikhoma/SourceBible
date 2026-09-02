@@ -502,6 +502,11 @@ struct CommentaryDetailView: View {
     let verseId: String
     @Environment(\.sessionTracker) private var tracker
     @Environment(\.dismiss) private var dismiss
+    // Code review 2026-09-02, Suggestion #4: SwiftU-native replacement for
+    // `UIScreen.main.scale` (soft-deprecated for multi-scene contexts;
+    // harmless here, single-scene iPhone app, but this is the documented
+    // correct source going forward).
+    @Environment(\.displayScale) private var displayScale
     @EnvironmentObject private var readerVM: ReaderViewModel
     @EnvironmentObject private var notesVM:  NotesViewModel
     @EnvironmentObject private var router:   AppNavigationRouter
@@ -607,7 +612,7 @@ struct CommentaryDetailView: View {
             // системний Divider().
             Rectangle()
                 .fill(Color(uiColor: .separator))
-                .frame(height: 1 / UIScreen.main.scale)
+                .frame(height: 1 / displayScale)
             Group {
                 if !isLoaded {
                     // Loading spinner
@@ -636,6 +641,12 @@ struct CommentaryDetailView: View {
                         },
                         onScroll: { offset in
                             let progress = min(max(offset / 60, 0), 1)
+                            // Code review 2026-09-02, Suggestion #2: без цього guard'а
+                            // кожен тік onScrollGeometryChange писав у @State навіть
+                            // коли значення не змінилось, перемальовуючи весь body
+                            // (і разом з ним — перебудовуючи чанки коментаря нижче,
+                            // Critical #1) на кожен кадр скролу без потреби.
+                            guard progress != headerCollapseProgress else { return }
                             headerCollapseProgress = progress
                             let collapsed = progress >= 1
                             if collapsed != isHeaderCollapsed {
