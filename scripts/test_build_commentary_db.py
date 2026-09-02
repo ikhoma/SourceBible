@@ -747,6 +747,102 @@ def test_module_info_sources_n_sections_matches_actual_rows(db):
         )
 
 
+# ============================================================
+#  comments_fts (ADR-027 §2, S10)
+# ============================================================
+
+def test_build_comments_fts_indexes_inserted_text():
+    """Unit-level: build_comments_fts() against a small fresh DB — one
+    insert_section call, then a MATCH query finds it by a word from its
+    text but not by a word that isn't there."""
+    con, cur = _fresh_comment_db()
+    org = FakeOrg(mapping={}, max_verses={})
+    bcd.insert_section(cur, org, "Calvin", "en", "GEN", 1, 1, 1, 1,
+                        "In the beginning God created the heaven and the earth.",
+                        origin="test", translation_status="source")
+    con.commit()
+    bcd.build_comments_fts(cur, con)
+
+    rows = cur.execute(
+        "SELECT count(*) FROM comments_fts WHERE comments_fts MATCH 'beginning'"
+    ).fetchone()
+    assert rows[0] == 1
+
+    rows = cur.execute(
+        "SELECT count(*) FROM comments_fts WHERE comments_fts MATCH 'zephyrhills'"
+    ).fetchone()
+    assert rows[0] == 0
+    con.close()
+
+
+def test_build_comments_fts_joins_back_to_comments_via_rowid():
+    """The whole point of content_rowid='rowid' — a MATCH hit's rowid must
+    resolve back to the same comments row (source/key), not just count."""
+    con, cur = _fresh_comment_db()
+    org = FakeOrg(mapping={}, max_verses={})
+    key = bcd.insert_section(cur, org, "Henry", "en", "PSA", 23, 1, 23, 1,
+                              "The LORD is my shepherd; I shall not want.",
+                              origin="test", translation_status="source")
+    con.commit()
+    bcd.build_comments_fts(cur, con)
+
+    row = cur.execute("""
+        SELECT c.key, c.source
+        FROM comments c
+        JOIN comments_fts ON comments_fts.rowid = c.rowid
+        WHERE comments_fts MATCH 'shepherd'
+    """).fetchone()
+    assert row == (key, "Henry")
+    con.close()
+
+
+def test_comments_fts_exists_in_db(db):
+    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert "comments_fts" in tables
+
+
+def test_comments_fts_row_count_matches_comments(db):
+    """External-content FTS5: comments_fts has no rows of its own storage-wise,
+    but its logical row count must equal comments' — a stale/partial 'rebuild'
+    (e.g. run before the last import) would show up here as a mismatch."""
+    n_comments = db.execute("SELECT count(*) FROM comments").fetchone()[0]
+    n_fts = db.execute("SELECT count(*) FROM comments_fts").fetchone()[0]
+    assert n_fts == n_comments
+
+
+def test_comments_fts_match_query_against_real_db(db):
+    """A word known to appear in Calvin's Genesis 1:1 commentary is
+    findable via MATCH, joined back to a real book_id/source."""
+    row = db.execute("""
+        SELECT c.book_id, c.source
+        FROM comments c
+        JOIN comments_fts ON comments_fts.rowid = c.rowid
+        WHERE comments_fts MATCH 'beginning' AND c.source = 'Calvin' AND c.book_id = 'GEN'
+        LIMIT 1
+    """).fetchone()
+    assert row is not None
+
+
+def test_comments_fts_tokenizer_matches_verse_fts_convention():
+    """Must stay 'unicode61 remove_diacritics 2' — same tokenizer as the
+    core verse_fts (scripts/build_db.py), so accented Greek/Cyrillic input
+    behaves the same way across both indexes (ADR-027 §2)."""
+    con, cur = _fresh_comment_db()
+    org = FakeOrg(mapping={}, max_verses={})
+    bcd.insert_section(cur, org, "Calvin", "en", "GEN", 1, 1, 1, 1,
+                        "faith́ in the beginning",  # combining acute accent
+                        origin="test", translation_status="source")
+    con.commit()
+    bcd.build_comments_fts(cur, con)
+    # Query WITHOUT the combining accent must still match the accented text —
+    # proves remove_diacritics=2 is active, not the FTS5 default tokenizer.
+    rows = cur.execute(
+        "SELECT count(*) FROM comments_fts WHERE comments_fts MATCH 'faith'"
+    ).fetchone()
+    assert rows[0] == 1
+    con.close()
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main([__file__, "-v"]))

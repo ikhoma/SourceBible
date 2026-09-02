@@ -43,6 +43,7 @@ import re
 import sqlite3
 import sys
 import tempfile
+import time
 import zipfile
 from pathlib import Path
 
@@ -799,6 +800,54 @@ def write_module_info(cur, sources):
     )
 
 
+def build_comments_fts(cur, con):
+    """Builds the module-level FTS5 index over `comments.text` (ADR-027 §2,
+    Amendment 2026-08-28: variant (a), confirmed empirically — FTS5
+    `content=` MUST live in the same DB as the FTS5 table itself, which
+    rules out any indexing scheme that spans the writable core DB and a
+    commentary module). Built here, at module-build time, not at app
+    runtime — a book update already carries its refreshed FTS fragment
+    with it, so there is nothing for the app to (re)index.
+
+    Same tokenizer as the core `verse_fts` (`scripts/build_db.py`):
+    `unicode61 remove_diacritics 2` — "faith" and "faith́" (combining
+    accent) tokenize identically, and query text goes through the same
+    tokenizer, so the stripping is symmetric on both sides.
+
+    At runtime the app is expected to `UNION ALL` this table across every
+    ATTACHed module (ADR-027 §2) — WITHOUT `ORDER BY rank`/BM25: a
+    single-source corpus makes BM25 degenerate into text length (ADR-008
+    amendment 2026-08-07's argument, and here BM25 scores from separate
+    FTS5 indexes are not even comparable to each other, a strictly worse
+    case of the same problem). Canonical order instead: `book_id (org),
+    start_chapter, start_verse, source`.
+
+    NOTE: `comments` is a normal rowid table (`key TEXT PRIMARY KEY` does
+    NOT imply `WITHOUT ROWID`), so `content_rowid='rowid'` addresses the
+    same hidden rowid FTS5 needs to join back to `comments` — no schema
+    change to `comments` was needed to support this.
+    """
+    print("\nBuilding FTS5 comments index...")
+    t0 = time.time()
+
+    cur.executescript("""
+        DROP TABLE IF EXISTS comments_fts;
+
+        CREATE VIRTUAL TABLE comments_fts USING fts5(
+            text,
+            content='comments',
+            content_rowid='rowid',
+            tokenize='unicode61 remove_diacritics 2'
+        );
+
+        INSERT INTO comments_fts(comments_fts) VALUES('rebuild');
+    """)
+    con.commit()
+
+    count = cur.execute("SELECT count(*) FROM comments_fts").fetchone()[0]
+    print(f"  comments_fts: {count:,} rows ({time.time() - t0:.1f}s)")
+
+
 # ============================================================
 #  Orchestration
 # ============================================================
@@ -888,6 +937,8 @@ def main():
 
     write_module_info(cur, sources_meta)
     con.commit()
+
+    build_comments_fts(cur, con)
 
     total_comments = cur.execute("SELECT count(*) FROM comments").fetchone()[0]
     total_verses = cur.execute("SELECT count(*) FROM comment_verses").fetchone()[0]
