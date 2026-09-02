@@ -329,5 +329,51 @@ Stacked Sheet header замість повторення «era · style» пок
 `DatabaseService.loadCommentary` (параметр `source:`). Плюс окремо, незалежно від Work-моделі:
 новий `Theologian.edwards` + аватарка + рядки локалізації (проблема 3).
 
-**Статус: заплановано, не виконано.** Виконати одразу після фінальної збірки/верифікації
-`commentaries-en.db` — окремим явним «зроби це» на Swift.
+**Статус: виконано** (commit `db40148`, «зроби це» — Іван, 2026-09-02, «свіфт, потім
+fts5»).
+
+### Механізм підключення (не був явно зафіксований вище до реалізації)
+
+`commentaries-en.db` додано ресурсом до бандла (`SourceBible/Resources/`, синхронізована
+файлова група — жодних змін `.pbxproj` не знадобилось) і підключається як друга БД до
+того самого `sqlite3` з'єднання: `DatabaseService.init` після відкриття `sourcebible.db`
+викликає новий `attachCommentaryDatabase()` — `ATTACH DATABASE 'file:...?immutable=1' AS
+commentary_en` (той самий `immutable=1`/URI-режим, що й для основної бази; помилка ATTACH
+не фатальна — лише `print` і коментарі недоступні). `loadCommentary` і обидва
+`commentarySourcesAvailable` тепер читають `commentary_en.comments` /
+`commentary_en.comment_verses` за новою `key`-схемою (ADR-027 §1), а не
+`comment_id`/`id`-таблиці, які фізично лишаються всередині `sourcebible.db` як мертва вага
+до наступної повної перезбірки цього файлу.
+
+`CommentaryDetailView.loadCommentary()` перебирає `theologian.works` по порядку і лишає
+перший твір із непорожньою секцією для вірша — та сама політика «перший збіг виграє», що
+раніше діяла всередині одного `source` (`ORDER BY id/key LIMIT 1`), тепер поширена на вибір
+твору для Сперджена.
+
+### Назви творів (`titleKey`) — рішення без окремого підтвердження, легко змінити
+
+Для одно-твірних теологів `titleKey` теж заповнено (не `nil`) — інакше вирішення проблеми 2
+було б неповним: без назви твору Stacked Sheet header для Кальвіна/Генрі/Оуена/Едвардса
+однаково повторював би «era · style». Обрані назви (перевірені проти реального охоплення
+книг у `commentaries-en.db`, не вигадані):
+
+| theologianId | sourceKey       | titleKey (en)                        | Обґрунтування |
+|---|---|---|---|
+| calvin       | Calvin          | Commentary on the Scriptures         | 48/66 книг — навмисно без «Whole Bible» |
+| henry        | Henry           | Commentary on the Whole Bible        | 66/66 книг — Генрі дійсно покрив усю Біблію |
+| owen         | Owen            | An Exposition of Hebrews             | 100% секцій — HEB, це справжня назва його magnum opus |
+| edwards      | Edwards         | Notes on Scripture                   | реальна історична назва його біблійних нотаток |
+| spurgeon     | Spurgeon-TOD    | The Treasury of David                | його коментар на Псалми, з файлу `chspurgeon-tod-main.zip` |
+| spurgeon     | Spurgeon-VE     | Verse Expositions of the Bible       | решта книг, з модуля `Spurgeon-c(VE)` |
+
+Українські відповідники в `Localizable.xcstrings`. Це рядок локалізації, не структура —
+поміняти пізніше дешево: новий рядок у `.xcstrings`, без міграції схеми чи бази.
+
+### Верифіковано
+
+`build_sim` + `build_run_sim` (iPhone 17, iOS 26.5, схема `SourceBible`) — 0 попереджень/
+помилок, застосунок стартує. Логіка SQL (key-join, розрізнення Spurgeon-TOD/VE по книзі,
+видимість огляду розділу лише на вірші 1) окремо перевірена прямими запитами до реального
+`commentaries-en.db` — Python-скрипт з тим самим ATTACH+SQL, що й Swift-код. Немає XCTest-
+таргета в проєкті — ручного UI-проходу по симулятору НЕ робилось (це залишається як
+відкритий пункт, не «перевірка в код», а «перевірка в очі», якої тут свідомо уникнули).
