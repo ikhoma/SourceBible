@@ -81,6 +81,42 @@ final class NotesViewModel: ObservableObject {
         return noteWithBlocks
     }
 
+    /// Called from CommentaryDetailView's selection menu ("Додати в нотатку").
+    /// Same shape as openNewNote(attachedTo verse:translation:) — does NOT set
+    /// isEditorPresented; CommentaryDetailView owns its own sheet slot and
+    /// presents NoteEditorView itself (ADR-037 §4).
+    @discardableResult
+    func openNewNote(attachedToQuote text: String, theologianId: String, verseId: String) -> NoteWithBlocks {
+        let now    = Date()
+        let noteId = UUID().uuidString
+
+        let note = Note(
+            id: noteId, userId: authService.userId, folderId: nil,
+            createdAt: now, updatedAt: now, deletedAt: nil, isDirty: true)
+
+        let quoteContent = QuoteBlockContent(theologianId: theologianId, verseId: verseId, text: text)
+        let quoteJSON = (try? JSONEncoder().encode(quoteContent))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+
+        let quoteBlock = NoteBlock(
+            id: UUID().uuidString, noteId: noteId, position: 0,
+            type: .quote, verseId: verseId, strongsId: nil, content: quoteJSON,
+            createdAt: now, updatedAt: now)
+
+        let textJSON = (try? JSONEncoder().encode(TextBlockContent(body: "")))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{\"body\":\"\"}"
+
+        let textBlock = NoteBlock(
+            id: UUID().uuidString, noteId: noteId, position: 1,
+            type: .text, verseId: nil, strongsId: nil, content: textJSON,
+            createdAt: now, updatedAt: now)
+
+        let noteWithBlocks = NoteWithBlocks(note: note, blocks: [quoteBlock, textBlock],
+                                            verseIds: [verseId])
+        editingNote = noteWithBlocks
+        return noteWithBlocks
+    }
+
     func openNewNote() {
         let now    = Date()
         let noteId = UUID().uuidString

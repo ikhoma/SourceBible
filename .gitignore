@@ -1,4 +1,7 @@
 # ── Generated database ────────────────────────────────────────
+commentaries-en.db
+commentaries-en.db-wal
+commentaries-en.db-shm
 sourcebible.db
 sourcebible.db-wal
 sourcebible.db-shm

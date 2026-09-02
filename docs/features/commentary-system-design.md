@@ -73,6 +73,15 @@ Result: user taps verse 7 → finds section 2 in `comment_verses` → sees Garde
 
 ### Bug 2 — Owen: Hebrews 1 hangs / blank screen
 
+> ⚠️ **Застаріло (2026-09-02).** Ця діагностика — з ери старого `comment_id`/`id`-based
+> `sourcebible.db` і `OwenHebrews-commentary.cmtx`, ДО переходу на канонічну
+> `commentaries-en.db` (ADR-027). Гіпотеза нижче («UI-side query bug, не той JOIN») не
+> була правильним root cause: реальна причина — TextKit/`UITextView` синхронна верстка
+> вже не витримувала масштаб (Оуен Євр. 1:1-2 = 231 237 симв., ціла секція одним
+> `UITextView`) — знайдено повторно 2026-09-02 ручним тестуванням, повний root-cause і
+> фікс (груповий чанкінг, ~12К симв./чанк) — **[[ADR-037-commentary-selection-share-note]],
+> Amendment 2026-09-02**. Секцію лишено нижче як історичний запис першої гіпотези.
+
 **DB data is correct.** Inspecting `OwenHebrews-commentary.cmtx`:
 
 ```

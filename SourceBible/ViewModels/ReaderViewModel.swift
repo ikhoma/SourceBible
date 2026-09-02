@@ -1070,6 +1070,10 @@ class ReaderViewModel: ObservableObject {
     // MARK: - Bottom Sheet
 
     func tapVerse(_ verse: BibleVerse) {
+        DebugTiming.mark("tapVerse ENTRY \(verse.id)")
+        // Clear whatever accumulated while merely scrolling — everything counted
+        // from here to the next flush belongs to THIS tap.
+        DebugTiming.flushTicks("tapVerse ENTRY (pre-tap accumulation — ignore)")
         Haptics.lightTransition()
         selectedVerse = verse
         selectedWord = nil
@@ -1077,11 +1081,39 @@ class ReaderViewModel: ObservableObject {
         strongsEntry = nil   // stale lexicon must not survive a verse change
         bottomSheetMode = .verse
         activeSheet = .verse
+        DebugTiming.mark("tapVerse activeSheet SET")
+        #if DEBUG
+        // bug-052: proved the main run loop is synchronously blocked across the
+        // whole first-tap gap (these fire only AFTER `.sheet`'s content closure
+        // has already started). DEBUG-only — GCD/RunLoop scheduling has a real,
+        // if tiny, cost and this has no business running for every tap in Release.
+        DispatchQueue.main.async {
+            DebugTiming.mark("main-thread NEXT TICK after activeSheet SET")
+            DebugTiming.flushTicks("main-thread NEXT TICK")
+        }
+        RunLoop.main.perform {
+            DebugTiming.mark("RunLoop.main NEXT TURN after activeSheet SET")
+        }
+        #endif
         verseScrollTrigger += 1
-        loadWordsForSelectedVerse()
         noteReadingAnchor(verse.id)   // Study Mode anchor = focused verse
         // Analytics: record unique verse read.
         sessionTracker.incVersesOpened(verseId: verse.id)
+
+        // bug-052: `loadWordsForSelectedVerse()` used to run synchronously right here,
+        // before the sheet-presentation state change above even had a chance to reach
+        // SwiftUI. It feeds the "Оригінал" pill only — NOT the pill the sheet opens on
+        // (Cross References is, see VerseBottomSheetView.versePill) — so on a freshly
+        // (re)installed app, where `word`/`strongs` haven't been touched by anything
+        // else on the launch path, that first cold read delayed the sheet's own
+        // invocation, not just its content. One tick is enough to let the sheet's
+        // presentation transaction actually start before this runs.
+        Task { [weak self] in
+            await Task.yield()
+            DebugTiming.mark("deferred loadWordsForSelectedVerse START")
+            self?.loadWordsForSelectedVerse()
+            DebugTiming.mark("deferred loadWordsForSelectedVerse END")
+        }
     }
 
     /// Called from VerseTextView long press — receives a VerseSegment with strongs: [String].

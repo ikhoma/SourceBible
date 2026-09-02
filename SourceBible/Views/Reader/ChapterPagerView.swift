@@ -47,6 +47,8 @@ struct ChapterPagerView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ pvc: UIPageViewController, context: Context) {
+        DebugTiming.mark("ChapterPager.updateUIViewController ENTRY (activeSheet=\(String(describing: vm.activeSheet)))")
+        defer { DebugTiming.mark("ChapterPager.updateUIViewController EXIT") }
         let co = context.coordinator
         co.vm = vm
 
@@ -99,11 +101,16 @@ struct ChapterPagerView: UIViewControllerRepresentable {
         /// stopped at every book boundary, which is exactly what testers hit).
         func hosting(for globalIndex: Int) -> UIViewController? {
             guard let vm, let ref = vm.chapterRef(atGlobalIndex: globalIndex) else { return nil }
+            // bug-052: a FRESH UIHostingController per call — a whole chapter of
+            // VerseTextViews (TextKit ×N). Bracketed so the log shows whether the
+            // pager rebuilds pages inside the first-tap freeze window.
+            DebugTiming.mark("ChapterPager.hosting(\(globalIndex)) BUILD START \(ref.book.id)|\(ref.chapter)")
             let host = UIHostingController(
                 rootView: ChapterScrollContent(ref: ref).environmentObject(vm)
             )
             host.view.backgroundColor = .clear
             host.view.tag = globalIndex      // page identity for the dataSource
+            DebugTiming.mark("ChapterPager.hosting(\(globalIndex)) BUILD END")
             return host
         }
 
@@ -181,12 +188,14 @@ struct ChapterPagerView: UIViewControllerRepresentable {
 
         func pageViewController(_ pageViewController: UIPageViewController,
                                 viewControllerBefore viewController: UIViewController) -> UIViewController? {
-            hosting(for: viewController.view.tag - 1)
+            DebugTiming.mark("ChapterPager dataSource BEFORE queried (tag=\(viewController.view.tag))")
+            return hosting(for: viewController.view.tag - 1)
         }
 
         func pageViewController(_ pageViewController: UIPageViewController,
                                 viewControllerAfter viewController: UIViewController) -> UIViewController? {
-            hosting(for: viewController.view.tag + 1)
+            DebugTiming.mark("ChapterPager dataSource AFTER queried (tag=\(viewController.view.tag))")
+            return hosting(for: viewController.view.tag + 1)
         }
 
         // MARK: Delegate — swipe starting / settled
@@ -303,7 +312,16 @@ struct ChapterPagerView: UIViewControllerRepresentable {
         /// Study-Mode swipe lock: UIPageViewController's own pan lives on its
         /// internal paging scroll view.
         func setPagingEnabled(_ enabled: Bool) {
+            DebugTiming.mark("ChapterPager.setPagingEnabled(\(enabled))")
             guard let pageVC else { return }
+            // bug-052 (2026-09-01/02): a "gesture gate" theory here (deferring this
+            // mutation via DispatchQueue.main.async to avoid toggling isScrollEnabled
+            // mid-touch) was tested on a real device and DISPROVEN — the sheet-open
+            // delay was identical with and without the deferral, and the "System
+            // gesture gate timed out" console line that motivated it didn't even
+            // reappear on the second run. Reverted to the original synchronous form.
+            // Root cause turned out to be unrelated (see docs/bugs/new/bug-052.md) —
+            // do not re-add a deferral here without new evidence.
             for sub in pageVC.view.subviews {
                 if let sv = sub as? UIScrollView {
                     if sv.isScrollEnabled != enabled { sv.isScrollEnabled = enabled }

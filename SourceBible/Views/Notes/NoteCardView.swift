@@ -61,30 +61,51 @@ struct NoteCardView: View {
 
     // MARK: - Derived values
 
-    /// "John 3:16 (KJV)" — locale-aware short name from the first verse block.
-    private var verseRef: String {
-        guard
-            let block = item.blocks.first(where: { $0.type == .verse }),
-            let c = try? JSONDecoder().decode(
-                VerseBlockContent.self, from: Data(block.content.utf8))
-        else { return NSLocalizedString("notes.row.default_title", comment: "") }
-
-        let parts = c.verseId.split(separator: "|")
-        guard parts.count == 3 else { return c.verseId }
-
-        let ref = "\(readerVM.shortBookName(for: String(parts[0]))) \(parts[1]):\(parts[2])"
-        return c.translationId.isEmpty ? ref : "\(ref) (\(c.translationId))"
+    /// Commentary-quote block, when this note was created via CommentaryDetailView's
+    /// "Додати в нотатку" (ADR-037) rather than attached to a verse — such notes have
+    /// no .verse block at all, so verseRef/verseText fall back to this.
+    private var quoteContent: QuoteBlockContent? {
+        item.blocks
+            .first(where: { $0.type == .quote })
+            .flatMap { try? JSONDecoder().decode(
+                QuoteBlockContent.self, from: Data($0.content.utf8)) }
     }
 
-    /// Verse text snapshot stored in the VerseBlock at note-creation time.
+    /// "John 3:16 (KJV)" — locale-aware short name from the first verse block.
+    /// Falls back to "Book ch:v — ShortName" for a commentary-quote note.
+    private var verseRef: String {
+        if let block = item.blocks.first(where: { $0.type == .verse }),
+           let c = try? JSONDecoder().decode(
+               VerseBlockContent.self, from: Data(block.content.utf8)) {
+            let parts = c.verseId.split(separator: "|")
+            guard parts.count == 3 else { return c.verseId }
+            let ref = "\(readerVM.shortBookName(for: String(parts[0]))) \(parts[1]):\(parts[2])"
+            return c.translationId.isEmpty ? ref : "\(ref) (\(c.translationId))"
+        }
+        if let c = quoteContent {
+            let parts = c.verseId.split(separator: "|")
+            guard parts.count == 3 else { return c.verseId }
+            let ref = "\(readerVM.shortBookName(for: String(parts[0]))) \(parts[1]):\(parts[2])"
+            let theologianName = Theologian.all.first(where: { $0.id == c.theologianId })?.shortName
+                ?? c.theologianId.capitalized
+            return "\(ref) — \(theologianName)"
+        }
+        return NSLocalizedString("notes.row.default_title", comment: "")
+    }
+
+    /// Verse text snapshot stored in the VerseBlock at note-creation time, or the
+    /// commentary quote text for a quote-attached note.
     private var verseText: String? {
-        guard
-            let block = item.blocks.first(where: { $0.type == .verse }),
-            let c = try? JSONDecoder().decode(
-                VerseBlockContent.self, from: Data(block.content.utf8)),
-            !c.text.isEmpty
-        else { return nil }
-        return c.text
+        if let block = item.blocks.first(where: { $0.type == .verse }),
+           let c = try? JSONDecoder().decode(
+               VerseBlockContent.self, from: Data(block.content.utf8)),
+           !c.text.isEmpty {
+            return c.text
+        }
+        if let c = quoteContent, !c.text.isEmpty {
+            return c.text
+        }
+        return nil
     }
 
     /// User-written note body, nil when empty.
