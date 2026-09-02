@@ -256,6 +256,43 @@ def test_no_unresolved_numeric_html_entities(db):
     assert n == 0, f"{n} sections still contain unresolved numeric HTML entities"
 
 
+def test_unescape_entities_resolves_double_escaping():
+    """Second-round review finding N1: Calvin's raw source has some DOUBLY
+    escaped markup (e.g. '&amp;gt;' for a literal '>') — a single
+    html.unescape() pass only partially resolves it ('&amp;gt;' -> '&gt;',
+    left encoded). Must resolve fully."""
+    result = bcd._unescape_entities("Pa&amp;gt;ntwn me&amp;lt;n")
+    assert result == "Pa>ntwn me<n", result
+
+
+def test_unescape_entities_normalizes_invisible_soft_hyphen_and_nbsp():
+    """Second-round review finding N2: &#173;/&#160; decode to the invisible
+    U+00AD (soft hyphen) / non-breaking U+00A0 — but Calvin's source uses
+    &#173; as a VISIBLE dash/hyphen ('loving&#173;kindness', a quote
+    attribution '&#173; Phillips'). Leaving it as an invisible codepoint
+    silently swallows readable punctuation and breaks text search."""
+    result = bcd._unescape_entities("loving&#173;kindness said&#160;he")
+    assert "\u00ad" not in result and "\u00a0" not in result
+    assert result == "loving-kindness said he", result
+
+
+def test_no_double_escaped_entities_in_db(db):
+    """DB-level regression guard for N1."""
+    n = db.execute(
+        "SELECT count(*) FROM comments WHERE text GLOB '*&gt;*' OR text GLOB '*&lt;*'"
+    ).fetchone()[0]
+    assert n == 0, f"{n} sections still contain double-escaped &gt;/&lt;"
+
+
+def test_no_invisible_soft_hyphen_or_nbsp_in_db(db):
+    """DB-level regression guard for N2."""
+    n = db.execute(
+        "SELECT count(*) FROM comments WHERE text LIKE '%' || char(173) || '%' "
+        "OR text LIKE '%' || char(160) || '%'"
+    ).fetchone()[0]
+    assert n == 0, f"{n} sections still contain an invisible soft hyphen or nbsp"
+
+
 def test_fix_single_newline_artifact_preserves_double_newlines():
     """Opus review S2: the old fix (`re.sub(r'\\n+', ' ', text)`) collapsed
     EVERY newline, including genuine '\\n\\n' paragraph breaks — measured at
@@ -464,6 +501,33 @@ def test_insert_section_chapter_intro_indexed_across_whole_chapter():
     verses = {v for (_k, _b, ch, v) in
               cur.execute("SELECT * FROM comment_verses WHERE key=?", (key,)).fetchall()}
     assert verses == set(range(0, 15)), f"expected verses 0..14 indexed, got {sorted(verses)}"
+
+
+def test_insert_section_book_level_intro_no_phantom_verse():
+    """Second-round review finding N3: a BOOK-level intro (start_chapter=0,
+    e.g. Owen's 'Volumes 1 and 2 provide a thorough introduction...') has no
+    verse_org chapter to fan out across — org.max_verse(book_id, 0) is
+    genuinely None. The old `or max(end_vs, 1)` fallback treated that None
+    as 'expand to at least verse 1', fabricating a phantom (book, 0, 1)
+    index row that exists nowhere in verse_org. With no real chapter to fan
+    out across, only the literal verse=0 marker should be indexed."""
+    con, cur = _fresh_comment_db()
+    org = FakeOrg(mapping={("HEB", 0, 0): ("HEB", 0, 0)}, max_verses={})  # no chapter-0 mapping
+    key = bcd.insert_section(
+        cur, org, "Owen", "en", "HEB", 0, 0, 0, 0, "book-level intro text",
+        origin="unit-test", translation_status="source",
+    )
+    verses = {v for (_k, _b, ch, v) in
+              cur.execute("SELECT * FROM comment_verses WHERE key=?", (key,)).fetchall()}
+    assert verses == {0}, f"expected only verse=0 indexed (no phantom fan-out), got {sorted(verses)}"
+
+
+def test_no_phantom_verse_one_at_chapter_zero_in_db(db):
+    """DB-level regression guard for N3."""
+    n = db.execute(
+        "SELECT count(*) FROM comment_verses WHERE chapter=0 AND verse=1"
+    ).fetchone()[0]
+    assert n == 0, f"{n} phantom (book, 0, 1) index rows found — verse_org has no such coordinate"
 
 
 # ============================================================

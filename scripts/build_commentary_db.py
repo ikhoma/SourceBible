@@ -279,6 +279,16 @@ def insert_section(cur, org, source, language, book_id, start_ch, start_vs,
             if clash is None:
                 cur.execute("UPDATE comments SET key=? WHERE key=?", (old_key, base_key))
                 cur.execute("UPDATE comment_verses SET key=? WHERE key=?", (old_key, base_key))
+            elif clash[0] == existing[0]:
+                # Second-round review note: not reachable under the
+                # invariants above (existing[0]'s text can't already occupy
+                # both base_key and base_key-<its own hash>), but guard
+                # explicitly rather than falling through to an INSERT that
+                # would hit the PRIMARY KEY constraint on base_key.
+                raise RuntimeError(
+                    f"unexpected pre-existing rekey target for {source} {book_id} "
+                    f"{start_ch}:{start_vs}-{end_ch}:{end_vs} — invariant violated"
+                )
             key = base_key
         else:
             key = f"{base_key}-{new_hash[:8]}"
@@ -310,8 +320,20 @@ def insert_section(cur, org, source, language, book_id, start_ch, start_vs,
             # every verse of the chapter it anchors to, in addition to the
             # literal verse=0 marker, so it surfaces when reading any verse
             # in that chapter.
-            mv = org.max_verse(book_id, start_ch) or max(end_vs, 1)
-            chapters = [(start_ch, 0, max(end_vs, mv))]
+            #
+            # Second-round review finding N3: start_ch==0 is a BOOK-level
+            # intro (not a chapter overview) and has no verse_org chapter to
+            # fan out across at all — org.max_verse(book_id, 0) correctly
+            # returns None. The old `or max(end_vs, 1)` fallback treated
+            # that None as "expand to at least verse 1" instead of "don't
+            # fan out", fabricating a phantom (book, 0, 1) index row that
+            # exists nowhere in verse_org. If there's no real chapter to
+            # fan out across, index only the literal verse=0 marker.
+            mv = org.max_verse(book_id, start_ch)
+            if mv is None:
+                chapters = [(start_ch, 0, 0)]
+            else:
+                chapters = [(start_ch, 0, max(end_vs, mv))]
         else:
             chapters = [(start_ch, start_vs, end_vs)]
     else:
@@ -439,9 +461,29 @@ def _unescape_entities(text: str) -> str:
     """Decode both named (&amp;, &nbsp;, ...) and numeric (&#945;, &#x3b1;, ...)
     HTML entities. The old hand-rolled version only handled 7 named entities
     and silently left ~72k numeric entities undecoded (mostly Greek/Hebrew
-    script in Calvin's quotations) — html.unescape() handles the full set."""
+    script in Calvin's quotations) — html.unescape() handles the full set.
+
+    Second-round review finding N1: Calvin's raw source has some DOUBLY
+    escaped markup (e.g. '&amp;gt;' for a literal '>'), which a single
+    html.unescape() pass only partially resolves ('&amp;gt;' -> '&gt;',
+    left encoded). Loop to a fixed point (capped) so nested escaping
+    fully resolves.
+
+    Finding N2: &#173; (soft hyphen) and &#160; (nbsp) decode to the
+    invisible U+00AD / the non-breaking U+00A0 — but Calvin's source uses
+    &#173; as a VISIBLE dash/hyphen (e.g. 'loving­kindness', a quote
+    attribution '­ Phillips'), so leaving it as an invisible codepoint
+    silently swallows readable punctuation and breaks text search. Normalize
+    both to plain ASCII after unescaping."""
     text = text.replace("&nbsp;", " ")
-    return html.unescape(text)
+    prev = None
+    for _ in range(5):
+        if text == prev:
+            break
+        prev = text
+        text = html.unescape(text)
+    text = text.replace("\u00ad", "-").replace("\u00a0", " ")
+    return text
 
 
 def _collapse_whitespace(text: str) -> str:
