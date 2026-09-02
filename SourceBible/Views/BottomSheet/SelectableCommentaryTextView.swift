@@ -110,7 +110,15 @@ struct SelectableCommentaryTextView: UIViewRepresentable {
             style.lineSpacing = 4
             if index > 0 { style.paragraphSpacingBefore = 12 }
 
-            result.append(NSAttributedString(string: para, attributes: [
+            // "\n" МІЖ абзацами — без нього TextKit бачить один суцільний
+            // абзац (append() сам по собі не створює межу абзацу), тому
+            // paragraphSpacingBefore ніколи не спрацьовував і текст виглядав
+            // одним шматком без розбивки (Henry HEB, баг знайдений Іваном,
+            // 2026-09-02). Без "\n" після ОСТАННЬОГО абзацу — щоб не
+            // повернути зайвий відступ знизу, щойно прибраний.
+            let piece = index < paragraphs.count - 1 ? para + "\n" : para
+
+            result.append(NSAttributedString(string: piece, attributes: [
                 .font:            font,
                 .foregroundColor: UIColor.label,
                 .paragraphStyle:  style
