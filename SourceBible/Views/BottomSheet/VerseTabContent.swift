@@ -596,7 +596,18 @@ struct CommentaryDetailView: View {
         // commentary text has loaded.
         VStack(spacing: 0) {
             commentaryNavBar
-            Divider()
+            // Не системний Divider() — той на відкритті цього sheet-у на мить
+            // рендериться помітно темнішим/насиченішим, ніж після (Ivan,
+            // manual test, 2026-09-02, /engineering:debug): типова "миготлива"
+            // поведінка Divider(), коли він опиняється в контексті, що
+            // перемальовується одразу після появи (тут — новий SwiftUI
+            // ScrollView тіла коментаря, що потребує зайвого layout-тіку).
+            // Ручна волосяна лінія фіксованим кольором сепаратора цього не
+            // має — колір не залежить від того самого трейт-кеша, що і
+            // системний Divider().
+            Rectangle()
+                .fill(Color(uiColor: .separator))
+                .frame(height: 1 / UIScreen.main.scale)
             Group {
                 if !isLoaded {
                     // Loading spinner
