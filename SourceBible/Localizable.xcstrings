@@ -5556,6 +5556,87 @@
           }
         }
       }
+    },
+    "menu.feedback": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зворотний зв'язок"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Mail App Found"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Немає застосунку пошти"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.message %@": {
+      "comment": "%@ = feedback email address",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please email us at %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Напишіть нам на %@"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.copy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Address"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопіювати адресу"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.ok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Гаразд"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -92,7 +92,7 @@ struct WordBlockContent: Codable {
 }
 
 struct QuoteBlockContent: Codable {
-    var theologianId: String    // "calvin" | "henry" | "spurgeon" | "owen"
+    var theologianId: String    // "calvin" | "henry" | "spurgeon" | "owen" | "edwards"
     var verseId: String
     var text: String
 }

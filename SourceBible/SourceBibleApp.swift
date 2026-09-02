@@ -52,6 +52,10 @@ struct SourceBibleApp: App {
     // MARK: - Init
 
     init() {
+        // bug-052 (DEBUG-only, no-op in Release): name the main-run-loop phase that
+        // contains any >150 ms stall. Installed first so it also covers launch.
+        DebugTiming.installRunLoopProbe()
+
         // ── Analytics init ────────────────────────────────────────────────────
         // Consent default (PDR D6, замінює D4): РЕГІОНАЛЬНИЙ, а не за типом збірки.
         // ЄЕЗ/GB → OFF (opt-in); решта світу → ON (opt-out). Уся логіка й аргументи —

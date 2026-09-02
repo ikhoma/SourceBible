@@ -543,6 +543,22 @@ def fix_single_newline_artifact(text: str) -> str:
 CALVIN_GARBAGE_BOOK_NUMBERS = {7137, 7241, 7245, 7294, 7295}  # + NULL, handled separately
 
 
+def _assert_calvin_garbage_excluded(cur2, book_num_to_id):
+    """CALVIN_GARBAGE_BOOK_NUMBERS documents 6 known-bad book_number values in
+    the raw MyBible source (5 numeric + NULL). They are excluded today only
+    as a SIDE EFFECT of import_calvin() iterating `book_num_to_id` (the fixed
+    66-book canonical map) rather than the source file's own distinct
+    book_number values — the constant itself was previously unused, so a
+    future refactor that iterated the source directly could silently let
+    them back in with no warning. This makes the guarantee explicit: fail
+    loudly if any garbage number is (still) reachable via the canonical map.
+    """
+    cur2.execute("SELECT DISTINCT book_number FROM commentaries")
+    raw_numbers = {row[0] for row in cur2.fetchall()}
+    leaked = CALVIN_GARBAGE_BOOK_NUMBERS & raw_numbers & set(book_num_to_id.keys())
+    assert not leaked, f"Calvin garbage book numbers reachable via canonical map: {leaked}"
+
+
 def import_calvin(cur, org, mybible_path, book_num_to_id):
     """Sole source for Calvin (see commentary-sources-audit.md — SWORD has a
     44-section index-bleed defect this MyBible source does not have; no
@@ -551,6 +567,7 @@ def import_calvin(cur, org, mybible_path, book_num_to_id):
     total = 0
     try:
         cur2 = con.cursor()
+        _assert_calvin_garbage_excluded(cur2, book_num_to_id)
         for book_number, book_id in book_num_to_id.items():
             for ch_from, vs_from, ch_to, vs_to, text in mybible_ranges(cur2, book_number, book_id, org):
                 clean = strip_p_tag_format(text)  # handles both plain text and light <i>/<p/> markup gracefully
@@ -639,7 +656,7 @@ def import_owen(cur, org, new_mybible_path, old_cmtx_path, book_names):
         con.close()
 
     # Patch: Heb 1:1-2 from the old .cmtx source (first row, verbatim).
-    src = sqlite3.connect(old_cmtx_path)
+    src = sqlite3.connect(f"file:{old_cmtx_path}?mode=ro", uri=True)
     try:
         row = src.execute(
             "SELECT ChapterBegin, ChapterEnd, VerseBegin, VerseEnd, Comments "
@@ -863,8 +880,10 @@ def main():
     data = Path(args.data_dir)
     new = data / "New"
 
-    if os.path.exists(args.out):
-        os.remove(args.out)
+    for suffix in ("", "-journal", "-wal", "-shm"):
+        sidecar = args.out + suffix
+        if os.path.exists(sidecar):
+            os.remove(sidecar)
 
     print(f"Loading verse_org (KJV) from {args.core_db} ...")
     org = OrgResolver(args.core_db)

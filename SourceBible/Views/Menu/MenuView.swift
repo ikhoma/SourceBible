@@ -21,6 +21,12 @@ struct MenuView: View {
     @AppStorage(AppStorageKeys.appLanguage) private var appLanguage: String = AppLanguage.resolved
     @AppStorage(AppStorageKeys.launchBehavior) private var launchBehaviorRaw = LaunchBehavior.resume.rawValue
     @AppStorage(AppStorageKeys.translationLaunchBehavior) private var translationLaunchRaw = TranslationLaunchBehavior.lastUsed.rawValue
+    // Feedback mail (Menu → Feedback): true only when mailto: couldn't be
+    // opened (no Mail account configured on-device) — shows the fallback
+    // alert with the address to copy instead of a silent dead tap.
+    @State private var showFeedbackMailUnavailable = false
+
+    private var uk: Bool { appLanguage == "uk" }
 
     private var currentLanguageLabel: String {
         switch appLanguage {
@@ -165,6 +171,24 @@ struct MenuView: View {
                     // Support primary action → DonationView). Closes bug-022/bug-023.
                     NavigationLink("menu.about") {
                         AboutView()
+                    }
+                    // Feedback — mailto: only, no in-app form (no backend to submit
+                    // to; app is local-first, PDR-Auth-Strategy). Prefilled subject
+                    // + body carry build version/iOS/device/app-language for triage
+                    // — never a user or install identifier, never note content.
+                    Button {
+                        openFeedbackMail()
+                    } label: {
+                        Label("menu.feedback", systemImage: "envelope")
+                    }
+                    .foregroundStyle(.primary)
+                    .alert("feedback.mail_unavailable.title", isPresented: $showFeedbackMailUnavailable) {
+                        Button("feedback.mail_unavailable.copy") {
+                            UIPasteboard.general.string = Self.feedbackAddress
+                        }
+                        Button("feedback.mail_unavailable.ok", role: .cancel) { }
+                    } message: {
+                        Text("feedback.mail_unavailable.message \(Self.feedbackAddress)")
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
@@ -493,6 +517,72 @@ struct DefaultTranslationPickerView: View {
         case "ru": return "lang.russian"
         default:   return "lang.english"
         }
+    }
+}
+
+// MARK: - Feedback mail
+
+private extension MenuView {
+    /// Contact address for in-app feedback (Menu → Feedback). Same address
+    /// already public in PrivacyPolicyView's Contact section. One constant —
+    /// the mailto builder and the fallback alert both read from it.
+    static let feedbackAddress = "ivan.khoma@gmail.com"
+
+    /// Raw device identifier (e.g. "iPhone16,1") via `utsname`, not a
+    /// marketing name ("iPhone 15 Pro") — that needs a lookup table kept in
+    /// sync with every new device, which this deliberately skips. Good enough
+    /// for bug triage; Ivan/team can look the identifier up if needed.
+    static var deviceModelIdentifier: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        return machineMirror.children.reduce(into: "") { result, element in
+            guard let value = element.value as? Int8, value != 0 else { return }
+            result.append(Character(UnicodeScalar(UInt8(value))))
+        }
+    }
+
+    static var appVersionString: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
+    }
+
+    /// `mailto:` URL with a prefilled subject and body template, language
+    /// matched to `appLanguage`. Diagnostics only — build version, iOS
+    /// version, raw device model, app language. ⛔ Never a user/install
+    /// identifier, never note content.
+    func feedbackMailURL() -> URL? {
+        let subject = uk ? "Відгук про Source Bible" : "Source Bible feedback"
+        let intro = uk ? "(напишіть тут ваш відгук)" : "(write your feedback here)"
+        let footerNote = uk
+            ? "Не видаляйте це нижче — допомагає з діагностикою:"
+            : "Please don't delete the section below — it helps with diagnostics:"
+        let versionLine = uk ? "Версія: \(Self.appVersionString)" : "Version: \(Self.appVersionString)"
+        let osLine = "iOS: \(UIDevice.current.systemVersion)"
+        let deviceLine = uk ? "Пристрій: \(Self.deviceModelIdentifier)" : "Device: \(Self.deviceModelIdentifier)"
+        let langLine = uk ? "Мова застосунку: \(appLanguage)" : "App language: \(appLanguage)"
+
+        let body = [intro, "", "", "---", footerNote, versionLine, osLine, deviceLine, langLine]
+            .joined(separator: "\n")
+
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = Self.feedbackAddress
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: body),
+        ]
+        return components.url
+    }
+
+    func openFeedbackMail() {
+        guard let url = feedbackMailURL(), UIApplication.shared.canOpenURL(url) else {
+            showFeedbackMailUnavailable = true
+            return
+        }
+        UIApplication.shared.open(url)
     }
 }
 
