@@ -187,10 +187,22 @@ private struct CommentaryChunkTextView: UIViewRepresentable {
     /// isScrollEnabled = false робить UITextView саморозмірним по контенту —
     /// це стандартний спосіб дати йому реальну (не 0) висоту всередині
     /// SwiftUI-стеку без окремого скролу.
+    ///
+    /// НЕ через uiView.sizeThatFits(_:) напряму — той може повернути висоту,
+    /// заміряну під СТАРУ ширину textContainer з попереднього layout-проходу
+    /// (кешовану), а не під ширину, яку щойно запропонував SwiftUI. У списку
+    /// чанків (LazyVStack) це проявлялось як обрізаний останній видимий
+    /// шматок тексту внизу секції — ScrollView вважав контент коротшим, ніж
+    /// він є насправді, і не давав доскролити до кінця (Ivan, manual test,
+    /// 2026-09-02, /engineering:debug). Фікс: примусово виставляємо ширину
+    /// textContainer і питаємо layoutManager про usedRect — це форсує
+    /// реальний перерахунок під ЦЮ конкретну ширину, а не читає кеш.
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
-        let width = proposal.width ?? UIScreen.main.bounds.width
-        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: fitted.height)
+        guard let width = proposal.width, width > 0 else { return nil }
+        uiView.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
+        uiView.layoutManager.ensureLayout(for: uiView.textContainer)
+        let used = uiView.layoutManager.usedRect(for: uiView.textContainer)
+        return CGSize(width: width, height: ceil(used.height))
     }
 
     func makeCoordinator() -> Coordinator {
