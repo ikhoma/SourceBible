@@ -973,52 +973,77 @@ enum MorphologyDecoder {
         // Для складеного слота розбираємо ГОЛОВУ, а не першу морфему — інакше
         // весь розбір походить від проклітики (див. `headMorpheme`).
         let head = headMorpheme(code)
-        let ch = Array(head)
-        guard let first = ch.first else { return nil }
         var m = FullMorphology()
 
-        switch first {
-        case "V":
-            m.partOfSpeech = t.string(for: MorphKey.posVerb)
-            if ch.count > 1 { m.stem   = hebrewStem(ch[1], t: t) }
-            if ch.count > 2 { m.aspect = hebrewAspect(ch[2], t: t) }
-            if ch.count > 5 {
-                let p = personLabel(ch[3], t: t)
-                let g = genderLabel(ch[4], t: t)
-                let n = numberLabel(ch[5], t: t)
-                m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
+        if head.contains("-") {
+            // Грецький SBLGNT-код (дефісний, напр. "V-FAI-3S"). Порода (Біньян) і
+            // видо-часова форма (aspect) — виключно гебрайські категорії; раніше цей
+            // код все одно йшов у гебрайську позиційну гілку нижче, і символ-роздільник
+            // "-" підставлявся в hebrewStem()/hebrewAspect(), звідки бралось хибне
+            // «Основа (Біньян): -» — це не заглушка «немає даних», а сам роздільник
+            // коду, помилково прочитаний як гебрайська літера породи. Тут для грецької
+            // свідомо визначаємо ЛИШЕ частину мови; час/стан/спосіб/особу/число з
+            // SBLGNT-сегментів ("FAI", "3S") тут НЕ розбираємо — це окреме рішення
+            // (потрібен розбір грецьких TVM-сегментів), не частина цього фіксу.
+            //
+            // ⛔ М'який фолбек, НЕ guard-return: 15 з 22 префіксів POS-коду, що реально
+            // трапляються в грецькому корпусі (виміряно 2026-09-05: T-артикль 19 783
+            // вживання, PREP 10 568, PRT 3 819, D/I/K/Q/R/S/X/C/F займенникові підтипи,
+            // ARAM/HEB/COND — разом 40 438 слів, 29% усього грецького НЗ), не входять у
+            // 8 кодів, які розпізнає `greekPartOfSpeech`. Якщо тут повернути nil, уся
+            // секція «Морфологія» ховається — а нижче є надійніший `lexicalClass` з
+            // Macula (`class`-колонка), який покриває їх ВСІ без винятку. Тому: беремо
+            // морф-код як перше наближення (може лишитись порожнім), і завжди даємо
+            // дійти до `lexicalClass`-фолбека нижче — так само, як для гебрайської.
+            let posStr = head.components(separatedBy: "-").first ?? head
+            m.partOfSpeech = greekPartOfSpeech(posStr, t: t) ?? ""
+        } else {
+            let ch = Array(head)
+            guard let first = ch.first else { return nil }
+
+            switch first {
+            case "V":
+                m.partOfSpeech = t.string(for: MorphKey.posVerb)
+                if ch.count > 1 { m.stem   = hebrewStem(ch[1], t: t) }
+                if ch.count > 2 { m.aspect = hebrewAspect(ch[2], t: t) }
+                if ch.count > 5 {
+                    let p = personLabel(ch[3], t: t)
+                    let g = genderLabel(ch[4], t: t)
+                    let n = numberLabel(ch[5], t: t)
+                    m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
+                }
+            case "N":
+                m.partOfSpeech = t.string(for: MorphKey.posNoun)
+                if ch.count > 4 {
+                    let g = genderLabel(ch[2], t: t)
+                    let n = numberLabel(ch[3], t: t)
+                    let s = stateLabel(ch[4], t: t)
+                    m.grammaticalForm = [g, n, s].filter { !$0.isEmpty }.joined(separator: " ")
+                }
+            case "A":
+                m.partOfSpeech = t.string(for: MorphKey.posAdjective)
+                if ch.count > 4 {
+                    let g = genderLabel(ch[2], t: t)
+                    let n = numberLabel(ch[3], t: t)
+                    m.grammaticalForm = [g, n].filter { !$0.isEmpty }.joined(separator: " ")
+                }
+            case "T":
+                m.partOfSpeech = ch.count > 1 ? particleLabel(ch[1], t: t) : t.string(for: MorphKey.posParticle)
+            case "R": m.partOfSpeech = t.string(for: MorphKey.posPreposition)
+            case "C": m.partOfSpeech = t.string(for: MorphKey.posConjunction)
+            case "P": m.partOfSpeech = t.string(for: MorphKey.posPronoun)
+            case "D": m.partOfSpeech = t.string(for: MorphKey.posAdverb)
+            case "I": m.partOfSpeech = t.string(for: MorphKey.posInterjection)
+            case "S":
+                m.partOfSpeech = ch.count > 1 ? suffixLabel(ch[1], t: t) : t.string(for: MorphKey.posPronSuffix)
+                if ch.count > 4 {
+                    let p = personLabel(ch[2], t: t)
+                    let g = genderLabel(ch[3], t: t)
+                    let n = numberLabel(ch[4], t: t)
+                    m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
+                }
+            default: return nil
             }
-        case "N":
-            m.partOfSpeech = t.string(for: MorphKey.posNoun)
-            if ch.count > 4 {
-                let g = genderLabel(ch[2], t: t)
-                let n = numberLabel(ch[3], t: t)
-                let s = stateLabel(ch[4], t: t)
-                m.grammaticalForm = [g, n, s].filter { !$0.isEmpty }.joined(separator: " ")
-            }
-        case "A":
-            m.partOfSpeech = t.string(for: MorphKey.posAdjective)
-            if ch.count > 4 {
-                let g = genderLabel(ch[2], t: t)
-                let n = numberLabel(ch[3], t: t)
-                m.grammaticalForm = [g, n].filter { !$0.isEmpty }.joined(separator: " ")
-            }
-        case "T":
-            m.partOfSpeech = ch.count > 1 ? particleLabel(ch[1], t: t) : t.string(for: MorphKey.posParticle)
-        case "R": m.partOfSpeech = t.string(for: MorphKey.posPreposition)
-        case "C": m.partOfSpeech = t.string(for: MorphKey.posConjunction)
-        case "P": m.partOfSpeech = t.string(for: MorphKey.posPronoun)
-        case "D": m.partOfSpeech = t.string(for: MorphKey.posAdverb)
-        case "I": m.partOfSpeech = t.string(for: MorphKey.posInterjection)
-        case "S":
-            m.partOfSpeech = ch.count > 1 ? suffixLabel(ch[1], t: t) : t.string(for: MorphKey.posPronSuffix)
-            if ch.count > 4 {
-                let p = personLabel(ch[2], t: t)
-                let g = genderLabel(ch[3], t: t)
-                let n = numberLabel(ch[4], t: t)
-                m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
-            }
-        default: return nil
         }
         // lexical_class is the authoritative POS — apply it last so it overrides
         // whatever the morph code derived. e.g. H835a: morph='Ncmpc' → "Noun",
@@ -1259,24 +1284,30 @@ enum MorphologyDecoder {
     }
 
     // MARK: Greek (SBLGNT, dash-separated)
-    private static func decodeGreek(_ code: String, t: TranslationProvider) -> String? {
-        let segs = code.components(separatedBy: "-")
-        guard let posStr = segs.first else { return nil }
-        var parts: [String] = []
 
+    /// Частина мови з ПЕРШОГО сегмента грецького коду (до першого "-").
+    /// Спільна для `decodeGreek` (короткий підпис у списку слів) і `decodeFull`
+    /// (детальна панель «Морфологія») — щоб не тримати два мапінги POS нарізно.
+    private static func greekPartOfSpeech(_ posStr: String, t: TranslationProvider) -> String? {
         switch posStr.uppercased() {
-        case "N":    parts.append(t.string(for: MorphKey.posNoun))
-        case "V":    parts.append(t.string(for: MorphKey.posVerb))
-        case "A":    parts.append(t.string(for: MorphKey.posAdjective))
-        case "P":    parts.append(t.string(for: MorphKey.posPreposition))
-        case "ADV":  parts.append(t.string(for: MorphKey.posAdverb))
-        case "CONJ": parts.append(t.string(for: MorphKey.posConjunction))
-        case "PRON": parts.append(t.string(for: MorphKey.posPronoun))
-        case "ART":  parts.append(t.string(for: MorphKey.posArticle))
-        case "PART": parts.append(t.string(for: MorphKey.posParticle))
-        case "INJ":  parts.append(t.string(for: MorphKey.posInterjection))
+        case "N":    return t.string(for: MorphKey.posNoun)
+        case "V":    return t.string(for: MorphKey.posVerb)
+        case "A":    return t.string(for: MorphKey.posAdjective)
+        case "P":    return t.string(for: MorphKey.posPreposition)
+        case "ADV":  return t.string(for: MorphKey.posAdverb)
+        case "CONJ": return t.string(for: MorphKey.posConjunction)
+        case "PRON": return t.string(for: MorphKey.posPronoun)
+        case "ART":  return t.string(for: MorphKey.posArticle)
+        case "PART": return t.string(for: MorphKey.posParticle)
+        case "INJ":  return t.string(for: MorphKey.posInterjection)
         default:     return nil
         }
+    }
+
+    private static func decodeGreek(_ code: String, t: TranslationProvider) -> String? {
+        let segs = code.components(separatedBy: "-")
+        guard let posStr = segs.first, let posLabel = greekPartOfSpeech(posStr, t: t) else { return nil }
+        var parts: [String] = [posLabel]
 
         if segs.count > 1 {
             let cng = Array(segs[1].uppercased())
