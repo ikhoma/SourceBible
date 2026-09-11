@@ -1003,15 +1003,29 @@ enum MorphologyDecoder {
         // а не для граматичних категорій.
         let head = headMorpheme(code)
         var m = FullMorphology()
+        var hasGreekPronounSubtype = false
 
-        if head.contains("-") {
-            // Грецький SBLGNT-код (дефісний, напр. "V-FAI-3S"). Частина мови —
-            // з коду (пласка мапа `greekPartOfSpeech`, бо `class`/`type` не
-            // розрізняють зворотний/взаємний/особовий займенник — усі три
-            // мають однаковий `class='pron'`, див. знахідку 4 в ADR-040).
-            // Решта категорій — з колонок, без жодного парсингу сегментів.
+        // ADR-040 review fix: розрізняємо мову за `word.lang` (заповнений
+        // лише для гебрайської/арамейської, NULL для грецької — перевірено на
+        // всьому корпусі: 469 476 гебр. рядків мають lang, 137 779 грец. — 0
+        // винятків), а НЕ за наявністю «-» в коді. Дефіс є лише в SBLGNT-
+        // кодах на кшталт "V-FAI-3S", але 32 821 грецьке слово мають
+        // бездефісний код (CONJ, PREP, ADV, PRT, COND, HEB, ARAM, INJ) —
+        // раніше такі слова тихо потрапляли в гебрайську гілку нижче й
+        // губили відмінок/час/стан/спосіб/ступінь (227 слів мали ці поля
+        // заповненими в базі, але жодне не показувалось). Найпомітніші
+        // жертви: Ἐφφαθά (Мк 7:34), κούμ (Мк 5:41), σαβαχθανεί (Мт 27:46,
+        // Мк 15:34) — той самий клас слів, що й породив цю сесію (Рим 6:14).
+        if word.lang == nil {
+            // Грецький код (з дефісом чи без — обидва варіанти сюди).
+            // Частина мови — з коду (пласка мапа `greekPartOfSpeech`, бо
+            // `class`/`type` не розрізняють зворотний/взаємний/особовий
+            // займенник — усі три мають однаковий `class='pron'`, див.
+            // знахідку 4 в ADR-040). Решта категорій — з колонок, без
+            // жодного парсингу сегментів.
             let posStr = head.components(separatedBy: "-").first ?? head
             m.partOfSpeech = greekPartOfSpeech(posStr, t: t) ?? ""
+            hasGreekPronounSubtype = greekPronounSubtypeCodes.contains(posStr.uppercased())
 
             let person = word.person.flatMap { personValueLabel($0, t: t) }
             let gender = word.gender.flatMap { genderValueLabel($0, t: t) }
@@ -1068,7 +1082,15 @@ enum MorphologyDecoder {
         // lexical_class — авторитетне джерело POS, застосовується останнім і
         // перекриває розбір коду вище. Напр. H835a: код 'Ncmpc' → «Іменник»,
         // але class='ij' → «Вигук».
-        if let cls = word.lexicalClass, let posLabel = lexicalClassLabel(cls, using: t) {
+        //
+        // ⛔ Виняток — bug-053 (ADR-040 review fix): `class='pron'` НЕ
+        // розрізняє особовий/вказівний/зворотний/взаємний/… займенник (усі
+        // мають однаковий `class`), тоді як пласка мапа на морф-коді вище вже
+        // дала конкретний підтип. Без цього винятку затирання спрацьовувало
+        // на КОЖНОМУ грецькому займеннику (16 176 слів, 11.7% НЗ) — bug-053
+        // фактично не закривався попри позначку «Зроблено» в ADR-040.
+        if let cls = word.lexicalClass, let posLabel = lexicalClassLabel(cls, using: t),
+           !(cls == "pron" && hasGreekPronounSubtype) {
             m.partOfSpeech = posLabel
         }
         m.composition = composition(code, lexicalClass: word.lexicalClass, using: t)
@@ -1318,12 +1340,20 @@ enum MorphologyDecoder {
     ) -> String? {
         guard let code = word.morphology, !code.isEmpty else { return nil }
         var parts: [String] = []
+        var hasGreekPronounSubtype = false
 
-        if code.contains("-") {
+        if word.lang == nil {
+            // ADR-040 review fix: мова визначається за `word.lang`, не за
+            // «-» в коді — див. коментар у decodeFull() вище.
             let posStr = code.components(separatedBy: "-").first ?? code
             guard let posLabel = greekPartOfSpeech(posStr, t: t) else { return nil }
             parts.append(posLabel)
-            if let raw = word.number, let label = numberValueLabel(raw, t: t) { parts.append(label) }
+            hasGreekPronounSubtype = greekPronounSubtypeCodes.contains(posStr.uppercased())
+            // Лише множина й двоїна; однина мовчить — той самий фільтр, що
+            // й у гебрайській гілці нижче («однина» — дефолт, не інформація).
+            if let raw = word.number, raw != "singular", let label = numberValueLabel(raw, t: t) {
+                parts.append(label)
+            }
         } else {
             guard let first = code.first else { return nil }
             switch first {
@@ -1351,8 +1381,11 @@ enum MorphologyDecoder {
         }
 
         // lexicalClass — авторитетне джерело POS, як і в decodeFull (напр.
-        // грецьке G3326 без дефіса, де морф-розбір неоднозначний).
-        if let cls = word.lexicalClass, let posLabel = lexicalClassLabel(cls, using: t) {
+        // грецьке G3326 без дефіса, де морф-розбір неоднозначний). Той самий
+        // виняток для bug-053, що й у decodeFull: не затираємо вже знайдений
+        // конкретний підтип займенника узагальненим class='pron'.
+        if let cls = word.lexicalClass, let posLabel = lexicalClassLabel(cls, using: t),
+           !(cls == "pron" && hasGreekPronounSubtype) {
             return posLabel
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
@@ -1363,6 +1396,13 @@ enum MorphologyDecoder {
     // особовий займенник (усі три — `class='pron'`), тож код лишається
     // джерелом підтипу POS. Виміряно на корпусі 2026-09-05/09-11: 22 реальні
     // префікси (ADR-040 називає їх 21 — уточнено під час реалізації).
+    /// bug-053 precision fix: коди, чия мітка від `greekPartOfSpeech` — КОНКРЕТНИЙ
+    /// підтип займенника. Затирання class='pron' нижче пропускається лише для
+    /// цих кодів — 1 рідкісне Macula-слово має `class='pron'`, але код "ADV"
+    /// (прислівникове вживання); для нього generic-мітка з `class` лишається
+    /// правильнішою за «Прислівник» з коду.
+    private static let greekPronounSubtypeCodes: Set<String> = ["P", "D", "R", "I", "X", "F", "S", "K", "Q", "C"]
+
     private static func greekPartOfSpeech(_ posStr: String, t: TranslationProvider) -> String? {
         switch posStr.uppercased() {
         case "N":    return t.string(for: MorphKey.posNoun)

@@ -306,7 +306,15 @@ def normalize_strongs(raw, lang_prefix=""):
     return None
 
 
-def _clean_morph_value(raw):
+# ADR-040 step 3 (build gate): counts, per `word` column, how many times
+# _clean_morph_value() stripped an actual 'unknown: x' sentinel (NOT a plain
+# empty value — those are normal/expected, e.g. `person` is empty for every
+# noun). verify_morphology_source_fields() pins these against MORPH_SENTINEL_
+# BASELINE below so a future Macula refresh that changes the sentinel count
+# fails the build loudly instead of silently reprinting "unknown: x" to users.
+MORPH_SENTINEL_COUNTS: dict = {}
+
+def _clean_morph_value(raw, column=None, sentinel_counts=None):
     """Normalize a Macula TSV morphology field to None if empty or an
     'unknown: x' / 'unknown: v' sentinel (ADR-040, Opus review finding #6 —
     2,803 such sentinel values measured across the Hebrew TSV's morphology
@@ -317,6 +325,8 @@ def _clean_morph_value(raw):
     if not val:
         return None
     if val.lower().startswith("unknown"):
+        if sentinel_counts is not None and column:
+            sentinel_counts[column] = sentinel_counts.get(column, 0) + 1
         return None
     return val
 
@@ -416,6 +426,172 @@ def import_macula_greek(cur):
     print(f"  {len(rows):,} Greek words imported.")
 
 
+# ─────────────────────────────────────────────
+# ADR-040 step 3-4 — build gate + audit artifact for the morphology source columns
+# ─────────────────────────────────────────────
+
+# Pinned baselines, measured 2026-09-11 (ADR-040 Прогін 2 + Opus review).
+# A mismatch means the Macula corpus changed shape since this ADR — investigate
+# before updating these numbers (same workflow as XLIT_BENIGN above).
+MORPH_SENTINEL_BASELINE = {
+    "person":     2676,
+    "gender":     7,
+    "number":     7,
+    "morph_type": 7,
+    "stem":       106,
+}
+
+# Value sets the Swift lookup switches (MorphologyDecoder in WordTabContent.swift)
+# actually handle. If Macula ever emits a value outside these sets, the Swift
+# switch's `default: return nil` would silently drop that word's row instead of
+# erroring — exactly the bug class ADR-040 exists to eliminate. Keep in sync with
+# personValueLabel/genderValueLabel/numberValueLabel/caseValueLabel/tenseValueLabel/
+# voiceValueLabel/moodValueLabel/degreeValueLabel/stateValueLabel/hebrewStemLabel/
+# hebrewAspectLabel in that file.
+MORPH_EXPECTED_VALUES = {
+    "person":   {"first", "second", "third"},
+    "gender":   {"masculine", "feminine", "neuter", "common", "both"},
+    "number":   {"singular", "plural", "dual"},
+    "gr_case":  {"nominative", "genitive", "dative", "accusative", "vocative"},
+    "tense":    {"aorist", "present", "imperfect", "future", "perfect", "pluperfect"},
+    "voice":    {"active", "middle", "passive", "middlepassive"},
+    "mood":     {"indicative", "imperative", "subjunctive", "optative", "participle", "infinitive"},
+    "degree":   {"comparative", "superlative"},
+    "state":    {"absolute", "construct", "determined"},
+    "stem":     {
+        "qal", "niphal", "piel", "pual", "hiphil", "hophal", "hithpael", "poel",
+        "peal", "peil", "pael", "haphel", "aphel", "shaphel", "saphel",
+        "hithpaal", "ithpaal", "hithpeel", "ithpeel", "ithpoel", "hishtaphel",
+        "nithpael", "hithpolel", "hithpalpel", "polel", "polal", "polpal",
+        "pilpel", "pilel", "palel", "pealal", "poal", "pulal", "qal passive",
+    },
+}
+
+# hebrewAspectLabel() only handles these 11 verb-relevant `morph_type` values —
+# the rest (common/proper/pronominal/definite article/…, same column, noun/particle
+# values) are imported but deliberately not shown in UI v1 (ADR-040 finding 5).
+MORPH_TYPE_VERB_VALUES = {
+    "qatal", "yiqtol", "wayyiqtol", "weqatal", "jussive", "cohortative",
+    "imperative", "participle active", "participle passive",
+    "infinitive absolute", "infinitive construct",
+}
+
+
+def verify_morphology_source_fields(cur):
+    """ADR-040 step 3 build gate. Fails the build (non-zero exit) if the newly
+    imported morphology source columns drift from what MorphologyDecoder (Swift)
+    and the sentinel-cleaning baseline actually handle. Run after both
+    import_macula_hebrew() and import_macula_greek()."""
+    print("\n[3b] Verifying ADR-040 morphology source columns...")
+    problems = []
+
+    # (a) Every Greek verb must have tense/voice/mood — measured 0 missing.
+    row = cur.execute("""
+        SELECT count(*) FROM word
+        WHERE language='grc' AND lexical_class='verb'
+          AND (tense IS NULL OR voice IS NULL OR mood IS NULL)
+    """).fetchone()
+    if row[0] != 0:
+        problems.append(f"{row[0]} Greek verb(s) missing tense/voice/mood (expected 0)")
+
+    # (b) No literal 'unknown%' sentinel leaks into any structured column.
+    cols = ["person", "gender", "number", "gr_case", "tense", "voice", "mood",
+            "degree", "gr_type", "stem", "morph_type", "pos"]
+    for col in cols:
+        leaked = cur.execute(f"SELECT count(*) FROM word WHERE {col} LIKE 'unknown%'").fetchone()[0]
+        if leaked:
+            problems.append(f"{leaked} row(s) leak an 'unknown:*' sentinel into `{col}` (expected 0)")
+
+    # (c) Value sets match what the Swift switches handle.
+    for col, expected in MORPH_EXPECTED_VALUES.items():
+        actual = {r[0] for r in cur.execute(f"SELECT DISTINCT {col} FROM word WHERE {col} IS NOT NULL")}
+        unexpected = actual - expected
+        if unexpected:
+            problems.append(
+                f"`{col}` has value(s) not handled by MorphologyDecoder: {sorted(unexpected)} — "
+                f"add a case to the matching *ValueLabel()/hebrewStemLabel() switch in "
+                f"WordTabContent.swift, a MorphKey + xcstrings entry, then add the value(s) here"
+            )
+
+    # (d) morph_type, restricted to verbs, matches the 11 values hebrewAspectLabel() handles.
+    actual_verb_types = {
+        r[0] for r in cur.execute(
+            "SELECT DISTINCT morph_type FROM word WHERE pos='verb' AND morph_type IS NOT NULL"
+        )
+    }
+    unexpected_types = actual_verb_types - MORPH_TYPE_VERB_VALUES
+    if unexpected_types:
+        problems.append(
+            f"`morph_type` has verb value(s) not handled by hebrewAspectLabel(): "
+            f"{sorted(unexpected_types)} — same fix as (c) above"
+        )
+
+    # (e) Sentinel counts pinned to the ADR-040 baseline (catches a Macula refresh
+    # silently changing how much data is unknown, in either direction).
+    for col, expected_count in MORPH_SENTINEL_BASELINE.items():
+        actual_count = MORPH_SENTINEL_COUNTS.get(col, 0)
+        if actual_count != expected_count:
+            problems.append(
+                f"'unknown:*' sentinel count for `{col}` is {actual_count}, expected {expected_count} "
+                f"(ADR-040 baseline) — Macula data shape changed; investigate, then update "
+                f"MORPH_SENTINEL_BASELINE in scripts/build_db.py and record why in docs/db_build.md"
+            )
+
+    if problems:
+        raise SystemExit(
+            "ADR-040 morphology gate failed (%d issue(s)):\n  - %s"
+            % (len(problems), "\n  - ".join(problems))
+        )
+    print(f"  ✓ morphology source columns OK ({len(MORPH_EXPECTED_VALUES)} value sets, "
+          f"{len(MORPH_SENTINEL_BASELINE)} sentinel counts, 0 unknown:* leaks)")
+
+
+def generate_morph_decode_hebrew_tsv(cur):
+    """ADR-040: regenerate data/morph_decode_hebrew.tsv — one row per unique
+    (morph, lang) pair actually seen in the Hebrew/Aramaic corpus, with the
+    MODE (most frequent combination) of its structured fields, for
+    auditability/regression-diffing (git-versioned, see .gitignore exception).
+    Not a runtime lookup — Swift always reads the per-word columns directly.
+
+    `distinct_variants`: how many distinct (stem, morph_type, person, gender,
+    number, state, pos, lexical_class) combinations occur under this exact
+    (morph, lang) pair — 774/892 pairs have exactly 1 (a clean code→fields
+    mapping); the rest have minor real-world noise (e.g. `class` disagreements
+    from XML enrichment) and show the most common combination.
+    """
+    print("\n[3c] Generating data/morph_decode_hebrew.tsv (ADR-040 audit artifact)...")
+    rows = cur.execute("""
+        SELECT morph, lang,
+               COALESCE(stem,''), COALESCE(morph_type,''), COALESCE(person,''),
+               COALESCE(gender,''), COALESCE(number,''), COALESCE(state,''),
+               COALESCE(pos,''), COALESCE(lexical_class,'')
+        FROM word WHERE lang IS NOT NULL
+    """).fetchall()
+
+    groups: dict = {}
+    for morph, lang, stem, mtype, person, gender, number, state, pos, lex in rows:
+        key = (morph, lang)
+        variant = (stem, mtype, person, gender, number, state, pos, lex)
+        g = groups.setdefault(key, {})
+        g[variant] = g.get(variant, 0) + 1
+
+    out_rows = []
+    for (morph, lang), variants in groups.items():
+        freq = sum(variants.values())
+        mode_variant, mode_count = max(variants.items(), key=lambda kv: kv[1])
+        stem, mtype, person, gender, number, state, pos, lex = mode_variant
+        out_rows.append((freq, morph, lang, stem, mtype, person, gender, number,
+                          state, pos, lex, len(variants)))
+    out_rows.sort(key=lambda r: r[0], reverse=True)
+
+    out_path = DATA_DIR / "morph_decode_hebrew.tsv"
+    with io.open(out_path, "w", encoding="utf-8", newline="") as f:
+        f.write("freq\tmorph\tlang\tstem\tmorph_type\tperson\tgender\tnumber\tstate\tpos\tlexical_class\tdistinct_variants\n")
+        for r in out_rows:
+            f.write("\t".join(str(v) for v in r) + "\n")
+    print(f"  {len(out_rows):,} (morph, lang) pairs written to {out_path}")
+
+
 # ADR-040: which Macula TSV columns become which `word` columns, per language.
 # Both languages share the same `parse_macula_tsv` body — only this mapping differs.
 HEBREW_EXTRA_FIELDS = [
@@ -512,7 +688,8 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: d
         verse_seq[verse_key] = pos
 
         word_id = f"{osis}|{ch}|{vs}|{pos}"
-        extra_values = tuple(_clean_morph_value(row.get(tsv_col, "")) for tsv_col, _ in extra_fields)
+        extra_values = tuple(_clean_morph_value(row.get(tsv_col, ""), db_col, MORPH_SENTINEL_COUNTS)
+                              for tsv_col, db_col in extra_fields)
         rows.append((word_id, osis, ch, vs, pos, surface, lemma,
                      strongs_id, morph, gloss, language, xlit, lexical_class, slot) + extra_values)
     return rows
@@ -2474,6 +2651,8 @@ def main():
     enrich_macula_from_xml(cur);    con.commit()   # populates gloss_macula, syntax_role, greek, greek_strong from XML
     import_macula_greek(cur);            con.commit()
     enrich_macula_greek_from_xml(cur);   con.commit()   # populates after_char for Greek words
+    verify_morphology_source_fields(cur)                # ADR-040 step 3: fail-fast on value-set/sentinel drift
+    generate_morph_decode_hebrew_tsv(cur)                # ADR-040: regenerate git-versioned audit artifact
     _backfill_strongs_originals_from_macula(cur); con.commit()  # fills strongs.original from word.lemma (Macula)
     _apply_word_table_xlit_fallback(cur); con.commit()          # fills xlit_simple/short_def for ~507 sub-entry stubs not in TBESH
     import_translations(cur);            con.commit()
