@@ -354,7 +354,19 @@ struct OriginalWordsView: View {
                 // have a helper as head, and 0 slots are all-helper, so `root.xlitSlot` and
                 // `.first` cannot disagree here. `.first` is kept because it stays correct
                 // if the helper set ever changes; it is not a workaround.
-                xlitSlot: tokens.compactMap(\.xlitSlot).first
+                xlitSlot: tokens.compactMap(\.xlitSlot).first,
+                // ADR-040: taken from `root` (the head token), never re-derived from the
+                // joined `morphology` string above — these come straight from the head
+                // token's own DB row, so composite Hebrew slots (e.g. "Td·Ncfsa") get
+                // correct values instead of being unparseable. This also fixes the
+                // ADR-033 regression where canonicalHebrewStem(morph) returned nil for
+                // any composite-slot code, since MorphologyDecoder now reads root.stem
+                // etc. directly instead of parsing the concatenated `morph` string.
+                person: root.person, gender: root.gender, number: root.number,
+                grCase: root.grCase, tense: root.tense, voice: root.voice,
+                mood: root.mood, degree: root.degree, grType: root.grType,
+                stem: root.stem, morphType: root.morphType, state: root.state,
+                pos: root.pos, lang: root.lang
             )
         }
     }

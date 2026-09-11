@@ -160,18 +160,46 @@ struct BibleWord: Identifiable, Hashable {
     let slot: Int?              // Macula !N group position; tokens sharing same slot = one display word
     let xlitSlot: String?       // BibleHub combined slot translit (root token only; nil on helpers + Greek)
 
+    // ADR-040: already-decoded morphology fields straight from the Macula TSV
+    // (MorphologyDecoder is a lookup layer over these, not a positional parser
+    // of `morphology`). All nullable — populated only where the field applies.
+    let person: String?         // both languages: first/second/third
+    let gender: String?         // both languages: masculine/feminine/neuter/common/both
+    let number: String?         // both languages: singular/plural/dual
+    let grCase: String?         // Greek `case`: nominative/genitive/dative/accusative/vocative
+    let tense: String?          // Greek `tense`: aorist/present/imperfect/future/perfect/pluperfect
+    let voice: String?          // Greek `voice`: active/passive/middle/middlepassive
+    let mood: String?           // Greek `mood`: indicative/imperative/subjunctive/optative/participle/infinitive
+    let degree: String?         // Greek `degree`: comparative/superlative
+    let grType: String?         // Greek `type`: pronoun/article subtype (demonstrative/personal/relative/…)
+    let stem: String?           // Hebrew `stem` (binyan): qal/niphal/piel/pual/hiphil/hophal/hithpael/peal/…
+    let morphType: String?      // Hebrew `type` (renamed from verb_type — not verb-only): qatal/wayyiqtol/common/…
+    let state: String?          // Hebrew `state`: absolute/construct/determined
+    let pos: String?            // Hebrew `pos` (finer than lexicalClass, e.g. pron→suffix): noun/verb/suffix/…
+    let lang: String?           // Hebrew `lang`: H=Hebrew, A=Aramaic — NOT the `language` (hbo/grc) distinction above
+
     init(id: String, text: String, strongsId: String? = nil,
          morphology: String? = nil, gloss: String? = nil,
          xlitSimple: String? = nil, xlit: String? = nil,
          syntaxRole: String? = nil, greek: String? = nil, greekStrong: String? = nil,
          afterChar: String? = nil, lexicalClass: String? = nil,
-         slot: Int? = nil, xlitSlot: String? = nil) {
+         slot: Int? = nil, xlitSlot: String? = nil,
+         person: String? = nil, gender: String? = nil, number: String? = nil,
+         grCase: String? = nil, tense: String? = nil, voice: String? = nil,
+         mood: String? = nil, degree: String? = nil, grType: String? = nil,
+         stem: String? = nil, morphType: String? = nil, state: String? = nil,
+         pos: String? = nil, lang: String? = nil) {
         self.id = id; self.text = text; self.strongsId = strongsId
         self.morphology = morphology; self.gloss = gloss
         self.xlitSimple = xlitSimple; self.xlit = xlit
         self.syntaxRole = syntaxRole; self.greek = greek; self.greekStrong = greekStrong
         self.afterChar = afterChar; self.lexicalClass = lexicalClass
         self.slot = slot; self.xlitSlot = xlitSlot
+        self.person = person; self.gender = gender; self.number = number
+        self.grCase = grCase; self.tense = tense; self.voice = voice
+        self.mood = mood; self.degree = degree; self.grType = grType
+        self.stem = stem; self.morphType = morphType; self.state = state
+        self.pos = pos; self.lang = lang
     }
 
     /// Best transliteration for display (Hebrew-aware):

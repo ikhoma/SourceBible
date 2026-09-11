@@ -299,9 +299,7 @@ struct WordMeaningView: View {
             headerSection
             if let word = vm.selectedWord {
                 contextSection(word)
-                if let morph = word.morphology {
-                    morphologySection(word: word, morph: morph)
-                }
+                morphologySection(word: word)
             }
             lexicalSection
             if let word = vm.selectedWord,
@@ -387,6 +385,17 @@ struct WordMeaningView: View {
         if let xlit = word.bestXlit, !xlit.isEmpty {
             rows.append((t.string(for: MorphKey.rowTransliteration), xlit, false))
         }
+        // ADR-040 (рішення 2026-09-11): «Склад слова» переїхав сюди з секції
+        // «Морфологія» — композиція («прийм. + ім.») описує КОНКРЕТНИЙ запис
+        // слова в ЦЬОМУ вірші (Macula-слот !N — угруповання per-occurrence,
+        // та сама лема деінде може стояти без приліпленого прийменника чи
+        // артикля), а не граматичну категорію голови слота.
+        if let morph = word.morphology {
+            let comp = MorphologyDecoder.composition(morph, lexicalClass: word.lexicalClass, using: t)
+            if !comp.isEmpty {
+                rows.append((t.string(for: MorphKey.rowComposition), comp, false))
+            }
+        }
         return VStack(alignment: .leading, spacing: 0) {
             sectionLabel(t.string(for: MorphKey.sectionFormInContext, ref))
             InfoGroup(rows: rows)
@@ -397,12 +406,17 @@ struct WordMeaningView: View {
 
     private func morphologyRows(word: BibleWord, decoded: FullMorphology) -> [(String, String, Bool)] {
         var rows: [(String, String, Bool)] = []
-        // Склад іде ПЕРШИМ: він відповідає на «з чого це слово», перш ніж решта
-        // рядків почне описувати його голову. Для однослівних порожній — рядка немає.
-        if !decoded.composition.isEmpty     { rows.append((t.string(for: MorphKey.rowComposition),     decoded.composition,     false)) }
+        // «Склад слова» переїхав у contextSection() (ADR-040, рішення 2026-09-11) —
+        // тут лишаються лише граматичні категорії ГОЛОВИ слота.
         if !decoded.partOfSpeech.isEmpty    { rows.append((t.string(for: MorphKey.rowPartOfSpeech),    decoded.partOfSpeech,    false)) }
         if !decoded.stem.isEmpty            { rows.append((t.string(for: MorphKey.rowStem),            decoded.stem,            false)) }
         if !decoded.aspect.isEmpty          { rows.append((t.string(for: MorphKey.rowAspect),          decoded.aspect,          false)) }
+        if !decoded.grCase.isEmpty          { rows.append((t.string(for: MorphKey.rowCase),            decoded.grCase,          false)) }
+        if !decoded.tense.isEmpty           { rows.append((t.string(for: MorphKey.rowTense),           decoded.tense,           false)) }
+        if !decoded.voice.isEmpty           { rows.append((t.string(for: MorphKey.rowVoice),           decoded.voice,           false)) }
+        if !decoded.mood.isEmpty            { rows.append((t.string(for: MorphKey.rowMood),            decoded.mood,            false)) }
+        if !decoded.nonFiniteForm.isEmpty   { rows.append((t.string(for: MorphKey.rowNonFiniteForm),   decoded.nonFiniteForm,   false)) }
+        if !decoded.degree.isEmpty          { rows.append((t.string(for: MorphKey.rowDegree),          decoded.degree,          false)) }
         if !decoded.grammaticalForm.isEmpty { rows.append((t.string(for: MorphKey.rowGrammaticalForm), decoded.grammaticalForm, false)) }
         if let role = word.syntaxRole, let label = syntaxRoleLabel(role) {
             rows.append((t.string(for: MorphKey.rowSyntaxRole), label, false))
@@ -411,8 +425,8 @@ struct WordMeaningView: View {
     }
 
     @ViewBuilder
-    private func morphologySection(word: BibleWord, morph: String) -> some View {
-        if let decoded = MorphologyDecoder.decodeFull(morph, lexicalClass: word.lexicalClass, using: t) {
+    private func morphologySection(word: BibleWord) -> some View {
+        if let decoded = MorphologyDecoder.decodeFull(word, using: t) {
             let rows = morphologyRows(word: word, decoded: decoded)
             if !rows.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
@@ -439,8 +453,8 @@ struct WordMeaningView: View {
     /// Це функція від `(entry, selectedWord)`, а НЕ збережений стан — інакше перехід
     /// по чевронах міняв би слово, а позначка лишалась би від попереднього.
     private func rankedLexicon(_ sections: [LexiconSection]) -> (sections: [LexiconSection], markedId: UUID?) {
-        guard let morph = vm.selectedWord?.morphology,
-              let stem  = MorphologyDecoder.canonicalHebrewStem(morph)
+        guard let word = vm.selectedWord,
+              let stem = MorphologyDecoder.canonicalHebrewStem(word)
         else { return (sections, nil) }
 
         let named = sections.filter { !$0.stemName.isEmpty }
@@ -803,6 +817,15 @@ struct FullMorphology {
     var grammaticalForm: String = ""
     /// «артикль + іменник» для складеного слова; порожній рядок для однослівного.
     var composition: String = ""
+    // ADR-040: грецькі категорії — порожній рядок, якщо не застосовується
+    // (не грецька) чи значення поза відомим набором.
+    var grCase: String = ""
+    var tense: String = ""
+    var voice: String = ""
+    var mood: String = ""
+    var degree: String = ""
+    /// participle/infinitive — окремо від `mood` (це не спосіб дієслова).
+    var nonFiniteForm: String = ""
 }
 
 enum MorphologyDecoder {
@@ -965,94 +988,90 @@ enum MorphologyDecoder {
     // MARK: Full decode (for WordMeaningView detail)
 
     static func decodeFull(
-        _ code: String,
-        lexicalClass: String? = nil,
+        _ word: BibleWord,
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> FullMorphology? {
-        guard !code.isEmpty else { return nil }
+        guard let code = word.morphology, !code.isEmpty else { return nil }
         // Для складеного слота розбираємо ГОЛОВУ, а не першу морфему — інакше
         // весь розбір походить від проклітики (див. `headMorpheme`).
+        //
+        // ADR-040: граматичні поля (особа/рід/число/відмінок/час/стан/спосіб/
+        // порода/тип/…) уже прийшли з колонок `word`, заповнених для ГОЛОВИ
+        // слота ще у `VerseTabContent.displayWords` — тут лишається розібрати
+        // ЛИШЕ частину мови (і її підтип) із самого коду, бо код і далі є
+        // джерелом правди для підтипу POS (артикль/присвійна частка/суфікс…),
+        // а не для граматичних категорій.
         let head = headMorpheme(code)
         var m = FullMorphology()
 
         if head.contains("-") {
-            // Грецький SBLGNT-код (дефісний, напр. "V-FAI-3S"). Порода (Біньян) і
-            // видо-часова форма (aspect) — виключно гебрайські категорії; раніше цей
-            // код все одно йшов у гебрайську позиційну гілку нижче, і символ-роздільник
-            // "-" підставлявся в hebrewStem()/hebrewAspect(), звідки бралось хибне
-            // «Основа (Біньян): -» — це не заглушка «немає даних», а сам роздільник
-            // коду, помилково прочитаний як гебрайська літера породи. Тут для грецької
-            // свідомо визначаємо ЛИШЕ частину мови; час/стан/спосіб/особу/число з
-            // SBLGNT-сегментів ("FAI", "3S") тут НЕ розбираємо — це окреме рішення
-            // (потрібен розбір грецьких TVM-сегментів), не частина цього фіксу.
-            //
-            // ⛔ М'який фолбек, НЕ guard-return: 15 з 22 префіксів POS-коду, що реально
-            // трапляються в грецькому корпусі (виміряно 2026-09-05: T-артикль 19 783
-            // вживання, PREP 10 568, PRT 3 819, D/I/K/Q/R/S/X/C/F займенникові підтипи,
-            // ARAM/HEB/COND — разом 40 438 слів, 29% усього грецького НЗ), не входять у
-            // 8 кодів, які розпізнає `greekPartOfSpeech`. Якщо тут повернути nil, уся
-            // секція «Морфологія» ховається — а нижче є надійніший `lexicalClass` з
-            // Macula (`class`-колонка), який покриває їх ВСІ без винятку. Тому: беремо
-            // морф-код як перше наближення (може лишитись порожнім), і завжди даємо
-            // дійти до `lexicalClass`-фолбека нижче — так само, як для гебрайської.
+            // Грецький SBLGNT-код (дефісний, напр. "V-FAI-3S"). Частина мови —
+            // з коду (пласка мапа `greekPartOfSpeech`, бо `class`/`type` не
+            // розрізняють зворотний/взаємний/особовий займенник — усі три
+            // мають однаковий `class='pron'`, див. знахідку 4 в ADR-040).
+            // Решта категорій — з колонок, без жодного парсингу сегментів.
             let posStr = head.components(separatedBy: "-").first ?? head
             m.partOfSpeech = greekPartOfSpeech(posStr, t: t) ?? ""
-        } else {
-            let ch = Array(head)
-            guard let first = ch.first else { return nil }
 
-            switch first {
-            case "V":
-                m.partOfSpeech = t.string(for: MorphKey.posVerb)
-                if ch.count > 1 { m.stem   = hebrewStem(ch[1], t: t) }
-                if ch.count > 2 { m.aspect = hebrewAspect(ch[2], t: t) }
-                if ch.count > 5 {
-                    let p = personLabel(ch[3], t: t)
-                    let g = genderLabel(ch[4], t: t)
-                    let n = numberLabel(ch[5], t: t)
-                    m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
+            let person = word.person.flatMap { personValueLabel($0, t: t) }
+            let gender = word.gender.flatMap { genderValueLabel($0, t: t) }
+            let number = word.number.flatMap { numberValueLabel($0, t: t) }
+            m.grammaticalForm = [person, gender, number].compactMap { $0 }.joined(separator: " ")
+
+            if let raw = word.grCase { m.grCase = caseValueLabel(raw, t: t) ?? "" }
+            if let raw = word.tense  { m.tense  = tenseValueLabel(raw, t: t) ?? "" }
+            if let raw = word.voice  { m.voice  = voiceValueLabel(raw, t: t) ?? "" }
+            if let raw = word.degree { m.degree = degreeValueLabel(raw, t: t) ?? "" }
+            // `mood` розводиться на два рядки (ADR-040, рецензія Opus): 4
+            // справжні способи (дійсний/наказовий/умовний/бажальний) →
+            // «Спосіб»; дієприкметник/інфінітив — не спосіб дієслова, а
+            // окрема неособова форма → «Неособова форма».
+            if let raw = word.mood {
+                if let label = moodValueLabel(raw, t: t) {
+                    m.mood = label
+                } else if let label = nonFiniteFormLabel(raw, t: t) {
+                    m.nonFiniteForm = label
                 }
-            case "N":
-                m.partOfSpeech = t.string(for: MorphKey.posNoun)
-                if ch.count > 4 {
-                    let g = genderLabel(ch[2], t: t)
-                    let n = numberLabel(ch[3], t: t)
-                    let s = stateLabel(ch[4], t: t)
-                    m.grammaticalForm = [g, n, s].filter { !$0.isEmpty }.joined(separator: " ")
-                }
-            case "A":
-                m.partOfSpeech = t.string(for: MorphKey.posAdjective)
-                if ch.count > 4 {
-                    let g = genderLabel(ch[2], t: t)
-                    let n = numberLabel(ch[3], t: t)
-                    m.grammaticalForm = [g, n].filter { !$0.isEmpty }.joined(separator: " ")
-                }
-            case "T":
-                m.partOfSpeech = ch.count > 1 ? particleLabel(ch[1], t: t) : t.string(for: MorphKey.posParticle)
-            case "R": m.partOfSpeech = t.string(for: MorphKey.posPreposition)
-            case "C": m.partOfSpeech = t.string(for: MorphKey.posConjunction)
-            case "P": m.partOfSpeech = t.string(for: MorphKey.posPronoun)
-            case "D": m.partOfSpeech = t.string(for: MorphKey.posAdverb)
-            case "I": m.partOfSpeech = t.string(for: MorphKey.posInterjection)
-            case "S":
-                m.partOfSpeech = ch.count > 1 ? suffixLabel(ch[1], t: t) : t.string(for: MorphKey.posPronSuffix)
-                if ch.count > 4 {
-                    let p = personLabel(ch[2], t: t)
-                    let g = genderLabel(ch[3], t: t)
-                    let n = numberLabel(ch[4], t: t)
-                    m.grammaticalForm = [p, g, n].filter { !$0.isEmpty }.joined(separator: " ")
-                }
-            default: return nil
             }
+        } else {
+            let chars = Array(head)
+            if let first = chars.first {
+                switch first {
+                case "V": m.partOfSpeech = t.string(for: MorphKey.posVerb)
+                case "N": m.partOfSpeech = t.string(for: MorphKey.posNoun)
+                case "A": m.partOfSpeech = t.string(for: MorphKey.posAdjective)
+                case "T": m.partOfSpeech = chars.count > 1 ? particleLabel(chars[1], t: t) : t.string(for: MorphKey.posParticle)
+                case "R": m.partOfSpeech = t.string(for: MorphKey.posPreposition)
+                case "C": m.partOfSpeech = t.string(for: MorphKey.posConjunction)
+                case "P": m.partOfSpeech = t.string(for: MorphKey.posPronoun)
+                case "D": m.partOfSpeech = t.string(for: MorphKey.posAdverb)
+                case "I": m.partOfSpeech = t.string(for: MorphKey.posInterjection)
+                case "S": m.partOfSpeech = chars.count > 1 ? suffixLabel(chars[1], t: t) : t.string(for: MorphKey.posPronSuffix)
+                default: break
+                }
+            }
+
+            if let raw = word.stem, let label = hebrewStemLabel(raw, t: t) { m.stem = label }
+            // «Тип» (було «Форма» — рішення 2026-09-11, збіг із «Форма у
+            // [вірш]»). Лише 11 дієслівних значень `morph_type`; іменникові й
+            // займенникові підтипи (common/proper/pronominal/…) імпортовані,
+            // але в UI v1 не показуються (ADR-040, знахідка 5).
+            if let raw = word.morphType, let label = hebrewAspectLabel(raw, t: t) { m.aspect = label }
+
+            let person = word.person.flatMap { personValueLabel($0, t: t) }
+            let gender = word.gender.flatMap { genderValueLabel($0, t: t) }
+            let number = word.number.flatMap { numberValueLabel($0, t: t) }
+            let state  = word.state.flatMap  { stateValueLabel($0, t: t) }
+            m.grammaticalForm = [person, gender, number, state].compactMap { $0 }.joined(separator: " ")
         }
-        // lexical_class is the authoritative POS — apply it last so it overrides
-        // whatever the morph code derived. e.g. H835a: morph='Ncmpc' → "Noun",
-        // but class='ij' → "Interjection".
-        if let cls = lexicalClass,
-           let posLabel = lexicalClassLabel(cls, using: t) {
+
+        // lexical_class — авторитетне джерело POS, застосовується останнім і
+        // перекриває розбір коду вище. Напр. H835a: код 'Ncmpc' → «Іменник»,
+        // але class='ij' → «Вигук».
+        if let cls = word.lexicalClass, let posLabel = lexicalClassLabel(cls, using: t) {
             m.partOfSpeech = posLabel
         }
-        m.composition = composition(code, lexicalClass: lexicalClass, using: t)
+        m.composition = composition(code, lexicalClass: word.lexicalClass, using: t)
         return m
     }
 
@@ -1064,59 +1083,83 @@ enum MorphologyDecoder {
         }
     }
 
-    /// Канонічна АНГЛІЙСЬКА назва породи — ключ звірки з підписами секцій BDB (ADR-033).
+    /// Канонічна АНГЛІЙСЬКА назва породи — ключ звірки з підписами секцій BDB
+    /// (ADR-033). Бере значення напряму з колонки `word.stem` (уже англійське
+    /// слово з Macula TSV — "niphal", "hithpael", "qal passive"…) замість
+    /// парсингу другого символу стисненого коду. ADR-040 закриває цим одразу
+    /// два баги: (1) розширює покриття з 8 до 34 порід/арам. еквівалентів —
+    /// раніше рідкісні породи (Polel, Pilpel, Hithpolel, …) мовчки повертали
+    /// nil; (2) для складеного гебрайського слота (`C·Vqp3ms`) стара функція
+    /// парсила ПЕРШИЙ символ склеєного рядка (проклітику) й теж повертала
+    /// nil — тепер `word.stem` завжди належить голові слота (заповнено ще у
+    /// `VerseTabContent.displayWords`), тож складені слоти більше не губляться.
     ///
-    /// ⛔ Не плутати з `hebrewStem` нижче: та віддає ЛОКАЛІЗОВАНУ назву для показу.
-    /// Звіряти локалізовану назву з BDB не можна — українською («Ніфаль») вона не
-    /// збіжиться з англійським підписом ніколи, і ранжування тихо не працювало б
-    /// саме в українській локалі.
-    ///
-    /// nil для всього, що не дієслово, і для кодів поза цими вісьмома. Рідкісні
-    /// породи (Polel, Pilpel, Hithpolel) OSHB не кодує — там свідомо nil, а не
-    /// евристика «схожа назва».
-    static func canonicalHebrewStem(_ code: String) -> String? {
-        let ch = Array(code)
-        guard ch.first == "V", ch.count > 1 else { return nil }
-        switch ch[1] {
-        case "q": return "qal"
-        case "N": return "niphal"
-        case "p": return "piel"
-        case "P": return "pual"
-        case "h": return "hiphil"
-        case "H": return "hophal"
-        case "t": return "hithpael"
-        case "D": return "poel"
-        default:  return nil
+    /// nil для невербальних слотів (`word.stem` порожній). Пробіл у
+    /// "qal passive" прибирається — `normalizedStem(_:)` у WordMeaningView
+    /// порівнює обидві сторони без пробілів і крапок.
+    static func canonicalHebrewStem(_ word: BibleWord) -> String? {
+        word.stem?.lowercased().replacingOccurrences(of: " ", with: "")
+    }
+
+    private static func hebrewStemLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "qal":         return t.string(for: MorphKey.stemQal)
+        case "niphal":      return t.string(for: MorphKey.stemNiphal)
+        case "piel":        return t.string(for: MorphKey.stemPiel)
+        case "pual":        return t.string(for: MorphKey.stemPual)
+        case "hiphil":      return t.string(for: MorphKey.stemHiphil)
+        case "hophal":      return t.string(for: MorphKey.stemHophal)
+        case "hithpael":    return t.string(for: MorphKey.stemHithpael)
+        case "poel":        return t.string(for: MorphKey.stemPoel)
+        case "peal":        return t.string(for: MorphKey.stemPeal)
+        case "peil":        return t.string(for: MorphKey.stemPeil)
+        case "pael":        return t.string(for: MorphKey.stemPael)
+        case "haphel":      return t.string(for: MorphKey.stemHaphel)
+        case "aphel":       return t.string(for: MorphKey.stemAphel)
+        case "shaphel":     return t.string(for: MorphKey.stemShaphel)
+        case "saphel":      return t.string(for: MorphKey.stemSaphel)
+        case "hithpaal":    return t.string(for: MorphKey.stemHithpaal)
+        case "ithpaal":     return t.string(for: MorphKey.stemIthpaal)
+        case "hithpeel":    return t.string(for: MorphKey.stemHithpeel)
+        case "ithpeel":     return t.string(for: MorphKey.stemIthpeel)
+        case "ithpoel":     return t.string(for: MorphKey.stemIthpoel)
+        case "hishtaphel":  return t.string(for: MorphKey.stemHishtaphel)
+        case "nithpael":    return t.string(for: MorphKey.stemNithpael)
+        case "hithpolel":   return t.string(for: MorphKey.stemHithpolel)
+        case "hithpalpel":  return t.string(for: MorphKey.stemHithpalpel)
+        case "polel":       return t.string(for: MorphKey.stemPolel)
+        case "polal":       return t.string(for: MorphKey.stemPolal)
+        case "polpal":      return t.string(for: MorphKey.stemPolpal)
+        case "pilpel":      return t.string(for: MorphKey.stemPilpel)
+        case "pilel":       return t.string(for: MorphKey.stemPilel)
+        case "palel":       return t.string(for: MorphKey.stemPalel)
+        case "pealal":      return t.string(for: MorphKey.stemPealal)
+        case "poal":        return t.string(for: MorphKey.stemPoal)
+        case "pulal":       return t.string(for: MorphKey.stemPulal)
+        case "qal passive": return t.string(for: MorphKey.stemQalPassive)
+        default:            return nil   // сентинели unknown:* вже None з build_db.py
         }
     }
 
-    private static func hebrewStem(_ c: Character, t: TranslationProvider) -> String {
-        switch c {
-        case "q": return t.string(for: MorphKey.stemQal)
-        case "N": return t.string(for: MorphKey.stemNiphal)
-        case "p": return t.string(for: MorphKey.stemPiel)
-        case "P": return t.string(for: MorphKey.stemPual)
-        case "h": return t.string(for: MorphKey.stemHiphil)
-        case "H": return t.string(for: MorphKey.stemHophal)
-        case "t": return t.string(for: MorphKey.stemHithpael)
-        case "D": return t.string(for: MorphKey.stemPoel)
-        default:  return String(c)
-        }
-    }
-
-    private static func hebrewAspect(_ c: Character, t: TranslationProvider) -> String {
-        switch c {
-        case "p": return t.string(for: MorphKey.aspectPerfect)
-        case "i": return t.string(for: MorphKey.aspectImperfect)
-        case "w": return t.string(for: MorphKey.aspectWayyiqtol)
-        case "j": return t.string(for: MorphKey.aspectJussive)
-        case "c": return t.string(for: MorphKey.aspectCohortative)
-        case "v": return t.string(for: MorphKey.aspectImperative)
-        case "r": return t.string(for: MorphKey.aspectParticipleActive)
-        case "s": return t.string(for: MorphKey.aspectParticiplePassive)
-        case "a": return t.string(for: MorphKey.aspectInfAbsolute)
-        case "A": return t.string(for: MorphKey.aspectInfConstruct)
-        default:  return ""
+    /// «Тип» (гебр. `morph_type`) — лише 11 дієслівно-релевантних значень.
+    /// Решта (`common`/`proper`/`pronominal`/`definite article`/… — та сама
+    /// колонка, значення для іменників/часток) імпортовані, але в UI v1 не
+    /// показуються (ADR-040, знахідка 5): недостатньо цінності для
+    /// богословського читання, можна додати пізніше без нової збірки.
+    private static func hebrewAspectLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "qatal":                  return t.string(for: MorphKey.aspectPerfect)
+        case "yiqtol":                 return t.string(for: MorphKey.aspectImperfect)
+        case "wayyiqtol":              return t.string(for: MorphKey.aspectWayyiqtol)
+        case "weqatal":                return t.string(for: MorphKey.aspectWeqatal)
+        case "jussive":                return t.string(for: MorphKey.aspectJussive)
+        case "cohortative":            return t.string(for: MorphKey.aspectCohortative)
+        case "imperative":             return t.string(for: MorphKey.aspectImperative)
+        case "participle active":      return t.string(for: MorphKey.aspectParticipleActive)
+        case "participle passive":     return t.string(for: MorphKey.aspectParticiplePassive)
+        case "infinitive absolute":    return t.string(for: MorphKey.aspectInfAbsolute)
+        case "infinitive construct":   return t.string(for: MorphKey.aspectInfConstruct)
+        default:                       return nil
         }
     }
 
@@ -1130,68 +1173,132 @@ enum MorphologyDecoder {
         }
     }
 
-    private static func personLabel(_ c: Character, t: TranslationProvider) -> String {
-        switch c {
-        case "1": return t.string(for: MorphKey.person1)
-        case "2": return t.string(for: MorphKey.person2)
-        case "3": return t.string(for: MorphKey.person3)
-        default:  return ""
+    // MARK: Значення граматичних категорій → підпис (обидві мови, спільні поля)
+
+    private static func personValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "first":  return t.string(for: MorphKey.person1)
+        case "second": return t.string(for: MorphKey.person2)
+        case "third":  return t.string(for: MorphKey.person3)
+        default:       return nil
         }
     }
 
-    private static func genderLabel(_ c: Character, t: TranslationProvider) -> String {
-        switch c {
-        case "m": return t.string(for: MorphKey.genderMasculine)
-        case "f": return t.string(for: MorphKey.genderFeminine)
-        case "c", "b": return t.string(for: MorphKey.genderCommon)
-        default:  return ""
+    private static func genderValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "masculine":       return t.string(for: MorphKey.genderMasculine)
+        case "feminine":        return t.string(for: MorphKey.genderFeminine)
+        case "common", "both":  return t.string(for: MorphKey.genderCommon)
+        case "neuter":          return t.string(for: MorphKey.genderNeuter)
+        default:                return nil
         }
     }
 
-    private static func numberLabel(_ c: Character, t: TranslationProvider) -> String {
-        switch c {
-        case "s": return t.string(for: MorphKey.numberSingular)
-        case "p": return t.string(for: MorphKey.numberPlural)
-        case "d": return t.string(for: MorphKey.numberDual)
-        default:  return ""
+    private static func numberValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "singular": return t.string(for: MorphKey.numberSingular)
+        case "plural":   return t.string(for: MorphKey.numberPlural)
+        case "dual":     return t.string(for: MorphKey.numberDual)
+        default:         return nil
         }
     }
 
-    private static func stateLabel(_ c: Character, t: TranslationProvider) -> String {
-        switch c {
-        case "a": return t.string(for: MorphKey.stateAbsolute)
-        case "c": return t.string(for: MorphKey.stateConstruct)
-        case "d": return t.string(for: MorphKey.stateDetermined)
-        default:  return ""
+    private static func stateValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "absolute":   return t.string(for: MorphKey.stateAbsolute)
+        case "construct":  return t.string(for: MorphKey.stateConstruct)
+        case "determined": return t.string(for: MorphKey.stateDetermined)
+        default:           return nil
+        }
+    }
+
+    // MARK: Значення граматичних категорій → підпис (лише грецька)
+
+    private static func caseValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "nominative": return t.string(for: MorphKey.caseNominative)
+        case "genitive":   return t.string(for: MorphKey.caseGenitive)
+        case "dative":     return t.string(for: MorphKey.caseDative)
+        case "accusative": return t.string(for: MorphKey.caseAccusative)
+        case "vocative":   return t.string(for: MorphKey.caseVocative)
+        default:           return nil
+        }
+    }
+
+    private static func tenseValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "aorist":      return t.string(for: MorphKey.tenseAorist)
+        case "present":     return t.string(for: MorphKey.tensePresent)
+        case "imperfect":   return t.string(for: MorphKey.tenseImperfect)
+        case "future":      return t.string(for: MorphKey.tenseFuture)
+        case "perfect":     return t.string(for: MorphKey.tensePerfect)
+        case "pluperfect":  return t.string(for: MorphKey.tensePluperfect)
+        default:            return nil
+        }
+    }
+
+    private static func voiceValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "active":         return t.string(for: MorphKey.voiceActive)
+        case "middle":         return t.string(for: MorphKey.voiceMiddle)
+        case "passive":        return t.string(for: MorphKey.voicePassive)
+        case "middlepassive":  return t.string(for: MorphKey.voiceMiddlePassive)
+        default:               return nil
+        }
+    }
+
+    /// Лише 4 справжні способи. `participle`/`infinitive` — див.
+    /// `nonFiniteFormLabel` нижче: це неособова форма, не спосіб дієслова.
+    private static func moodValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "indicative":  return t.string(for: MorphKey.moodIndicative)
+        case "imperative":  return t.string(for: MorphKey.moodImperative)
+        case "subjunctive": return t.string(for: MorphKey.moodSubjunctive)
+        case "optative":    return t.string(for: MorphKey.moodOptative)
+        default:            return nil
+        }
+    }
+
+    private static func nonFiniteFormLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "participle": return t.string(for: MorphKey.nonFiniteParticiple)
+        case "infinitive": return t.string(for: MorphKey.nonFiniteInfinitive)
+        default:            return nil
+        }
+    }
+
+    private static func degreeValueLabel(_ raw: String, t: TranslationProvider) -> String? {
+        switch raw {
+        case "comparative": return t.string(for: MorphKey.degreeComparative)
+        case "superlative": return t.string(for: MorphKey.degreeSuperlative)
+        default:             return nil
         }
     }
 
     // MARK: Short decode (for WordCard — Оригінал pill)
 
     static func decode(
-        _ code: String,
-        lexicalClass: String? = nil,
+        _ word: BibleWord,
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> String? {
-        guard !code.isEmpty else { return nil }
+        guard let code = word.morphology, !code.isEmpty else { return nil }
         // Складене слово показує СКЛАД («арт. + ім.»), а не саму лише частину
         // мови голови. «Іменник» для הַדַּעַת приховує, що артикль узагалі є —
         // і що номер Стронга поруч стосується лише кореня.
-        let composed = composition(code, lexicalClass: lexicalClass, using: t)
+        let composed = composition(code, lexicalClass: word.lexicalClass, using: t)
         if !composed.isEmpty { return composed }
 
         // Одноморфемне слово — ТОЙ САМИЙ скорочений підпис, що й у складі.
         // Інакше список читався б у двох регістрах одразу: «Дієслово» в одному
         // рядку і «арт. + ім.» у сусідньому.
-        if let short = shortLabel(code, lexicalClass: lexicalClass, using: t) {
+        if let short = shortLabel(code, lexicalClass: word.lexicalClass, using: t) {
             return short
         }
 
-        // Останній рубіж: підпису-скорочення для цього коду немає (грецькі коди
-        // без `lexicalClass` — там перша літера коду ненадійна: "ADV" почалося б
-        // з "A" і назвалось прикметником). Беремо повну назву й гасимо лише
-        // регістр першої літери, щоб рядок лишався однорідним.
-        return decodeOne(code, lexicalClass: lexicalClass, using: t).map(lowercasedFirst)
+        // Останній рубіж: підпису-скорочення для цього коду немає. Беремо
+        // повну назву й гасимо лише регістр першої літери, щоб рядок лишався
+        // однорідним.
+        return decodeOne(word, using: t).map(lowercasedFirst)
     }
 
     /// «Дієслово» → «дієслово». Тільки перша літера: решта може бути власною
@@ -1201,125 +1308,87 @@ enum MorphologyDecoder {
         return String(f).lowercased() + s.dropFirst()
     }
 
-    /// Розбір ОДНІЄЇ морфеми. Виділено з `decode`, щоб `composition` могла
-    /// викликати те саме для кожної частини складеного слова.
+    /// Розбір ОДНІЄЇ морфеми — фолбек, коли ні `composition`, ні `shortLabel`
+    /// нічого не дали (лишається практично мертвою гілкою: `lexicalClass`
+    /// покриває майже всі реальні випадки, див. знахідки ADR-040). ADR-040:
+    /// граматичні категорії — з колонок `word`, лише частина мови — з коду.
     fileprivate static func decodeOne(
-        _ code: String,
-        lexicalClass: String? = nil,
+        _ word: BibleWord,
         using t: TranslationProvider = BundleTranslationProvider()
     ) -> String? {
-        guard !code.isEmpty else { return nil }
-        let morphResult = code.contains("-") ? decodeGreek(code, t: t) : decodeHebrew(code, t: t)
-        // lexicalClass is authoritative for POS — same override logic as decodeFull.
-        // Fixes Greek words where morph routing is ambiguous (e.g. G3326 "P" no-dash →
-        // decodeHebrew P=Pronoun, G846 "P-GSM3S" → decodeGreek P=Preposition).
-        if let cls = lexicalClass,
-           let posLabel = lexicalClassLabel(cls, using: t) {
-            return posLabel
-        }
-        return morphResult
-    }
-
-    // MARK: Hebrew (OSHB, no language prefix)
-    private static func decodeHebrew(_ code: String, t: TranslationProvider) -> String? {
-        let chars = Array(code)
-        guard let first = chars.first else { return nil }
+        guard let code = word.morphology, !code.isEmpty else { return nil }
         var parts: [String] = []
 
-        switch first {
-        case "N":
-            parts.append(t.string(for: MorphKey.posNoun))
-            if chars.count > 3 {
-                switch chars[3] {
-                case "p": parts.append(t.string(for: MorphKey.numberPlural))
-                case "d": parts.append(t.string(for: MorphKey.numberDual))
-                default: break
-                }
+        if code.contains("-") {
+            let posStr = code.components(separatedBy: "-").first ?? code
+            guard let posLabel = greekPartOfSpeech(posStr, t: t) else { return nil }
+            parts.append(posLabel)
+            if let raw = word.number, let label = numberValueLabel(raw, t: t) { parts.append(label) }
+        } else {
+            guard let first = code.first else { return nil }
+            switch first {
+            case "N": parts.append(t.string(for: MorphKey.posNoun))
+            case "V": parts.append(t.string(for: MorphKey.posVerb))
+            case "A": parts.append(t.string(for: MorphKey.posAdjective))
+            case "T":
+                let chars = Array(code)
+                parts.append(chars.count > 1 ? particleLabel(chars[1], t: t) : t.string(for: MorphKey.posParticle))
+            case "R": parts.append(t.string(for: MorphKey.posPreposition))
+            case "C": parts.append(t.string(for: MorphKey.posConjunction))
+            case "P": parts.append(t.string(for: MorphKey.posPronoun))
+            case "D": parts.append(t.string(for: MorphKey.posAdverb))
+            case "I": parts.append(t.string(for: MorphKey.posInterjection))
+            case "S": parts.append(t.string(for: MorphKey.posPronSuffix))
+            default: return nil
             }
-        case "V":
-            parts.append(t.string(for: MorphKey.posVerb))
-            if chars.count > 1 {
-                switch chars[1] {
-                case "q": parts.append("Qal")
-                case "N": parts.append("Niphal")   // fix: was "n" — OSHB uses uppercase N
-                case "p": parts.append("Piel")
-                case "P": parts.append("Pual")     // fix: was "u" — OSHB uses uppercase P
-                case "h": parts.append("Hiphil")
-                case "H": parts.append("Hophal")   // fix: was "o" — OSHB uses uppercase H
-                case "t": parts.append("Hithp.")
-                default: break
-                }
+            if first == "V", let raw = word.stem, let label = hebrewStemLabel(raw, t: t) {
+                parts.append(label)
             }
-        case "A":
-            parts.append(t.string(for: MorphKey.posAdjective))
-            if chars.count > 3 {
-                switch chars[3] {
-                case "p": parts.append(t.string(for: MorphKey.numberPlural))
-                case "d": parts.append(t.string(for: MorphKey.numberDual))
-                default: break
-                }
+            if (first == "N" || first == "A"), let raw = word.number, raw != "singular",
+               let label = numberValueLabel(raw, t: t) {
+                parts.append(label)
             }
-        case "T":
-            if chars.count > 1 {
-                switch chars[1] {
-                case "d": parts.append(t.string(for: MorphKey.posArticle))
-                case "r": parts.append(t.string(for: MorphKey.posRelPronoun))
-                case "n": parts.append(t.string(for: MorphKey.posNegParticle))
-                case "i": parts.append(t.string(for: MorphKey.posInterrogative))
-                default:  parts.append(t.string(for: MorphKey.posParticle))
-                }
-            } else {
-                parts.append(t.string(for: MorphKey.posParticle))
-            }
-        case "R": parts.append(t.string(for: MorphKey.posPreposition))
-        case "C": parts.append(t.string(for: MorphKey.posConjunction))
-        case "P": parts.append(t.string(for: MorphKey.posPronoun))
-        case "D": parts.append(t.string(for: MorphKey.posAdverb))
-        case "I": parts.append(t.string(for: MorphKey.posInterjection))
-        case "S": parts.append(t.string(for: MorphKey.posPronSuffix))
-        default: return nil
         }
 
+        // lexicalClass — авторитетне джерело POS, як і в decodeFull (напр.
+        // грецьке G3326 без дефіса, де морф-розбір неоднозначний).
+        if let cls = word.lexicalClass, let posLabel = lexicalClassLabel(cls, using: t) {
+            return posLabel
+        }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    // MARK: Greek (SBLGNT, dash-separated)
-
-    /// Частина мови з ПЕРШОГО сегмента грецького коду (до першого "-").
-    /// Спільна для `decodeGreek` (короткий підпис у списку слів) і `decodeFull`
-    /// (детальна панель «Морфологія») — щоб не тримати два мапінги POS нарізно.
+    // MARK: Грецька частина мови з коду (bug-053) — пласка мапа, без парсингу
+    // сегментів. `class`/`gr_type` НЕ розрізняють зворотний/взаємний/
+    // особовий займенник (усі три — `class='pron'`), тож код лишається
+    // джерелом підтипу POS. Виміряно на корпусі 2026-09-05/09-11: 22 реальні
+    // префікси (ADR-040 називає їх 21 — уточнено під час реалізації).
     private static func greekPartOfSpeech(_ posStr: String, t: TranslationProvider) -> String? {
         switch posStr.uppercased() {
         case "N":    return t.string(for: MorphKey.posNoun)
         case "V":    return t.string(for: MorphKey.posVerb)
         case "A":    return t.string(for: MorphKey.posAdjective)
-        case "P":    return t.string(for: MorphKey.posPreposition)
         case "ADV":  return t.string(for: MorphKey.posAdverb)
         case "CONJ": return t.string(for: MorphKey.posConjunction)
-        case "PRON": return t.string(for: MorphKey.posPronoun)
-        case "ART":  return t.string(for: MorphKey.posArticle)
-        case "PART": return t.string(for: MorphKey.posParticle)
         case "INJ":  return t.string(for: MorphKey.posInterjection)
+        case "P":    return t.string(for: MorphKey.posPersonalPronoun)      // fix bug-053: НЕ прийменник
+        case "PREP": return t.string(for: MorphKey.posPreposition)
+        case "T":    return t.string(for: MorphKey.posArticle)
+        case "PRT":  return t.string(for: MorphKey.posParticle)
+        case "D":    return t.string(for: MorphKey.posDemonstrativePronoun)
+        case "R":    return t.string(for: MorphKey.posRelPronoun)
+        case "I":    return t.string(for: MorphKey.posInterrogativePronoun)
+        case "X":    return t.string(for: MorphKey.posIndefinitePronoun)
+        case "F":    return t.string(for: MorphKey.posReflexivePronoun)
+        case "S":    return t.string(for: MorphKey.posPossessivePronoun)
+        case "K":    return t.string(for: MorphKey.posCorrelativePronoun)
+        case "Q":    return t.string(for: MorphKey.posCorrelativePronoun)
+        case "C":    return t.string(for: MorphKey.posReciprocalPronoun)
+        case "HEB":  return t.string(for: MorphKey.posHebrewTerm)
+        case "ARAM": return t.string(for: MorphKey.posAramaicTerm)
+        case "COND": return t.string(for: MorphKey.posConjunction)
         default:     return nil
         }
-    }
-
-    private static func decodeGreek(_ code: String, t: TranslationProvider) -> String? {
-        let segs = code.components(separatedBy: "-")
-        guard let posStr = segs.first, let posLabel = greekPartOfSpeech(posStr, t: t) else { return nil }
-        var parts: [String] = [posLabel]
-
-        if segs.count > 1 {
-            let cng = Array(segs[1].uppercased())
-            if cng.count > 1 {
-                switch cng[1] {
-                case "P": parts.append(t.string(for: MorphKey.numberPlural))
-                default: break
-                }
-            }
-        }
-
-        return parts.joined(separator: " · ")
     }
 }
 
@@ -1348,8 +1417,7 @@ struct WordRow: View {
     }
 
     private var morphLabel: String? {
-        guard let morph = word.morphology else { return nil }
-        return MorphologyDecoder.decode(morph, lexicalClass: word.lexicalClass, using: t)
+        MorphologyDecoder.decode(word, using: t)
     }
 
     private func rowContent(showChevron: Bool) -> some View {

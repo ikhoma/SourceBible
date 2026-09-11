@@ -2897,13 +2897,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tense / Aspect"
+            "value": "Type"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Час / Вид"
+            "value": "Тип"
           }
         }
       }
@@ -5634,6 +5634,1145 @@
           "stringUnit": {
             "state": "translated",
             "value": "Гаразд"
+          }
+        }
+      }
+    },
+    "morph.row.case": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Case"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відмінок"
+          }
+        }
+      }
+    },
+    "morph.row.tense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tense"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Час"
+          }
+        }
+      }
+    },
+    "morph.row.voice": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Стан"
+          }
+        }
+      }
+    },
+    "morph.row.mood": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mood"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спосіб"
+          }
+        }
+      }
+    },
+    "morph.row.degree": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Degree"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ступінь порівняння"
+          }
+        }
+      }
+    },
+    "morph.row.non_finite_form": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non-finite form"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неособова форма"
+          }
+        }
+      }
+    },
+    "morph.case.nominative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nominative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Називний"
+          }
+        }
+      }
+    },
+    "morph.case.genitive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genitive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Родовий"
+          }
+        }
+      }
+    },
+    "morph.case.dative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Давальний"
+          }
+        }
+      }
+    },
+    "morph.case.accusative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accusative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Знахідний"
+          }
+        }
+      }
+    },
+    "morph.case.vocative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vocative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кличний"
+          }
+        }
+      }
+    },
+    "morph.tense.aorist": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aorist"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аорист"
+          }
+        }
+      }
+    },
+    "morph.tense.present": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Present"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Теперішній"
+          }
+        }
+      }
+    },
+    "morph.tense.imperfect": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imperfect"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Імперфект"
+          }
+        }
+      }
+    },
+    "morph.tense.future": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Future"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Майбутній"
+          }
+        }
+      }
+    },
+    "morph.tense.perfect": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfect"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перфект"
+          }
+        }
+      }
+    },
+    "morph.tense.pluperfect": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pluperfect"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плюсквамперфект"
+          }
+        }
+      }
+    },
+    "morph.voice.active": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активний"
+          }
+        }
+      }
+    },
+    "morph.voice.middle": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Middle"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Середній"
+          }
+        }
+      }
+    },
+    "morph.voice.passive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пасивний"
+          }
+        }
+      }
+    },
+    "morph.voice.middlepassive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Middle/Passive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Середньо-пасивний"
+          }
+        }
+      }
+    },
+    "morph.mood.indicative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indicative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дійсний"
+          }
+        }
+      }
+    },
+    "morph.mood.imperative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imperative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наказовий"
+          }
+        }
+      }
+    },
+    "morph.mood.subjunctive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subjunctive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Умовний"
+          }
+        }
+      }
+    },
+    "morph.mood.optative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бажальний"
+          }
+        }
+      }
+    },
+    "morph.degree.comparative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вищий"
+          }
+        }
+      }
+    },
+    "morph.degree.superlative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Superlative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Найвищий"
+          }
+        }
+      }
+    },
+    "morph.non_finite_form.participle": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participle"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дієприкметник"
+          }
+        }
+      }
+    },
+    "morph.non_finite_form.infinitive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infinitive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Інфінітив"
+          }
+        }
+      }
+    },
+    "morph.gender.neuter": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "neut."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "сер. р."
+          }
+        }
+      }
+    },
+    "morph.aspect.weqatal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weqatal (consecutive)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weqatal (послідовний)"
+          }
+        }
+      }
+    },
+    "morph.stem.peal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peal — simple active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peal — проста активна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.peil": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peil — simple passive (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peil — проста пасивна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.pael": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pael — intensive active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pael — інтенсивна активна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.haphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haphel — causative active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haphel — каузативна активна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.aphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aphel — causative active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aphel — каузативна активна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.shaphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shaphel — causative (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shaphel — каузативна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.saphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saphel — causative, rare (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saphel — каузативна, рідкісна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpaal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpaal — reflexive / passive of Pael"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpaal — рефлексивна / пасивна (Pael)"
+          }
+        }
+      }
+    },
+    "morph.stem.ithpaal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpaal — reflexive / passive of Pael"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpaal — рефлексивна / пасивна (Pael)"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpeel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpeel — reflexive / passive of Peal"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpeel — рефлексивна / пасивна (Peal)"
+          }
+        }
+      }
+    },
+    "morph.stem.ithpeel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpeel — reflexive / passive of Peal"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpeel — рефлексивна / пасивна (Peal)"
+          }
+        }
+      }
+    },
+    "morph.stem.ithpoel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpoel — reflexive / passive of Poel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpoel — рефлексивна / пасивна (Poel)"
+          }
+        }
+      }
+    },
+    "morph.stem.hishtaphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hishtaphel — reflexive of Shaphel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hishtaphel — рефлексивна (Shaphel)"
+          }
+        }
+      }
+    },
+    "morph.stem.nithpael": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nithpael — passive of Piel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nithpael — пасивна (Piel)"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpolel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpolel — reflexive of Polel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpolel — рефлексивна (Polel)"
+          }
+        }
+      }
+    },
+    "morph.stem.polel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polel — intensive active (hollow/geminate roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polel — інтенсивна активна (порожні подвійні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.polal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polal — intensive passive (hollow/geminate roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polal — інтенсивна пасивна (порожні/подвійні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.polpal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polpal — reduplicated intensive passive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polpal — редуплікована інтенсивна пасивна, рідкісна"
+          }
+        }
+      }
+    },
+    "morph.stem.pilpel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilpel — reduplicated intensive (weak roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilpel — редуплікована інтенсивна (слабкі корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.pilel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilel — intensive, rare (hollow roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilel — інтенсивна, рідкісна (порожні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.palel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palel — intensive, rare (geminate roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palel — інтенсивна, рідкісна (подвійні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.pealal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pealal — reduplicated intensive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pealal — редуплікована інтенсивна, рідкісна"
+          }
+        }
+      }
+    },
+    "morph.stem.poal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poal — intensive passive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poal — інтенсивна пасивна, рідкісна"
+          }
+        }
+      }
+    },
+    "morph.stem.pulal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulal — intensive passive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulal — інтенсивна пасивна, рідкісна"
+          }
+        }
+      }
+    },
+    "morph.stem.qal_passive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qal passive — simple passive (archaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пасивний Qal — проста пасивна (архаїчна)"
+          }
+        }
+      }
+    },
+    "morph.pos.personal_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Особовий займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.demonstrative_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demonstrative pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вказівний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.interrogative_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrogative pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Питальний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.indefinite_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indefinite pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неозначений займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.reflexive_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reflexive pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зворотний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.possessive_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Possessive pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Присвійний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.correlative_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correlative pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Співвідносний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.reciprocal_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reciprocal pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Взаємний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.hebrew_term": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hebrew term"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Гебрейський вислів"
+          }
+        }
+      }
+    },
+    "morph.pos.aramaic_term": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aramaic term"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Арамейський вислів"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpalpel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpalpel — reflexive of Pilpel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpalpel — рефлексивна (Pilpel)"
           }
         }
       }

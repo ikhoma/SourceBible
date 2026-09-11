@@ -148,4 +148,106 @@ enum MorphKey {
     static let usageTotalCount        = "word.usage.total_count"
     /// Pluralized: "1 Occurrence in this Book" / "5 Occurrences in this Book"
     static let usageBookCount         = "word.usage.book_count"
+
+    // MARK: - ADR-040: new morphology categories (source-field columns)
+
+    // MARK: - Row labels
+
+    static let rowCase                   = "morph.row.case"
+    static let rowTense                  = "morph.row.tense"
+    static let rowVoice                  = "morph.row.voice"
+    static let rowMood                   = "morph.row.mood"
+    static let rowDegree                 = "morph.row.degree"
+    static let rowNonFiniteForm          = "morph.row.non_finite_form"
+
+    // MARK: - Case (Greek)
+
+    static let caseNominative            = "morph.case.nominative"
+    static let caseGenitive              = "morph.case.genitive"
+    static let caseDative                = "morph.case.dative"
+    static let caseAccusative            = "morph.case.accusative"
+    static let caseVocative              = "morph.case.vocative"
+
+    // MARK: - Tense (Greek)
+
+    static let tenseAorist               = "morph.tense.aorist"
+    static let tensePresent              = "morph.tense.present"
+    static let tenseImperfect            = "morph.tense.imperfect"
+    static let tenseFuture               = "morph.tense.future"
+    static let tensePerfect              = "morph.tense.perfect"
+    static let tensePluperfect           = "morph.tense.pluperfect"
+
+    // MARK: - Voice (Greek)
+
+    static let voiceActive               = "morph.voice.active"
+    static let voiceMiddle               = "morph.voice.middle"
+    static let voicePassive              = "morph.voice.passive"
+    static let voiceMiddlePassive        = "morph.voice.middlepassive"
+
+    // MARK: - Mood (Greek) — 4 real moods only; participle/infinitive are a non-finite form, not a mood
+
+    static let moodIndicative            = "morph.mood.indicative"
+    static let moodImperative            = "morph.mood.imperative"
+    static let moodSubjunctive           = "morph.mood.subjunctive"
+    static let moodOptative              = "morph.mood.optative"
+
+    // MARK: - Degree (Greek) — positive/default is not shown
+
+    static let degreeComparative         = "morph.degree.comparative"
+    static let degreeSuperlative         = "morph.degree.superlative"
+
+    // MARK: - Non-finite form (Greek) — participle/infinitive, split out of `mood`
+
+    static let nonFiniteParticiple       = "morph.non_finite_form.participle"
+    static let nonFiniteInfinitive       = "morph.non_finite_form.infinitive"
+
+    // MARK: - Gender — Greek adds neuter
+
+    static let genderNeuter              = "morph.gender.neuter"
+
+    // MARK: - Aramaic/Hebrew verbal stems — ADR-040 (34 total; 8 already above)
+
+    static let stemPeal                  = "morph.stem.peal"
+    static let stemPeil                  = "morph.stem.peil"
+    static let stemPael                  = "morph.stem.pael"
+    static let stemHaphel                = "morph.stem.haphel"
+    static let stemAphel                 = "morph.stem.aphel"
+    static let stemShaphel               = "morph.stem.shaphel"
+    static let stemSaphel                = "morph.stem.saphel"
+    static let stemHithpaal              = "morph.stem.hithpaal"
+    static let stemIthpaal               = "morph.stem.ithpaal"
+    static let stemHithpeel              = "morph.stem.hithpeel"
+    static let stemIthpeel               = "morph.stem.ithpeel"
+    static let stemIthpoel               = "morph.stem.ithpoel"
+    static let stemHishtaphel            = "morph.stem.hishtaphel"
+    static let stemNithpael              = "morph.stem.nithpael"
+    static let stemHithpolel             = "morph.stem.hithpolel"
+    static let stemPolel                 = "morph.stem.polel"
+    static let stemPolal                 = "morph.stem.polal"
+    static let stemPolpal                = "morph.stem.polpal"
+    static let stemPilpel                = "morph.stem.pilpel"
+    static let stemPilel                 = "morph.stem.pilel"
+    static let stemPalel                 = "morph.stem.palel"
+    static let stemPealal                = "morph.stem.pealal"
+    static let stemPoal                  = "morph.stem.poal"
+    static let stemPulal                 = "morph.stem.pulal"
+    static let stemQalPassive            = "morph.stem.qal_passive"
+    static let stemHithpalpel             = "morph.stem.hithpalpel"
+
+    // MARK: - Hebrew aspect — weqatal (11th verb-relevant `morph_type` value)
+
+    static let aspectWeqatal             = "morph.aspect.weqatal"
+
+    // MARK: - Greek POS from morph-code prefix (bug-053)
+
+    static let posPersonalPronoun        = "morph.pos.personal_pronoun"
+    static let posDemonstrativePronoun   = "morph.pos.demonstrative_pronoun"
+    static let posInterrogativePronoun   = "morph.pos.interrogative_pronoun"
+    static let posIndefinitePronoun      = "morph.pos.indefinite_pronoun"
+    static let posReflexivePronoun       = "morph.pos.reflexive_pronoun"
+    static let posPossessivePronoun      = "morph.pos.possessive_pronoun"
+    static let posCorrelativePronoun     = "morph.pos.correlative_pronoun"
+    static let posReciprocalPronoun      = "morph.pos.reciprocal_pronoun"
+    static let posHebrewTerm             = "morph.pos.hebrew_term"
+    static let posAramaicTerm            = "morph.pos.aramaic_term"
 }

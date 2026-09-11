@@ -337,7 +337,10 @@ final class DatabaseService: @unchecked Sendable {
                    w.xlit AS xlit_ctx,
                    w.syntax_role, w.greek, w.greek_strong,
                    w.after_char, w.lexical_class,
-                   w.slot, w.xlit_slot
+                   w.slot, w.xlit_slot,
+                   w.person, w.gender, w.number, w.gr_case, w.tense, w.voice,
+                   w.mood, w.degree, w.gr_type, w.stem, w.morph_type, w.state,
+                   w.pos, w.lang
             FROM word w
             LEFT JOIN strongs s ON w.strongs_id = s.id
             WHERE w.book_id = ? AND w.chapter = ? AND w.verse = ?
@@ -358,12 +361,32 @@ final class DatabaseService: @unchecked Sendable {
             let lexicalClass = optString(stmt, 11)  // Macula lexical class (noun/verb/ij/intj/…)
             let slot         = optInt(stmt, 12)     // Macula !N group position (nil for Greek)
             let xlitSlot     = optString(stmt, 13)  // BibleHub combined slot translit (root token only)
+            // ADR-040: already-decoded morphology fields, straight from the Macula TSV.
+            let person       = optString(stmt, 14)
+            let gender       = optString(stmt, 15)
+            let number       = optString(stmt, 16)
+            let grCase       = optString(stmt, 17)
+            let tense        = optString(stmt, 18)
+            let voice        = optString(stmt, 19)
+            let mood         = optString(stmt, 20)
+            let degree       = optString(stmt, 21)
+            let grType       = optString(stmt, 22)
+            let stem         = optString(stmt, 23)
+            let morphType    = optString(stmt, 24)
+            let state        = optString(stmt, 25)
+            let pos          = optString(stmt, 26)
+            let lang         = optString(stmt, 27)
             words.append(BibleWord(id: id, text: surface, strongsId: strongsId,
                                    morphology: morph, gloss: gloss,
                                    xlitSimple: xlitLex.map(normalizeXlitForDisplay), xlit: xlitCtx,
                                    syntaxRole: syntaxRole, greek: greek, greekStrong: greekStrong,
                                    afterChar: afterChar, lexicalClass: lexicalClass,
-                                   slot: slot, xlitSlot: xlitSlot))
+                                   slot: slot, xlitSlot: xlitSlot,
+                                   person: person, gender: gender, number: number,
+                                   grCase: grCase, tense: tense, voice: voice,
+                                   mood: mood, degree: degree, grType: grType,
+                                   stem: stem, morphType: morphType, state: state,
+                                   pos: pos, lang: lang))
         }
         return words
     }
