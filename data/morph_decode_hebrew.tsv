@@ -1,0 +1,893 @@
+freq	morph	lang	stem	morph_type	person	gender	number	state	pos	lexical_class	distinct_variants
+56965	R	H							preposition	prep	7
+56522	C	H							conjunction	cj	4
+33625	Np	H		proper					noun	noun	4
+26271	Ncmsc	H		common		masculine	singular	construct	noun	noun	5
+25348	Ncmsa	H		common		masculine	singular	absolute	noun	noun	7
+23896	Td	H		definite article					particle	art	4
+13392	Sp3ms	H		pronominal	third	masculine	singular		suffix	pron	1
+11300	Ncmpc	H		common		masculine	plural	construct	noun	noun	4
+10977	To	H		direct object marker					particle	om	2
+9371	Ncfsa	H		common		feminine	singular	absolute	noun	noun	5
+8427	Ncmpa	H		common		masculine	plural	absolute	noun	noun	3
+8232	Sp1cs	H		pronominal	first	common	singular		suffix	pron	2
+7319	Vqw3ms	H	qal	wayyiqtol	third	masculine	singular		verb	verb	1
+7086	Sp3mp	H		pronominal	third	masculine	plural		suffix	pron	1
+6798	Tn	H		negative					particle	adv	3
+6624	Ncfsc	H		common		feminine	singular	construct	noun	noun	5
+6584	Sp2ms	H		pronominal	second	masculine	singular		suffix	pron	1
+6435	Rd	H							preposition	prep	1
+5654	Tr	H		relative					particle	rel	2
+5230	Ncbsa	H		common		both	singular	absolute	noun	noun	4
+5142	Ncbsc	H		common		both	singular	construct	noun	noun	2
+4525	Vqc	H	qal	infinitive construct					verb	verb	2
+4372	Vqp3ms	H	qal	qatal	third	masculine	singular		verb	verb	2
+4194	D	H							adverb	adv	7
+3626	Aamsa	H		adjective		masculine	singular	absolute	adjective	adj	5
+3321	Sp3fs	H		pronominal	third	feminine	singular		suffix	pron	1
+3240	Vqi3ms	H	qal	yiqtol	third	masculine	singular		verb	verb	1
+2913	Ncbpc	H		common		both	plural	construct	noun	noun	2
+2649	Sp2mp	H		pronominal	second	masculine	plural		suffix	pron	1
+2470	Vqrmsa	H	qal	participle active		masculine	singular	absolute	verb	verb	3
+2424	Ncfpc	H		common		feminine	plural	construct	noun	noun	2
+2402	Vqw3mp	H	qal	wayyiqtol	third	masculine	plural		verb	verb	1
+2375	Ncfpa	H		common		feminine	plural	absolute	noun	noun	2
+2238	Ti	H		interrogative					particle	pron	5
+2193	Vqp3cp	H	qal	qatal	third	common	plural		verb	verb	1
+1773	Sp1cp	H		pronominal	first	common	plural		suffix	pron	1
+1749	Sp2fs	H		pronominal	second	feminine	singular		suffix	pron	1
+1726	Vqi3mp	H	qal	yiqtol	third	masculine	plural		verb	verb	1
+1700	Tm	H		demonstrative					particle	ij	4
+1589	Acmsa	H		cardinal number		masculine	singular	absolute	adjective	num	3
+1543	Vqv2ms	H	qal	imperative	second	masculine	singular		verb	verb	2
+1509	Aampa	H		adjective		masculine	plural	absolute	adjective	adj	2
+1487	Acbpa	H		cardinal number		both	plural	absolute	adjective	num	2
+1427	Vqp1cs	H	qal	qatal	first	common	singular		verb	verb	1
+1414	Acfsa	H		cardinal number		feminine	singular	absolute	adjective	num	2
+1395	Pp3ms	H		personal	third	masculine	singular		pronoun	pron	1
+1283	Vqq3ms	H	qal	weqatal	third	masculine	singular		verb	verb	2
+1233	Pp1cs	H		personal	first	common	singular		pronoun	pron	1
+1190	Pdxms	H		demonstrative		masculine	singular		pronoun	adj	2
+1180	Vqi2ms	H	qal	yiqtol	second	masculine	singular		verb	verb	1
+1124	Ta	H		affirmation					particle	cj	3
+1122	Vqrmpa	H	qal	participle active		masculine	plural	absolute	verb	verb	3
+1093	Vqi1cs	H	qal	yiqtol	first	common	singular		verb	verb	1
+1092	Vqv2mp	H	qal	imperative	second	masculine	plural		verb	verb	1
+1079	Sd	H		directional he					suffix	x	2
+1035	Vqrmpc	H	qal	participle active		masculine	plural	construct	verb	verb	3
+1027	Vhw3ms	H	hiphil	wayyiqtol	third	masculine	singular		verb	verb	1
+1000	Ncbdc	H		common		both	dual	construct	noun	noun	1
+973	Aafsa	H		adjective		feminine	singular	absolute	adjective	adj	3
+972	Vqw3fs	H	qal	wayyiqtol	third	feminine	singular		verb	verb	1
+942	Ngmsa	H		gentilic		masculine	singular	absolute	noun	noun	1
+941	Vhc	H	hiphil	infinitive construct					verb	verb	1
+916	R	A							preposition	prep	2
+894	Vhp3ms	H	hiphil	qatal	third	masculine	singular		verb	verb	1
+886	C	A							conjunction	cj	5
+885	Ncbpa	H		common		both	plural	absolute	noun	noun	3
+860	Td	A		definite article					particle	art	2
+825	Vpp3ms	H	piel	qatal	third	masculine	singular		verb	verb	1
+758	Vqp3fs	H	qal	qatal	third	feminine	singular		verb	verb	2
+755	Pdxcp	H		demonstrative		common	plural		pronoun	adj	1
+745	Pp2ms	H		personal	second	masculine	singular		pronoun	pron	1
+737	Vhi3ms	H	hiphil	yiqtol	third	masculine	singular		verb	verb	1
+734	Vqi3fs	H	qal	yiqtol	third	feminine	singular		verb	verb	1
+729	Ngmpa	H		gentilic		masculine	plural	absolute	noun	noun	1
+724	Vqq3cp	H	qal	weqatal	third	common	plural		verb	verb	1
+717	Vqp2ms	H	qal	qatal	second	masculine	singular		verb	verb	1
+716	Vqq2ms	H	qal	weqatal	second	masculine	singular		verb	verb	1
+705	Vpc	H	piel	infinitive construct					verb	verb	1
+656	Vqi2mp	H	qal	yiqtol	second	masculine	plural		verb	verb	1
+636	Vpw3ms	H	piel	wayyiqtol	third	masculine	singular		verb	verb	1
+611	Pdxfs	H		demonstrative		feminine	singular		pronoun	adj	1
+560	Pp3mp	H		personal	third	masculine	plural		pronoun	pron	1
+510	Vqa	H	qal	infinitive absolute					verb	verb	2
+505	VNi3ms	H	niphal	yiqtol	third	masculine	singular		verb	verb	1
+499	Vhw3mp	H	hiphil	wayyiqtol	third	masculine	plural		verb	verb	1
+491	Ncfdc	H		common		feminine	dual	construct	noun	noun	1
+485	Vhrmsa	H	hiphil	participle active		masculine	singular	absolute	verb	verb	2
+485	Pp3fs	H		personal	third	feminine	singular		pronoun	pron	1
+468	Vqw1cs	H	qal	wayyiqtol	first	common	singular		verb	verb	1
+463	Acbsa	H		cardinal number		both	singular	absolute	adjective	num	2
+454	Ncmsd	A		common		masculine	singular	determined	noun	noun	2
+452	VNp3ms	H	niphal	qatal	third	masculine	singular		verb	verb	1
+451	Vqq1cs	H	qal	weqatal	first	common	singular		verb	verb	1
+445	Vpi3ms	H	piel	yiqtol	third	masculine	singular		verb	verb	1
+445	Sh	H		paragogic he					suffix	x	1
+429	Vhv2ms	H	hiphil	imperative	second	masculine	singular		verb	verb	1
+426	Ncmsc	A		common		masculine	singular	construct	noun	noun	2
+425	Aomsa	H		ordinal number		masculine	singular	absolute	adjective	num	2
+416	Vhi1cs	H	hiphil	yiqtol	first	common	singular		verb	verb	1
+412	Aampc	H		adjective		masculine	plural	construct	adjective	adj	2
+410	Vqrmsc	H	qal	participle active		masculine	singular	construct	verb	verb	3
+408	Acmsc	H		cardinal number		masculine	singular	construct	adjective	num	1
+394	Vqsmsa	H	qal	participle passive		masculine	singular	absolute	verb	verb	3
+353	Te	H		exhortation					particle	ij	2
+350	Vhp3cp	H	hiphil	qatal	third	common	plural		verb	verb	1
+345	VNrmsa	H	niphal	participle active		masculine	singular	absolute	verb	verb	1
+341	Np	A		proper					noun	noun	2
+334	Vqq2mp	H	qal	weqatal	second	masculine	plural		verb	verb	1
+331	Tj	H		interjection					particle	ij	3
+330	Vhq1cs	H	hiphil	weqatal	first	common	singular		verb	verb	1
+319	VNp3cp	H	niphal	qatal	third	common	plural		verb	verb	1
+311	Sn	H		paragogic nun					suffix	x	2
+309	Aamsc	H		adjective		masculine	singular	construct	adjective	adj	4
+302	Acmdc	H		cardinal number		masculine	dual	construct	adjective	num	2
+301	Vprmsa	H	piel	participle active		masculine	singular	absolute	verb	verb	1
+300	Vqrfsa	H	qal	participle active		feminine	singular	absolute	verb	verb	3
+292	Vhi2ms	H	hiphil	yiqtol	second	masculine	singular		verb	verb	1
+287	Tr	A		relative					particle	rel	2
+283	Pp2mp	H		personal	second	masculine	plural		pronoun	pron	1
+278	Vpp1cs	H	piel	qatal	first	common	singular		verb	verb	1
+277	Vhi3mp	H	hiphil	yiqtol	third	masculine	plural		verb	verb	1
+273	Vqj3ms	H	qal	jussive	third	masculine	singular		verb	verb	1
+273	Vhq3ms	H	hiphil	weqatal	third	masculine	singular		verb	verb	1
+271	Vqp2mp	H	qal	qatal	second	masculine	plural		verb	verb	1
+270	Vqi1cp	H	qal	yiqtol	first	common	plural		verb	verb	1
+264	Aafpa	H		adjective		feminine	plural	absolute	adjective	adj	2
+264	Vpi1cs	H	piel	yiqtol	first	common	singular		verb	verb	1
+258	Vhv2mp	H	hiphil	imperative	second	masculine	plural		verb	verb	1
+243	Vhp1cs	H	hiphil	qatal	first	common	singular		verb	verb	1
+241	Sp3ms	A		pronominal	third	masculine	singular		suffix	pron	2
+240	Acmda	H		cardinal number		masculine	dual	absolute	adjective	num	1
+234	Vpv2ms	H	piel	imperative	second	masculine	singular		verb	verb	2
+233	Vpp3cp	H	piel	qatal	third	common	plural		verb	verb	1
+232	Vqp1cp	H	qal	qatal	first	common	plural		verb	verb	1
+231	Sp3fp	H		pronominal	third	feminine	plural		suffix	pron	1
+230	Vqq3fs	H	qal	weqatal	third	feminine	singular		verb	verb	1
+229	Vpi3mp	H	piel	yiqtol	third	masculine	plural		verb	verb	1
+225	Vqv2fs	H	qal	imperative	second	feminine	singular		verb	verb	2
+224	VNw3ms	H	niphal	wayyiqtol	third	masculine	singular		verb	verb	1
+220	Vha	H	hiphil	infinitive absolute					verb	verb	2
+210	Vqh1cs	H	qal	cohortative	first	common	singular		verb	verb	1
+208	Vqsmpa	H	qal	participle passive		masculine	plural	absolute	verb	verb	3
+206	VNc	H	niphal	infinitive construct					verb	verb	2
+205	Vqj2ms	H	qal	jussive	second	masculine	singular		verb	verb	1
+194	VNi3mp	H	niphal	yiqtol	third	masculine	plural		verb	verb	1
+189	Vpi2ms	H	piel	yiqtol	second	masculine	singular		verb	verb	1
+187	Ncmsa	A		common		masculine	singular	absolute	noun	noun	2
+185	VNrmpa	H	niphal	participle active		masculine	plural	absolute	verb	verb	1
+182	Vpv2mp	H	piel	imperative	second	masculine	plural		verb	verb	1
+180	Vpw3mp	H	piel	wayyiqtol	third	masculine	plural		verb	verb	1
+172	Vhp2ms	H	hiphil	qatal	second	masculine	singular		verb	verb	1
+171	Vpq3ms	H	piel	weqatal	third	masculine	singular		verb	verb	1
+166	Vqsfsa	H	qal	participle passive		feminine	singular	absolute	verb	verb	1
+161	Vhrmpa	H	hiphil	participle active		masculine	plural	absolute	verb	verb	2
+161	Ncmpd	A		common		masculine	plural	determined	noun	noun	1
+160	Vqh1cp	H	qal	cohortative	first	common	plural		verb	verb	1
+153	Vqi3fp	H	qal	yiqtol	third	feminine	plural		verb	verb	1
+152	Ncfda	H		common		feminine	dual	absolute	noun	noun	2
+152	Vprmpa	H	piel	participle active		masculine	plural	absolute	verb	verb	1
+148	Vpp2ms	H	piel	qatal	second	masculine	singular		verb	verb	1
+146	Aofsa	H		ordinal number		feminine	singular	absolute	adjective	num	2
+145	Vhi2mp	H	hiphil	yiqtol	second	masculine	plural		verb	verb	1
+144	VNw3mp	H	niphal	wayyiqtol	third	masculine	plural		verb	verb	1
+143	VNp3fs	H	niphal	qatal	third	feminine	singular		verb	verb	1
+142	Acfdc	H		cardinal number		feminine	dual	construct	adjective	num	1
+140	VNi3fs	H	niphal	yiqtol	third	feminine	singular		verb	verb	1
+131	Ncfsd	A		common		feminine	singular	determined	noun	noun	2
+125	Pp1cp	H		personal	first	common	plural		pronoun	pron	1
+125	Vqj2mp	H	qal	jussive	second	masculine	plural		verb	verb	1
+123	Vqp2fs	H	qal	qatal	second	feminine	singular		verb	verb	1
+123	Vpq1cs	H	piel	weqatal	first	common	singular		verb	verb	1
+123	Ncmpc	A		common		masculine	plural	construct	noun	noun	2
+122	Vqrfpa	H	qal	participle active		feminine	plural	absolute	verb	verb	3
+121	VNq3ms	H	niphal	weqatal	third	masculine	singular		verb	verb	1
+121	Ncfsc	A		common		feminine	singular	construct	noun	noun	1
+119	Vqsmpc	H	qal	participle passive		masculine	plural	construct	verb	verb	2
+118	Vtw3ms	H	hithpael	wayyiqtol	third	masculine	singular		verb	verb	1
+115	Acfda	H		cardinal number		feminine	dual	absolute	adjective	num	2
+110	Vhq2ms	H	hiphil	weqatal	second	masculine	singular		verb	verb	1
+110	Vqrmsa	A	peal	participle active		masculine	singular	absolute	verb	verb	1
+109	Vtc	H	hithpael	infinitive construct					verb	verb	1
+109	Vqp3ms	A	peal	qatal	third	masculine	singular		verb	verb	1
+105	Vprmpc	H	piel	participle active		masculine	plural	construct	verb	verb	1
+104	D	A							adverb	adv	2
+103	Ncmda	H		common		masculine	dual	absolute	noun	noun	1
+102	Vpa	H	piel	infinitive absolute					verb	verb	1
+99	VHi3ms	H	hophal	yiqtol	third	masculine	singular		verb	verb	1
+98	VNp1cs	H	niphal	qatal	first	common	singular		verb	verb	1
+98	Sp2ms	A		pronominal	second	masculine	singular		suffix	pron	1
+96	Ncmdc	H		common		masculine	dual	construct	noun	noun	1
+96	Ncmpa	A		common		masculine	plural	absolute	noun	noun	1
+95	Vqw2ms	H	qal	wayyiqtol	second	masculine	singular		verb	verb	1
+94	Vhi3fs	H	hiphil	yiqtol	third	feminine	singular		verb	verb	1
+93	Vqi2fs	H	qal	yiqtol	second	feminine	singular		verb	verb	1
+91	Vqj3mp	H	qal	jussive	third	masculine	plural		verb	verb	1
+91	Sp1cs	A		pronominal	first	common	singular		suffix	pron	2
+90	Vpq2ms	H	piel	weqatal	second	masculine	singular		verb	verb	1
+87	Vhrmsc	H	hiphil	participle active		masculine	singular	construct	verb	verb	2
+86	Tn	A		negative					particle	adv	1
+85	Ncbda	H		common		both	dual	absolute	noun	noun	1
+81	Vqw3fp	H	qal	wayyiqtol	third	feminine	plural		verb	verb	1
+80	Vti3ms	H	hithpael	yiqtol	third	masculine	singular		verb	verb	1
+80	Vhw1cs	H	hiphil	wayyiqtol	first	common	singular		verb	verb	1
+78	VNq3cp	H	niphal	weqatal	third	common	plural		verb	verb	1
+78	Acbda	H		cardinal number		both	dual	absolute	adjective	num	1
+78	Vpi3fs	H	piel	yiqtol	third	feminine	singular		verb	verb	1
+77	Vhw3fs	H	hiphil	wayyiqtol	third	feminine	singular		verb	verb	1
+77	Vprmsc	H	piel	participle active		masculine	singular	construct	verb	verb	1
+77	VNv2ms	H	niphal	imperative	second	masculine	singular		verb	verb	1
+77	Ncfsa	A		common		feminine	singular	absolute	noun	noun	3
+76	VPsmsa	H	pual	participle passive		masculine	singular	absolute	verb	verb	2
+76	Vph1cs	H	piel	cohortative	first	common	singular		verb	verb	1
+76	Vtw3mp	H	hithpael	wayyiqtol	third	masculine	plural		verb	verb	1
+75	Vtrmsa	H	hithpael	participle active		masculine	singular	absolute	verb	verb	1
+73	Vhq3cp	H	hiphil	weqatal	third	common	plural		verb	verb	1
+70	VPp3ms	H	pual	qatal	third	masculine	singular		verb	verb	2
+69	Vpq3cp	H	piel	weqatal	third	common	plural		verb	verb	1
+68	Vqi3ms	A	peal	yiqtol	third	masculine	singular		verb	verb	1
+65	Vhj3ms	H	hiphil	jussive	third	masculine	singular		verb	verb	1
+65	Vti3mp	H	hithpael	yiqtol	third	masculine	plural		verb	verb	1
+64	Vqrfsc	H	qal	participle active		feminine	singular	construct	verb	verb	2
+63	Aafsc	H		adjective		feminine	singular	construct	adjective	adj	3
+63	Vqw1cp	H	qal	wayyiqtol	first	common	plural		verb	verb	1
+63	VHsmsa	H	hophal	participle passive		masculine	singular	absolute	verb	verb	2
+62	Vhj2ms	H	hiphil	jussive	second	masculine	singular		verb	verb	1
+62	Sp3mp	A		pronominal	third	masculine	plural		suffix	pron	1
+61	Vhq2mp	H	hiphil	weqatal	second	masculine	plural		verb	verb	1
+61	Vqrmpa	A	peal	participle active		masculine	plural	absolute	verb	verb	1
+60	Vpw3fs	H	piel	wayyiqtol	third	feminine	singular		verb	verb	1
+60	Vpp3fs	H	piel	qatal	third	feminine	singular		verb	verb	1
+59	Pp2fs	H		personal	second	feminine	singular		pronoun	pron	1
+59	Ngfsa	H		gentilic		feminine	singular	absolute	noun	noun	1
+58	Vqj3fs	H	qal	jussive	third	feminine	singular		verb	verb	1
+58	VNrfsa	H	niphal	participle active		feminine	singular	absolute	verb	verb	1
+57	Vhh1cs	H	hiphil	cohortative	first	common	singular		verb	verb	1
+56	Vhp3fs	H	hiphil	qatal	third	feminine	singular		verb	verb	1
+56	Vpi2mp	H	piel	yiqtol	second	masculine	plural		verb	verb	1
+56	Vqw2mp	H	qal	wayyiqtol	second	masculine	plural		verb	verb	1
+55	VNi2ms	H	niphal	yiqtol	second	masculine	singular		verb	verb	1
+53	VPsmpa	H	pual	participle passive		masculine	plural	absolute	verb	verb	2
+51	Pdxms	A		demonstrative		masculine	singular		pronoun	adj	2
+50	VNw3fs	H	niphal	wayyiqtol	third	feminine	singular		verb	verb	1
+49	Vqw2fs	H	qal	wayyiqtol	second	feminine	singular		verb	verb	1
+49	Aamsa	A		adjective		masculine	singular	absolute	adjective	adj	2
+48	VNi1cs	H	niphal	yiqtol	first	common	singular		verb	verb	1
+48	VHp3ms	H	hophal	qatal	third	masculine	singular		verb	verb	1
+48	VNq3fs	H	niphal	weqatal	third	feminine	singular		verb	verb	1
+48	VPi3ms	H	pual	yiqtol	third	masculine	singular		verb	verb	1
+47	Pp3fp	H		personal	third	feminine	plural		pronoun	pron	1
+47	VNrfpa	H	niphal	participle active		feminine	plural	absolute	verb	verb	2
+47	Vhv2fs	H	hiphil	imperative	second	feminine	singular		verb	verb	1
+43	Vqq2fs	H	qal	weqatal	second	feminine	singular		verb	verb	1
+43	Vqsmsc	H	qal	participle passive		masculine	singular	construct	verb	verb	3
+43	Vqsfpa	H	qal	participle passive		feminine	plural	absolute	verb	verb	2
+43	Vqq1cp	H	qal	weqatal	first	common	plural		verb	verb	2
+42	Vhp2mp	H	hiphil	qatal	second	masculine	plural		verb	verb	1
+42	To	A		direct object marker					particle	prep	3
+41	Vhrmpc	H	hiphil	participle active		masculine	plural	construct	verb	verb	2
+40	Vpw1cs	H	piel	wayyiqtol	first	common	singular		verb	verb	1
+40	Sp3fs	A		pronominal	third	feminine	singular		suffix	pron	1
+38	Vqp3mp	A	peal	qatal	third	masculine	plural		verb	verb	1
+37	VPp3cp	H	pual	qatal	third	common	plural		verb	verb	1
+36	Vhi1cp	H	hiphil	yiqtol	first	common	plural		verb	verb	1
+36	VNi3fp	H	niphal	yiqtol	third	feminine	plural		verb	verb	1
+36	Ncfpc	A		common		feminine	plural	construct	noun	noun	1
+35	VNa	H	niphal	infinitive absolute					verb	verb	1
+35	VNv2mp	H	niphal	imperative	second	masculine	plural		verb	verb	1
+35	Acbpc	H		cardinal number		both	plural	construct	adjective	num	2
+34	VNsfsa	H	niphal	participle passive		feminine	singular	absolute	verb	verb	1
+34	Vtrmpa	H	hithpael	participle active		masculine	plural	absolute	verb	verb	1
+34	Vhc	A	haphel	infinitive construct					verb	verb	1
+34	Acbsa	A		cardinal number		both	singular	absolute	adjective	num	2
+33	Vpj2ms	H	piel	jussive	second	masculine	singular		verb	verb	1
+33	Vormpa	H	polel	participle active		masculine	plural	absolute	verb	verb	1
+32	VNp2ms	H	niphal	qatal	second	masculine	singular		verb	verb	1
+31	Vhp3ms	A	haphel	qatal	third	masculine	singular		verb	verb	1
+30	Vtp3cp	H	hithpael	qatal	third	common	plural		verb	verb	1
+30	Vtv2mp	H	hithpael	imperative	second	masculine	plural		verb	verb	1
+30	VNi2mp	H	niphal	yiqtol	second	masculine	plural		verb	verb	1
+30	Vpq2mp	H	piel	weqatal	second	masculine	plural		verb	verb	1
+30	VNrfpc	H	niphal	participle active		feminine	plural	construct	verb	verb	1
+30	VNsmpa	H	niphal	participle passive		masculine	plural	absolute	verb	verb	1
+29	VPsfsa	H	pual	participle passive		feminine	singular	absolute	verb	verb	2
+29	Vhw2ms	H	hiphil	wayyiqtol	second	masculine	singular		verb	verb	1
+29	Vpp2mp	H	piel	qatal	second	masculine	plural		verb	verb	1
+29	VNsmsa	H	niphal	participle passive		masculine	singular	absolute	verb	verb	1
+29	Vqc	A	peal	infinitive construct					verb	verb	1
+29	Ta	A		affirmation					particle	noun	3
+28	VNq1cs	H	niphal	weqatal	first	common	singular		verb	verb	1
+28	Aafsa	A		adjective		feminine	singular	absolute	adjective	adj	3
+28	Vqp1cs	A	peal	qatal	first	common	singular		verb	verb	1
+27	VPp3fs	H	pual	qatal	third	feminine	singular		verb	verb	1
+27	VNq2mp	H	niphal	weqatal	second	masculine	plural		verb	verb	1
+27	Vqj2fs	H	qal	jussive	second	feminine	singular		verb	verb	1
+27	VHw3ms	H	hophal	wayyiqtol	third	masculine	singular		verb	verb	1
+27	Vpp1cp	H	piel	qatal	first	common	plural		verb	verb	1
+26	Vtq3cp	H	hithpael	weqatal	third	common	plural		verb	verb	1
+26	Vpw2ms	H	piel	wayyiqtol	second	masculine	singular		verb	verb	1
+26	Vhrfsa	H	hiphil	participle active		feminine	singular	absolute	verb	verb	2
+25	Acbsc	H		cardinal number		both	singular	construct	adjective	num	1
+25	Vtv2ms	H	hithpael	imperative	second	masculine	singular		verb	verb	1
+25	Vpi1cp	H	piel	yiqtol	first	common	plural		verb	verb	1
+25	VNp1cp	H	niphal	qatal	first	common	plural		verb	verb	1
+25	Aafpc	H		adjective		feminine	plural	construct	adjective	adj	2
+25	Vqi3mp	A	peal	yiqtol	third	masculine	plural		verb	verb	1
+25	VQp3ms	A	peil	qatal	third	masculine	singular		verb	verb	1
+24	Vprfsa	H	piel	participle active		feminine	singular	absolute	verb	verb	1
+24	Vpv2fs	H	piel	imperative	second	feminine	singular		verb	verb	1
+24	VHsmpa	H	hophal	participle passive		masculine	plural	absolute	verb	verb	1
+24	Vti2ms	H	hithpael	yiqtol	second	masculine	singular		verb	verb	1
+24	Ncfpa	A		common		feminine	plural	absolute	noun	noun	1
+23	Vtp3ms	H	hithpael	qatal	third	masculine	singular		verb	verb	1
+23	Vhp1cp	H	hiphil	qatal	first	common	plural		verb	verb	1
+22	Vqv2fp	H	qal	imperative	second	feminine	plural		verb	verb	1
+22	Vhh1cp	H	hiphil	cohortative	first	common	plural		verb	verb	1
+22	Vhp3mp	A	haphel	qatal	third	masculine	plural		verb	verb	1
+21	Vhj2mp	H	hiphil	jussive	second	masculine	plural		verb	verb	1
+21	Vqp3fs	A	peal	qatal	third	feminine	singular		verb	verb	1
+21	Vqi3fs	A	peal	yiqtol	third	feminine	singular		verb	verb	2
+20	Vprfpa	H	piel	participle active		feminine	plural	absolute	verb	verb	1
+20	Ncfpd	A		common		feminine	plural	determined	noun	noun	1
+19	Sp2fp	H		pronominal	second	feminine	plural		suffix	pron	1
+19	Aofsc	H		ordinal number		feminine	singular	construct	adjective	num	1
+19	Ngmpd	A		gentilic		masculine	plural	determined	noun	noun	1
+19	Aampa	A		adjective		masculine	plural	absolute	adjective	adj	2
+19	VNsfpa	H	niphal	participle passive		feminine	plural	absolute	verb	verb	1
+18	VNq2ms	H	niphal	weqatal	second	masculine	singular		verb	verb	1
+18	VNj3ms	H	niphal	jussive	third	masculine	singular		verb	verb	1
+18	VHi3mp	H	hophal	yiqtol	third	masculine	plural		verb	verb	1
+18	Vtj2ms	H	hithpael	jussive	second	masculine	singular		verb	verb	1
+17	Voi3ms	H	polel	yiqtol	third	masculine	singular		verb	verb	1
+17	Acfsc	H		cardinal number		feminine	singular	construct	adjective	num	1
+17	Vtp1cs	H	hithpael	qatal	first	common	singular		verb	verb	1
+17	Vhj3mp	H	hiphil	jussive	third	masculine	plural		verb	verb	1
+17	VPq3ms	H	pual	weqatal	third	masculine	singular		verb	verb	1
+17	Vhp2fs	H	hiphil	qatal	second	feminine	singular		verb	verb	1
+17	Vhi2fs	H	hiphil	yiqtol	second	feminine	singular		verb	verb	1
+17	Vui3ms	A	hithpeel	yiqtol	third	masculine	singular		verb	verb	1
+17	VNrmpc	H	niphal	participle active		masculine	plural	construct	verb	verb	1
+16	Vtw1cs	H	hithpael	wayyiqtol	first	common	singular		verb	verb	1
+16	Aamsd	A		adjective		masculine	singular	determined	adjective	adj	1
+16	Pp1cs	A		personal	first	common	singular		pronoun	pron	1
+16	Vqp2ms	A	peal	qatal	second	masculine	singular		verb	verb	1
+15	VHp3fs	H	hophal	qatal	third	feminine	singular		verb	verb	1
+15	Vti1cs	H	hithpael	yiqtol	first	common	singular		verb	verb	1
+15	Vti3fs	H	hithpael	yiqtol	third	feminine	singular		verb	verb	1
+15	Sp2mp	A		pronominal	second	masculine	plural		suffix	pron	1
+15	Pp2ms	A		personal	second	masculine	singular		pronoun	pron	1
+15	VPi3mp	H	pual	yiqtol	third	masculine	plural		verb	verb	1
+14	VNw1cs	H	niphal	wayyiqtol	first	common	singular		verb	verb	1
+14	Aompa	H		ordinal number		masculine	plural	absolute	adjective	num	3
+14	VNh1cs	H	niphal	cohortative	first	common	singular		verb	verb	1
+14	Vpj3ms	H	piel	jussive	third	masculine	singular		verb	verb	1
+14	VHp3cp	H	hophal	qatal	third	common	plural		verb	verb	1
+14	VNj2mp	H	niphal	jussive	second	masculine	plural		verb	verb	1
+14	Ngfpa	H		gentilic		feminine	plural	absolute	noun	noun	1
+14	VHq3ms	H	hophal	weqatal	third	masculine	singular		verb	verb	1
+14	Aobpc	H		ordinal number		both	plural	construct	adjective	num	1
+14	Vhq3fs	H	hiphil	weqatal	third	feminine	singular		verb	verb	1
+14	VPsmpc	H	pual	participle passive		masculine	plural	construct	verb	verb	1
+14	Vpi3fp	H	piel	yiqtol	third	feminine	plural		verb	verb	1
+14	Ncbsd	A		common		both	singular	determined	noun	noun	1
+13	VPp1cs	H	pual	qatal	first	common	singular		verb	verb	1
+13	Vpq3fs	H	piel	weqatal	third	feminine	singular		verb	verb	1
+13	Vop3ms	H	polel	qatal	third	masculine	singular		verb	verb	1
+13	VPi3fs	H	pual	yiqtol	third	feminine	singular		verb	verb	1
+13	Vhw2mp	H	hiphil	wayyiqtol	second	masculine	plural		verb	verb	1
+13	Pdxfs	A		demonstrative		feminine	singular		pronoun	adj	1
+13	Vqv2ms	A	peal	imperative	second	masculine	singular		verb	verb	1
+13	Tm	A		demonstrative					particle	ij	2
+13	Vpi3mp	A	pael	yiqtol	third	masculine	plural		verb	verb	1
+12	VPsfpa	H	pual	participle passive		feminine	plural	absolute	verb	verb	1
+12	VNh1cp	H	niphal	cohortative	first	common	plural		verb	verb	1
+12	Vti2mp	H	hithpael	yiqtol	second	masculine	plural		verb	verb	1
+12	Vhw1cp	H	hiphil	wayyiqtol	first	common	plural		verb	verb	1
+12	VNj2ms	H	niphal	jussive	second	masculine	singular		verb	verb	1
+12	Vpp2fs	H	piel	qatal	second	feminine	singular		verb	verb	1
+12	Pp3mp	A		personal	third	masculine	plural		pronoun	pron	1
+12	Vqi2ms	A	peal	yiqtol	second	masculine	singular		verb	verb	1
+12	Pdxmp	A		demonstrative		masculine	plural		pronoun	adj	2
+11	Vtrfsa	H	hithpael	participle active		feminine	singular	absolute	verb	verb	1
+11	Vhrfpa	H	hiphil	participle active		feminine	plural	absolute	verb	verb	1
+11	VHsfsa	H	hophal	participle passive		feminine	singular	absolute	verb	verb	1
+11	Vvi3mp	H		yiqtol	third	masculine	plural		verb	verb	1
+11	Vmrmsa	H	poel	participle active		masculine	singular	absolute	verb	verb	1
+11	Vrrmsa	H	hithpolel	participle active		masculine	singular	absolute	verb	verb	1
+11	VNrmsc	H	niphal	participle active		masculine	singular	construct	verb	verb	1
+11	VHi3fs	H	hophal	yiqtol	third	feminine	singular		verb	verb	1
+11	Vmi3ms	H	poel	yiqtol	third	masculine	singular		verb	verb	1
+11	Vqi2fp	H	qal	yiqtol	second	feminine	plural		verb	verb	1
+11	Vqv2mp	A	peal	imperative	second	masculine	plural		verb	verb	1
+11	Vpc	A	pael	infinitive construct					verb	verb	1
+11	Vri3ms	H	hithpolel	yiqtol	third	masculine	singular		verb	verb	1
+11	Vri1cs	H	hithpolel	yiqtol	first	common	singular		verb	verb	1
+10	Vtq2mp	H	hithpael	weqatal	second	masculine	plural		verb	verb	1
+10	VNp2mp	H	niphal	qatal	second	masculine	plural		verb	verb	1
+10	Vph1cp	H	piel	cohortative	first	common	plural		verb	verb	1
+10	Voi2ms	H	polel	yiqtol	second	masculine	singular		verb	verb	1
+10	Vpj3mp	H	piel	jussive	third	masculine	plural		verb	verb	1
+10	VQsmsa	A	peil	participle passive		masculine	singular	absolute	verb	verb	1
+10	Sp1cp	A		pronominal	first	common	plural		suffix	pron	1
+10	Vqrfsa	A	peal	participle active		feminine	singular	absolute	verb	verb	1
+10	Vqi2mp	A	peal	yiqtol	second	masculine	plural		verb	verb	1
+10	Vhw2fs	H	hiphil	wayyiqtol	second	feminine	singular		verb	verb	1
+9	Vhj3fs	H	hiphil	jussive	third	feminine	singular		verb	verb	1
+9	Vri3mp	H	hithpolel	yiqtol	third	masculine	plural		verb	verb	1
+9	Vqsfsc	H	qal	participle passive		feminine	singular	construct	verb	verb	1
+9	VNp2fs	H	niphal	qatal	second	feminine	singular		verb	verb	1
+9	VNj3fs	H	niphal	jussive	third	feminine	singular		verb	verb	1
+9	Vtp2ms	H	hithpael	qatal	second	masculine	singular		verb	verb	1
+9	Acfsa	A		cardinal number		feminine	singular	absolute	adjective	num	1
+9	Vqp1cp	A	peal	qatal	first	common	plural		verb	verb	1
+9	Vpi3ms	A	pael	yiqtol	third	masculine	singular		verb	verb	1
+9	Vpi2fs	H	piel	yiqtol	second	feminine	singular		verb	verb	1
+9	Vqrfpc	H	qal	participle active		feminine	plural	construct	verb	verb	1
+9	Acmsa	A		cardinal number		masculine	singular	absolute	adjective	num	1
+8	VNj3mp	H	niphal	jussive	third	masculine	plural		verb	verb	1
+8	Acmpa	H		cardinal number		masculine	plural	absolute	adjective	num	1
+8	Vtv2fs	H	hithpael	imperative	second	feminine	singular		verb	verb	1
+8	Vpj2mp	H	piel	jussive	second	masculine	plural		verb	verb	1
+8	Vhrfsc	H	hiphil	participle active		feminine	singular	construct	verb	verb	2
+8	Vtw3fs	H	hithpael	wayyiqtol	third	feminine	singular		verb	verb	1
+8	VNi1cp	H	niphal	yiqtol	first	common	plural		verb	verb	1
+8	Vvrmpa	H		participle active		masculine	plural	absolute	verb	verb	1
+8	Vtq3ms	H	hithpael	weqatal	third	masculine	singular		verb	verb	1
+8	VHsfpa	H	hophal	participle passive		feminine	plural	absolute	verb	verb	1
+8	Vow3ms	H	polel	wayyiqtol	third	masculine	singular		verb	verb	1
+8	Vormsa	H	polel	participle active		masculine	singular	absolute	verb	verb	1
+8	Vpw2fs	H	piel	wayyiqtol	second	feminine	singular		verb	verb	1
+8	Vhi3ms	A	haphel	yiqtol	third	masculine	singular		verb	verb	1
+8	Vpp3mp	A	pael	qatal	third	masculine	plural		verb	verb	1
+8	Ti	A		interrogative					particle	ptcl	2
+8	Pp3ms	A		personal	third	masculine	singular		pronoun	pron	1
+8	VQp3mp	A	peil	qatal	third	masculine	plural		verb	verb	1
+8	Pfxcs	A		indefinite		common	singular		pronoun	pron	2
+8	Vpp3ms	A	pael	qatal	third	masculine	singular		verb	verb	1
+8	Vqrmpc	A	peal	participle active		masculine	plural	construct	verb	verb	1
+8	Aamsc	A		adjective		masculine	singular	construct	adjective	adj	1
+8	Vqrfsd	A	peal	participle active		feminine	singular	determined	verb	verb	1
+8	VQp3fs	A	peil	qatal	third	feminine	singular		verb	verb	1
+7	VHc	H	hophal	infinitive construct					verb	verb	1
+7	Vorfpa	H	polel	participle active		feminine	plural	absolute	verb	verb	1
+7	Vvw3fs	H		wayyiqtol	third	feminine	singular		verb	verb	1
+7	Vlc	H	pilpel	infinitive construct					verb	verb	2
+7	Vtj3ms	H	hithpael	jussive	third	masculine	singular		verb	verb	1
+7	VHp1cs	H	hophal	qatal	first	common	singular		verb	verb	1
+7	Pdxcs	A		demonstrative		common	singular		pronoun	adj	1
+7	Aafpa	A		adjective		feminine	plural	absolute	adjective	adj	1
+7	VMi3ms	A	hithpaal	yiqtol	third	masculine	singular		verb	verb	1
+7	VMrmsa	A	hithpaal	participle active		masculine	singular	absolute	verb	verb	1
+7	Voc	H	polel	infinitive construct					verb	verb	1
+7	Vmi3mp	H	poel	yiqtol	third	masculine	plural		verb	verb	1
+7	Voi3mp	H	polel	yiqtol	third	masculine	plural		verb	verb	1
+7	VNi2fs	H	niphal	yiqtol	second	feminine	singular		verb	verb	1
+7	Pdxcp	A		demonstrative		common	plural		pronoun	adj	1
+7	VQsfsa	A	peil	participle passive		feminine	singular	absolute	verb	verb	1
+7	Vprmsa	A	pael	participle active		masculine	singular	absolute	verb	verb	1
+7	Sp3fp	A		pronominal	third	feminine	plural		suffix	pron	1
+7	T	A							particle	rel	1
+7	Nxxxa	A						absolute	noun	noun	1
+6	Vpw2mp	H	piel	wayyiqtol	second	masculine	plural		verb	verb	1
+6	Vhq1cp	H	hiphil	weqatal	first	common	plural		verb	verb	1
+6	Vvw3mp	H		wayyiqtol	third	masculine	plural		verb	verb	1
+6	Vpw3fp	H	piel	wayyiqtol	third	feminine	plural		verb	verb	1
+6	Voi1cs	H	polel	yiqtol	first	common	singular		verb	verb	1
+6	Vop3cp	H	polel	qatal	third	common	plural		verb	verb	1
+6	Vvi2ms	H		yiqtol	second	masculine	singular		verb	verb	1
+6	VHa	H	hophal	infinitive absolute					verb	verb	1
+6	VNv2fs	H	niphal	imperative	second	feminine	singular		verb	verb	1
+6	Vvi2mp	H		yiqtol	second	masculine	plural		verb	verb	1
+6	Ngmsc	H		gentilic		masculine	singular	construct	noun	noun	1
+6	Vov2ms	H	polel	imperative	second	masculine	singular		verb	verb	1
+6	VKp3fs	H	pulal	qatal	third	feminine	singular		verb	verb	1
+6	Vqj3fp	H	qal	jussive	third	feminine	plural		verb	verb	1
+6	Voq1cs	H	polel	weqatal	first	common	singular		verb	verb	1
+6	Vvv2mp	H		imperative	second	masculine	plural		verb	verb	1
+6	Vli3ms	H	pilpel	yiqtol	third	masculine	singular		verb	verb	1
+6	VHp3fs	A	hophal	qatal	third	feminine	singular		verb	verb	1
+6	Ngmsd	A		gentilic		masculine	singular	determined	noun	noun	1
+6	Pp3fs	A		personal	third	feminine	singular		pronoun	pron	1
+6	VQp3cp	H	qal passive	qatal	third	common	plural		verb	verb	1
+6	VPq3cp	H	pual	weqatal	third	common	plural		verb	verb	1
+6	Voi3fs	H	polel	yiqtol	third	feminine	singular		verb	verb	1
+6	Vri2fs	H	hithpolel	yiqtol	second	feminine	singular		verb	verb	1
+6	Vhrmsa	A	haphel	participle active		masculine	singular	absolute	verb	verb	1
+6	Vup3fs	A	hithpeel	qatal	third	feminine	singular		verb	verb	1
+5	VPw3mp	H	pual	wayyiqtol	third	masculine	plural		verb	verb	1
+5	Vlrmsa	H	pilpel	participle active		masculine	singular	absolute	verb	verb	1
+5	Pp2fp	H		personal	second	feminine	plural		pronoun	pron	1
+5	Vqsfpc	H	qal	participle passive		feminine	plural	construct	verb	verb	2
+5	Vlq1cs	H	pilpel	weqatal	first	common	singular		verb	verb	1
+5	Vth1cp	H	hithpael	cohortative	first	common	plural		verb	verb	1
+5	VNw2ms	H	niphal	wayyiqtol	second	masculine	singular		verb	verb	1
+5	Vvq3cp	H		weqatal	third	common	plural		verb	verb	1
+5	Vvq2mp	H		weqatal	second	masculine	plural		verb	verb	1
+5	Vhi3fp	H	hiphil	yiqtol	third	feminine	plural		verb	verb	1
+5	Vtj2mp	H	hithpael	jussive	second	masculine	plural		verb	verb	1
+5	Vtq1cs	H	hithpael	weqatal	first	common	singular		verb	verb	1
+5	Vmrmpa	H	poel	participle active		masculine	plural	absolute	verb	verb	1
+5	Pf	H		indefinite					pronoun	adj	2
+5	Vti2fs	H	hithpael	yiqtol	second	feminine	singular		verb	verb	1
+5	Vpj3fs	H	piel	jussive	third	feminine	singular		verb	verb	1
+5	Vop1cs	H	polel	qatal	first	common	singular		verb	verb	1
+5	Vui3fs	A	hithpeel	yiqtol	third	feminine	singular		verb	verb	1
+5	Vec	A	shaphel	infinitive construct					verb	verb	1
+5	Varmsa	A	aphel	participle active		masculine	singular	absolute	verb	verb	1
+5	Vqsmsa	A	peal	participle passive		masculine	singular	absolute	verb	verb	1
+5	Vhi3mp	A	haphel	yiqtol	third	masculine	plural		verb	verb	1
+5	VMrmpa	A	hithpaal	participle active		masculine	plural	absolute	verb	verb	1
+5	Vhi2mp	A	haphel	yiqtol	second	masculine	plural		verb	verb	1
+5	Vrv2mp	H	hithpolel	imperative	second	masculine	plural		verb	verb	1
+5	VNq2fs	H	niphal	weqatal	second	feminine	singular		verb	verb	1
+5	Pfxbs	A		indefinite		both	singular		pronoun	pron	1
+5	Vhp2ms	A	haphel	qatal	second	masculine	singular		verb	verb	1
+5	Ncfda	A		common		feminine	dual	absolute	noun	noun	1
+4	Vpw1cp	H	piel	wayyiqtol	first	common	plural		verb	verb	1
+4	Vqp2fp	H	qal	qatal	second	feminine	plural		verb	verb	1
+4	Vrc	H	hithpolel	infinitive construct					verb	verb	1
+4	VQp3ms	H	qal passive	qatal	third	masculine	singular		verb	verb	1
+4	Vlw3ms	H	pilpel	wayyiqtol	third	masculine	singular		verb	verb	1
+4	VQsmsa	H	qal passive	participle passive		masculine	singular	absolute	verb	verb	1
+4	VHp2ms	H	hophal	qatal	second	masculine	singular		verb	verb	1
+4	Vmi2ms	H	poel	yiqtol	second	masculine	singular		verb	verb	1
+4	Vup3cp	H		qatal	third	common	plural		verb	verb	1
+4	Vlp3ms	H	pilpel	qatal	third	masculine	singular		verb	verb	1
+4	Vvq2ms	H		weqatal	second	masculine	singular		verb	verb	1
+4	VNsmsc	H	niphal	participle passive		masculine	singular	construct	verb	verb	1
+4	Vtp1cp	H	hithpael	qatal	first	common	plural		verb	verb	1
+4	Vvc	H		infinitive construct					verb	verb	1
+4	Pdxcs	H		demonstrative		common	singular		pronoun	adj	1
+4	Vpj2fs	H	piel	jussive	second	feminine	singular		verb	verb	1
+4	Vvi3ms	H		yiqtol	third	masculine	singular		verb	verb	1
+4	Aafsd	A		adjective		feminine	singular	determined	adjective	adj	1
+4	Vhrmpa	A	haphel	participle active		masculine	plural	absolute	verb	verb	1
+4	Pp1cp	A		personal	first	common	plural		pronoun	pron	1
+4	Vpsmsa	A	pael	participle passive		masculine	singular	absolute	verb	verb	1
+4	Vusmsa	A	hithpeel	participle passive		masculine	singular	absolute	verb	verb	1
+4	Vprmpa	A	pael	participle active		masculine	plural	absolute	verb	verb	1
+4	Vep3ms	A	shaphel	qatal	third	masculine	singular		verb	verb	1
+4	Vup3ms	A	hithpeel	qatal	third	masculine	singular		verb	verb	1
+4	Acmsc	A		cardinal number		masculine	singular	construct	adjective	num	1
+4	Vop2ms	H	polel	qatal	second	masculine	singular		verb	verb	1
+4	Voi2mp	H	polel	yiqtol	second	masculine	plural		verb	verb	1
+4	VKp3ms	H	pulal	qatal	third	masculine	singular		verb	verb	1
+4	VKp3cp	H	pulal	qatal	third	common	plural		verb	verb	1
+4	Vop3fs	H	polel	qatal	third	feminine	singular		verb	verb	1
+4	Ngmpa	A		gentilic		masculine	plural	absolute	noun	noun	1
+4	Aafpd	A		adjective		feminine	plural	determined	adjective	adj	1
+4	Aofsa	A		ordinal number		feminine	singular	absolute	adjective	num	1
+4	Pf3cs	A		indefinite	third	common	singular		pronoun	pron	2
+4	Ncbsa	A		common		both	singular	absolute	noun	noun	1
+4	Prxcs	A		relative		common	singular		pronoun	pron	2
+4	Vqrfpa	A	peal	participle active		feminine	plural	absolute	verb	verb	1
+4	VHp3ms	A	hophal	qatal	third	masculine	singular		verb	verb	1
+4	Aampc	A		adjective		masculine	plural	construct	adjective	adj	1
+3	VPp2ms	H	pual	qatal	second	masculine	singular		verb	verb	1
+3	VQj3ms	H	qal passive	jussive	third	masculine	singular		verb	verb	1
+3	Vhw3fp	H	hiphil	wayyiqtol	third	feminine	plural		verb	verb	1
+3	Vrw3mp	H	hithpolel	wayyiqtol	third	masculine	plural		verb	verb	1
+3	Vth1cs	H	hithpael	cohortative	first	common	singular		verb	verb	1
+3	Vpq1cp	H	piel	weqatal	first	common	plural		verb	verb	1
+3	Vqq2fp	H	qal	weqatal	second	feminine	plural		verb	verb	1
+3	Vmc	H	poel	infinitive construct					verb	verb	1
+3	VHi2ms	H	hophal	yiqtol	second	masculine	singular		verb	verb	1
+3	VNq1cp	H	niphal	weqatal	first	common	plural		verb	verb	1
+3	Sp2cp	H		pronominal	second	common	plural		suffix	pron	1
+3	Vta	H	hithpael	infinitive absolute					verb	verb	1
+3	Vtp2fs	H	hithpael	qatal	second	feminine	singular		verb	verb	1
+3	VNw2mp	H	niphal	wayyiqtol	second	masculine	plural		verb	verb	1
+3	Vri2mp	H	hithpolel	yiqtol	second	masculine	plural		verb	verb	1
+3	Vtq2ms	H	hithpael	weqatal	second	masculine	singular		verb	verb	1
+3	Vvi1cs	H		yiqtol	first	common	singular		verb	verb	1
+3	Vmp1cs	H	poel	qatal	first	common	singular		verb	verb	1
+3	Vrw3ms	H	hithpolel	wayyiqtol	third	masculine	singular		verb	verb	1
+3	Vow2ms	H	polel	wayyiqtol	second	masculine	singular		verb	verb	1
+3	Vrw1cs	H	hithpolel	wayyiqtol	first	common	singular		verb	verb	1
+3	Vlp3cp	H	pilpel	qatal	third	common	plural		verb	verb	1
+3	Vli3mp	H	pilpel	yiqtol	third	masculine	plural		verb	verb	1
+3	VHw3fs	H	hophal	wayyiqtol	third	feminine	singular		verb	verb	1
+3	Vvrmsa	H		participle active		masculine	singular	absolute	verb	verb	1
+3	Voq3ms	H	polel	weqatal	third	masculine	singular		verb	verb	1
+3	Vai3mp	A	aphel	yiqtol	third	masculine	plural		verb	verb	1
+3	Vhi2ms	A	haphel	yiqtol	second	masculine	singular		verb	verb	1
+3	Vurmsa	A	hithpeel	participle active		masculine	singular	absolute	verb	verb	1
+3	Vqi1cp	A	peal	yiqtol	first	common	plural		verb	verb	1
+3	Varmpa	A	aphel	participle active		masculine	plural	absolute	verb	verb	1
+3	Aobsa	A		ordinal number		both	singular	absolute	adjective	adj	2
+3	Vmrmsc	H	poel	participle active		masculine	singular	construct	verb	verb	1
+3	Vjp3cp	H	pealal	qatal	third	common	plural		verb	verb	1
+3	Vrrfsa	H	hithpolel	participle active		feminine	singular	absolute	verb	verb	1
+3	VQi3ms	H	qal passive	yiqtol	third	masculine	singular		verb	verb	1
+3	VOp1cs	H	polal	qatal	first	common	singular		verb	verb	1
+3	Vrv2fs	H	hithpolel	imperative	second	feminine	singular		verb	verb	1
+3	Vmp2ms	H	poel	qatal	second	masculine	singular		verb	verb	1
+3	Vrp3cp	H	hithpolel	qatal	third	common	plural		verb	verb	1
+3	Vov2mp	H	polel	imperative	second	masculine	plural		verb	verb	1
+3	Pdxmp	H		demonstrative		masculine	plural		pronoun	pron	1
+3	VHi2mp	H	hophal	yiqtol	second	masculine	plural		verb	verb	1
+3	VNsmpc	H	niphal	participle passive		masculine	plural	construct	verb	verb	1
+3	Vrp3fs	H	hithpolel	qatal	third	feminine	singular		verb	verb	1
+3	Vprfsc	H	piel	participle active		feminine	singular	construct	verb	verb	1
+3	VPp2mp	H	pual	qatal	second	masculine	plural		verb	verb	1
+3	Vma	H	poel	infinitive absolute					verb	verb	1
+3	VPp2fs	H	pual	qatal	second	feminine	singular		verb	verb	1
+3	VPp1cp	H	pual	qatal	first	common	plural		verb	verb	1
+3	Vqi1cs	A	peal	yiqtol	first	common	singular		verb	verb	1
+3	Aampd	A		adjective		masculine	plural	determined	adjective	adj	1
+3	Pdxbp	A		demonstrative		both	plural		pronoun	adj	1
+3	Vhi3fs	A	haphel	yiqtol	third	feminine	singular		verb	verb	1
+3	VMi3fs	A	hithpaal	yiqtol	third	feminine	singular		verb	verb	1
+3	Vpp2ms	A	pael	qatal	second	masculine	singular		verb	verb	1
+3	Vei3ms	A	shaphel	yiqtol	third	masculine	singular		verb	verb	1
+3	Varfsa	A	aphel	participle active		feminine	singular	absolute	verb	verb	1
+3	Vqrmpd	A	peal	participle active		masculine	plural	determined	verb	verb	1
+3	Vpv2mp	A	pael	imperative	second	masculine	plural		verb	verb	1
+3	Vpp1cs	A	pael	qatal	first	common	singular		verb	verb	1
+3	VMi3mp	A	hithpaal	yiqtol	third	masculine	plural		verb	verb	1
+3	Acbpa	A		cardinal number		both	plural	absolute	adjective	num	1
+3	Acmpa	A		cardinal number		masculine	plural	absolute	adjective	num	1
+3	Aofsd	A		ordinal number		feminine	singular	determined	adjective	num	1
+2	VNw3fp	H	niphal	wayyiqtol	third	feminine	plural		verb	verb	1
+2	Vhv2fp	H	hiphil	imperative	second	feminine	plural		verb	verb	1
+2	Vfw3ms	H	hithpalpel	wayyiqtol	third	masculine	singular		verb	verb	1
+2	Vvi1cp	H		yiqtol	first	common	plural		verb	verb	1
+2	Vvj3mp	H		jussive	third	masculine	plural		verb	verb	1
+2	Vvw3fp	H		wayyiqtol	third	feminine	plural		verb	verb	1
+2	Vti1cp	H	hithpael	yiqtol	first	common	plural		verb	verb	1
+2	Vli1cs	H	pilpel	yiqtol	first	common	singular		verb	verb	1
+2	Vhq2fp	H	hiphil	weqatal	second	feminine	plural		verb	verb	1
+2	Vpw2fp	H	piel	wayyiqtol	second	feminine	plural		verb	verb	1
+2	Vfc	H	hithpalpel	infinitive construct					verb	verb	1
+2	VPsfpc	H	pual	participle passive		feminine	plural	construct	verb	verb	1
+2	VHsfpc	H	hophal	participle passive		feminine	plural	construct	verb	verb	1
+2	Vuc	H		infinitive construct					verb	verb	1
+2	Vrrmpa	H	hithpolel	participle active		masculine	plural	absolute	verb	verb	1
+2	Vup3fs	H		qatal	third	feminine	singular		verb	verb	1
+2	Vormsc	H	polel	participle active		masculine	singular	construct	verb	verb	1
+2	VPsfsc	H	pual	participle passive		feminine	singular	construct	verb	verb	1
+2	Vmw3mp	H	poel	wayyiqtol	third	masculine	plural		verb	verb	1
+2	Vpi2fp	H	piel	yiqtol	second	feminine	plural		verb	verb	1
+2	Vqj2fp	H	qal	jussive	second	feminine	plural		verb	verb	1
+2	VNj2fs	H	niphal	jussive	second	feminine	singular		verb	verb	1
+2	Vpq2fs	H	piel	weqatal	second	feminine	singular		verb	verb	1
+2	Vvp1cs	H		qatal	first	common	singular		verb	verb	1
+2	Ngmpc	H		gentilic		masculine	plural	construct	noun	noun	1
+2	Vfrmsa	H	hithpalpel	participle active		masculine	singular	absolute	verb	verb	1
+2	Vhj2fs	H	hiphil	jussive	second	feminine	singular		verb	verb	1
+2	VHsmsc	H	hophal	participle passive		masculine	singular	construct	verb	noun	2
+2	Vmrfsc	H	poel	participle active		feminine	singular	construct	verb	verb	1
+2	VHj3ms	H	hophal	jussive	third	masculine	singular		verb	verb	1
+2	Vmp3ms	H	poel	qatal	third	masculine	singular		verb	verb	1
+2	Vep3mp	A	shaphel	qatal	third	masculine	plural		verb	verb	1
+2	Vti3mp	A	hishtaphel	yiqtol	third	masculine	plural		verb	verb	1
+2	Vhp1cp	A	haphel	qatal	first	common	plural		verb	verb	1
+2	Vqp2mp	A	peal	qatal	second	masculine	plural		verb	verb	1
+2	VMp3ms	A	hithpaal	qatal	third	masculine	singular		verb	verb	1
+2	Pi	A		interrogative					pronoun	pron	1
+2	Vai2ms	A	aphel	yiqtol	second	masculine	singular		verb	verb	1
+2	VMp3mp	A	hithpaal	qatal	third	masculine	plural		verb	verb	1
+2	Vhv2ms	A	haphel	imperative	second	masculine	singular		verb	verb	1
+2	Vmsmsa	H	poel	participle passive		masculine	singular	absolute	verb	verb	1
+2	VOsmsa	H	polal	participle passive		masculine	singular	absolute	verb	verb	1
+2	VHq3cp	H	hophal	weqatal	third	common	plural		verb	verb	1
+2	Vmp3fs	H	poel	qatal	third	feminine	singular		verb	verb	1
+2	Vfp3cp	H	hithpalpel	qatal	third	common	plural		verb	verb	1
+2	Vrv2ms	H	hithpolel	imperative	second	masculine	singular		verb	verb	1
+2	Vrp2ms	H	hithpolel	qatal	second	masculine	singular		verb	verb	1
+2	Aobsa	H		ordinal number		both	singular	absolute	adjective	num	1
+2	Vmh1cs	H	poel	cohortative	first	common	singular		verb	verb	1
+2	VOp3cp	H	polal	qatal	third	common	plural		verb	verb	1
+2	Vri3fs	H	hithpolel	yiqtol	third	feminine	singular		verb	verb	1
+2	VPsmsc	H	pual	participle passive		masculine	singular	construct	verb	verb	1
+2	Vmp3cp	H	poel	qatal	third	common	plural		verb	verb	1
+2	Vorfsa	H	polel	participle active		feminine	singular	absolute	verb	verb	1
+2	Vfi1cs	H	hithpalpel	yiqtol	first	common	singular		verb	verb	1
+2	Vkq3ms	H	palel	weqatal	third	masculine	singular		verb	verb	1
+2	VQsfsa	H	qal passive	participle passive		feminine	singular	absolute	verb	verb	1
+2	Vri2ms	H	hithpolel	yiqtol	second	masculine	singular		verb	verb	1
+2	Vlq3ms	H	pilpel	weqatal	third	masculine	singular		verb	verb	1
+2	Vlrmsc	H	pilpel	participle active		masculine	singular	construct	verb	verb	1
+2	VPi2mp	H	pual	yiqtol	second	masculine	plural		verb	verb	1
+2	Vrj2mp	H	hithpolel	jussive	second	masculine	plural		verb	verb	1
+2	Vfv2mp	H	hithpalpel	imperative	second	masculine	plural		verb	verb	1
+2	Vrq3cp	H	hithpolel	weqatal	third	common	plural		verb	verb	1
+2	Vkp3ms	H	palel	qatal	third	masculine	singular		verb	verb	1
+2	VMp3ms	H	poal	qatal	third	masculine	singular		verb	verb	1
+2	Vti3fp	H	hithpael	yiqtol	third	feminine	plural		verb	verb	1
+2	Voq3cp	H	polel	weqatal	third	common	plural		verb	verb	1
+2	Voi3fp	H	polel	yiqtol	third	feminine	plural		verb	verb	1
+2	Vui2mp	A	hithpeel	yiqtol	second	masculine	plural		verb	verb	1
+2	Vui3mp	A	hithpeel	yiqtol	third	masculine	plural		verb	verb	1
+2	Vhi1cp	A	haphel	yiqtol	first	common	plural		verb	verb	1
+2	Ngmpc	A		gentilic		masculine	plural	construct	noun	noun	1
+2	Vuc	A	hithpeel	infinitive construct					verb	verb	1
+2	Vhp1cs	A	haphel	qatal	first	common	singular		verb	verb	1
+2	Vqrmsc	A	peal	participle active		masculine	singular	construct	verb	verb	1
+2	Vhp3fs	A	haphel	qatal	third	feminine	singular		verb	verb	1
+2	VMsmpa	A	hithpaal	participle passive		masculine	plural	absolute	verb	verb	1
+2	Vai3ms	A	aphel	yiqtol	third	masculine	singular		verb	verb	1
+2	Vip3fs	A	ithpeel	qatal	third	feminine	singular		verb	verb	1
+2	Vhsmsa	A	haphel	participle passive		masculine	singular	absolute	verb	verb	1
+2	Acfpa	A		cardinal number		feminine	plural	absolute	adjective	num	1
+2	Pf3bs	A		indefinite	third	both	singular		pronoun	pron	2
+2	VHp3mp	A	hophal	qatal	third	masculine	plural		verb	verb	1
+2	VQsmpa	A	peil	participle passive		masculine	plural	absolute	verb	verb	1
+2	Vai3fs	A	aphel	yiqtol	third	feminine	singular		verb	verb	1
+2	Vqp3fp	A	peal	qatal	third	feminine	plural		verb	verb	1
+2	Aomsa	A		ordinal number		masculine	singular	absolute	adjective	adj	2
+2	Ncbpa	A		common		both	plural	absolute	noun	noun	1
+2	Vqv2fs	A	peal	imperative	second	feminine	singular		verb	verb	1
+2	Vfi3ms	H	hithpalpel	yiqtol	third	masculine	singular		verb	verb	1
+1	VQw3fs	H	qal passive	wayyiqtol	third	feminine	singular		verb	verb	1
+1	Vkrmpc	H	palel	participle active		masculine	plural	construct	verb	verb	1
+1	Vvw1cs	H		wayyiqtol	first	common	singular		verb	verb	1
+1	VPa	H	pual	infinitive absolute					verb	verb	1
+1	Vfp1cp	H	hithpalpel	qatal	first	common	plural		verb	verb	1
+1	Vpp2fp	H	piel	qatal	second	feminine	plural		verb	verb	1
+1	Vmq3cp	H	poel	weqatal	third	common	plural		verb	verb	1
+1	VHw3mp	H	hophal	wayyiqtol	third	masculine	plural		verb	verb	1
+1	Vqq2cp	H	qal	weqatal	second	common	plural		verb	verb	1
+1	Vmi2mp	H	poel	yiqtol	second	masculine	plural		verb	verb	1
+1	Vrj3fs	H	hithpolel	jussive	third	feminine	singular		verb	verb	1
+1	VHi1cp	H	hophal	yiqtol	first	common	plural		verb	verb	1
+1	VDq3ms	H	nithpael	weqatal	third	masculine	singular		verb	verb	1
+1	VNi2fp	H	niphal	yiqtol	second	feminine	plural		verb	verb	1
+1	Aabsa	H		adjective		both	singular	absolute	adjective	adj	1
+1	VNrfsc	H	niphal	participle active		feminine	singular	construct	verb	verb	1
+1	VHp1cp	H	hophal	qatal	first	common	plural		verb	verb	1
+1	Vow1cs	H	polel	wayyiqtol	first	common	singular		verb	verb	1
+1	Sp2cs	H		pronominal	second	common	singular		suffix	pron	1
+1	VMsfpa	H	poal	participle passive		feminine	plural	absolute	verb	verb	1
+1	Vmrfsa	H	poel	participle active		feminine	singular	absolute	verb	verb	1
+1	Vlw1cs	H	pilpel	wayyiqtol	first	common	singular		verb	verb	1
+1	VLp3cp	H	polpal	qatal	third	common	plural		verb	verb	1
+1	Vvw3ms	H		wayyiqtol	third	masculine	singular		verb	verb	1
+1	Vmw3ms	H	poel	wayyiqtol	third	masculine	singular		verb	verb	1
+1	Vvq1cs	H		weqatal	first	common	singular		verb	verb	1
+1	VHj3fs	H	hophal	jussive	third	feminine	singular		verb	verb	1
+1	Vfrmpa	H	hithpalpel	participle active		masculine	plural	absolute	verb	verb	1
+1	Vhrfsc	A	haphel	participle active		feminine	singular	construct	verb	verb	1
+1	VMrfsa	A	hithpaal	participle active		feminine	singular	absolute	verb	verb	1
+1	Aocpa	A		ordinal number		common	plural	absolute	adjective	num	1
+1	Pi3ms	A		interrogative	third	masculine	singular		pronoun	pron	1
+1	Vurfsa	A	hithpeel	participle active		feminine	singular	absolute	verb	verb	1
+1	Vav2ms	A	aphel	imperative	second	masculine	singular		verb	verb	1
+1	Vhsmpa	A	haphel	participle passive		masculine	plural	absolute	verb	verb	1
+1	Vssmpa	A	saphel	participle passive		masculine	plural	absolute	verb	verb	1
+1	Vusfsa	A	hithpeel	participle passive		feminine	singular	absolute	verb	verb	1
+1	Acbda	A		cardinal number		both	dual	absolute	adjective	num	1
+1	Acbsc	A		cardinal number		both	singular	construct	adjective	num	1
+1	Vpi2ms	A	pael	yiqtol	second	masculine	singular		verb	verb	1
+1	Vusmpa	A	hithpeel	participle passive		masculine	plural	absolute	verb	verb	1
+1	Pixcs	A		interrogative		common	singular		pronoun	pron	1
+1	Vpv2ms	A	pael	imperative	second	masculine	singular		verb	verb	1
+1	Vtw1cp	H	hithpael	wayyiqtol	first	common	plural		verb	verb	1
+1	Vlp2ms	H	pilpel	qatal	second	masculine	singular		verb	verb	1
+1	VPw3ms	H	pual	wayyiqtol	third	masculine	singular		verb	verb	1
+1	Vfw3fs	H	hithpalpel	wayyiqtol	third	feminine	singular		verb	verb	1
+1	Vkp3cp	H	palel	qatal	third	common	plural		verb	verb	1
+1	VHi1cs	H	hophal	yiqtol	first	common	singular		verb	verb	1
+1	VOp2ms	H	polal	qatal	second	masculine	singular		verb	verb	1
+1	Vkp3fs	H	palel	qatal	third	feminine	singular		verb	verb	1
+1	VOi3mp	H	polal	yiqtol	third	masculine	plural		verb	verb	1
+1	Via	H	pilel	infinitive absolute					verb	verb	1
+1	VMi3mp	H	poal	yiqtol	third	masculine	plural		verb	verb	1
+1	Vrrmsc	H	hithpolel	participle active		masculine	singular	construct	verb	verb	1
+1	Vrw2ms	H	hithpolel	wayyiqtol	second	masculine	singular		verb	verb	1
+1	Vrq1cs	H	hithpolel	weqatal	first	common	singular		verb	verb	1
+1	Vmj3fs	H	poel	jussive	third	feminine	singular		verb	verb	1
+1	Vrw1cp	H	hithpolel	wayyiqtol	first	common	plural		verb	verb	1
+1	Vtj3fs	H	hithpael	jussive	third	feminine	singular		verb	verb	1
+1	Voh1cp	H	polel	cohortative	first	common	plural		verb	verb	1
+1	Vjp3ms	H	pealal	qatal	third	masculine	singular		verb	verb	1
+1	VQp1cp	H	qal passive	qatal	first	common	plural		verb	verb	1
+1	Vjp2ms	H	pealal	qatal	second	masculine	singular		verb	verb	1
+1	Vvv2fs	H		imperative	second	feminine	singular		verb	verb	1
+1	VHi3fp	H	hophal	yiqtol	third	feminine	plural		verb	verb	1
+1	Vrrmpc	H	hithpolel	participle active		masculine	plural	construct	verb	verb	1
+1	VOi3fp	H	polal	yiqtol	third	feminine	plural		verb	verb	1
+1	Vzc	H		infinitive construct					verb	verb	1
+1	VMsmpc	H	poal	participle passive		masculine	plural	construct	verb	verb	1
+1	Vow3fs	H	polel	wayyiqtol	third	feminine	singular		verb	verb	1
+1	Vow3mp	H	polel	wayyiqtol	third	masculine	plural		verb	verb	1
+1	Vrj3mp	H	hithpolel	jussive	third	masculine	plural		verb	verb	1
+1	Vfp1cs	H	hithpalpel	qatal	first	common	singular		verb	verb	1
+1	Vlp1cs	H	pilpel	qatal	first	common	singular		verb	verb	1
+1	VPc	H	pual	infinitive construct					verb	verb	1
+1	Vvh1cp	H		cohortative	first	common	plural		verb	verb	1
+1	Voh1cs	H	polel	cohortative	first	common	singular		verb	verb	1
+1	Sp3cs	H		pronominal	third	common	singular		suffix	pron	1
+1	Vlv2ms	H	pilpel	imperative	second	masculine	singular		verb	verb	1
+1	Vpsmsa	H	piel	participle passive		masculine	singular	absolute	verb	verb	1
+1	Vtrmsc	H	hithpael	participle active		masculine	singular	construct	verb	verb	1
+1	VDp3fs	H	nithpael	qatal	third	feminine	singular		verb	verb	1
+1	VMsmsa	H	poal	participle passive		masculine	singular	absolute	verb	verb	1
+1	Vrp3ms	H	hithpolel	qatal	third	masculine	singular		verb	verb	1
+1	VQi2mp	H	qal passive	yiqtol	second	masculine	plural		verb	verb	1
+1	VHq2mp	H	hophal	weqatal	second	masculine	plural		verb	verb	1
+1	Vlrmpa	H	pilpel	participle active		masculine	plural	absolute	verb	verb	1
+1	VMsfsa	H	poal	participle passive		feminine	singular	absolute	verb	verb	1
+1	VOi3ms	H	polal	yiqtol	third	masculine	singular		verb	verb	1
+1	Vli2fs	H	pilpel	yiqtol	second	feminine	singular		verb	verb	1
+1	Vrq3fs	H	hithpolel	weqatal	third	feminine	singular		verb	verb	1
+1	Vli3fs	H	pilpel	yiqtol	third	feminine	singular		verb	verb	1
+1	VQi2ms	H	qal passive	yiqtol	second	masculine	singular		verb	verb	1
+1	Vhrfpc	H	hiphil	participle active		feminine	plural	construct	verb	noun	1
+1	Vrsmsa	H	hithpolel	participle passive		masculine	singular	absolute	verb	verb	1
+1	VLi2mp	H	polpal	yiqtol	second	masculine	plural		verb	verb	1
+1	Vvp3cp	H		qatal	third	common	plural		verb	verb	1
+1	Vpv2fp	H	piel	imperative	second	feminine	plural		verb	verb	1
+1	VMp3cp	H	poal	qatal	third	common	plural		verb	verb	1
+1	Vci2ms	H		yiqtol	second	masculine	singular		verb	verb	1
+1	VHsmpc	H	hophal	participle passive		masculine	plural	construct	verb	verb	1
+1	VQp1cs	H	qal passive	qatal	first	common	singular		verb	verb	1
+1	Vcrmsa	H		participle active		masculine	singular	absolute	verb	verb	1
+1	Vmrmpc	H	poel	participle active		masculine	plural	construct	verb	verb	1
+1	Vmi3fs	H	poel	yiqtol	third	feminine	singular		verb	verb	1
+1	Vzrmpa	H		participle active		masculine	plural	absolute	verb	verb	1
+1	Vhi2fp	H	hiphil	yiqtol	second	feminine	plural		verb	verb	1
+1	Vrv2fp	H	hithpolel	imperative	second	feminine	plural		verb	verb	1
+1	VHv2mp	H	hophal	imperative	second	masculine	plural		verb	verb	1
+1	VQp3fs	H	qal passive	qatal	third	feminine	singular		verb	verb	1
+1	Vla	H	pilpel	infinitive absolute					verb	verb	1
+1	Vfi3fs	H	hithpalpel	yiqtol	third	feminine	singular		verb	verb	1
+1	Vmv2ms	H	poel	imperative	second	masculine	singular		verb	verb	1
+1	Vtrfpa	H	hithpael	participle active		feminine	plural	absolute	verb	verb	1
+1	Voi2fp	H	polel	yiqtol	second	feminine	plural		verb	verb	1
+1	VHp2fs	H	hophal	qatal	second	feminine	singular		verb	verb	1
+1	VHw2fs	H	hophal	wayyiqtol	second	feminine	singular		verb	verb	1
+1	VDq3cp	H	nithpael	weqatal	third	common	plural		verb	verb	1
+1	VPi2fs	H	pual	yiqtol	second	feminine	singular		verb	verb	1
+1	VNw2fs	H	niphal	wayyiqtol	second	feminine	singular		verb	verb	1
+1	VHq2ms	H	hophal	weqatal	second	masculine	singular		verb	verb	1
+1	VHv2ms	H	hophal	imperative	second	masculine	singular		verb	verb	1
+1	Vosfsa	H	polel	participle passive		feminine	singular	absolute	verb	verb	1
+1	Vvq3ms	H		weqatal	third	masculine	singular		verb	verb	1
+1	Vpi1cp	A	pael	yiqtol	first	common	plural		verb	verb	1
+1	Vpi2mp	A	pael	yiqtol	second	masculine	plural		verb	verb	1
+1	Vhv2mp	A	haphel	imperative	second	masculine	plural		verb	verb	1
+1	Aobpa	A		ordinal number		both	plural	absolute	adjective	adv	1
+1	Pp2mp	A		personal	second	masculine	plural		pronoun	pron	1
+1	Ngbsa	A		gentilic		both	singular	absolute	noun	noun	1
+1	VMc	A	hithpaal	infinitive construct					verb	verb	1
+1	Vhrfsa	A	haphel	participle active		feminine	singular	absolute	verb	verb	1
+1	Vpsfpd	A	pael	participle passive		feminine	plural	determined	verb	verb	1
+1	Vpi1cs	A	pael	yiqtol	first	common	singular		verb	verb	1
+1	Pdxbs	A		demonstrative		both	singular		pronoun	adj	1
+1	Pd3ms	A		demonstrative	third	masculine	singular		pronoun	pron	1
+1	Vap3ms	A	aphel	qatal	third	masculine	singular		verb	verb	1
+1	Pi3cs	A		interrogative	third	common	singular		pronoun	pron	1
+1	Ncmdc	A		common		masculine	dual	construct	noun	noun	1
+1	VPp3ms	A	ithpaal	qatal	third	masculine	singular		verb	verb	1
+1	Vpsmpa	A	pael	participle passive		masculine	plural	absolute	verb	verb	1
+1	Aomsd	A		ordinal number		masculine	singular	determined	adjective	num	1
+1	Vup3mp	A	hithpeel	qatal	third	masculine	plural		verb	verb	1
+1	Ngmsc	A		gentilic		masculine	singular	construct	noun	noun	1
+1	Vav2mp	A	aphel	imperative	second	masculine	plural		verb	verb	1
+1	Vzp3ms	A	ithpoel	qatal	third	masculine	singular		verb	verb	1
+1	Sp1ms	A		pronominal	first	masculine	singular		suffix	pron	1
+1	Pixbs	A		interrogative		both	singular		pronoun	pron	1
+1	Vormsa	A	polel	participle active		masculine	singular	absolute	verb	verb	1
+1	Acmsd	A		cardinal number		masculine	singular	determined	adjective	num	1
+1	Vprmsc	A	pael	participle active		masculine	singular	construct	verb	verb	1
+1	Vprmpc	A	pael	participle active		masculine	plural	construct	verb	verb	1
+1	Vqi3fp	A	peal	yiqtol	third	feminine	plural		verb	verb	1
+1	Vhi1cs	A	haphel	yiqtol	first	common	singular		verb	verb	1
+1	Sp3cs	A		pronominal	third	common	singular		suffix	pron	1
+1	Vrp2ms	A	hithpolel	qatal	second	masculine	singular		verb	verb	1
+1	VQi2ms	A	peil	yiqtol	second	masculine	singular		verb	verb	1
+1	Vup2ms	A	hithpeel	qatal	second	masculine	singular		verb	verb	1
+1	VPp3mp	A	ithpaal	qatal	third	masculine	plural		verb	verb	1
+1	VQsfpa	A	peil	participle passive		feminine	plural	absolute	verb	verb	1
+1	Vermsa	A	shaphel	participle active		masculine	singular	absolute	verb	verb	1
+1	Varfpa	A	aphel	participle active		feminine	plural	absolute	verb	verb	1
+1	Ncbpc	A		common		both	plural	construct	noun	noun	1
+1	Vpsfsa	A	pael	participle passive		feminine	singular	absolute	verb	verb	1
+1	Vip3mp	A	ithpeel	qatal	third	masculine	plural		verb	verb	1
+1	Acfsc	A		cardinal number		feminine	singular	construct	adjective	num	1
+1	Vprfsa	A	pael	participle active		feminine	singular	absolute	verb	verb	1
+1	Pp3fp	A		personal	third	feminine	plural		pronoun	pron	1
+1	Aabsa	A		adjective		both	singular	absolute	adjective	num	1
+1	VKq3ms	H	pulal	weqatal	third	masculine	singular		verb	verb	1
+1	Vcp1cs	H		qatal	first	common	singular		verb	verb	1
+1	Vri3fp	H	hithpolel	yiqtol	third	feminine	plural		verb	verb	1
+1	Vhq2fs	H	hiphil	weqatal	second	feminine	singular		verb	verb	1
+1	Vfi3mp	H	hithpalpel	yiqtol	third	masculine	plural		verb	verb	1
+1	Vmrfpa	H	poel	participle active		feminine	plural	absolute	verb	verb	1
+1	Vlrmpc	H	pilpel	participle active		masculine	plural	construct	verb	verb	1
+1	VQq3ms	H	qal passive	weqatal	third	masculine	singular		verb	verb	1
+1	VHq3fs	H	hophal	weqatal	third	feminine	singular		verb	verb	1
+1	Vtw3fp	H	hithpael	wayyiqtol	third	feminine	plural		verb	verb	1
+1	Vrrfpa	H	hithpolel	participle active		feminine	plural	absolute	verb	verb	1

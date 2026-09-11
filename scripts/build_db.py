@@ -181,6 +181,23 @@ CREATE TABLE IF NOT EXISTS word (
     lexical_class TEXT,             -- Macula TSV `class` field: noun/verb/adj/adv/prep/cj/pron/ij/intj/art/ptcl/rel/num/om/x
     slot         INTEGER,           -- Macula !N group position (multiple tokens share same slot = one display word)
     xlit_slot    TEXT,              -- BibleHub per-slot transliteration (keyed by verse-slot position via ADR-020)
+    -- ADR-040: already-decoded morphology fields imported straight from the Macula
+    -- TSV, so MorphologyDecoder becomes a lookup layer instead of a positional parser.
+    -- All nullable — populated only for the language/POS the field applies to.
+    person       TEXT,              -- both languages: first/second/third
+    gender       TEXT,              -- both languages: masculine/feminine/neuter/common/both
+    number       TEXT,              -- both languages: singular/plural/dual
+    gr_case      TEXT,              -- Greek `case`: nominative/genitive/dative/accusative/vocative
+    tense        TEXT,              -- Greek `tense`: aorist/present/imperfect/future/perfect/pluperfect
+    voice        TEXT,              -- Greek `voice`: active/passive/middle/middlepassive
+    mood         TEXT,              -- Greek `mood`: indicative/imperative/subjunctive/optative/participle/infinitive
+    degree       TEXT,              -- Greek `degree`: comparative/superlative
+    gr_type      TEXT,              -- Greek `type`: pronoun/article subtype, e.g. demonstrative/personal/relative
+    stem         TEXT,              -- Hebrew `stem` (binyan): qal/niphal/piel/pual/hiphil/hophal/hithpael/...
+    morph_type   TEXT,              -- Hebrew `type` (renamed from verb_type — not verb-only): qatal/wayyiqtol/common/proper/...
+    state        TEXT,              -- Hebrew `state`: absolute/construct/determined
+    pos          TEXT,              -- Hebrew `pos` (finer than lexical_class, e.g. pron→suffix): noun/verb/suffix/preposition/...
+    lang         TEXT,              -- Hebrew `lang`: H=Hebrew, A=Aramaic. NOT the same distinction as `language` (hbo/grc) above.
     FOREIGN KEY (book_id)    REFERENCES book(id),
     FOREIGN KEY (strongs_id) REFERENCES strongs(id)
 );
@@ -289,6 +306,21 @@ def normalize_strongs(raw, lang_prefix=""):
     return None
 
 
+def _clean_morph_value(raw):
+    """Normalize a Macula TSV morphology field to None if empty or an
+    'unknown: x' / 'unknown: v' sentinel (ADR-040, Opus review finding #6 —
+    2,803 such sentinel values measured across the Hebrew TSV's morphology
+    columns). Returns the stripped value otherwise."""
+    if not raw:
+        return None
+    val = raw.strip()
+    if not val:
+        return None
+    if val.lower().startswith("unknown"):
+        return None
+    return val
+
+
 def parse_macula_ref(ref):
     """
     Parse 'GEN 1:1!1' or 'MAT 1:1!1' → (osis_id, chapter, verse, position).
@@ -334,11 +366,12 @@ def import_macula_hebrew(cur):
     with zipfile.ZipFile(MACULA_HEB_ZIP) as zf:
         with zf.open(MACULA_HEB_TSV) as f:
             raw = io.TextIOWrapper(f, encoding="utf-8")
-            rows = parse_macula_tsv(raw, language="hbo", strongs_col="strongnumberx", lang_prefix="H")
+            rows = parse_macula_tsv(raw, language="hbo", strongs_col="strongnumberx", lang_prefix="H",
+                                    extra_fields=HEBREW_EXTRA_FIELDS)
 
     cur.executemany(
-        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class,slot) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        f"INSERT OR IGNORE INTO word ({WORD_BASE_COLS_SQL},{HEBREW_EXTRA_COLS_SQL}) "
+        f"VALUES ({WORD_BASE_PLACEHOLDERS},{HEBREW_EXTRA_PLACEHOLDERS})",
         rows
     )
     print(f"  {len(rows):,} Hebrew words imported.")
@@ -372,17 +405,54 @@ def import_macula_greek(cur):
         with zf.open(MACULA_GRK_TSV) as f:
             raw = io.TextIOWrapper(f, encoding="utf-8")
             rows = parse_macula_tsv(raw, language="grc", strongs_col="strong",
-                                    lang_prefix="G", xlit_lookup=bh_translit)
+                                    lang_prefix="G", xlit_lookup=bh_translit,
+                                    extra_fields=GREEK_EXTRA_FIELDS)
 
     cur.executemany(
-        "INSERT OR IGNORE INTO word (id,book_id,chapter,verse,position,surface,lemma,strongs_id,morph,gloss,language,xlit,lexical_class,slot) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        f"INSERT OR IGNORE INTO word ({WORD_BASE_COLS_SQL},{GREEK_EXTRA_COLS_SQL}) "
+        f"VALUES ({WORD_BASE_PLACEHOLDERS},{GREEK_EXTRA_PLACEHOLDERS})",
         rows
     )
     print(f"  {len(rows):,} Greek words imported.")
 
 
-def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: dict = {}):
+# ADR-040: which Macula TSV columns become which `word` columns, per language.
+# Both languages share the same `parse_macula_tsv` body — only this mapping differs.
+HEBREW_EXTRA_FIELDS = [
+    ("person", "person"),
+    ("gender", "gender"),
+    ("number", "number"),
+    ("stem",   "stem"),
+    ("type",   "morph_type"),   # renamed: Hebrew TSV `type` is not verb-only
+    ("state",  "state"),
+    ("pos",    "pos"),
+    ("lang",   "lang"),
+]
+
+GREEK_EXTRA_FIELDS = [
+    ("person", "person"),
+    ("gender", "gender"),
+    ("number", "number"),
+    ("case",   "gr_case"),      # renamed: `case` would shadow no column, but keeps Greek/Hebrew naming symmetric
+    ("tense",  "tense"),
+    ("voice",  "voice"),
+    ("mood",   "mood"),
+    ("degree", "degree"),
+    ("type",   "gr_type"),      # renamed: Greek TSV `type` is the pronoun/article subtype
+]
+
+WORD_BASE_COLS = ["id", "book_id", "chapter", "verse", "position", "surface", "lemma",
+                  "strongs_id", "morph", "gloss", "language", "xlit", "lexical_class", "slot"]
+WORD_BASE_COLS_SQL = ",".join(WORD_BASE_COLS)
+WORD_BASE_PLACEHOLDERS = ",".join(["?"] * len(WORD_BASE_COLS))
+HEBREW_EXTRA_COLS_SQL = ",".join(db_col for _, db_col in HEBREW_EXTRA_FIELDS)
+HEBREW_EXTRA_PLACEHOLDERS = ",".join(["?"] * len(HEBREW_EXTRA_FIELDS))
+GREEK_EXTRA_COLS_SQL = ",".join(db_col for _, db_col in GREEK_EXTRA_FIELDS)
+GREEK_EXTRA_PLACEHOLDERS = ",".join(["?"] * len(GREEK_EXTRA_FIELDS))
+
+
+def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: dict = {},
+                      extra_fields: list = ()):
     """Parse a Macula consolidated TSV (file-like object). Returns word rows.
 
     The Macula Hebrew TSV uses word-group position numbers (PSA 1:2!3 can have
@@ -393,6 +463,11 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: d
 
     xlit_lookup: optional {normalized_greek_form: transliteration} from BibleHub.
     When provided, per-form surface xlit is used instead of the TSV column fallback.
+
+    extra_fields: list of (tsv_column, db_column) pairs (ADR-040) — already-decoded
+    morphology columns to carry straight from the TSV into `word`, appended to each
+    row tuple in this order. Empty values and 'unknown: x'/'unknown: v' sentinels
+    are normalized to None via _clean_morph_value().
     """
     rows = []
     reader = csv.DictReader(fileobj, delimiter="\t")
@@ -437,8 +512,9 @@ def parse_macula_tsv(fileobj, language, strongs_col, lang_prefix, xlit_lookup: d
         verse_seq[verse_key] = pos
 
         word_id = f"{osis}|{ch}|{vs}|{pos}"
+        extra_values = tuple(_clean_morph_value(row.get(tsv_col, "")) for tsv_col, _ in extra_fields)
         rows.append((word_id, osis, ch, vs, pos, surface, lemma,
-                     strongs_id, morph, gloss, language, xlit, lexical_class, slot))
+                     strongs_id, morph, gloss, language, xlit, lexical_class, slot) + extra_values)
     return rows
 
 # ─────────────────────────────────────────────

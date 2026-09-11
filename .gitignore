@@ -30,6 +30,12 @@ scripts/.cache/
 !data/glosses/
 !data/glosses/**
 
+# EXCEPTION: Hebrew morph-decode audit artifact (ADR-040) — one row per unique
+# (morph, lang) pair actually seen in the corpus (892 rows) with its decoded
+# fields, generated from the Macula TSV for auditability/regression-diffing.
+# Small, hand-reviewable, not regenerated at build time — MUST be tracked.
+!data/morph_decode_hebrew.tsv
+
 # ── macOS ─────────────────────────────────────────────────────
 .DS_Store
 **/.DS_Store
