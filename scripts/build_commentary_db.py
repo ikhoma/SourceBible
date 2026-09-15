@@ -448,17 +448,42 @@ def mybible_ranges(cur, book_number, book_id, org):
 # which is the actual fix for the live single-'\n' artifact class
 # (commentary-sources-audit.md, доповнення 2026-09-01).
 
+# Whitelisted tag-name catch-all (Opus review 2026-09-14) -- used at the END
+# of both strip_p_tag_format and strip_henry_new_html, AFTER unescaping runs
+# first (see N3 below). A bare <[^>]+> here would also match Beta-code Greek
+# diacritics like "me<n mh<" (Calvin's classical quotations use "<"/">" as
+# breathing marks, not brackets) and delete real text between them. Matching
+# only real tag names leaves that punctuation alone. [^>]* for the attribute
+# span (not [^<>]*) is deliberate: some anchors carry a literal "<" inside an
+# attribute value (e.g. "<a href='B:680 1:19<'>"), which [^<>]* would break.
+_HTML_TAG = re.compile(
+    r"(?i)</?(?:a|abbr|b|big|blockquote|br|caption|center|cite|code|col|colgroup"
+    r"|dd|div|dl|dt|em|font|h1|h2|h3|h4|h5|h6|hr|i|img|li|nobr|ol|p|pre|q|s|small"
+    r"|span|strike|strong|sub|sup|table|tbody|td|tfoot|th|thead|tr|tt|u|ul"
+    r"|script|style|wbr)(?:\s[^>]*)?/?>"
+)
+
+
 def strip_p_tag_format(html: str) -> str:
-    """Owen-New / Spurgeon-VE / Edwards shared format."""
-    text = html
+    """Owen-New / Spurgeon-VE / Edwards shared format.
+
+    N3 (session 2026-09-14, found via Henry, same mechanism applies here):
+    some rows carry DOUBLY-escaped tags (e.g. '&amp;lti&gt;' for a literal
+    '<i>', missing the ';' after 'lt' -- html.unescape's HTML5 legacy-name
+    handling still resolves it over _unescape_entities's fixed-point loop).
+    Tag-stripping ran before unescaping, so a tag hidden behind escaping
+    was still encoded when the strip regexes ran and survived verbatim
+    into the stored text once unescaping (last step, until now) revealed
+    it. Unescape FIRST so every tag -- plain or escaped -- is literal
+    before any stripping regex sees it."""
+    text = _unescape_entities(html)
     text = re.sub(r"(?i)<p\s*/?>", "\n\n", text)
     text = re.sub(r"(?i)</p>", "\n\n", text)
     text = re.sub(r"(?i)<a\s+[^>]*>", "", text)
     text = re.sub(r"(?i)</a>", "", text)
     text = re.sub(r"(?i)</?(?:i|b|u|em|strong|span)[^>]*>", "", text)
     text = re.sub(r"(?i)<br\s*/?>", "\n", text)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = _unescape_entities(text)
+    text = _HTML_TAG.sub(" ", text)
     return _collapse_whitespace(text)
 
 
@@ -466,8 +491,18 @@ def strip_henry_new_html(html: str) -> str:
     """Henry-New (MHWBC) format — old-style HTML tables/paragraphs. Converts
     genuine block boundaries to '\\n\\n'; everything else (inline SPAN/I/B,
     TR/TD structure) is dropped without inserting a line break, unlike the
-    live _strip_henry_html() which turns every tag into a bare '\\n'."""
-    text = html
+    live _strip_henry_html() which turns every tag into a bare '\\n'.
+
+    N3 (session 2026-09-14): 247 rows carry DOUBLY-escaped tags (e.g.
+    '&amp;lti&gt;' for a literal '<i>', missing the ';' after 'lt' --
+    html.unescape's HTML5 legacy-name handling still resolves it over
+    _unescape_entities's fixed-point loop). Tag-stripping ran before
+    unescaping, so a tag hidden behind escaping was still encoded when the
+    strip regexes ran and survived verbatim into the stored text once
+    unescaping (last step, until now) revealed it -- e.g. GEN 12:14 stored
+    a literal, unstripped '<i>v. 16 )'. Unescape FIRST so every tag --
+    plain or escaped -- is literal before any stripping regex sees it."""
+    text = _unescape_entities(html)
     text = re.sub(r"(?i)<script[^>]*>.*?</script>", " ", text, flags=re.DOTALL)
     text = re.sub(r"(?i)<style[^>]*>.*?</style>", " ", text, flags=re.DOTALL)
     text = re.sub(r"(?i)</?(?:table|tr)[^>]*>", "\n\n", text)
@@ -475,8 +510,7 @@ def strip_henry_new_html(html: str) -> str:
     text = re.sub(r"(?i)<br\s*/?>", "\n", text)
     text = re.sub(r"(?i)</?(?:td|th|span|i|b|u|em|strong)[^>]*>", "", text)
     text = re.sub(r"(?i)<hr[^>]*>", "\n\n", text)
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = _unescape_entities(text)
+    text = _HTML_TAG.sub(" ", text)
     return _collapse_whitespace(text)
 
 
@@ -559,21 +593,102 @@ def _assert_calvin_garbage_excluded(cur2, book_num_to_id):
     assert not leaked, f"Calvin garbage book numbers reachable via canonical map: {leaked}"
 
 
+def _load_calvin_genesis_overrides(mybible_path):
+    """Surgical fix -- Calvin / Genesis, two parts (session 2026-09-14,
+    Opus-reviewed).
+
+    Part 1 -- GEN 1:1 text is wrong. The 2026-09-01 audit note above
+    ("Ісая 49-66 та Буття -- вирішено") called this row's 35,287 chars
+    "genuine long text, not garbage" on a length check alone. Closer
+    inspection: it is CCEL title-page + translator's-preface + general
+    "Argument" boilerplate with ZERO actual exposition of Genesis 1:1
+    anywhere in it (exhaustive search finds no "in the beginning", "Moses
+    simply intends", etc.) -- and it is byte-IDENTICAL to
+    CalvinCommentaries.zip's (SWORD) text for the same verse, the format
+    already known to carry front-matter/index-bleed defects.
+
+    Part 2 -- that 35,287-char blob is not garbage, it is DISPLACED: it is
+    Calvin's real book-level "Argument" to Genesis, which the untouched
+    original data/New/Calvin-c.commentaries.zip stores as its own
+    chapter_number_from=0 row (book intro) -- the same first-class shape
+    insert_section() already gives every other book's ch0 intro. The
+    PATCHED file is missing that row outright: Genesis is the ONLY Calvin
+    book with a ch0 intro in ORIG but not in PATCHED (checked all 32/33).
+    Whatever patch pass filled the Gen 10-30 gap dropped this row and the
+    text ended up squatting in 1:1 instead. Restore it to its own slot
+    rather than discarding it, so Genesis isn't left the only Calvin book
+    silently missing its introduction.
+
+    Both pulled from the same untouched original zip, once, at import time;
+    everything downstream (strip_p_tag_format, insert_section) treats each
+    exactly like any other row's raw text. Hard-fails (not a soft skip) if
+    either can't be verified -- a silently-corrupt Genesis is worse than a
+    loud build failure, per the same standard as
+    _assert_calvin_garbage_excluded above.
+    """
+    orig_zip = os.path.join(os.path.dirname(mybible_path), "Calvin-c.commentaries.zip")
+    assert os.path.exists(orig_zip), f"Calvin Genesis override source not found: {orig_zip}"
+    with zipfile.ZipFile(orig_zip) as z:
+        sqlite_bytes = z.read("Calvin-c.commentaries.SQLite3")
+    with tempfile.NamedTemporaryFile(suffix=".sqlite3") as tmp:
+        tmp.write(sqlite_bytes)
+        tmp.flush()
+        con = sqlite3.connect(f"file:{tmp.name}?mode=ro", uri=True)
+        v11_rows = con.execute(
+            "SELECT text FROM commentaries WHERE book_number=10 "
+            "AND chapter_number_from=1 AND verse_number_from=1"
+        ).fetchall()
+        ch0_rows = con.execute(
+            "SELECT text FROM commentaries WHERE book_number=10 AND chapter_number_from=0"
+        ).fetchall()
+        con.close()
+
+    assert len(v11_rows) == 1, (
+        f"expected exactly 1 Calvin GEN 1:1 row in original source, found {len(v11_rows)}"
+    )
+    v11_text = v11_rows[0][0]
+    assert "Moses simply intends" in v11_text, (
+        "Calvin GEN 1:1 override canary phrase not found -- original source row changed?"
+    )
+
+    assert len(ch0_rows) == 1, (
+        f"expected exactly 1 Calvin GEN chapter-0 (book intro) row in original source, "
+        f"found {len(ch0_rows)}"
+    )
+    ch0_text = ch0_rows[0][0]
+
+    return v11_text, ch0_text
+
+
 def import_calvin(cur, org, mybible_path, book_num_to_id):
     """Sole source for Calvin (see commentary-sources-audit.md — SWORD has a
     44-section index-bleed defect this MyBible source does not have; no
-    SWORD splice anywhere, including Isaiah 49-66)."""
+    SWORD splice anywhere, including Isaiah 49-66). Two row-level
+    exceptions for Genesis -- see _load_calvin_genesis_overrides()."""
     con = sqlite3.connect(f"file:{mybible_path}?mode=ro", uri=True)
     total = 0
+    gen11_override, gen_ch0_intro = _load_calvin_genesis_overrides(mybible_path)
     try:
         cur2 = con.cursor()
         _assert_calvin_garbage_excluded(cur2, book_num_to_id)
         for book_number, book_id in book_num_to_id.items():
             for ch_from, vs_from, ch_to, vs_to, text in mybible_ranges(cur2, book_number, book_id, org):
+                if book_id == "GEN" and ch_from == 1 and vs_from == 1:
+                    text = gen11_override
                 clean = strip_p_tag_format(text)  # handles both plain text and light <i>/<p/> markup gracefully
                 key = insert_section(
                     cur, org, "Calvin", "en", book_id, ch_from, vs_from, ch_to, vs_to,
                     clean, origin="MyBible:Calvin-c.PATCHED", translation_status="source",
+                )
+                if key:
+                    total += 1
+            if book_number == 10:
+                # Restore Genesis's missing book-intro row (see
+                # _load_calvin_genesis_overrides Part 2).
+                clean = strip_p_tag_format(gen_ch0_intro)
+                key = insert_section(
+                    cur, org, "Calvin", "en", "GEN", 0, 0, 0, 0,
+                    clean, origin="MyBible:Calvin-c(orig,restored)", translation_status="source",
                 )
                 if key:
                     total += 1
