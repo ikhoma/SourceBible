@@ -51,14 +51,10 @@ struct VerseTabView: View {
         // until the user switches pills, so it can trail by a tick without anyone
         // noticing; on a cold-cache first tap after (re)install that keeps its read
         // from competing with the content the user is actually looking at.
-        DebugTiming.mark("VerseTabView.loadData START")
         refs = vm.loadCrossReferences()
-        DebugTiming.mark("loadCrossReferences RETURNED (\(refs.count) refs)")
         Task {
             await Task.yield()
-            DebugTiming.mark("deferred loadParallelVerses START")
             parallels = vm.loadParallelVerses()
-            DebugTiming.mark("deferred loadParallelVerses END")
         }
     }
 }

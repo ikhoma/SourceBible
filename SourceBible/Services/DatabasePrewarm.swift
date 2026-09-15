@@ -39,9 +39,7 @@ enum DatabasePrewarm {
     static func runInBackground(fileURL: URL) {
         guard !started else { return }
         started = true
-        DebugTiming.mark("DatabasePrewarm scheduled")
         Task.detached(priority: .utility) {
-            DebugTiming.mark("DatabasePrewarm STARTED")
             guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return }
             defer { try? handle.close() }
             // 4 MB chunks: large enough to amortize the read() syscall over a 350 MB
@@ -56,7 +54,6 @@ enum DatabasePrewarm {
                 // Intentionally empty otherwise: the read is the warm-up, there's
                 // nothing to do with the bytes.
             }
-            DebugTiming.mark("DatabasePrewarm FINISHED (\(totalBytes / 1_000_000) MB)")
         }
     }
 }

@@ -51,7 +51,6 @@ struct ReaderView: View {
     }
 
     var body: some View {
-        let _ = DebugTiming.tick("ReaderView.body")
         NavigationStack {
             ZStack {
                 colorTheme.appBackground.ignoresSafeArea()
@@ -136,10 +135,6 @@ struct ReaderView: View {
             // ADR-024: reset the cross-ref back stack so the next sheet entry starts fresh.
             vm.resetCrossRefStack()
         }) { sheet in
-            let _ = DebugTiming.mark("ReaderView .sheet content closure ENTRY (sheet=\(sheet))")
-            // Everything counted here ran INSIDE the blocked stack, before SwiftUI
-            // got as far as building the sheet's content — i.e. it IS the freeze.
-            let _ = DebugTiming.flushTicks(".sheet content closure ENTRY")
             switch sheet {
             case .bookPicker:
                 BookChapterPickerView().environmentObject(vm)
@@ -273,7 +268,6 @@ struct ChapterScrollContent: View {
 
     var body: some View {
         let verses = vm.versesForPage(ref)
-        let _ = DebugTiming.tick("ChapterScrollContent.body[\(ref.book.id)|\(ref.chapter)]")
         ScrollViewReader { proxy in
 
             let sheetOpen = vm.activeSheet == .verse
@@ -624,7 +618,6 @@ struct VerseRowView: View {
     @State private var openFootnote: OpenFootnote? = nil
 
     var body: some View {
-        let _ = DebugTiming.tick("VerseRowView.body")
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
                 // Verse number

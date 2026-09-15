@@ -65,8 +65,7 @@ struct VerseBottomSheetView: View {
     }
 
     var body: some View {
-        let _ = DebugTiming.mark("VerseBottomSheetView.body EVALUATED")
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             sheetHeader
             modeTabs
             pillsRow        // fixed — does not scroll vertically

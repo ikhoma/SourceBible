@@ -73,7 +73,6 @@ final class DatabaseService: @unchecked Sendable {
         } else {
             sqlite3_exec(db, "PRAGMA cache_size=-8000;", nil, nil, nil)
             print("✓ DatabaseService: database opened at \(url.lastPathComponent)")
-            DebugTiming.mark("DatabaseService.init: db opened")
             // bug-052: on a freshly (re)installed app the OS page cache for this 356 MB
             // bundled file is completely cold. `word`/`strongs`/`cross_reference` aren't
             // touched by anything on the launch path (only `book`/`translation`/`verse`
@@ -1003,7 +1002,6 @@ final class DatabaseService: @unchecked Sendable {
                              fallbackTranslation: String = DatabaseService.defaultFallbackTranslation,
                              bookShortNames: [String: String] = [:]) -> [CrossReference] {
         guard isAvailable else { return [] }
-        DebugTiming.mark("loadCrossReferences ENTRY")
         var refs: [CrossReference] = []
 
         let xrefVsn = DatabaseService.crossRefVersification
@@ -1019,7 +1017,6 @@ final class DatabaseService: @unchecked Sendable {
         guard let src = crossRefSourceRef(bookId: bookId, chapter: chapter, verse: verse,
                                           translation: translation, xrefVsn: xrefVsn)
         else { return [] }
-        DebugTiming.mark("crossRefSourceRef done")
 
         // Raw target rows, KJV-numbered, highest-voted first.
         struct RawTarget { let book: String; let chapter: Int; let verse: Int }
@@ -1034,7 +1031,6 @@ final class DatabaseService: @unchecked Sendable {
                                  chapter: Int(sqlite3_column_int(stmt, 1)),
                                  verse: Int(sqlite3_column_int(stmt, 2))))
         }
-        DebugTiming.mark("cross_reference raw query done (\(raw.count) rows)")
 
         // TARGET SIDE: re-express each KJV target in the reader's versification
         // (KJV → original → reader), so the printed reference, the text and the tap
@@ -1061,7 +1057,6 @@ final class DatabaseService: @unchecked Sendable {
                                        bookId: display.bookId, chapter: display.chapter,
                                        verse: display.verse, isFallback: isFallback))
         }
-        DebugTiming.mark("loadCrossReferences RETURN (\(refs.count) refs resolved)")
         return refs
     }
 

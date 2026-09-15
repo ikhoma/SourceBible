@@ -65,7 +65,6 @@ private final class HighlightableTextView: UITextView {
     }
 
     override func layoutSubviews() {
-        DebugTiming.tick("HighlightableTextView.layoutSubviews")
         super.layoutSubviews()
         if highlightColor != nil { setNeedsDisplay() }
     }
@@ -94,7 +93,6 @@ struct VerseTextView: UIViewRepresentable {
     // MARK: UIViewRepresentable
 
     func makeUIView(context: Context) -> UITextView {
-        DebugTiming.tick("VerseTextView.makeUIView (NEW UITextView)")
         let tv = HighlightableTextView()
         tv.isEditable        = false
         tv.isSelectable      = false
@@ -122,7 +120,6 @@ struct VerseTextView: UIViewRepresentable {
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
-        DebugTiming.tick("VerseTextView.updateUIView")
         let coord = context.coordinator
 
         // Detect selection changes BEFORE mutating coordinator state so we can
@@ -168,9 +165,7 @@ struct VerseTextView: UIViewRepresentable {
                           || coord.redLetters      != redLetters
                           || coord.footnoteKeys    != Set(footnotes.keys)
         if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
-            coord.baseAttributedString = DebugTiming.time("VerseTextView.buildBaseAttributedString") {
-                buildBaseAttributedString()
-            }
+            coord.baseAttributedString = buildBaseAttributedString()
         }
 
         // Verse-level highlight: drawn in HighlightableTextView.draw(_:) which fills
@@ -190,7 +185,6 @@ struct VerseTextView: UIViewRepresentable {
         // chapter with many verses (e.g. Genesis 1 with 31 verses) is open.
         if contentChanged || selectionChanged || wordRangeChanged
                 || tv.attributedText == nil || tv.attributedText.length == 0 {
-            DebugTiming.tick("VerseTextView.attributedText REASSIGNED")
             tv.attributedText = applySelection(to: coord.baseAttributedString,
                                                wordRange: coord.selectedWordRange)
             tv.invalidateIntrinsicContentSize()
@@ -219,9 +213,7 @@ struct VerseTextView: UIViewRepresentable {
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width > 0, width < .infinity else { return nil }
-        let size = DebugTiming.time("VerseTextView.sizeThatFits (TextKit layout)") {
-            uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        }
+        let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         // +1pt slack — ⚠️ DO NOT REMOVE.
         //
         // SwiftUI pixel-aligns the final frame: with any fractional content offset

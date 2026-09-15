@@ -1070,10 +1070,6 @@ class ReaderViewModel: ObservableObject {
     // MARK: - Bottom Sheet
 
     func tapVerse(_ verse: BibleVerse) {
-        DebugTiming.mark("tapVerse ENTRY \(verse.id)")
-        // Clear whatever accumulated while merely scrolling — everything counted
-        // from here to the next flush belongs to THIS tap.
-        DebugTiming.flushTicks("tapVerse ENTRY (pre-tap accumulation — ignore)")
         Haptics.lightTransition()
         selectedVerse = verse
         selectedWord = nil
@@ -1081,20 +1077,6 @@ class ReaderViewModel: ObservableObject {
         strongsEntry = nil   // stale lexicon must not survive a verse change
         bottomSheetMode = .verse
         activeSheet = .verse
-        DebugTiming.mark("tapVerse activeSheet SET")
-        #if DEBUG
-        // bug-052: proved the main run loop is synchronously blocked across the
-        // whole first-tap gap (these fire only AFTER `.sheet`'s content closure
-        // has already started). DEBUG-only — GCD/RunLoop scheduling has a real,
-        // if tiny, cost and this has no business running for every tap in Release.
-        DispatchQueue.main.async {
-            DebugTiming.mark("main-thread NEXT TICK after activeSheet SET")
-            DebugTiming.flushTicks("main-thread NEXT TICK")
-        }
-        RunLoop.main.perform {
-            DebugTiming.mark("RunLoop.main NEXT TURN after activeSheet SET")
-        }
-        #endif
         verseScrollTrigger += 1
         noteReadingAnchor(verse.id)   // Study Mode anchor = focused verse
         // Analytics: record unique verse read.
@@ -1110,9 +1092,7 @@ class ReaderViewModel: ObservableObject {
         // presentation transaction actually start before this runs.
         Task { [weak self] in
             await Task.yield()
-            DebugTiming.mark("deferred loadWordsForSelectedVerse START")
             self?.loadWordsForSelectedVerse()
-            DebugTiming.mark("deferred loadWordsForSelectedVerse END")
         }
     }
 

@@ -108,7 +108,6 @@ struct StudySheetDetentApplier: UIViewRepresentable {
     let height: CGFloat
 
     func makeUIView(context: Context) -> ApplierView {
-        DebugTiming.mark("StudySheetDetentApplier.makeUIView")
         let v = ApplierView()
         v.isUserInteractionEnabled = false
         v.backgroundColor = .clear
@@ -130,7 +129,6 @@ struct StudySheetDetentApplier: UIViewRepresentable {
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            DebugTiming.mark("ApplierView.didMoveToWindow (window=\(window != nil))")
             // First moment the responder chain reaches the presented VC.
             apply(animated: false)
         }
@@ -140,9 +138,7 @@ struct StudySheetDetentApplier: UIViewRepresentable {
         private static let detentID = UISheetPresentationController.Detent.Identifier("studySheet")
 
         private func apply(animated: Bool) {
-            DebugTiming.mark("apply(animated: \(animated)) ENTRY")
             guard desiredHeight > 0, let sheet = sheetController() else {
-                DebugTiming.mark("apply EARLY RETURN (no sheetController / height<=0)")
                 return
             }
             let h = desiredHeight
@@ -177,7 +173,6 @@ struct StudySheetDetentApplier: UIViewRepresentable {
             } else {
                 applyChanges()
             }
-            DebugTiming.mark("apply(animated: \(animated)) DID SET sheet.detents")
             // Калібрування (bug-031): після того як лейаут осів, зміряти РЕАЛЬНИЙ
             // top sheet'а і зберегти різницю з розрахунковим. Наступна презентація
             // використає заміряне значення. Нічого не малює й не рухає зараз.
