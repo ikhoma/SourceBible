@@ -2,6 +2,7 @@
 // SourceBible
 
 import SwiftUI
+import TipKit
 
 struct ReaderView: View {
 
@@ -250,6 +251,10 @@ struct ReaderView: View {
 /// neighbour page renders the wrong book's cover, heading and verses.
 struct ChapterScrollContent: View {
     @EnvironmentObject var vm: ReaderViewModel
+    @Environment(\.analytics) private var analytics
+    // Bug fix 2026-09-16 (real-device report): gates TapVerseTip so it never
+    // competes on screen with the first-launch analytics consent sheet.
+    @Environment(\.consentFlowPending) private var consentFlowPending
     // Locale dependency kept for BibleBookNames fallback paths (see ReaderView).
     @Environment(\.locale) private var locale
     @Environment(\.titleFontStyle) private var titleFontStyle
@@ -326,6 +331,33 @@ struct ChapterScrollContent: View {
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
                                     .id(verse.id)
+                                    // TapVerseTip (spec-minimal-tap-onboarding.md): anchored only
+                                    // to the app's first-launch default target (Genesis 1:1). Not
+                                    // a rewrite of VerseRowView -- attached from the caller so the
+                                    // tuned row view itself stays untouched.
+                                    .popoverTip(
+                                        (verse.bookId == "GEN" && verse.chapter == 1 && verse.number == 1 && !consentFlowPending)
+                                            ? TapVerseTip() : nil,
+                                        arrowEdge: .top
+                                    )
+                                    .task(id: consentFlowPending) {
+                                        // Bug fix 2026-09-16 (real-device report): re-runs when the
+                                        // consent sheet resolves, so the "shown" event can't fire while
+                                        // the tip is held off screen by !consentFlowPending above.
+                                        guard !consentFlowPending else { return }
+                                        guard verse.bookId == "GEN", verse.chapter == 1, verse.number == 1 else { return }
+                                        guard !TapVerseTip.hasShownTapHint else { return }
+                                        for await shouldDisplay in TapVerseTip().shouldDisplayUpdates where shouldDisplay {
+                                            TapVerseTip.hasShownTapHint = true
+                                            // Environment analytics (not vm.analytics): this task can run
+                                            // before ReaderView's own `.task { vm.analytics = analytics }`
+                                            // wiring below has executed -- reading straight from the
+                                            // environment (same pattern as SearchView.swift/ContentView.swift)
+                                            // sidesteps that ordering race entirely.
+                                            analytics.track(.onboardingTapHintShown)
+                                            break
+                                        }
+                                    }
                                     // Measure EVERY row's INTRINSIC height (stable; unaffected
                                     // by scroll) into a per-id store. Done for all rows, not
                                     // just the selected one: onGeometryChange does NOT re-fire

@@ -84,6 +84,10 @@ enum AnalyticsEvent: Sendable {
     case highlightCreated(color: String)
     case bookmarkCreated
 
+    // ── Onboarding (spec-minimal-tap-onboarding.md) ──────────────────────────
+    case onboardingTapHintShown
+    case onboardingTapHintDismissed(reason: String)
+
     // ── Deferred (slice 4 — cards/folders not yet built) ─────────────────────
     // case verseCardAdded
     // case wordCardAdded
@@ -148,6 +152,12 @@ extension AnalyticsEvent {
 
         case .bookmarkCreated:
             return ("bookmark_created", [:])
+
+        case .onboardingTapHintShown:
+            return ("onboarding_tap_hint_shown", [:])
+
+        case let .onboardingTapHintDismissed(reason):
+            return ("onboarding_tap_hint_dismissed", ["reason": reason])
         }
     }
 }

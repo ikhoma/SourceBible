@@ -1071,6 +1071,13 @@ class ReaderViewModel: ObservableObject {
 
     func tapVerse(_ verse: BibleVerse) {
         Haptics.lightTransition()
+        // TapVerseTip (spec-minimal-tap-onboarding.md §5): dismiss forever on
+        // the FIRST tap of ANY verse, not just the anchor verse (Gen 1:1).
+        // Guarded so the dismissed event fires once, on the real transition.
+        if !TapVerseTip.hasTappedAnyVerse {
+            TapVerseTip.hasTappedAnyVerse = true
+            analytics.track(.onboardingTapHintDismissed(reason: "verse_tapped"))
+        }
         selectedVerse = verse
         selectedWord = nil
         selectedSegment = nil
@@ -1099,6 +1106,14 @@ class ReaderViewModel: ObservableObject {
     /// Called from VerseTextView long press — receives a VerseSegment with strongs: [String].
     /// Bridges to the matching BibleWord so WordMeaningView shows full morphology/xlit/greek.
     func tapWord(_ segment: VerseSegment, in verse: BibleVerse) {
+        // TapVerseTip (code-review fix): long-press is also a valid first
+        // discovery of Study Mode -- same guarded donation as tapVerse(_:),
+        // so a user whose first interaction is a long-press doesn't leave
+        // the tip armed forever. See spec-minimal-tap-onboarding.md §6.
+        if !TapVerseTip.hasTappedAnyVerse {
+            TapVerseTip.hasTappedAnyVerse = true
+            analytics.track(.onboardingTapHintDismissed(reason: "word_long_pressed"))
+        }
         selectedVerse = verse
         selectedSegment = segment
         bottomSheetMode = .word

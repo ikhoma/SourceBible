@@ -25,6 +25,10 @@ struct NoteWithBlocks {
 struct BookmarkWithVerses {
     var bookmark: Bookmark
     var verseIds: [String]
+    /// verseId → translation it was saved under. Only present for bookmarks saved
+    /// after bug-037's v3 migration — absent (legacy) means "unknown", not "KJV" or
+    /// any other guess, per Ivan's 2026-09-22 decision not to backfill a guess.
+    var verseTranslations: [String: String] = [:]
 }
 
 // MARK: - Protocol
@@ -80,7 +84,11 @@ protocol UserDataStoreProtocol: AnyObject {
     func bookmarks() -> [BookmarkWithVerses]
 
     /// Upsert a bookmark with its verse IDs. Replaces existing verse rows atomically.
-    func saveBookmark(_ bookmark: Bookmark, verseIds: [String])
+    /// `translation` (bug-037) is the translation active when the bookmark was created —
+    /// stored per verse so BookmarkCardView can hop through verse_org on translation
+    /// switch instead of an identity (same-number) lookup. Pass nil only for flows that
+    /// genuinely don't know it; legacy callers should always have it now.
+    func saveBookmark(_ bookmark: Bookmark, verseIds: [String], translation: String?)
 
     /// Soft-delete a bookmark.
     func deleteBookmark(id: String)

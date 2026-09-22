@@ -46,21 +46,11 @@ struct AnalyticsConsentCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Образ замість стіни тексту: за пів секунди видно, про що мова,
-            // ще до читання.
-            //
-            // 48 pt + `.quaternary` — навмисно ті самі значення, що в empty-state'ах
-            // (`NotesListView` / `BookmarksListView` / `CrossRefsView`), щоб великі
-            // символи в застосунку виглядали як один прийом, а не як три різні.
-            //
-            // padding(.bottom, 8) + spacing 16 = 24 знизу, рівно стільки ж, скільки
-            // дає верхній `.padding(24)` картки. Зазори навколо іконки симетричні.
-            Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 48))
-                .foregroundStyle(.quaternary)
-                .padding(.bottom, 8)
-                .accessibilityHidden(true)   // суто декоративний
-
+            // Іконку (chart.bar.xaxis, .quaternary) прибрано 2026-09-16 --
+            // Іван: "виглядає дешево, Android-like". Найближчий системний
+            // прецедент (ATT-alert "Allow app to track you?") теж без
+            // кастомної іконки, тільки заголовок + текст + кнопки -- той
+            // самий регістр: consent-запит, а не feature-callout.
             Text("analytics.consent.title")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -149,6 +139,29 @@ struct AnalyticsConsentCard: View {
 // Corner radius: not set — iOS 26 floating partial sheets automatically
 // use the device's rounded-corner radius. Explicit values looked "off".
 
+// MARK: - Consent Flow Pending Environment Key
+//
+// TapVerseTip (spec-minimal-tap-onboarding.md, real-device bug 2026-09-16):
+// the tap-hint tooltip and this sheet both compete for the user's very first
+// moments in the app. `analyticsConsentShown` (AppStorage) flips `true` the
+// instant `presentIfReady()` decides to show -- the SAME tick the sheet is
+// scheduled, not when it's dismissed -- so it can't gate other first-launch
+// UI. This key is the real "is the consent flow still on screen" signal:
+// `true` (default, conservative) until either (a) `onAppear` finds
+// `consentShown` already true (returning user, no sheet coming this launch)
+// or (b) the sheet's own `onDismiss` fires. Read by ChapterScrollContent to
+// hold the tap-hint tooltip off screen until this sheet is out of the way.
+private struct ConsentFlowPendingEnvironmentKey: EnvironmentKey {
+    nonisolated static let defaultValue: Bool = true
+}
+
+extension EnvironmentValues {
+    var consentFlowPending: Bool {
+        get { self[ConsentFlowPendingEnvironmentKey.self] }
+        set { self[ConsentFlowPendingEnvironmentKey.self] = newValue }
+    }
+}
+
 struct AnalyticsConsentModifier: ViewModifier {
     @AppStorage(AppStorageKeys.analyticsConsentShown) private var consentShown: Bool = false
     // Reaches this modifier even though .analyticsConsentIfNeeded() is applied before
@@ -164,6 +177,9 @@ struct AnalyticsConsentModifier: ViewModifier {
     @State private var consentPending = false
     /// Проба вже відпрацювала хоч раз, тобто `sheetHeight` — справжній, а не сід.
     @State private var heightMeasured = false
+    /// See `ConsentFlowPendingEnvironmentKey` above -- exposed to the rest of
+    /// the app via `.environment(\.consentFlowPending, isPending)` below.
+    @State private var isPending = true
 
     /// Невидимий дублікат картки — єдине джерело висоти детента.
     ///
@@ -240,7 +256,12 @@ struct AnalyticsConsentModifier: ViewModifier {
         content
             .background(alignment: .top) { heightProbe }
             .onAppear {
-                guard !consentShown else { return }
+                guard !consentShown else {
+                    // Returning user -- this sheet will never show this launch,
+                    // so nothing is blocking TapVerseTip (see isPending doc above).
+                    isPending = false
+                    return
+                }
                 consentPending = true
                 presentIfReady()
             }
@@ -259,12 +280,14 @@ struct AnalyticsConsentModifier: ViewModifier {
             // дефолт ЯВНО — не лишаємо ключ порожнім. Див. пункт 2 у шапці файлу.
             .sheet(isPresented: $showSheet, onDismiss: {
                 if !decisionMade { analyticsEnabled = AnalyticsConsentPolicy.defaultConsent }
+                isPending = false
             }) {
                 AnalyticsConsentCard(isPresented: $showSheet, decisionMade: $decisionMade)
                     .presentationDetents([.height(sheetHeight)])
                     .presentationDragIndicator(.visible)
                     .themedSheet(colorTheme)
             }
+            .environment(\.consentFlowPending, isPending)
     }
 }
 

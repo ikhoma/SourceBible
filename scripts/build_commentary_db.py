@@ -475,8 +475,31 @@ def strip_p_tag_format(html: str) -> str:
     was still encoded when the strip regexes ran and survived verbatim
     into the stored text once unescaping (last step, until now) revealed
     it. Unescape FIRST so every tag -- plain or escaped -- is literal
-    before any stripping regex sees it."""
+    before any stripping regex sees it.
+
+    N4 (session 2026-09-22, Ivan /engineering:debug -- leading-dot report):
+    Calvin's raw MyBible rows sometimes open with a self-citation anchor --
+    e.g. <a href='B:20 20:7'>Exo 20:7</a><p/>. <i>Thou shalt not take the
+    name... -- where the <p/> paragraph-break tag sits BETWEEN the citation
+    and its own trailing punctuation. Verified against the independent
+    SWORD CalvinCommentaries.zip source (not MyBible-derived) that this
+    citation is genuine Calvin/CCEL editorial content -- section-opening
+    verses are headed "Exodus 20:7." in bold, inline with the body, no
+    paragraph break -- so the citation itself must stay; MyBible's own
+    conversion is what misplaced the <p/> before the period. Left as-is,
+    converting that <p/> to "\n\n" orphans a lone ".", ",", ";" or ":" at
+    the very start of the next paragraph (339 Calvin sections measured).
+    Re-attach the punctuation to the citation BEFORE the generic <p/>
+    split runs, so "Exo 20:7</a><p/>. Thou..." becomes "Exo 20:7</a>. Thou
+    ..." -- one unbroken line, matching the SWORD source's own formatting."""
     text = _unescape_entities(html)
+    # N4 cont'd: one row (Mar 7:24) has an <i> between </a> and <p/> --
+    # </a><i><p/>. He wished... -- same misplaced-<p/> defect, the inline
+    # tag just sits in the gap. Swallow it too, not only bare whitespace.
+    text = re.sub(
+        r"(?i)(</a>)(?:\s*<(?:i|b|u|em|strong|span)>)?\s*<p\s*/?>\s*([.,;:])\s*",
+        r"\1\2 ", text,
+    )
     text = re.sub(r"(?i)<p\s*/?>", "\n\n", text)
     text = re.sub(r"(?i)</p>", "\n\n", text)
     text = re.sub(r"(?i)<a\s+[^>]*>", "", text)

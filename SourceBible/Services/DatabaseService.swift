@@ -995,6 +995,37 @@ final class DatabaseService: @unchecked Sendable {
         return out
     }
 
+    /// Hops ONE verse from `source` numbering to `target` numbering via `verse_org`
+    /// (ADR-028), returning the target's OWN reference together with its text.
+    ///
+    /// Same two curated hops as `loadParallelVerseTexts`, but for a single target where
+    /// the caller also needs the resulting (bookId, chapter, verse) — not just text keyed
+    /// by translation id. Added for bookmarks (bug-037): a bookmark stores only a verse
+    /// number under the translation it was created in, and switching translations must
+    /// re-point both the displayed reference and the preview text at the SAME verse of
+    /// Scripture, not the same number (Ivan's decision 2026-09-22: the header renumbers).
+    ///
+    /// - Returns: `nil` when there's no `verse_org` row for `source` (DB predates
+    ///   ADR-028), the verse has no original counterpart, or `target` has no verse for
+    ///   that original (a merge gap, e.g. no RST verse for Heb PSA 90:6). Callers fall
+    ///   back to identity lookup themselves in every `nil` case — same honest-gap
+    ///   behavior as `loadParallelVerseTexts`, never a neighboring verse's text.
+    func loadHoppedVerse(bookId: String, chapter: Int, verse: Int,
+                         source: String, target: String)
+        -> (bookId: String, chapter: Int, verse: Int, text: String)? {
+        guard isAvailable, source != target else { return nil }
+
+        let (sawRows, org) = orgRef(bookId: bookId, chapter: chapter, verse: verse,
+                                    translation: source)
+        guard sawRows, let org,
+              let ref = translationRef(orgBookId: org.bookId, orgChapter: org.chapter,
+                                       orgVerse: org.verse, translation: target),
+              let text = verseText(bookId: ref.bookId, chapter: ref.chapter,
+                                   verse: ref.verse, translation: target)
+        else { return nil }
+        return (ref.bookId, ref.chapter, ref.verse, text)
+    }
+
     // MARK: - Cross References
 
     func loadCrossReferences(bookId: String, chapter: Int, verse: Int,

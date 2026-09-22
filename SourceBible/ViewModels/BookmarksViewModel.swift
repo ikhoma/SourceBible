@@ -38,8 +38,11 @@ final class BookmarksViewModel: ObservableObject {
 
     /// Save a bookmark for the given verse immediately — no editor sheet.
     /// Idempotent: if a bookmark for this verseId already exists, returns it unchanged.
+    /// `translation` (bug-037) is the reader's active translation at save time — stored
+    /// so the card can later hop through verse_org instead of an identity lookup when
+    /// the reader switches to a translation with a different versification scheme.
     @discardableResult
-    func addBookmark(verseId: String) -> BookmarkWithVerses {
+    func addBookmark(verseId: String, translation: String) -> BookmarkWithVerses {
         if let existing = bookmarks.first(where: { $0.verseIds.contains(verseId) }) {
             return existing
         }
@@ -47,8 +50,9 @@ final class BookmarksViewModel: ObservableObject {
         let bookmark = Bookmark(
             id: UUID().uuidString, userId: authService.userId,
             createdAt: now, updatedAt: now, deletedAt: nil, isDirty: true)
-        let bwv = BookmarkWithVerses(bookmark: bookmark, verseIds: [verseId])
-        store.saveBookmark(bookmark, verseIds: [verseId])
+        let bwv = BookmarkWithVerses(bookmark: bookmark, verseIds: [verseId],
+                                     verseTranslations: [verseId: translation])
+        store.saveBookmark(bookmark, verseIds: [verseId], translation: translation)
         refresh()
         // Analytics: discrete bookmark_created + aggregate annotation counter (Slice 3 §C).
         analytics.track(.bookmarkCreated)
@@ -68,7 +72,7 @@ final class BookmarksViewModel: ObservableObject {
 
     /// Toggle bookmark for a verse. Returns true if now bookmarked.
     @discardableResult
-    func toggleBookmark(verseId: String) -> Bool {
+    func toggleBookmark(verseId: String, translation: String) -> Bool {
         // Однаково в обидва боки: постановка й зняття закладки рівнозначні,
         // на відміну від highlight, де створення відчутніше за скасування.
         Haptics.lightTransition()
@@ -76,7 +80,7 @@ final class BookmarksViewModel: ObservableObject {
             deleteBookmark(id: existing.bookmark.id)
             return false
         } else {
-            addBookmark(verseId: verseId)
+            addBookmark(verseId: verseId, translation: translation)
             return true
         }
     }

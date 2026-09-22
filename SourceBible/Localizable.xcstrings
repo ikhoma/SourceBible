@@ -314,13 +314,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anonymous usage stats show which features people use, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
+            "value": "Anonymous usage stats show which features people use, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Анонімна статистика показує, якими функціями користуються, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
+            "value": "Анонімна статистика показує, якими функціями користуються, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
           }
         }
       }
@@ -336,7 +336,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не ділитися"
+            "value": "Не ділитися"
           }
         }
       }
@@ -396,13 +396,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add verses to bookmarks\nfor quick access"
+            "value": "Add verses to bookmarks\nfor quick access"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Додайте вірші до закладок\nдля швидкого доступу"
+            "value": "Додайте вірші до закладок\nдля швидкого доступу"
           }
         }
       }
@@ -413,13 +413,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bookmark verses for quick access"
+            "value": "Bookmark verses for quick access"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Додайте вірші до закладок\nдля швидкого доступу"
+            "value": "Додайте вірші до закладок\nдля швидкого доступу"
           }
         }
       }
@@ -429,7 +429,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No bookmarks"
+            "value": "No bookmarks"
           }
         },
         "uk": {
@@ -464,13 +464,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add to Note"
+            "value": "Add to Note"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Додати в нотатку"
+            "value": "Додати в нотатку"
           }
         }
       }
@@ -565,7 +565,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Gospels"
+            "value": "The Gospels"
           }
         },
         "uk": {
@@ -597,7 +597,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Law"
+            "value": "The Law"
           }
         },
         "uk": {
@@ -683,7 +683,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мудрість і поезія"
+            "value": "Мудрість і поезія"
           }
         }
       }
@@ -709,7 +709,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Make a Donation"
+            "value": "Make a Donation"
           }
         },
         "uk": {
@@ -725,7 +725,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your donation supports the development of Source Bible. All features stay free for everyone."
+            "value": "Your donation supports the development of Source Bible. All features stay free for everyone."
           }
         },
         "uk": {
@@ -741,13 +741,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unable to load donation options. Check your connection and try again."
+            "value": "Unable to load donation options. Check your connection and try again."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не вдалося завантажити варіанти пожертв. Перевірте з'єднання та спробуйте ще раз."
+            "value": "Не вдалося завантажити варіанти пожертв. Перевірте з'єднання та спробуйте ще раз."
           }
         }
       }
@@ -763,7 +763,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Покупка не вдалася"
+            "value": "Покупка не вдалася"
           }
         }
       }
@@ -789,13 +789,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The purchase could not be verified."
+            "value": "The purchase could not be verified."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не вдалося перевірити покупку."
+            "value": "Не вдалося перевірити покупку."
           }
         }
       }
@@ -837,13 +837,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Any outstanding transactions have been processed. Donations are one-time gifts, so there is nothing to restore."
+            "value": "Any outstanding transactions have been processed. Donations are one-time gifts, so there is nothing to restore."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Усі незавершені транзакції оброблено. Пожертви — це разові внески, тож відновлювати нічого."
+            "value": "Усі незавершені транзакції оброблено. Пожертви — це разові внески, тож відновлювати нічого."
           }
         }
       }
@@ -875,7 +875,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Спробувати ще раз"
+            "value": "Спробувати ще раз"
           }
         }
       }
@@ -885,7 +885,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terms of Use"
+            "value": "Terms of Use"
           }
         },
         "uk": {
@@ -917,13 +917,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your donation was received. Thank you for supporting Source Bible!"
+            "value": "Your donation was received. Thank you for supporting Source Bible!"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вашу пожертву отримано. Дякуємо за підтримку Source Bible!"
+            "value": "Вашу пожертву отримано. Дякуємо за підтримку Source Bible!"
           }
         }
       }
@@ -1014,13 +1014,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No entries match the filters"
+            "value": "No entries match the filters"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нічого не знайдено за цими фільтрами"
+            "value": "Нічого не знайдено за цими фільтрами"
           }
         }
       }
@@ -1304,7 +1304,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No Highlight"
+            "value": "No Highlight"
           }
         },
         "uk": {
@@ -1449,13 +1449,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anonymous only. No notes or search text."
+            "value": "Anonymous only. No notes or search text."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Тільки анонімно. Без нотаток і тексту запитів."
+            "value": "Тільки анонімно. Без нотаток і тексту запитів."
           }
         }
       }
@@ -1535,7 +1535,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Як на пристрої"
+            "value": "Як на пристрої"
           }
         }
       }
@@ -1601,7 +1601,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Переклад за замовчуванням"
+            "value": "Переклад за замовчуванням"
           }
         }
       }
@@ -1676,7 +1676,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "On launch open"
+            "value": "On launch open"
           }
         },
         "uk": {
@@ -1740,13 +1740,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Where you left off"
+            "value": "Where you left off"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "З місця, де ви зупинились"
+            "value": "З місця, де ви зупинились"
           }
         }
       }
@@ -1964,7 +1964,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Translation on launch"
+            "value": "Translation on launch"
           }
         },
         "uk": {
@@ -1996,7 +1996,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The translation you read most recently"
+            "value": "The translation you read most recently"
           }
         },
         "uk": {
@@ -2948,7 +2948,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Part of speech"
+            "value": "Part of speech"
           }
         },
         "uk": {
@@ -3050,13 +3050,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Form in %@"
+            "value": "Form in %@"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Форма у %@"
+            "value": "Форма у %@"
           }
         }
       }
@@ -3186,13 +3186,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "form in this verse"
+            "value": "form in this verse"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "форма у вірші"
+            "value": "форма у вірші"
           }
         }
       }
@@ -3506,13 +3506,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a verse in the Reader\nto add a note"
+            "value": "Tap a verse in the Reader\nto add a note"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
+            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
           }
         }
       }
@@ -3523,13 +3523,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a verse in the Reader to add a note"
+            "value": "Tap a verse in the Reader to add a note"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
+            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
           }
         }
       }
@@ -3539,7 +3539,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No notes"
+            "value": "No notes"
           }
         },
         "uk": {
@@ -3572,13 +3572,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap to add text"
+            "value": "Tap to add text"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Торкніться щоб додати текст"
+            "value": "Торкніться щоб додати текст"
           }
         }
       }
@@ -3605,13 +3605,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No book found"
+            "value": "No book found"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Книгу не знайдено"
+            "value": "Книгу не знайдено"
           }
         }
       }
@@ -3621,13 +3621,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the spelling or try a different name."
+            "value": "Check the spelling or try a different name."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Перевірте написання або спробуйте іншу назву."
+            "value": "Перевірте написання або спробуйте іншу назву."
           }
         }
       }
@@ -3766,13 +3766,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a word or phrase\nto find verses"
+            "value": "Enter a word or phrase\nto find verses"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введіть слово або фразу\nщоб знайти вірші"
+            "value": "Введіть слово або фразу\nщоб знайти вірші"
           }
         }
       }
@@ -3789,7 +3789,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Пошук за словом"
+            "value": "Пошук за словом"
           }
         }
       }
@@ -3800,7 +3800,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask a question in natural language\ne.g. \"Where does it talk about success?\""
+            "value": "Ask a question in natural language\ne.g. \"Where does it talk about success?\""
           }
         },
         "uk": {
@@ -3995,13 +3995,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a word or phrase\nSearch in %@ translation"
+            "value": "Enter a word or phrase\nSearch in %@ translation"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введіть слово або фразу\nПошук у перекладі %@"
+            "value": "Введіть слово або фразу\nПошук у перекладі %@"
           }
         }
       }
@@ -4012,13 +4012,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a word or phrase\nSearch in %@ translation"
+            "value": "Enter a word or phrase\nSearch in %@ translation"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введіть слово або фразу\nПошук у перекладі %@"
+            "value": "Введіть слово або фразу\nПошук у перекладі %@"
           }
         }
       }
@@ -4034,7 +4034,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Пошук по тексту"
+            "value": "Пошук по тексту"
           }
         }
       }
@@ -4060,7 +4060,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try a different query"
+            "value": "Try a different query"
           }
         },
         "uk": {
@@ -4082,7 +4082,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нічого не знайдено"
+            "value": "Нічого не знайдено"
           }
         }
       }
@@ -4092,13 +4092,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Word or phrase…"
+            "value": "Word or phrase…"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Слово або фраза…"
+            "value": "Слово або фраза…"
           }
         }
       }
@@ -4109,7 +4109,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Question in natural language…"
+            "value": "Question in natural language…"
           }
         },
         "uk": {
@@ -4194,7 +4194,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Results for \"%@\""
+            "value": "Results for \"%@\""
           }
         },
         "uk": {
@@ -4211,13 +4211,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "By word"
+            "value": "By word"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "За словом"
+            "value": "За словом"
           }
         }
       }
@@ -4301,7 +4301,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дії з віршем"
+            "value": "Дії з віршем"
           }
         }
       }
@@ -4551,7 +4551,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Текст і богослов'я"
+            "value": "Текст і богослов'я"
           }
         }
       }
@@ -4619,7 +4619,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Серце і застосування"
+            "value": "Серце і застосування"
           }
         }
       }
@@ -4687,7 +4687,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Догматика і душа"
+            "value": "Догматика і душа"
           }
         }
       }
@@ -4755,7 +4755,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Проповідь і образи"
+            "value": "Проповідь і образи"
           }
         }
       }
@@ -4766,7 +4766,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No commentaries available for this book."
+            "value": "No commentaries available for this book."
           }
         },
         "uk": {
@@ -4783,13 +4783,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
+            "value": "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
           }
         }
       }
@@ -4800,13 +4800,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commentary will be loaded from the public domain database (Calvin, Henry, Spurgeon)."
+            "value": "Commentary will be loaded from the public domain database (Calvin, Henry, Spurgeon)."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
           }
         }
       }
@@ -4816,7 +4816,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No commentary available for this verse."
+            "value": "No commentary available for this verse."
           }
         },
         "uk": {
@@ -4832,7 +4832,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No cross references for this verse"
+            "value": "No cross references for this verse"
           }
         },
         "uk": {
@@ -4849,7 +4849,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No cross-references for this verse"
+            "value": "No cross-references for this verse"
           }
         },
         "uk": {
@@ -4900,7 +4900,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No translations available"
+            "value": "No translations available"
           }
         },
         "uk": {
@@ -5045,13 +5045,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Original Text in Greek Word by Word"
+            "value": "Original Text in Greek Word by Word"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Оригінальний текст грецькою слово за словом"
+            "value": "Оригінальний текст грецькою слово за словом"
           }
         }
       }
@@ -5061,13 +5061,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Original Text in Hebrew Word by Word"
+            "value": "Original Text in Hebrew Word by Word"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Оригінальний текст івритом слово за словом"
+            "value": "Оригінальний текст івритом слово за словом"
           }
         }
       }
@@ -5109,7 +5109,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No translations available"
+            "value": "No translations available"
           }
         },
         "uk": {
@@ -5128,7 +5128,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No definition available for this sub-entry"
+            "value": "No definition available for this sub-entry"
           }
         },
         "uk": {
@@ -5145,7 +5145,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Language data unavailable for this word"
+            "value": "Language data unavailable for this word"
           }
         },
         "uk": {
@@ -5162,13 +5162,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a word to explore"
+            "value": "Tap a word to explore"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Натисніть на слово для вивчення"
+            "value": "Натисніть на слово для вивчення"
           }
         }
       }
@@ -5178,13 +5178,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Linking every word of a translation to its Strong's number is a large, painstaking effort. Your support helps us make it happen."
+            "value": "Linking every word of a translation to its Strong's number is a large, painstaking effort. Your support helps us make it happen."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мапінг кожного слова перекладу на номер Стронга — велика й копітка робота. Ваша підтримка допомагає нам її здійснити."
+            "value": "Мапінг кожного слова перекладу на номер Стронга — велика й копітка робота. Ваша підтримка допомагає нам її здійснити."
           }
         }
       }
@@ -5194,7 +5194,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Support the project"
+            "value": "Support the project"
           }
         },
         "uk": {
@@ -5210,13 +5210,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meanwhile, tap words in the Original tab — the lexicon already works there."
+            "value": "Meanwhile, tap words in the Original tab — the lexicon already works there."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Тим часом торкайтеся слів у вкладці «Оригінал» — лексикон там уже працює."
+            "value": "Тим часом торкайтеся слів у вкладці «Оригінал» — лексикон там уже працює."
           }
         }
       }
@@ -5226,13 +5226,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This translation is not yet linked to Strong's numbers"
+            "value": "This translation is not yet linked to Strong's numbers"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Цей переклад ще не повʼязано з номерами Стронга"
+            "value": "Цей переклад ще не повʼязано з номерами Стронга"
           }
         }
       }
@@ -5433,7 +5433,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Доктрина і досвід"
+            "value": "Доктрина і досвід"
           }
         }
       }
@@ -5461,13 +5461,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commentary on the Scriptures"
+            "value": "Commentary on the Scriptures"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Коментар на Святе Письмо"
+            "value": "Коментар на Святе Письмо"
           }
         }
       }
@@ -5478,13 +5478,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commentary on the Whole Bible"
+            "value": "Commentary on the Whole Bible"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Коментар на всю Біблію"
+            "value": "Коментар на всю Біблію"
           }
         }
       }
@@ -5495,13 +5495,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "An Exposition of Hebrews"
+            "value": "An Exposition of Hebrews"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Тлумачення Послання до Євреїв"
+            "value": "Тлумачення Послання до Євреїв"
           }
         }
       }
@@ -5512,13 +5512,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notes on Scripture"
+            "value": "Notes on Scripture"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нотатки до Святого Письма"
+            "value": "Нотатки до Святого Письма"
           }
         }
       }
@@ -5529,7 +5529,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Treasury of David"
+            "value": "The Treasury of David"
           }
         },
         "uk": {
@@ -5546,7 +5546,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verse Expositions of the Bible"
+            "value": "Verse Expositions of the Bible"
           }
         },
         "uk": {
@@ -5578,7 +5578,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No Mail App Found"
+            "value": "No Mail App Found"
           }
         },
         "uk": {
@@ -5595,13 +5595,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please email us at %@"
+            "value": "Please email us at %@"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Напишіть нам на %@"
+            "value": "Напишіть нам на %@"
           }
         }
       }
@@ -6290,7 +6290,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hithpaal — reflexive / passive of Pael"
+            "value": "Hithpaal — reflexive / passive of Pael"
           }
         },
         "uk": {
@@ -6307,7 +6307,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ithpaal — reflexive / passive of Pael"
+            "value": "Ithpaal — reflexive / passive of Pael"
           }
         },
         "uk": {
@@ -6324,7 +6324,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hithpeel — reflexive / passive of Peal"
+            "value": "Hithpeel — reflexive / passive of Peal"
           }
         },
         "uk": {
@@ -6341,7 +6341,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ithpeel — reflexive / passive of Peal"
+            "value": "Ithpeel — reflexive / passive of Peal"
           }
         },
         "uk": {
@@ -6358,7 +6358,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ithpoel — reflexive / passive of Poel"
+            "value": "Ithpoel — reflexive / passive of Poel"
           }
         },
         "uk": {
@@ -6375,7 +6375,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hishtaphel — reflexive of Shaphel"
+            "value": "Hishtaphel — reflexive of Shaphel"
           }
         },
         "uk": {
@@ -6392,7 +6392,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nithpael — passive of Piel"
+            "value": "Nithpael — passive of Piel"
           }
         },
         "uk": {
@@ -6409,7 +6409,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hithpolel — reflexive of Polel"
+            "value": "Hithpolel — reflexive of Polel"
           }
         },
         "uk": {
@@ -6766,13 +6766,45 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hithpalpel — reflexive of Pilpel"
+            "value": "Hithpalpel — reflexive of Pilpel"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
             "value": "Hithpalpel — рефлексивна (Pilpel)"
+          }
+        }
+      }
+    },
+    "tip.tapVerse.message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explore original text, word meanings, commentary, and more."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дослідіть оригінал, значення слів, коментарі та інше."
+          }
+        }
+      }
+    },
+    "tip.tapVerse.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap any verse"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Торкніться будь-якого вірша"
           }
         }
       }
