@@ -250,121 +250,15 @@ struct OriginalWordsView: View {
 
     // MARK: – Slot combining
 
-    // NOTE: a `helperStrongs` allow-list used to live here and was used to pick each slot's
-    // root token as "the first token whose Strong's is not in the list". It has been removed,
-    // not extended, and it should not come back. Derived from Psalm 1, it was missing לְ
-    // (H3807a) and מִן (H4480) — so for ~21K words the leading PREPOSITION was selected as the
-    // head, and every such word opened the lexicon on the preposition instead of the noun
-    // (8.5% of all Hebrew words; e.g. Gen 1:5 לָאוֹר reported H3807a "Preposition" not H216
-    // "light"). It also mislabeled H1930a as לְ, which it is not. Head selection is now
-    // derived from morphology — see `headToken(of:)`. Keep it that way.
-
-    /// The head (root) token of a slot — the word the reader is actually tapping.
+    /// Words grouped by Macula slot -> one display row per Hebrew word. Greek verses
+    /// (slot == nil for all tokens) are returned unchanged.
     ///
-    /// Hebrew builds a slot as `[proclitics…] HEAD [enclitics…]`: inseparable prepositions,
-    /// the article and the waw attach to the FRONT, pronominal suffixes to the BACK. So the
-    /// head is the last token that is not an enclitic.
-    ///
-    /// Enclitic = pronominal suffix (Macula `morph` begins with `S`, e.g. `Sp3ms`) or an
-    /// enclitic particle (`class == "x"`). This is why we key on morphology rather than on a
-    /// Strong's allow-list: `pron` alone is ambiguous — `Sp3ms` is a suffix and never a head,
-    /// while `Pp3ms` (independent pronoun, e.g. וְהוּא) IS the head. `class` alone is ambiguous
-    /// too — proclitic לְ and standalone בֵּין are both `prep` with `morph == "R"`.
-    ///
-    /// Validated against BSB's independent Strong's assignment over 274,474 slots:
-    /// first-non-helper (old) 9.20% wrong → this rule 1.75%, of which 0.81% are single-token
-    /// slots where Macula and BSB simply disagree lexically (H7473 vs H7462 for רֹעֶה).
-    /// True alignment error: 0.94%. See ADR-020.
-    private static func headToken(of tokens: [BibleWord]) -> BibleWord {
-        tokens.last(where: { !isEnclitic($0) }) ?? tokens[tokens.count - 1]
-    }
-
-    private static func isEnclitic(_ word: BibleWord) -> Bool {
-        if word.lexicalClass == "x" { return true }               // enclitic particle
-        return word.morphology?.hasPrefix("S") ?? false           // pronominal suffix
-    }
-
-    /// Words grouped by Macula slot → one display row per Hebrew word.
-    /// Greek verses (slot == nil for all tokens) are returned unchanged.
+    /// bug-054: the merge itself now lives in `BibleWord.slotMerged` (Models/BibleModels.swift)
+    /// -- NOT here -- so long-press in the verse text, chevron word navigation and
+    /// auto-select-first-word (all in ReaderViewModel) share the exact same composed word
+    /// this view shows, instead of each falling back to raw un-merged Macula tokens.
     private var displayWords: [BibleWord] {
-        guard !words.isEmpty, words.first?.slot != nil else { return words }
-
-        // Group consecutive tokens that share the same slot value
-        var groups: [[BibleWord]] = []
-        var current: [BibleWord] = []
-        var currentSlot: Int? = nil
-
-        for word in words {
-            guard let s = word.slot else {
-                // Safety fallback: a token with no slot stands alone
-                if !current.isEmpty { groups.append(current); current = [] }
-                groups.append([word])
-                currentSlot = nil
-                continue
-            }
-            if s != currentSlot {
-                if !current.isEmpty { groups.append(current) }
-                current = [word]
-                currentSlot = s
-            } else {
-                current.append(word)
-            }
-        }
-        if !current.isEmpty { groups.append(current) }
-
-        // Merge each group into one representative BibleWord
-        return groups.map { tokens in
-            guard tokens.count > 1 else { return tokens[0] }
-            // Head = last non-enclitic token (carries Strong's, xlit, tap target).
-            // NOT "first non-helper" — that picked the leading preposition. See headToken(of:).
-            let root = Self.headToken(of: tokens)
-            // Combined surface: concatenate each token's displayText (already includes afterChar)
-            let surface   = tokens.map(\.displayText).joined()
-            let gloss     = tokens.compactMap(\.gloss).filter { !$0.isEmpty }.joined(separator: " ")
-            let morphology = tokens.compactMap(\.morphology).filter { !$0.isEmpty }.joined(separator: "·")
-            return BibleWord(
-                id: root.id,
-                text: surface,
-                strongsId: root.strongsId,
-                morphology: morphology.isEmpty ? nil : morphology,
-                gloss: gloss.isEmpty ? nil : gloss,
-                xlitSimple: root.xlitSimple,
-                xlit: root.xlit,
-                syntaxRole: root.syntaxRole,
-                greek: root.greek,
-                greekStrong: root.greekStrong,
-                afterChar: nil,          // already baked into `surface` via displayText join
-                lexicalClass: root.lexicalClass,
-                slot: root.slot,
-                // NB: xlit_slot is a SLOT-level value (the combined translit of the whole
-                // word, e.g. "lā-’ō-wr"), so any token in the slot that carries it carries
-                // the same string. `_apply_bh_hebrew_translit` in build_db.py writes it to
-                // EVERY non-helper token of the slot and skips helper morphemes (H871a,
-                // H2050b, …) so those keep their own short xlit. compactMap therefore drops
-                // the helper nils and .first lands on a real value.
-                //
-                // Corrected 2026-08-05: this comment used to claim build_db.py wrote
-                // xlit_slot onto "the token it considers the root, which is the leading
-                // preposition", and that `root.xlitSlot` would find nil. That was never what
-                // the code did. Verified against the 24-verse pilot sample: 0 of 259 slots
-                // have a helper as head, and 0 slots are all-helper, so `root.xlitSlot` and
-                // `.first` cannot disagree here. `.first` is kept because it stays correct
-                // if the helper set ever changes; it is not a workaround.
-                xlitSlot: tokens.compactMap(\.xlitSlot).first,
-                // ADR-040: taken from `root` (the head token), never re-derived from the
-                // joined `morphology` string above — these come straight from the head
-                // token's own DB row, so composite Hebrew slots (e.g. "Td·Ncfsa") get
-                // correct values instead of being unparseable. This also fixes the
-                // ADR-033 regression where canonicalHebrewStem(morph) returned nil for
-                // any composite-slot code, since MorphologyDecoder now reads root.stem
-                // etc. directly instead of parsing the concatenated `morph` string.
-                person: root.person, gender: root.gender, number: root.number,
-                grCase: root.grCase, tense: root.tense, voice: root.voice,
-                mood: root.mood, degree: root.degree, grType: root.grType,
-                stem: root.stem, morphType: root.morphType, state: root.state,
-                pos: root.pos, lang: root.lang
-            )
-        }
+        BibleWord.slotMerged(words)
     }
 
     // MARK: – Body

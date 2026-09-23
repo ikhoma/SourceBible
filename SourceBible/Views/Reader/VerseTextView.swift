@@ -75,6 +75,16 @@ private final class HighlightableTextView: UITextView {
 struct VerseTextView: UIViewRepresentable {
 
     let parsed: ParsedVerse
+    /// EXPERIMENT (Geneva-style inline verse number, not yet committed): when set,
+    /// buildBaseAttributedString() prepends this number as a small raised run — the
+    /// FIRST run of the attributed string, carrying no .verseSegmentIndex — so word-tap
+    /// / footnote hit-testing (both purely attribute-lookups at a character index, see
+    /// Coordinator.handleLongPress / footnoteHit) simply never match it. nil keeps the
+    /// old behaviour (caller renders the number itself, e.g. the #Preview below).
+    var verseNumber: Int? = nil
+    /// Drives the verse-number run's colour (blue when this row is the selected/focused
+    /// verse) — mirrors what the old sibling Text(verse.number) did in VerseRowView.
+    var isSelected: Bool = false
     /// rawValue of HighlightColor, or nil if not highlighted.
     var highlightColor: String? = nil
     /// Сегмент що зараз виділений (word mode). nil — виділення знято.
@@ -164,6 +174,7 @@ struct VerseTextView: UIViewRepresentable {
                           || coord.highlightColor  != highlightColor
                           || coord.redLetters      != redLetters
                           || coord.footnoteKeys    != Set(footnotes.keys)
+                          || coord.isSelected      != isSelected
         if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
             coord.baseAttributedString = buildBaseAttributedString()
         }
@@ -195,6 +206,7 @@ struct VerseTextView: UIViewRepresentable {
         coord.highlightColor = highlightColor
         coord.redLetters     = redLetters
         coord.footnoteKeys   = Set(footnotes.keys)
+        coord.isSelected     = isSelected
         coord.onVerseTap     = onVerseTap
         coord.onWordTap      = onWordTap
         coord.onFootnoteTap  = onFootnoteTap
@@ -205,6 +217,7 @@ struct VerseTextView: UIViewRepresentable {
                                 onVerseTap: onVerseTap, onWordTap: onWordTap,
                                 onFootnoteTap: onFootnoteTap)
         coord.redLetters = redLetters
+        coord.isSelected  = isSelected
         coord.baseAttributedString = buildBaseAttributedString()
         return coord
     }
@@ -237,6 +250,24 @@ struct VerseTextView: UIViewRepresentable {
     func buildBaseAttributedString() -> NSAttributedString {
         let result   = NSMutableAttributedString()
         let baseFont = UIFont.preferredFont(forTextStyle: .body)
+
+        // EXPERIMENT — Geneva-style verse number: the FIRST run in the string, raised
+        // and undersized like a real typeset superscript, glued directly to the verse's
+        // first glyph (zero-width separator — Ivan's reference has no gap either).
+        // Deliberately carries no .verseSegmentIndex: a tap landing on the numeral just
+        // fails the segment/footnote attribute lookups below and falls through to
+        // onVerseTap(), same as tapping any other unstyled part of the verse.
+        if let number = verseNumber {
+            // Trailing space (not a separate run): Ivan's call after seeing 3-digit
+            // numbers ("176") render — true zero-gap read as "stuck" past 2 digits.
+            // One space keeps 1-2 digit verses close to the Geneva reference while
+            // giving wider numbers breathing room, without digit-count branching.
+            result.append(NSAttributedString(string: "\(number) ", attributes: [
+                .font:            UIFont.systemFont(ofSize: 11, weight: .semibold),
+                .foregroundColor: isSelected ? UIColor.appBlue : UIColor.tertiaryLabel,
+                .baselineOffset:  NSNumber(value: 7)
+            ]))
+        }
 
         for (index, seg) in parsed.segments.enumerated() {
 
@@ -349,6 +380,8 @@ struct VerseTextView: UIViewRepresentable {
         /// Маркери приміток, з якими побудований поточний рядок — джерело правди про те,
         /// чи стоїть у тексті глиф † (див. contentChanged в updateUIView).
         var footnoteKeys:         Set<String> = []
+        /// Last-rendered row-selection state — see VerseTextView.isSelected.
+        var isSelected:            Bool = false
         var onVerseTap:           () -> Void
         var onWordTap:            (VerseSegment) -> Void
         var onFootnoteTap:        (String, CGRect) -> Void

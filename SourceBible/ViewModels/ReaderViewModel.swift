@@ -443,8 +443,19 @@ class ReaderViewModel: ObservableObject {
     /// so a word page opened from the Original pill can still be walked word-by-word.
     var wordNavSequence: [BibleWord] {
         let pairs = verseWordSegmentPairs
-        guard pairs.isEmpty else { return pairs.map { $0.word } }
-        return verseWordsWithStrongs
+        let raw = pairs.isEmpty ? verseWordsWithStrongs : pairs.map { $0.word }
+        // bug-054: upgrade each raw token to its slot-merged word so ‹› navigation shows the
+        // same composed word OriginalWordsView/long-press do, not a bare un-merged morpheme.
+        // Dedup by merged id — two raw tokens of the same slot could in principle each carry
+        // a Strong's tag and would otherwise show up as two identical stops.
+        let lookup = BibleWord.slotMergedLookup(selectedVerse?.words ?? [])
+        var seen: Set<String> = []
+        var merged: [BibleWord] = []
+        for w in raw {
+            let m = lookup[w.id] ?? w
+            if seen.insert(m.id).inserted { merged.append(m) }
+        }
+        return merged
     }
 
     /// True when the DISPLAYED translation has no Strong's tagging for the focused
@@ -1120,11 +1131,27 @@ class ReaderViewModel: ObservableObject {
         activeSheet = .verse
 
         // Ensure Macula words are loaded
+        // bug-054 follow-up: `verse` is a value-type snapshot from BEFORE this load — it
+        // stays empty even after loadWordsForSelectedVerse() populates `self.selectedVerse`
+        // (which IS updated in place). The first long-press on a freshly-opened verse used
+        // to build the slot-merge lookup from this stale, still-empty `verse.words`, so ONLY
+        // the very first tap fell back to the raw un-merged word again — every tap after that
+        // worked because `verse.words` was no longer empty by then. Read `selectedVerse?.words`
+        // (same source `verseWordSegmentPairs` below already uses) instead of the parameter.
         if verse.words.isEmpty { loadWordsForSelectedVerse() }
+        let wordsForLookup = selectedVerse?.words ?? verse.words
 
         // Bridge to the exact Macula word paired with THIS segment instance in the canonical
         // mapping — handles repeated words (e.g. לֹא…לֹא…לֹא) without jumping to a prior instance.
-        selectedWord = verseWordSegmentPairs.first { $0.segment.id == segment.id }?.word
+        // bug-054: upgrade the raw paired token to its slot-merged form (the same composed
+        // word OriginalWordsView shows) — otherwise a compound Hebrew word opened by long-press
+        // loses its composition row and part of its own surface form vs. opening it from
+        // "Оригінал".
+        if let raw = verseWordSegmentPairs.first(where: { $0.segment.id == segment.id })?.word {
+            selectedWord = BibleWord.slotMergedLookup(wordsForLookup)[raw.id] ?? raw
+        } else {
+            selectedWord = nil
+        }
 
         // Prefer the Macula word's strongsId (e.g. H3887a) over the segment ID (e.g. H3887).
         // The strongs table is backfilled from Macula, so bare OpenScriptures IDs like H3887
@@ -1245,9 +1272,12 @@ class ReaderViewModel: ObservableObject {
     func autoSelectFirstWordIfNeeded() {
         guard selectedWord == nil && selectedSegment == nil else { return }
         if let first = verseWordSegmentPairs.first {
-            selectedWord = first.word
+            // bug-054: show the composed slot word, not the bare raw token, the moment the
+            // sheet auto-opens on the first word — mirrors the tapWord(_ segment:) fix.
+            let merged = BibleWord.slotMergedLookup(selectedVerse?.words ?? [])[first.word.id] ?? first.word
+            selectedWord = merged
             selectedSegment = first.segment
-            loadStrongs(for: first.word)
+            loadStrongs(for: merged)
         }
     }
 

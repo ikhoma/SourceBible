@@ -253,8 +253,8 @@ private struct ThemeCardButton: View {
                             // (black in light, white in dark) rather than the brand
                             // blue: the blue read as a third accent competing with
                             // the theme swatches themselves.
-                            isSelected ? Color.primary : Color(.separator).opacity(0.5),
-                            lineWidth: isSelected ? 2 : 1
+                            isSelected ? Color.primary : Color(.separator),
+                            lineWidth: isSelected ? 2 : 0.5
                         )
                 }
                 Text(theme.labelKey)

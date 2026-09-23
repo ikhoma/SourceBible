@@ -171,7 +171,10 @@ extension Theologian {
         styleKey: "theologian.edwards.style",
         imageName: "edwards"
     ) }
-    static var all: [Theologian] { [calvin, henry, spurgeon, owen, edwards] }
+    /// Chronological order by era (century), tie-broken alphabetically by surname
+    /// within the same century: Calvin 16th c. · Owen 17th c. · Edwards/Henry 18th c.
+    /// (Edwards before Henry, E < H) · Spurgeon 19th c.
+    static var all: [Theologian] { [calvin, owen, edwards, henry, spurgeon] }
 
     /// This theologian's published work(s) — see `CommentaryWork`. Spurgeon is
     /// the only one with more than one; everyone else has a single work whose

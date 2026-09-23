@@ -651,18 +651,21 @@ struct VerseRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                // Verse number
-                Text("\(verse.number)")
-                    .font(.caption)
-                    .foregroundStyle(isSelected ? Color.appBlue : Color(UIColor.tertiaryLabel))
-                    .frame(width: 24, alignment: .trailing)
-                    .padding(.top, 12)
-
-                // Verse text — UITextView renderer when parsed; plain Text fallback
+            HStack(alignment: .top, spacing: 0) {
+                // Verse text — UITextView renderer when parsed; plain Text fallback.
+                // EXPERIMENT (Geneva-style inline verse number, not committed): the
+                // number used to be a sibling Text() in a fixed 24pt trailing-aligned
+                // gutter, which (a) looked nothing like Ivan's Geneva reference and
+                // (b) overflowed further LEFT as digit count grew ("176" vs "2"),
+                // crowding the bigger 32pt corner test above. Now the number is fused
+                // as the first run of the SAME attributed string / Text (see
+                // VerseTextView.buildBaseAttributedString and the fallback below) —
+                // true inline typesetting, zero gap, reflows with the paragraph.
                 if let parsed = verse.parsed {
                     VerseTextView(
                         parsed: parsed,
+                        verseNumber: verse.number,
+                        isSelected: isSelected,
                         highlightColor: verse.highlightColor,
                         selectedSegment: selectedSegment,
                         redLetters: redLetters,
@@ -699,13 +702,22 @@ struct VerseRowView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
                     .padding(.trailing, 12)
+                    .padding(.leading, 16)
                 } else {
-                    Text(verse.text)
-                        .font(.body)
+                    // Same fusion, done the plain-SwiftUI way: Text concatenation keeps
+                    // both runs in ONE Text, so they wrap as a single paragraph instead
+                    // of the old two-view HStack (which pinned the number to the row's
+                    // top-left regardless of how the text below it wrapped).
+                    (Text("\(verse.number) ")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.appBlue : Color(UIColor.tertiaryLabel))
+                        .baselineOffset(7)
+                     + Text(verse.text).font(.body))
                         .lineSpacing(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                         .padding(.trailing, 12)
+                        .padding(.leading, 16)
                         .background(verse.highlightColor.map {
                             HighlightColor.from($0).color.opacity(0.22)
                         } ?? Color.clear)
@@ -719,7 +731,7 @@ struct VerseRowView: View {
                         // iOS 26: ConcentricRectangle автоматично рахує inner radius
                         // containerShape(r=12) → ConcentricRectangle з padding 2pt → inner r=10
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 12).fill(Color.appBlue)
+                            RoundedRectangle(cornerRadius: 32).fill(Color.appBlue)
                             ConcentricRectangle()
                                 .fill(colorTheme.appBackground)
                                 .padding(.leading, 2)
@@ -727,7 +739,7 @@ struct VerseRowView: View {
                                 .fill(Color.appBlue.opacity(0.1))
                                 .padding(.leading, 2)
                         }
-                        .containerShape(RoundedRectangle(cornerRadius: 12))
+                        .containerShape(RoundedRectangle(cornerRadius: 32))
                     } else {
                         // iOS 17–25: три шари вручну
                         // 1) синій (акцент-смужка) → 2) grouped bg (ховає синій) → 3) синій тінт
@@ -743,7 +755,10 @@ struct VerseRowView: View {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: isSelected ? 12 : 0))
+            .clipShape(RoundedRectangle(cornerRadius: {
+                guard isSelected else { return 0 }
+                if #available(iOS 26, *) { return 32 } else { return 12 }
+            }()))
 
         }
     }

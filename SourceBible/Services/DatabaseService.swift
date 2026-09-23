@@ -162,7 +162,9 @@ final class DatabaseService: @unchecked Sendable {
     func loadTranslations() -> [Translation] {
         guard isAvailable else { return [Translation.kjv] }
         var translations: [Translation] = []
-        query("SELECT id, name, language FROM translation ORDER BY id") { stmt in
+        // Синодальний переклад (RST) завжди останній у списку, незалежно від id;
+        // решта — за id, як і раніше.
+        query("SELECT id, name, language FROM translation ORDER BY (id = 'RST'), id") { stmt in
             translations.append(Translation(
                 id:       string(stmt, 0),
                 name:     string(stmt, 1),
