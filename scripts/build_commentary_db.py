@@ -507,6 +507,24 @@ def strip_p_tag_format(html: str) -> str:
     text = re.sub(r"(?i)</?(?:i|b|u|em|strong|span)[^>]*>", "", text)
     text = re.sub(r"(?i)<br\s*/?>", "\n", text)
     text = _HTML_TAG.sub(" ", text)
+    # N5 (session 2026-09-25, Ivan -- recurrence of the N4 leading-punctuation
+    # symptom, different shape): 17 Calvin sections (measured against the
+    # live commentaries-en.db, zero elsewhere -- JOS 10:8, PSA 119:152, JHN
+    # 4:13, ROM 1:8/4:5/10:4/10:6/13:3, GAL 2:5, COL 1:4/3:17, 2TH
+    # 1:9/2:6/2:7, 1TI 1:13/3:13/5:6) have NO misplaced <p/> tag at all --
+    # the raw MyBible source text simply opens with an orphaned ".", ","
+    # or ";" where a bold verse-number digit should precede it (confirmed
+    # present in the independent SWORD CalvinCommentaries.zip source, e.g.
+    # "<hi type='bold'>6</hi>. She who is in luxury..." for 1Tim 5:6) --
+    # MyBible's own conversion dropped the digit, not this script. Rather
+    # than reconstruct it from a second source (redundant: the app's own
+    # UI header already shows the verse number), strip punctuation orphaned
+    # at the very start of a section OR right after a paragraph break --
+    # the same shape N4 fixed for the <p/>-before-punctuation case,
+    # generalized here so this single pass also covers N4's own mechanism
+    # as a safety net, should a future source update reproduce it without
+    # an <a> citation to re-anchor to.
+    text = re.sub(r"(^|\n\n)\s*[.,;:]+\s*", r"\1", text)
     return _collapse_whitespace(text)
 
 
