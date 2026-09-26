@@ -7,6 +7,10 @@ struct NotesListView: View {
 
     @EnvironmentObject private var notesVM: NotesViewModel
     @EnvironmentObject private var router:  AppNavigationRouter
+    @EnvironmentObject private var readerVM: ReaderViewModel
+
+    /// Текст для системного Share Sheet (свайп «Поділитись»).
+    @State private var shareItem: EntryShareItem?
 
     /// Фільтри вкладки Entries (період / книга / сортування).
     var filter = EntriesFilter()
@@ -40,12 +44,23 @@ struct NotesListView: View {
                                 Label("action.delete", systemImage: "trash")
                             }
                             .tint(.red)
+                            Button {
+                                if let text = EntryShareFormatter.format(note: item, readerVM: readerVM) {
+                                    shareItem = EntryShareItem(text: text)
+                                }
+                            } label: {
+                                Label("action.share", systemImage: "square.and.arrow.up")
+                            }
+                            .tint(Color.appBlue)
                         }
                     }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
             }
+        }
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(activityItems: [item.text])
         }
         .sheet(isPresented: $notesVM.isEditorPresented,
                onDismiss: { notesVM.refresh() }) {
@@ -91,6 +106,7 @@ struct NotesListView: View {
     NotesListView()
         .environmentObject(NotesViewModel(store: InMemoryUserDataStore(),
                                           authService: LocalAuthService.shared))
+        .environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
         .environmentObject(AppNavigationRouter())
         .background(Color(.systemGroupedBackground))
 }

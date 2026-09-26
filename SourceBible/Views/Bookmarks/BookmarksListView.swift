@@ -10,6 +10,10 @@ struct BookmarksListView: View {
 
     @EnvironmentObject private var bookmarksVM: BookmarksViewModel
     @EnvironmentObject private var router:      AppNavigationRouter
+    @EnvironmentObject private var readerVM:    ReaderViewModel
+
+    /// Текст для системного Share Sheet (свайп «Поділитись»).
+    @State private var shareItem: EntryShareItem?
 
     /// Фільтри вкладки Entries (період / книга / сортування).
     var filter = EntriesFilter()
@@ -44,12 +48,23 @@ struct BookmarksListView: View {
                                     Label("action.delete", systemImage: "trash")
                                 }
                                 .tint(.red)
+                                Button {
+                                    if let text = EntryShareFormatter.format(bookmark: item, readerVM: readerVM) {
+                                        shareItem = EntryShareItem(text: text)
+                                    }
+                                } label: {
+                                    Label("action.share", systemImage: "square.and.arrow.up")
+                                }
+                                .tint(Color.appBlue)
                             }
                     }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
             }
+        }
+        .sheet(item: $shareItem) { item in
+            ActivityShareSheet(activityItems: [item.text])
         }
     }
 
@@ -85,6 +100,7 @@ struct BookmarksListView: View {
 #Preview {
     BookmarksListView()
         .environmentObject(BookmarksViewModel(store: InMemoryUserDataStore(), authService: LocalAuthService.shared))
+        .environmentObject(ReaderViewModel(store: InMemoryUserDataStore()))
         .environmentObject(AppNavigationRouter())
         .background(Color(.systemGroupedBackground))
 }
