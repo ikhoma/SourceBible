@@ -22,6 +22,11 @@ if sys.version_info < need:
 print("▸ python3 %s at %s" % (got, sys.executable))
 PY
 
+# ADR-041: build_word_rendering.py (наприкінці) лематизує RST через pymorphy3.
+# Перевіряємо ТУТ, а не через 10 хвилин білду.
+python3 -c "import pymorphy3" 2>/dev/null || {
+  echo "\n✗ pymorphy3 не встановлено: pip install -r requirements-build.txt\n"; exit 1; }
+
 echo "\n▸ Building database..."
 python3 scripts/build_db.py
 
@@ -65,6 +70,15 @@ echo "\n▸ Regenerating Strong's merge map (bug-045)..."
 # hesed II «ганьба»), H871/H871a і Єремія — ні. Розходження = ненульовий код виходу,
 # і `set -e` спиняє білд ДО cp у бандл.
 python3 scripts/build_strongs_merge_map.py sourcebible.db
+
+echo "\n▸ Building word renderings — «Translated as» (ADR-041)..."
+# Як переклад читанки передає кожне слово оригіналу: рядок на кожне входження
+# (KJV/ASV/RST; NASB свідомо пропущено). Порт VerseParser + verseWordSegmentPairs.
+# Після merge map — ключ групи Strong's той самий, що в Usage (bug-045).
+# Потрібен pymorphy3 (лематизація RST): pip install -r requirements-build.txt
+# Еталони hesed (KJV 245 «mercy», ASV 237 «lovingkindness», H2617a окремо) —
+# розходження = ненульовий код, і `set -e` спиняє білд ДО cp у бандл.
+python3 scripts/build_word_rendering.py sourcebible.db
 
 echo "\n▸ Copying to app bundle..."
 cp sourcebible.db SourceBible/Resources/sourcebible.db
