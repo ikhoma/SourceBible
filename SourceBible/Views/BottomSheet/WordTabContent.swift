@@ -294,6 +294,13 @@ struct WordMeaningView: View {
     /// ADR-041 «Translated as»: як поточний переклад передає слово. nil = секцію не показуємо.
     @State private var renderings: RenderingSummary?
     @State private var showAllRenderings = false
+    /// Stacked sheet з усіма входженнями (частина 3); значення — передача, з якої відкрили.
+    @State private var renderingsSheet: RenderingsSheetRequest?
+
+    private struct RenderingsSheetRequest: Identifiable {
+        let renderingId: Int
+        var id: Int { renderingId }
+    }
 
     private let t: TranslationProvider = BundleTranslationProvider()
 
@@ -366,8 +373,13 @@ struct WordMeaningView: View {
                 sectionLabel(t.string(for: MorphKey.sectionTranslatedIn, summary.translationId))
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(visible) { item in
-                        renderingRow(item, maxCount: maxCount,
-                                     isCurrent: item.id == summary.currentRenderingId)
+                        Button {
+                            renderingsSheet = RenderingsSheetRequest(renderingId: item.id)
+                        } label: {
+                            renderingRow(item, maxCount: maxCount,
+                                         isCurrent: item.id == summary.currentRenderingId)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 HStack(alignment: .firstTextBaseline) {
@@ -395,6 +407,13 @@ struct WordMeaningView: View {
                 }
                 .padding(.top, 6)
             }
+            .sheet(item: $renderingsSheet) { req in
+                WordRenderingsSheet(entry: entry, summary: summary,
+                                    initialRendering: req.renderingId) {
+                    renderingsSheet = nil
+                }
+                .environmentObject(vm)
+            }
         }
     }
 
@@ -419,9 +438,16 @@ struct WordMeaningView: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+            // Афорданс переходу: рядок відкриває аркуш з усіма входженнями цієї
+            // передачі (раніше рядки Usage були «мовчки клікабельні» — 2026-08-02).
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 6)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: isCurrent
             ? "\(item.text), \(item.count), \(t.string(for: MorphKey.renderingsThisVerse))"
             : "\(item.text), \(item.count)"))

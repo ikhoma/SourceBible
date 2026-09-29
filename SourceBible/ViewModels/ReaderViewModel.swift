@@ -1343,6 +1343,11 @@ class ReaderViewModel: ObservableObject {
         return summary
     }
 
+    /// Усі входження слова в перекладі для stacked sheet (ADR-041 частина 3).
+    func renderingOccurrences(for entry: StrongsEntry, translation: String) -> [RenderingOccurrence] {
+        db.loadRenderingOccurrences(strongsId: entry.id, translation: translation)
+    }
+
     /// Load Strong's entry for a Macula BibleWord (future — called once word table is populated).
     func loadStrongs(for word: BibleWord) {
         guard let strongsId = word.strongsId else {

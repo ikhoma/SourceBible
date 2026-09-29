@@ -735,6 +735,42 @@ final class DatabaseService: @unchecked Sendable {
         )
     }
 
+    /// Усі входження слова в перекладі, з передачею кожного (ADR-041, stacked sheet).
+    /// Канонічний порядок: книга → глава → вірш → сегмент. `verse_key` — це вірш
+    /// ПЕРЕКЛАДУ (build-скрипт іде по віршах перекладу), тож verse_org тут не потрібен.
+    func loadRenderingOccurrences(strongsId: String, translation: String) -> [RenderingOccurrence] {
+        guard isAvailable, hasWordRenderingTable else { return [] }
+        let key = StrongsMergeMap.canonical(strongsId)
+        var out: [RenderingOccurrence] = []
+        let sql = """
+            SELECT w.rendering_id, b.id,
+                   (w.verse_key / 1000) % 1000 AS ch,
+                   w.verse_key % 1000          AS vs,
+                   w.seg_ord, v.text
+            FROM word_rendering w
+            JOIN book  b ON b.num = w.verse_key / 1000000
+            JOIN verse v ON v.translation = w.translation
+                        AND v.book_id     = b.id
+                        AND v.chapter     = (w.verse_key / 1000) % 1000
+                        AND v.verse       = w.verse_key % 1000
+            WHERE w.translation = ? AND w.strongs_key = ?
+            ORDER BY w.verse_key, w.seg_ord
+            """
+        query(sql, bindings: [translation, key]) { stmt in
+            let bookId = string(stmt, 1)
+            let ch  = Int(sqlite3_column_int(stmt, 2))
+            let vs  = Int(sqlite3_column_int(stmt, 3))
+            let ord = Int(sqlite3_column_int(stmt, 4))
+            out.append(RenderingOccurrence(
+                id: "\(bookId)|\(ch)|\(vs)|\(ord)",
+                renderingId: Int(sqlite3_column_int(stmt, 0)),
+                bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
+                rawText: optString(stmt, 5) ?? ""
+            ))
+        }
+        return out
+    }
+
     // MARK: - Book Usage Groups (per-book concordance for ConcordanceView)
 
     /// Returns the true total occurrence count across the whole Bible plus a

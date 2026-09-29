@@ -50,6 +50,19 @@ struct RenderingSummary: Equatable {
     var coverage: Double { total > 0 ? Double(matched) / Double(total) : 0 }
 }
 
+/// Одне входження слова в перекладі з його передачею (ADR-041, stacked sheet).
+/// `segOrd` — № сегмента з Strong's у вірші (0-based), той самий, що пише build-скрипт;
+/// за ним підсвічується саме це слово, а не всі збіги номера у вірші.
+struct RenderingOccurrence: Identifiable {
+    let id: String            // "BOOK|ch|v|segOrd"
+    let renderingId: Int
+    let bookId: String
+    let chapter: Int
+    let verse: Int
+    let segOrd: Int
+    let rawText: String       // сирий текст з <S>-тегами — для підсвітки
+}
+
 // MARK: - Book Usage Group
 
 /// Aggregated concordance data for one Bible book.
