@@ -25,7 +25,7 @@ PY
 # ADR-041: build_word_rendering.py (наприкінці) лематизує RST через pymorphy3.
 # Перевіряємо ТУТ, а не через 10 хвилин білду.
 python3 -c "import pymorphy3" 2>/dev/null || {
-  echo "\n✗ pymorphy3 не встановлено: pip install -r requirements-build.txt\n"; exit 1; }
+  echo "\n✗ pymorphy3 не встановлено: python3 -m pip install --user --break-system-packages -r requirements-build.txt\n"; exit 1; }
 
 echo "\n▸ Building database..."
 python3 scripts/build_db.py

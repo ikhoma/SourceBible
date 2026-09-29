@@ -69,6 +69,18 @@ STOP_RU = frozenset("""
 все всех весь себя сей оный
 """.split())
 
+# Прислівникові частки фразових дієслів (ADR-041, Amendment 3). У KJV/ASV тег
+# стоїть після всієї фрази: «passed over<S>5674</S>», «went out<S>3318</S>»,
+# «cut off<S>3772</S>». Частка — частина передачі, а не службове слово: без
+# неї «pass over» і «pass through» зливаються, а з правилом «хвіст після
+# службового слова» лишається сама частка («over» 168 для H5674).
+# Навмисно БЕЗ чистих прийменників (in, on, to, unto, into, upon, with, for,
+# of, from, at): «trust in», «call on» лишаються зведеними до дієслова.
+PARTICLES_EN = frozenset("""
+over through away past by out up down off forth back about aside along across
+around round again abroad asunder together near nigh hither thither
+""".split())
+
 WORD_RE = re.compile(r"[A-Za-zА-Яа-яЁё]+(?:['’][A-Za-z]+)?")
 
 # ── Порт VerseParser.swift ───────────────────────────────────────────────────
@@ -240,7 +252,7 @@ class Normalizer:
             except ImportError:
                 sys.stderr.write(
                     "\n✗ pymorphy3 не встановлено — потрібен для RST (ADR-041).\n"
-                    "  pip install -r requirements-build.txt\n\n")
+                    "  python3 -m pip install --user --break-system-packages -r requirements-build.txt\n\n")
                 raise SystemExit(1)
             self._ma = pymorphy3.MorphAnalyzer()
 
@@ -260,6 +272,12 @@ class Normalizer:
         """Хвіст сегмента після останнього службового слова; для RU — леми."""
         words = [re.sub(r"['’]s$", "", m.group(0).lower().replace("ё", "е"))
                  for m in WORD_RE.finditer(seg_text)]
+        # EN: кінцеві частки фразового дієслова відкладаємо й повертаємо після
+        # ядра («and passed by» → ядро «passed» + «by» → «passed by»).
+        particles = []
+        if self.lang == "en":
+            while words and words[-1] in PARTICLES_EN:
+                particles.insert(0, words.pop())
         while words and self.is_stop(words[-1]):
             words.pop()
         i = len(words)
@@ -268,7 +286,7 @@ class Normalizer:
         tail = words[i:]
         if self.lang == "ru":
             tail = [self.lemma(w) for w in tail]
-        return " ".join(tail)
+        return " ".join(tail + particles)
 
 
 EN_SUFFIXES = (("ies", "y"), ("ied", "y"), ("es", ""), ("s", ""), ("ed", ""),
@@ -290,10 +308,14 @@ def merge_forms(by_key: dict[str, Counter], lang: str) -> dict[tuple[str, str], 
             tgt = r
             if lang == "en":
                 ws = r.split()
-                last = ws[-1]
+                # змінюється останнє НЕ-частка слово: «passed over» → «pass over»
+                k = len(ws) - 1
+                while k > 0 and ws[k] in PARTICLES_EN:
+                    k -= 1
+                last = ws[k]
                 for suf, rep in EN_SUFFIXES:
                     if last.endswith(suf) and len(last) > len(suf) + 2:
-                        cand = " ".join(ws[:-1] + [last[: -len(suf)] + rep])
+                        cand = " ".join(ws[:k] + [last[: -len(suf)] + rep] + ws[k + 1:])
                         if cand in forms:
                             tgt = cand
                             break
@@ -305,6 +327,9 @@ def merge_forms(by_key: dict[str, Counter], lang: str) -> dict[tuple[str, str], 
             while True:
                 ws = t.split()
                 for i in range(1, len(ws)):
+                    # не згортати до голої частки: «pass over» ≠ «over»
+                    if all(w in PARTICLES_EN for w in ws[i:]):
+                        continue
                     suf = " ".join(ws[i:])
                     if suf in finals:
                         t = suf

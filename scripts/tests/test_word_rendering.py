@@ -93,6 +93,15 @@ class TestNormalizer(unittest.TestCase):
         self.assertEqual(n("unto her"), "")                # лише службові слова → порожньо
         self.assertEqual(n("love's"), "love")
 
+    def test_phrasal_particle_is_kept(self):
+        # ADR-041 Amendment 3: «passed over» ≠ «over»; «passed by» ≠ «passed»
+        n = Normalizer("en")
+        self.assertEqual(n("and passed by"), "passed by")
+        self.assertEqual(n("will pass through"), "pass through")
+        self.assertEqual(n("shall be cut off"), "cut off")
+        self.assertEqual(n("round about"), "round about")      # сама частка — теж передача
+        self.assertEqual(n("put their trust in"), "trust")      # чистий прийменник не частка
+
 
 class TestMergeForms(unittest.TestCase):
     def test_plural_merges_only_with_sibling(self):
@@ -103,6 +112,11 @@ class TestMergeForms(unittest.TestCase):
     def test_suffix_collapse_to_fixed_point(self):
         m = merge_forms({"H559": Counter({"saith": 3, "thus saith": 2, "therefore thus saith": 1})}, "en")
         self.assertEqual(m[("H559", "therefore thus saith")], "saith")
+
+    def test_phrasal_verb_merges_on_the_verb(self):
+        m = merge_forms({"H5674": Counter({"pass over": 3, "passed over": 2, "over": 1, "pass": 4})}, "en")
+        self.assertEqual(m[("H5674", "passed over")], "pass over")
+        self.assertEqual(m[("H5674", "pass over")], "pass over")   # не згортається до «over»
 
     def test_homonym_keeps_its_phrase(self):
         m = merge_forms({"H2617a": Counter({"wicked thing": 1, "reproach": 1})}, "en")
