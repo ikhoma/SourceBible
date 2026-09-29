@@ -111,6 +111,12 @@ enum MorphKey {
     static let sectionLexical         = "morph.section.lexical"
     /// Interpolated: "Form in Gen 1:1" — use string(for:_:) with ref argument
     static let sectionFormInContext   = "morph.section.form_in_context"
+    // ADR-041 «Translated as» — секція в Meaning після лексикону
+    static let sectionTranslatedIn    = "morph.section.translated_in"      // "Translated in %@"
+    static let renderingsShowAll      = "morph.renderings.show_all"
+    static let renderingsShowLess     = "morph.renderings.show_less"
+    static let renderingsThisVerse    = "morph.renderings.this_verse"
+    static let renderingsCoverage     = "morph.renderings.coverage"        // "%1$@ of %2$@" — числа рядками, без іменника (plural не потрібен)
     static let sectionGreekEquiv      = "morph.section.greek_equivalent"
     /// Позначка біля породи, що збігається з розібраною формою (ADR-033).
     static let stemFormInVerse        = "morph.stem.form_in_verse"

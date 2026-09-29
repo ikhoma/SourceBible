@@ -1316,6 +1316,33 @@ class ReaderViewModel: ObservableObject {
         return (testament == .old ? "H" : "G") + raw.dropFirst()
     }
 
+    // MARK: - Word renderings (ADR-041 «Translated as»)
+
+    /// Нижче цієї частки зіставлених входжень графік брехав би: σύ (G4771) у KJV має
+    /// передачу лише для 6% вживань (займенник часто не тегується окремим словом).
+    static let renderingCoverageThreshold = 0.8
+
+    /// Як поточний переклад читанки передає слово `entry` — для секції в Meaning.
+    /// `nil` = секцію не показуємо: переклад без Strong's-розмітки (UBIO), NASB (ADR-041
+    /// Amendment — рядків немає), стара база без таблиці, або покриття нижче порогу.
+    func renderingSummary(for entry: StrongsEntry) -> RenderingSummary? {
+        var current: (bookId: String, chapter: Int, verse: Int, segOrd: Int)?
+        if let verse = selectedVerse, let seg = selectedSegment,
+           let segments = verse.parsed?.segments {
+            // seg_ord = № серед сегментів З Strong's — так само рахує build-скрипт.
+            let tagged = segments.filter { !$0.strongs.isEmpty }
+            if let ord = tagged.firstIndex(where: { $0.id == seg.id }) {
+                current = (verse.bookId, verse.chapter, verse.number, ord)
+            }
+        }
+        guard let summary = db.loadRenderingSummary(strongsId: entry.id,
+                                                    translation: currentTranslation.id,
+                                                    current: current),
+              summary.coverage >= Self.renderingCoverageThreshold
+        else { return nil }
+        return summary
+    }
+
     /// Load Strong's entry for a Macula BibleWord (future — called once word table is populated).
     func loadStrongs(for word: BibleWord) {
         guard let strongsId = word.strongsId else {

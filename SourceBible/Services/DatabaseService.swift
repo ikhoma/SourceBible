@@ -656,6 +656,85 @@ final class DatabaseService: @unchecked Sendable {
         return entries
     }
 
+    // MARK: - Word renderings (ADR-041 «Translated as»)
+
+    /// Таблиця `word_rendering` будується окремим кроком `rebuild.sh`
+    /// (scripts/build_word_rendering.py). Старіша база її не має — тоді фіча мовчки
+    /// вимкнена, без помилок у консолі на кожне слово.
+    private lazy var hasWordRenderingTable: Bool = {
+        var exists = false
+        query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'word_rendering'") { _ in
+            exists = true
+        }
+        return exists
+    }()
+
+    /// Як переклад `translation` передає слово `strongsId` (ADR-041).
+    ///
+    /// - Parameters:
+    ///   - current: вірш читанки + порядковий № сегмента з Strong's у ньому (0-based,
+    ///     рахуються лише сегменти з непорожнім `strongs`) — для позначки «this verse».
+    ///     Це той самий `seg_ord`, що пише build-скрипт.
+    /// - Returns: `nil`, якщо таблиці немає або для слова в цьому перекладі нема рядків.
+    ///   Поріг покриття застосовує викликач — тут лише дані.
+    func loadRenderingSummary(
+        strongsId: String,
+        translation: String,
+        current: (bookId: String, chapter: Int, verse: Int, segOrd: Int)?
+    ) -> RenderingSummary? {
+        guard isAvailable, hasWordRenderingTable else { return nil }
+        let key = StrongsMergeMap.canonical(strongsId)
+
+        var items: [WordRendering] = []
+        let sql = """
+            SELECT r.id, r.text, COUNT(*) AS n
+            FROM word_rendering w
+            JOIN rendering r ON r.id = w.rendering_id
+            WHERE w.translation = ? AND w.strongs_key = ?
+            GROUP BY w.rendering_id
+            ORDER BY n DESC, r.text
+            """
+        query(sql, bindings: [translation, key]) { stmt in
+            items.append(WordRendering(
+                id: Int(sqlite3_column_int(stmt, 0)),
+                text: string(stmt, 1),
+                count: Int(sqlite3_column_int(stmt, 2))
+            ))
+        }
+        guard !items.isEmpty else { return nil }
+
+        // Знаменник покриття — та сама група id, що й загальна кількість у Usage (bug-045).
+        let mergeIds = StrongsMergeMap.expand(strongsId)
+        let placeholders = Array(repeating: "?", count: mergeIds.count).joined(separator: ", ")
+        var total = 0
+        query("SELECT COUNT(*) FROM word WHERE strongs_id IN (\(placeholders))",
+              bindings: mergeIds) { stmt in
+            total = Int(sqlite3_column_int(stmt, 0))
+        }
+
+        var currentId: Int?
+        if let c = current {
+            let curSQL = """
+                SELECT w.rendering_id FROM word_rendering w
+                WHERE w.translation = ? AND w.strongs_key = ?
+                  AND w.verse_key = (SELECT num FROM book WHERE id = ?) * 1000000 + ? * 1000 + ?
+                  AND w.seg_ord = ?
+                LIMIT 1
+                """
+            query(curSQL, bindings: [translation, key, c.bookId, c.chapter, c.verse, c.segOrd]) { stmt in
+                currentId = Int(sqlite3_column_int(stmt, 0))
+            }
+        }
+
+        return RenderingSummary(
+            translationId: translation,
+            items: items,
+            matched: items.reduce(0) { $0 + $1.count },
+            total: total,
+            currentRenderingId: currentId
+        )
+    }
+
     // MARK: - Book Usage Groups (per-book concordance for ConcordanceView)
 
     /// Returns the true total occurrence count across the whole Bible plus a

@@ -291,6 +291,10 @@ struct WordMeaningView: View {
     /// does not inflate the counter (Slice 3 §E).
     @State private var lastTrackedEntryId: String = ""
 
+    /// ADR-041 «Translated as»: як поточний переклад передає слово. nil = секцію не показуємо.
+    @State private var renderings: RenderingSummary?
+    @State private var showAllRenderings = false
+
     private let t: TranslationProvider = BundleTranslationProvider()
 
     var body: some View {
@@ -302,12 +306,19 @@ struct WordMeaningView: View {
                 morphologySection(word: word)
             }
             lexicalSection
+            renderingSection
             if let word = vm.selectedWord,
                let greek = word.greek, !greek.isEmpty {
                 greekSection(word)
             }
         }
         .padding(.bottom, 20)
+        // ADR-041: перечитуємо при зміні слова, перекладу читанки або натиснутого сегмента
+        // («this verse»). Індексований запит — синхронно на MainActor, як і решта лексикону.
+        .task(id: renderingTaskKey) {
+            renderings = vm.renderingSummary(for: entry)
+            showAllRenderings = false
+        }
         // Dedup: fire once per unique entry.id (chevron nav changes the entry → new fire).
         // .onAppear handles the initial display; .onChange handles subsequent word navigations
         // while the view stays mounted (no teardown between chevron taps).
@@ -323,6 +334,97 @@ struct WordMeaningView: View {
                 tracker.recordFeatureUse(.lexicon)
             }
         }
+    }
+
+    // MARK: Translated in (ADR-041)
+
+    private var renderingTaskKey: String {
+        "\(entry.id)|\(vm.currentTranslation.id)|\(vm.selectedSegment?.id.uuidString ?? "-")"
+    }
+
+    /// Скільки рядків видно до «Показати всі». Рядок передачі з поточного вірша
+    /// показується завжди, навіть поза топом.
+    private static let renderingsCollapsedCount = 5
+
+    @ViewBuilder
+    private var renderingSection: some View {
+        if let summary = renderings {
+            let all = summary.items
+            let visible: [WordRendering] = {
+                if showAllRenderings || all.count <= Self.renderingsCollapsedCount { return all }
+                var top = Array(all.prefix(Self.renderingsCollapsedCount))
+                if let cur = summary.currentRenderingId,
+                   !top.contains(where: { $0.id == cur }),
+                   let row = all.first(where: { $0.id == cur }) {
+                    top.append(row)
+                }
+                return top
+            }()
+            let maxCount = max(all.first?.count ?? 1, 1)
+
+            VStack(alignment: .leading, spacing: 0) {
+                sectionLabel(t.string(for: MorphKey.sectionTranslatedIn, summary.translationId))
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(visible) { item in
+                        renderingRow(item, maxCount: maxCount,
+                                     isCurrent: item.id == summary.currentRenderingId)
+                    }
+                }
+                HStack(alignment: .firstTextBaseline) {
+                    if all.count > Self.renderingsCollapsedCount {
+                        Button {
+                            withAnimation(.snappy) { showAllRenderings.toggle() }
+                        } label: {
+                            Text(t.string(for: showAllRenderings ? MorphKey.renderingsShowLess
+                                                                 : MorphKey.renderingsShowAll))
+                                .font(.callout)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.appBlue)
+                    }
+                    Spacer(minLength: 8)
+                    // Чесно показуємо, що зіставлено не все (ASV 237 з 245) —
+                    // інакше сума стовпчиків мовчки розходилась би з лічильником Usage.
+                    if summary.matched < summary.total {
+                        Text(t.string(for: MorphKey.renderingsCoverage,
+                                      String(summary.matched), String(summary.total)))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                .padding(.top, 6)
+            }
+        }
+    }
+
+    private func renderingRow(_ item: WordRendering, maxCount: Int, isCurrent: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(item.text)
+                .font(.callout)
+                .lineLimit(1)
+                .layoutPriority(1)
+            GeometryReader { geo in
+                // Capsule: both ends equally rounded; the 8 pt minimum keeps a
+                // rare rendering visible as a dot. One colour for every bar: the
+                // rendering in this verse is already highlighted in the verse card.
+                Capsule()
+                    .fill(Color.appBlue)
+                    .frame(width: max(8, geo.size.width * CGFloat(item.count) / CGFloat(maxCount)),
+                           height: 8)
+                    .frame(maxHeight: .infinity, alignment: .center)
+            }
+            .frame(height: 20)
+            Text(verbatim: "\(item.count)")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: isCurrent
+            ? "\(item.text), \(item.count), \(t.string(for: MorphKey.renderingsThisVerse))"
+            : "\(item.text), \(item.count)"))
     }
 
     // MARK: Header

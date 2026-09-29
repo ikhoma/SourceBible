@@ -27,6 +27,29 @@ struct StrongsEntry: Identifiable {
     var usageLoaded: Bool = false
 }
 
+// MARK: - Word Renderings (ADR-041 «Translated as»)
+
+/// Одна передача слова оригіналу в перекладі: «mercy» × 149.
+struct WordRendering: Identifiable, Equatable {
+    let id: Int          // rendering.id
+    let text: String
+    let count: Int
+}
+
+/// Як поточний переклад читанки передає слово — дані секції «Translated as» у Meaning.
+struct RenderingSummary: Equatable {
+    let translationId: String
+    let items: [WordRendering]      // за спаданням count
+    /// Входжень, для яких знайдено передачу (сума `items.count`).
+    let matched: Int
+    /// Усі входження слова в Macula (та сама група, що в Usage).
+    let total: Int
+    /// Передача слова в ПОТОЧНОМУ вірші, якщо відома.
+    let currentRenderingId: Int?
+
+    var coverage: Double { total > 0 ? Double(matched) / Double(total) : 0 }
+}
+
 // MARK: - Book Usage Group
 
 /// Aggregated concordance data for one Bible book.
