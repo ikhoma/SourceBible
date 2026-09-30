@@ -11,7 +11,7 @@ from collections import Counter
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from build_word_rendering import (  # noqa: E402
-    Normalizer, merge_forms, pair_words, parse_segments)
+    Normalizer, merge_forms, pair_words, parse_segments, pick_examples)
 
 KJV_EXO_34_6 = ('And the LORD<S>3068</S> passed by<S>5674</S> before him<S>6440</S>, and proclaimed<S>7121</S>, '
                 'The LORD<S>3068</S>, The LORD<S>3068</S> God<S>410</S>, merciful<S>7349</S> and gracious<S>2587</S>, '
@@ -121,6 +121,39 @@ class TestMergeForms(unittest.TestCase):
     def test_homonym_keeps_its_phrase(self):
         m = merge_forms({"H2617a": Counter({"wicked thing": 1, "reproach": 1})}, "en")
         self.assertEqual(m[("H2617a", "wicked thing")], "wicked thing")
+
+
+
+class TestCase_(unittest.TestCase):
+    def test_proper_noun_keeps_capital_sentence_start_does_not(self):
+        from build_word_rendering import apply_case
+        rows = [("H430", [("God", "god")], 1, 0)] * 3 + [("H430", [("gods", "gods")], 2, 0)] \
+            + [("H2617", [("Mercy", "mercy")], 3, 0)] + [("H2617", [("mercy", "mercy")], 4, 0)] * 2
+        out = [r for _, r, _, _ in apply_case(rows, "en")]
+        self.assertEqual(out[:4], ["God", "God", "God", "gods"])
+        self.assertEqual(out[4], "mercy")        # велика лише на початку речення
+
+    def test_all_caps_lord_survives(self):
+        from build_word_rendering import apply_case
+        rows = [("H3068", [("LORD", "lord")], 1, 0)] * 2
+        self.assertEqual(apply_case(rows, "en")[0][1], "LORD")
+
+    def test_hyphen_stays_inside_word(self):
+        self.assertEqual(Normalizer("en")("to God-ward"), "god-ward")
+
+    def test_possessive_capital_s_stripped(self):
+        self.assertEqual(Normalizer("en").tokens("the LORD'S"), [("LORD", "lord")])
+
+
+class TestPickExamples(unittest.TestCase):
+    def test_heaviest_verse_wins_and_ties_go_to_earliest(self):
+        rows = [("H2617", "mercy", 1019019, 0),   # Бут 19:19, вага 5
+                ("H2617", "mercy", 33006008, 2),  # Мих 6:8, вага 2072
+                ("H2617", "kindness", 1020013, 0),
+                ("H2617", "kindness", 1021023, 1)]  # обидва без ваги → найраніший
+        ex = pick_examples(rows, {1019019: 5, 33006008: 2072})
+        self.assertEqual(ex[("H2617", "mercy")], (33006008, 2))
+        self.assertEqual(ex[("H2617", "kindness")], (1020013, 0))
 
 
 if __name__ == "__main__":

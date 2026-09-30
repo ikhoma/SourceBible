@@ -81,7 +81,13 @@ over through away past by out up down off forth back about aside along across
 around round again abroad asunder together near nigh hither thither
 """.split())
 
-WORD_RE = re.compile(r"[A-Za-zА-Яа-яЁё]+(?:['’][A-Za-z]+)?")
+# Кличний відмінок, який pymorphy3 зводить до чужої леми: «Господи» → «господин»
+# (1 090 входжень H3068 у RST показувались як «Господин»). Лише перевірені заміром.
+RU_LEMMA_OVERRIDE = {"господи": "господь"}
+
+# Дефіс усередині слова — частина слова: KJV «God-ward», «mercy-seat»,
+# RST «кто-то». Раніше регулярка різала по дефісу, і передача ставала «god ward».
+WORD_RE = re.compile(r"[A-Za-zА-Яа-яЁё]+(?:[-‐][A-Za-zА-Яа-яЁё]+)*(?:['’][A-Za-z]+)?")
 
 # ── Порт VerseParser.swift ───────────────────────────────────────────────────
 # Роздільники, що НЕ належать слову (VerseParser.leadingSeparators).
@@ -261,7 +267,7 @@ class Normalizer:
             return w
         r = self._lem.get(w)
         if r is None:
-            r = self._ma.parse(w)[0].normal_form
+            r = RU_LEMMA_OVERRIDE.get(w) or self._ma.parse(w)[0].normal_form
             self._lem[w] = r
         return r
 
@@ -270,23 +276,31 @@ class Normalizer:
 
     def __call__(self, seg_text: str) -> str:
         """Хвіст сегмента після останнього службового слова; для RU — леми."""
-        words = [re.sub(r"['’]s$", "", m.group(0).lower().replace("ё", "е"))
-                 for m in WORD_RE.finditer(seg_text)]
+        return " ".join(n for _, n in self.tokens(seg_text))
+
+    def tokens(self, seg_text: str) -> list:
+        """Той самий хвіст, але парами (сире слово, нормалізоване): сире потрібне,
+        щоб повернути велику літеру власним назвам («God», «LORD», «Бог»)."""
+        raw = [re.sub(r"['’][sS]$", "", m.group(0)) for m in WORD_RE.finditer(seg_text)]
+        words = [w.lower().replace("ё", "е") for w in raw]
         # EN: кінцеві частки фразового дієслова відкладаємо й повертаємо після
         # ядра («and passed by» → ядро «passed» + «by» → «passed by»).
-        particles = []
+        n_part = 0
         if self.lang == "en":
-            while words and words[-1] in PARTICLES_EN:
-                particles.insert(0, words.pop())
-        while words and self.is_stop(words[-1]):
-            words.pop()
-        i = len(words)
+            while n_part < len(words) and words[len(words) - 1 - n_part] in PARTICLES_EN:
+                n_part += 1
+        end = len(words) - n_part
+        while end > 0 and self.is_stop(words[end - 1]):
+            end -= 1
+        i = end
         while i > 0 and not self.is_stop(words[i - 1]):
             i -= 1
-        tail = words[i:]
-        if self.lang == "ru":
-            tail = [self.lemma(w) for w in tail]
-        return " ".join(tail + particles)
+        idx = list(range(i, end)) + list(range(len(words) - n_part, len(words)))
+        out = []
+        for k in idx:
+            norm = self.lemma(words[k]) if (self.lang == "ru" and k < end) else words[k]
+            out.append((raw[k], norm))
+        return out
 
 
 EN_SUFFIXES = (("ies", "y"), ("ied", "y"), ("es", ""), ("s", ""), ("ed", ""),
@@ -388,13 +402,102 @@ def collect(conn, translation: str, canon: dict[str, str], norm: Normalizer):
                 stats["dup_word"] += 1
                 continue
             seen_words.add(wid)
-            r = norm(seg_text)
-            if not r:
+            toks = norm.tokens(seg_text)
+            if not toks:
                 stats["empty"] += 1
                 continue
-            rows.append((canon.get(sid, sid), r, verse_key(book_num[b], c, v), ord_))
+            rows.append((canon.get(sid, sid), toks, verse_key(book_num[b], c, v), ord_))
             stats["rows"] += 1
-    return rows, stats
+    return apply_case(rows, norm.lang), stats
+
+
+# ── Велика літера власних назв ────────────────────────────────────────────────
+# Нормалізація зводить усе до нижнього регістру, тож «God» ставав «god», а
+# «LORD» — «lord». Мала літера в тексті — завжди справжня; велика буває і від
+# власної назви, і від початку речення/цитати («said, Let»). Тому для кожного
+# слова ОКРЕМОГО Strong's рахуємо: якщо великих більше, ніж малих, — це власна
+# назва, і беремо найчастішу велику форму («God», «LORD»; RU — лема з великої).
+# Інакше велика — випадковий початок речення, і слово йде в нижньому регістрі.
+# Побічно це розводить «God» (H430 про Бога) і «gods»/«god» (про ідолів).
+def apply_case(rows, lang: str):
+    """rows: [(key, [(raw, norm)], vk, ord)] → [(key, rendering, vk, ord)]"""
+    upper: dict = defaultdict(Counter)   # (key, norm) → Counter(raw форм з великої)
+    lower: Counter = Counter()           # (key, norm) → скільки разів з малої
+    for key, toks, _, _ in rows:
+        for raw, n in toks:
+            if raw[:1].isupper():
+                upper[(key, n)][raw] += 1
+            else:
+                lower[(key, n)] += 1
+
+    def cased(key, raw, n):
+        if not raw[:1].isupper():
+            return n
+        ups = upper[(key, n)]
+        if sum(ups.values()) <= lower[(key, n)]:
+            return n
+        if lang == "ru":
+            return n[:1].upper() + n[1:]
+        return ups.most_common(1)[0][0].replace("’", "'")
+
+    return [(key, " ".join(cased(key, raw, n) for raw, n in toks), vk, o)
+            for key, toks, vk, o in rows]
+
+
+# ── Вірш-приклад для кожної передачі (ADR-041 ч.5, Amendment 4) ────────────────
+# «Вага» вірша = сума голосів OpenBible за всі перехресні посилання з нього і на
+# нього (ідея proposal_smarter_examples_v1.5). Голоси прив'язані до АНГЛІЙСЬКОЇ
+# нумерації, тож вірш перекладу спершу переводиться через verse_org в оригінал, а
+# звідти — у вірш(і) KJV. Без цього RST-Псалтир брав вагу чужого вірша
+# («милость → Пс 51:10» = вага KJV 51:10 «create in me a clean heart»).
+def verse_weights(conn, translation: str) -> dict:
+    """verse_key ПЕРЕКЛАДУ → вага (сума голосів у KJV-нумерації)."""
+    num = {b: n for b, n in conn.execute("SELECT id, num FROM book")}
+    eng = Counter()
+    for bk, ch, vs, votes in conn.execute(
+            "SELECT from_book, from_chapter, from_verse, votes FROM cross_reference "
+            "UNION ALL SELECT to_book, to_chapter, to_verse, votes FROM cross_reference"):
+        eng[(bk, ch, vs)] += votes or 0
+    kjv_by_org = defaultdict(list)
+    for b, c, v, ob, oc, ov in conn.execute(
+            "SELECT book_id, chapter, verse, org_book_id, org_chapter, org_verse "
+            "FROM verse_org WHERE translation = 'KJV' AND org_book_id IS NOT NULL"):
+        kjv_by_org[(ob, oc, ov)].append((b, c, v))
+    out: dict = {}
+    seen = set()
+    for b, c, v, ob, oc, ov in conn.execute(
+            "SELECT book_id, chapter, verse, org_book_id, org_chapter, org_verse "
+            "FROM verse_org WHERE translation = ?", (translation,)):
+        vk = verse_key(num[b], c, v)
+        seen.add((b, c, v))
+        if ob is None:
+            continue
+        w = max((eng[k] for k in kjv_by_org.get((ob, oc, ov), [])), default=0)
+        out[vk] = max(out.get(vk, 0), w)
+    # Вірші без рядків verse_org — тотожна нумерація.
+    for (b, c, v), w in eng.items():
+        if (b, c, v) not in seen and b in num:
+            out.setdefault(verse_key(num[b], c, v), w)
+    return out
+
+
+def pick_examples(rows_final, weights: dict) -> dict:
+    """(strongs_key, rendering_text) → (verse_key, seg_ord): найвагоміший вірш;
+    нічия або нульова вага → найраніший (канонічний порядок)."""
+    best: dict = {}
+    for key, r, vk, o in rows_final:
+        cand = (weights.get(vk, 0), -vk, -o)
+        cur = best.get((key, r))
+        if cur is None or cand > cur[0]:
+            best[(key, r)] = (cand, vk, o)
+    return {k: (vk, o) for k, (_, vk, o) in best.items()}
+
+
+EXAMPLE_GOLDEN = [
+    # (translation, strongs_key, rendering, expected "BOOK ch:v")
+    ("KJV", "H2617", "mercy", "MIC 6:8"),
+    ("KJV", "G26", "charity", "1CO 13:13"),
+]
 
 
 GOLDEN = [
@@ -411,7 +514,11 @@ def main() -> int:
 
     conn = sqlite3.connect(args.db)
     canon = canonical_map(conn)
+    # BEGIN усередині скрипта: DDL у SQLite транзакційний, тож провал еталонів
+    # відкочує і DROP/CREATE — стара таблиця лишається цілою. Без цього
+    # executescript комітив DROP одразу, і rollback лишав порожні таблиці.
     conn.executescript("""
+        BEGIN;
         DROP TABLE IF EXISTS word_rendering;
         DROP TABLE IF EXISTS rendering;
         CREATE TABLE rendering (
@@ -427,6 +534,15 @@ def main() -> int:
             verse_key    INTEGER NOT NULL,
             seg_ord      INTEGER NOT NULL,
             PRIMARY KEY (translation, strongs_key, rendering_id, verse_key, seg_ord)
+        ) WITHOUT ROWID;
+        DROP TABLE IF EXISTS rendering_example;
+        CREATE TABLE rendering_example (
+            translation  TEXT    NOT NULL,
+            strongs_key  TEXT    NOT NULL,
+            rendering_id INTEGER NOT NULL,
+            verse_key    INTEGER NOT NULL,
+            seg_ord      INTEGER NOT NULL,
+            PRIMARY KEY (translation, strongs_key, rendering_id)
         ) WITHOUT ROWID;
     """)
     rid_cache: dict[tuple[str, str], int] = {}
@@ -450,6 +566,11 @@ def main() -> int:
         conn.executemany(
             "INSERT OR IGNORE INTO word_rendering VALUES (?, ?, ?, ?, ?)",
             ((tr, key, rid(lang, final[(key, r)]), vk, o) for key, r, vk, o in rows))
+        rows_final = [(key, final[(key, r)], vk, o) for key, r, vk, o in rows]
+        examples = pick_examples(rows_final, verse_weights(conn, tr))
+        conn.executemany(
+            "INSERT INTO rendering_example VALUES (?, ?, ?, ?, ?)",
+            ((tr, key, rid(lang, text), vk, o) for (key, text), (vk, o) in examples.items()))
         print(f"  {tr}: {stats['rows']} входжень, {len(by_key)} слів; "
               f"порожніх після нормалізації {stats['empty']}, дублів 1:N {stats['dup_word']}")
 
@@ -463,6 +584,19 @@ def main() -> int:
             failures.append(f"{tr} {key}: очікувалось {total} / «{top}», маємо {n} / {got[:3]}")
         else:
             print(f"  ✓ {tr} {key}: {n}, топ «{top}» ({got[0][1]})")
+    for tr, key, text, want in EXAMPLE_GOLDEN:
+        # Рядок збираємо в Python: у SQLite `||` сильніший за `%`, тож
+        # «' ' || x % 1000» рахувався як «(' ' || x) % 1000» → 0.
+        row = conn.execute(
+            "SELECT b.id, e.verse_key "
+            "FROM rendering_example e JOIN rendering r ON r.id = e.rendering_id "
+            "JOIN book b ON b.num = e.verse_key / 1000000 "
+            "WHERE e.translation = ? AND e.strongs_key = ? AND r.text = ?", (tr, key, text)).fetchone()
+        got = f"{row[0]} {row[1] // 1000 % 1000}:{row[1] % 1000}" if row else None
+        if got != want:
+            failures.append(f"приклад {tr} {key} «{text}»: очікувався {want}, маємо {got}")
+        else:
+            print(f"  ✓ приклад {tr} {key} «{text}»: {want}")
     if conn.execute("SELECT COUNT(*) FROM word_rendering WHERE strongs_key = 'H2617a'").fetchone()[0] == 0:
         failures.append("H2617a (hesed II) не має жодного рядка — омонім загубився")
 
