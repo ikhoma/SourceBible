@@ -5,31 +5,28 @@
 // Відкривається з рядка «Translated in KJV» (Meaning) з уже вибраною передачею.
 // Чипи-передачі переносяться на кілька рядків (без горизонтального скролу — рішення
 // Івана на демо v8), пікер книг — у тулбарі, список згрупований за книгами.
-// Тап по вірші (перехід у читанку з back-stack) — частина 4, тут ще не підключено.
+// Тап по вірші → читанка; «‹ Назад» відкриває аркуш знову з тим самим фільтром (ч.4).
 
 import SwiftUI
 
 struct WordRenderingsSheet: View {
-    let entry: StrongsEntry
-    let summary: RenderingSummary
-    let onClose: () -> Void
+    let state: RenderingsSheetState
 
     @EnvironmentObject private var vm: ReaderViewModel
     @Environment(\.colorTheme) private var colorTheme
 
-    /// nil = «Все». Початкове значення — передача, з рядка якої відкрили аркуш.
+    /// nil = «Все».
     @State private var renderingFilter: Int?
     /// nil = всі книги.
     @State private var bookFilter: String?
+    @State private var summary: RenderingSummary?
     @State private var occurrences: [RenderingOccurrence] = []
     @State private var loaded = false
 
-    init(entry: StrongsEntry, summary: RenderingSummary, initialRendering: Int?,
-         onClose: @escaping () -> Void) {
-        self.entry = entry
-        self.summary = summary
-        self.onClose = onClose
-        _renderingFilter = State(initialValue: initialRendering)
+    init(state: RenderingsSheetState) {
+        self.state = state
+        _renderingFilter = State(initialValue: state.renderingFilter)
+        _bookFilter = State(initialValue: state.bookFilter)
     }
 
     // MARK: Derived
@@ -76,59 +73,84 @@ struct WordRenderingsSheet: View {
         vm.translationBookNames[id]?.long ?? BibleBookNames.full(for: id)
     }
 
+    private func close() { vm.renderingsSheet = nil }
+
+    /// Тап по вірші (ч.4): у читанку, а поточний фільтр і вірш-якір — у back-stack,
+    /// щоб «‹ Назад» відкрив аркуш таким самим.
+    private func open(_ occ: RenderingOccurrence) {
+        var back = state
+        back.renderingFilter = renderingFilter
+        back.bookFilter = bookFilter
+        back.anchorOccurrenceId = occ.id
+        vm.followRenderingOccurrence(to: "\(occ.bookId)|\(occ.chapter)|\(occ.verse)", returnTo: back)
+    }
+
     // MARK: Body
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    chips
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 12, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                }
-                if !loaded {
-                    HStack { Spacer(); ProgressView(); Spacer() }
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                } else {
-                    ForEach(sections) { section in
-                        Section {
-                            ForEach(section.items) { occ in
-                                OccurrenceRow(occurrence: occ,
-                                              reference: "\(bookName(occ.bookId)) \(occ.chapter):\(occ.verse)")
-                                    .listRowBackground(Color.clear)
-                            }
-                        } header: {
-                            HStack {
-                                Text(verbatim: bookName(section.id))
-                                Spacer()
-                                Text(verbatim: "\(section.items.count)")
-                                    .monospacedDigit()
+            ScrollViewReader { proxy in
+                // ScrollView + LazyVStack, а не List — та сама анатомія, що в
+                // результатах Пошуку (resultsScroll): поля 20, рядок ±10, Divider.
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        chips
+                            .padding(.top, 4)
+                            .padding(.bottom, 12)
+                        if !loaded {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 20)
+                        } else {
+                            ForEach(sections) { section in
+                                Section {
+                                    ForEach(section.items) { occ in
+                                        OccurrenceRow(occurrence: occ,
+                                                      reference: "\(bookName(occ.bookId)) \(occ.chapter):\(occ.verse)")
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.vertical, 10)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture { open(occ) }
+                                            .accessibilityAddTraits(.isButton)
+                                            .id(occ.id)
+                                        Divider()
+                                    }
+                                } header: {
+                                    bookHeader(section)
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
-            }
-            .listStyle(.plain)
-            .themedList(colorTheme)
-            .navigationTitle(Text(verbatim: entry.originalWord))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    SheetCloseButton(action: onClose)
+                .pinnedHeaderEdge()
+                .navigationTitle(Text(verbatim: state.lemma))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        SheetCloseButton(action: close)
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        bookMenu
+                    }
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    bookMenu
+                .task(id: state.id) {
+                    summary = vm.renderingSummaryForSheet(strongsId: state.strongsId,
+                                                          translation: state.translationId)
+                    occurrences = vm.renderingOccurrences(strongsId: state.strongsId,
+                                                          translation: state.translationId)
+                    loaded = true
+                    // Повернення з читанки: до вірша, з якого пішли.
+                    if let anchor = state.anchorOccurrenceId {
+                        await Task.yield()
+                        proxy.scrollTo(anchor, anchor: .center)
+                    }
                 }
             }
         }
         .themedSheet(colorTheme)
         .presentationDetents([.large])
-        .task(id: "\(entry.id)|\(summary.translationId)") {
-            occurrences = vm.renderingOccurrences(for: entry, translation: summary.translationId)
-            loaded = true
-        }
         .onChange(of: renderingFilter) { _, _ in
             // Книга могла зникнути з нового фільтра — тоді показуємо всі.
             if let b = bookFilter, !bookCounts.contains(where: { $0.bookId == b }) {
@@ -137,17 +159,35 @@ struct WordRenderingsSheet: View {
         }
     }
 
+    /// Липкий заголовок книги: назва + кількість. Непрозорий фон аркуша, щоб
+    /// рядки не просвічували під ним під час прокрутки.
+    private func bookHeader(_ section: BookSection) -> some View {
+        HStack {
+            Text(verbatim: bookName(section.id))
+            Spacer()
+            Text(verbatim: "\(section.items.count)")
+                .monospacedDigit()
+        }
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 8)
+        .background(colorTheme.sheetBackground)
+    }
+
     // MARK: Chips
 
+    @ViewBuilder
     private var chips: some View {
-        FlowLayout(spacing: 8) {
-            chip(label: Text("search.filter.all"), count: summary.matched,
-                 selected: renderingFilter == nil) { renderingFilter = nil }
-            ForEach(summary.items) { item in
-                chip(label: Text(verbatim: item.text), count: item.count,
-                     selected: renderingFilter == item.id) {
-                    // Повторний тап по активному чипу знімає фільтр (m5 з review).
-                    renderingFilter = (renderingFilter == item.id) ? nil : item.id
+        if let summary {
+            FlowLayout(spacing: 8) {
+                chip(label: Text("search.filter.all"), count: summary.matched,
+                     selected: renderingFilter == nil) { renderingFilter = nil }
+                ForEach(summary.items) { item in
+                    chip(label: Text(verbatim: item.text), count: item.count,
+                         selected: renderingFilter == item.id) {
+                        // Повторний тап по активному чипу знімає фільтр (m5 з review).
+                        renderingFilter = (renderingFilter == item.id) ? nil : item.id
+                    }
                 }
             }
         }
@@ -211,16 +251,22 @@ private struct OccurrenceRow: View {
     let occurrence: RenderingOccurrence
     let reference: String
 
+    // Та сама анатомія, що в перехресних посиланнях і результатах Пошуку:
+    // шеврон справа = рядок веде на вірш.
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ReferenceLabel(reference)
-            Text(VerseHighlight.attributed(raw: occurrence.rawText,
-                                           verseId: occurrence.id,
-                                           taggedOrdinal: occurrence.segOrd))
-                .font(.callout)
-                .lineSpacing(3)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                ReferenceLabel(reference)
+                Text(VerseHighlight.attributed(raw: occurrence.rawText,
+                                               verseId: occurrence.id,
+                                               taggedOrdinal: occurrence.segOrd))
+                    .font(.callout)
+                }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.quaternary)
         }
-        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
     }
 }
@@ -260,5 +306,21 @@ enum VerseHighlight {
             result += a
         }
         return result
+    }
+}
+
+// MARK: - Pinned header edge
+
+private extension View {
+    /// iOS 26: тулбар аркуша прозорий, і рядки видно в смузі між ним та липким
+    /// заголовком книги. Apple радить `.hard` для прокрутки з закріпленими
+    /// заголовками — край під тулбаром стає суцільним. iOS 18: бар і так непрозорий.
+    @ViewBuilder
+    func pinnedHeaderEdge() -> some View {
+        if #available(iOS 26.0, *) {
+            scrollEdgeEffectStyle(.hard, for: .top)
+        } else {
+            self
+        }
     }
 }

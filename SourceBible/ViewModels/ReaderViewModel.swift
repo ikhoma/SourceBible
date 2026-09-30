@@ -837,7 +837,11 @@ class ReaderViewModel: ObservableObject {
     /// Stack of verse IDs representing the cross-ref navigation history.
     /// Top of the stack (last element) is the most recent origin.
     /// Session-scoped: cleared when the sheet is dismissed.
-    @Published private(set) var crossRefBackStack: [String] = []
+    @Published private(set) var crossRefBackStack: [CrossRefBackEntry] = []
+
+    /// Stacked sheet «усі входження» (ADR-041 частина 3–4). Живе у VM, а не у View,
+    /// бо «‹ Назад» з читанки мусить відкрити його знову з тим самим станом.
+    @Published var renderingsSheet: RenderingsSheetState?
 
     /// True when the back stack has at least one entry (i.e. user followed at least one cross-ref).
     var canCrossRefBack: Bool { !crossRefBackStack.isEmpty }
@@ -852,12 +856,43 @@ class ReaderViewModel: ObservableObject {
     /// Pops the previous verse from the stack and navigates to it.
     func crossRefBack() {
         guard let previous = crossRefBackStack.popLast() else { return }
-        navigateToVerse(id: previous, source: .back)
+        navigateToVerse(id: previous.verseId, source: .back)
+        // ADR-041 ч.4: перехід був з аркуша входжень — повертаємо слово і сам аркуш
+        // з тим самим фільтром і прокруткою.
+        if let ord = previous.wordSegOrd { reselectWord(taggedOrdinal: ord) }
+        if let sheet = previous.renderingsSheet {
+            Task { [weak self] in
+                await Task.yield()   // дати Study Mode завершити перехід до презентації
+                self?.renderingsSheet = RenderingsSheetState(reopening: sheet)
+            }
+        }
+    }
+
+    /// Тап по вірші в аркуші входжень (ADR-041 ч.4): аркуш закривається, читанка
+    /// переходить на вірш, а в back-stack кладеться поточний вірш РАЗОМ зі станом
+    /// аркуша — «‹ Назад» відкриє його знову.
+    func followRenderingOccurrence(to verseId: String, returnTo sheet: RenderingsSheetState) {
+        var ord: Int?
+        if let seg = selectedSegment, let segments = selectedVerse?.parsed?.segments {
+            ord = segments.filter { !$0.strongs.isEmpty }.firstIndex(where: { $0.id == seg.id })
+        }
+        renderingsSheet = nil
+        navigateToVerse(id: verseId, source: .crossRef,
+                        returnSheet: sheet, returnWordOrd: ord)
+    }
+
+    /// Знову вибирає слово у поточному вірші за № сегмента з Strong's (seg_ord).
+    private func reselectWord(taggedOrdinal: Int) {
+        guard let verse = selectedVerse,
+              let tagged = verse.parsed?.segments.filter({ !$0.strongs.isEmpty }),
+              taggedOrdinal < tagged.count else { return }
+        tapWord(tagged[taggedOrdinal], in: verse)
     }
 
     /// Clear the back stack — called from onDismiss so the next sheet entry starts fresh.
     func resetCrossRefStack() {
         crossRefBackStack.removeAll()
+        renderingsSheet = nil
     }
 
     /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
@@ -868,7 +903,9 @@ class ReaderViewModel: ObservableObject {
 
     /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
     /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
-    private func navigateToVerse(id verseId: String, source: VerseNavSource) {
+    private func navigateToVerse(id verseId: String, source: VerseNavSource,
+                                 returnSheet: RenderingsSheetState? = nil,
+                                 returnWordOrd: Int? = nil) {
         let parts = verseId.split(separator: "|")
         guard parts.count == 3,
               let chapter = Int(parts[1]) else { return }
@@ -906,7 +943,10 @@ class ReaderViewModel: ObservableObject {
                 // Push the current verse (if the sheet is open and a verse is selected)
                 // so the user can navigate back to it.
                 if activeSheet == .verse, let current = selectedVerse, current.id != verseId {
-                    crossRefBackStack.append(current.id)
+                    crossRefBackStack.append(CrossRefBackEntry(
+                        verseId: current.id,
+                        renderingsSheet: returnSheet,
+                        wordSegOrd: returnSheet == nil ? nil : returnWordOrd))
                 }
                 // Хаптика: перехід по перехресному — це стрибок в інше місце Біблії,
                 // а не крок по сусідніх віршах. Тому impact, а не selection: те саме
@@ -1344,8 +1384,14 @@ class ReaderViewModel: ObservableObject {
     }
 
     /// Усі входження слова в перекладі для stacked sheet (ADR-041 частина 3).
-    func renderingOccurrences(for entry: StrongsEntry, translation: String) -> [RenderingOccurrence] {
-        db.loadRenderingOccurrences(strongsId: entry.id, translation: translation)
+    func renderingOccurrences(strongsId: String, translation: String) -> [RenderingOccurrence] {
+        db.loadRenderingOccurrences(strongsId: strongsId, translation: translation)
+    }
+
+    /// Підсумок передач для аркуша — без позначки поточного вірша й без порогу
+    /// (аркуш відкривається лише з секції, яка поріг уже пройшла).
+    func renderingSummaryForSheet(strongsId: String, translation: String) -> RenderingSummary? {
+        db.loadRenderingSummary(strongsId: strongsId, translation: translation, current: nil)
     }
 
     /// Load Strong's entry for a Macula BibleWord (future — called once word table is populated).
@@ -1449,6 +1495,44 @@ class ReaderViewModel: ObservableObject {
 
 /// Describes what triggered a `navigateToVerse(id:source:)` call.
 /// Controls how the cross-ref back stack is updated.
+/// Крок історії переходів у Study Mode (ADR-024). `renderingsSheet` — якщо перехід
+/// був з аркуша входжень (ADR-041 ч.4): «‹ Назад» тоді відкриває аркуш знову.
+struct CrossRefBackEntry: Equatable {
+    let verseId: String
+    var renderingsSheet: RenderingsSheetState? = nil
+    /// № сегмента з Strong's вибраного слова (seg_ord) — щоб повернутись на Word-таб.
+    var wordSegOrd: Int? = nil
+}
+
+/// Стан stacked sheet «усі входження» — достатній, щоб відкрити його знову.
+struct RenderingsSheetState: Identifiable, Equatable {
+    let id = UUID()
+    let strongsId: String
+    let lemma: String
+    let translationId: String
+    var renderingFilter: Int?
+    var bookFilter: String? = nil
+    /// Вірш, з якого пішли в читанку, — до нього прокручуємо при поверненні.
+    var anchorOccurrenceId: String? = nil
+
+    init(strongsId: String, lemma: String, translationId: String,
+         renderingFilter: Int?, bookFilter: String? = nil, anchorOccurrenceId: String? = nil) {
+        self.strongsId = strongsId
+        self.lemma = lemma
+        self.translationId = translationId
+        self.renderingFilter = renderingFilter
+        self.bookFilter = bookFilter
+        self.anchorOccurrenceId = anchorOccurrenceId
+    }
+
+    /// Та сама копія з новим `id`, щоб `.sheet(item:)` презентував її як новий аркуш.
+    init(reopening s: RenderingsSheetState) {
+        self.init(strongsId: s.strongsId, lemma: s.lemma, translationId: s.translationId,
+                  renderingFilter: s.renderingFilter, bookFilter: s.bookFilter,
+                  anchorOccurrenceId: s.anchorOccurrenceId)
+    }
+}
+
 enum VerseNavSource: Equatable {
     /// Fresh tap (verse row, search, bookmarks, notes, pendingVerseId).
     /// Clears the back stack — this is a new entry point.

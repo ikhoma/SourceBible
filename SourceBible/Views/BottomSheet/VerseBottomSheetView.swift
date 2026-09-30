@@ -110,6 +110,12 @@ struct VerseBottomSheetView: View {
         // button. The old custom drag-only-from-header zone was unreliable
         // ("1 of 5 tries"); the system gesture is the expected behaviour.
         // Single editor sheet slot — avoids "only one sheet" warning
+        // ADR-041: stacked sheet «усі входження» — стан у VM, бо «‹ Назад» з читанки
+        // відкриває його знову (ч.4).
+        .sheet(item: $vm.renderingsSheet) { state in
+            WordRenderingsSheet(state: state)
+                .environmentObject(vm)
+        }
         .sheet(item: $activeEditor) { editor in
             switch editor {
             case .note(let note):
