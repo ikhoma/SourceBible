@@ -1388,6 +1388,11 @@ class ReaderViewModel: ObservableObject {
         db.loadRenderingOccurrences(strongsId: strongsId, translation: translation)
     }
 
+    /// Вірші-приклади для Usage (ADR-041 ч.5), ключ — rendering.id.
+    func renderingExamples(strongsId: String, translation: String) -> [Int: RenderingOccurrence] {
+        db.loadRenderingExamples(strongsId: strongsId, translation: translation)
+    }
+
     /// Підсумок передач для аркуша — без позначки поточного вірша й без порогу
     /// (аркуш відкривається лише з секції, яка поріг уже пройшла).
     func renderingSummaryForSheet(strongsId: String, translation: String) -> RenderingSummary? {

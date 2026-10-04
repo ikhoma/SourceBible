@@ -735,6 +735,43 @@ final class DatabaseService: @unchecked Sendable {
         )
     }
 
+    /// Вірш-приклад для кожної передачі (ADR-041 ч.5): найвагоміший за голосами
+    /// перехресних посилань OpenBible, обраний build-скриптом (`rendering_example`).
+    /// Ключ — `rendering.id`. Порожньо, якщо таблиці ще немає (стара база).
+    func loadRenderingExamples(strongsId: String, translation: String) -> [Int: RenderingOccurrence] {
+        guard isAvailable, hasWordRenderingTable else { return [:] }
+        var hasTable = false
+        query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rendering_example'") { _ in
+            hasTable = true
+        }
+        guard hasTable else { return [:] }
+        let key = StrongsMergeMap.canonical(strongsId)
+        var out: [Int: RenderingOccurrence] = [:]
+        let sql = """
+            SELECT e.rendering_id, b.id,
+                   (e.verse_key / 1000) % 1000, e.verse_key % 1000, e.seg_ord, v.text
+            FROM rendering_example e
+            JOIN book  b ON b.num = e.verse_key / 1000000
+            JOIN verse v ON v.translation = e.translation
+                        AND v.book_id     = b.id
+                        AND v.chapter     = (e.verse_key / 1000) % 1000
+                        AND v.verse       = e.verse_key % 1000
+            WHERE e.translation = ? AND e.strongs_key = ?
+            """
+        query(sql, bindings: [translation, key]) { stmt in
+            let rid = Int(sqlite3_column_int(stmt, 0))
+            let bookId = string(stmt, 1)
+            let ch  = Int(sqlite3_column_int(stmt, 2))
+            let vs  = Int(sqlite3_column_int(stmt, 3))
+            let ord = Int(sqlite3_column_int(stmt, 4))
+            out[rid] = RenderingOccurrence(
+                id: "\(bookId)|\(ch)|\(vs)|\(ord)", renderingId: rid,
+                bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
+                rawText: optString(stmt, 5) ?? "")
+        }
+        return out
+    }
+
     /// Усі входження слова в перекладі, з передачею кожного (ADR-041, stacked sheet).
     /// Канонічний порядок: книга → глава → вірш → сегмент. `verse_key` — це вірш
     /// ПЕРЕКЛАДУ (build-скрипт іде по віршах перекладу), тож verse_org тут не потрібен.

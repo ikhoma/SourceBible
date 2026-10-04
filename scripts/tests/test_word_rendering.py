@@ -80,6 +80,12 @@ class TestPairing(unittest.TestCase):
         self.assertEqual(by_id["H5769"], "endureth for ever")
         self.assertNotIn("H3807a", by_id)                 # прийменник KJV окремо не тегує
 
+    def test_space_between_tags_before_comma_dropped_bug056(self):
+        segs = parse_segments("to God-ward<S>4136</S> <S>430</S>, that")
+        self.assertEqual("".join(s.text for s in segs), "to God-ward, that")
+        segs = parse_segments("said<S>559</S> <S>1</S> God")   # перед словом — лишається
+        self.assertEqual("".join(s.text for s in segs), "said God")
+
     def test_seg_ord_counts_only_tagged_segments(self):
         pairs = pair_words(PSA_136_1_WORDS, parse_segments(KJV_PSA_136_1))
         self.assertEqual({sid: o for _, sid, o, _ in pairs}["H2617"], 3)

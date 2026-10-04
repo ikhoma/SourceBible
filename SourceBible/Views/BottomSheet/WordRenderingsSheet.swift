@@ -290,6 +290,7 @@ enum VerseHighlight {
                 ord += 1
                 hit = ord == taggedOrdinal
             }
+            // Пробіл перед комою прибирає сам VerseParser (bug-056).
             if !seg.text.isEmpty { pieces.append((seg.text, hit)) }
         }
         // Краї вірша: джерело кодує пробіл між словами як ведучий пробіл сегмента

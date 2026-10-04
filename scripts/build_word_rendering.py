@@ -203,7 +203,26 @@ def parse_segments(raw_text: str) -> list[Seg]:
                 segs.append(Seg("\n", linebreak=True))
             elif val == "pb":
                 segs.append(Seg("", parabreak=True))
-    return segs
+    return drop_space_before_punct(segs)
+
+
+def drop_space_before_punct(segs):
+    """Порт VerseParser.droppingSpaceBeforePunctuation (bug-056): зайвий сегмент із
+    самих пробілів (перед розділовим знаком чи іншим пробілом) зникає.
+    Сегменти з Strong's не зачіпаються."""
+    out = []
+    for i, s in enumerate(segs):
+        blank = (not s.strongs and not s.linebreak and not s.parabreak
+                 and s.text != "" and set(s.text) == {" "})
+        if blank:
+            nxt = next((t for t in segs[i + 1:] if t.text != ""), None)
+            prv = next((t for t in reversed(out) if t.text != ""), None)
+            if nxt is not None and nxt.text[0] in ",.;:!?) ":
+                continue
+            if prv is not None and prv.text.endswith(" "):
+                continue
+        out.append(s)
+    return out
 
 
 # ── Порт ReaderViewModel.verseWordSegmentPairs ───────────────────────────────

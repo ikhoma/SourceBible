@@ -357,7 +357,35 @@ struct VerseParser {
     }
 
     private func result() -> ParsedVerse {
-        ParsedVerse(verseId: verseId, segments: segments, footnotes: footnotes)
+        ParsedVerse(verseId: verseId,
+                    segments: Self.droppingSpaceBeforePunctuation(segments),
+                    footnotes: footnotes)
+    }
+
+    /// bug-056: KJV «God-ward<S>4136</S> <S>430</S>, that» — пробіл між двома тегами
+    /// лишається окремим сегментом, і читанка показувала «God-ward , that» (1 073 вірші
+    /// KJV) або подвійний пробіл «which  thou» (2 605 віршів KJV, 3 ASV). Сегмент із
+    /// самих пробілів прибираємо, якщо він ЗАЙВИЙ: наступний видимий текст починається
+    /// з розділового знака чи пробілу, або попередній уже закінчується пробілом.
+    /// Єдиний пробіл між словами лишається (RST «сказал<S>3004</S> <i>Бог</i>» — див. handleText).
+    /// Сегменти з Strong's не зачіпаються, тож `seg_ord` (ADR-041) не зсувається.
+    /// Порт: `scripts/build_word_rendering.py` → `drop_space_before_punct`.
+    static func droppingSpaceBeforePunctuation(_ segs: [VerseSegment]) -> [VerseSegment] {
+        var out: [VerseSegment] = []
+        out.reserveCapacity(segs.count)
+        for (i, seg) in segs.enumerated() {
+            let blank = seg.strongs.isEmpty && seg.footnoteAnchorId == nil
+                && !seg.isLineBreak && !seg.isParagraphBreak
+                && !seg.text.isEmpty && seg.text.allSatisfy { $0 == " " }
+            if blank {
+                let nextFirst = segs[(i + 1)...].first(where: { !$0.text.isEmpty })?.text.first
+                let prevLast  = out.last(where: { !$0.text.isEmpty })?.text.last
+                if let ch = nextFirst, ",.;:!?) ".contains(ch) { continue }
+                if prevLast == " " { continue }
+            }
+            out.append(seg)
+        }
+        return out
     }
 
     private init(verseId: String) { self.verseId = verseId }
