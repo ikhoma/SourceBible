@@ -268,9 +268,19 @@ struct VerseParser {
     /// змінюється лише те, що саме підсвічується.
     private mutating func attachStrongs(_ ids: [String], toSegmentAt index: Int) {
         let segment = segments[index]
-        let lead = segment.text.unicodeScalars
-            .prefix { Self.leadingSeparators.contains($0) }
-        let leadText = String(String.UnicodeScalarView(lead))
+        let scalars = Array(segment.text.unicodeScalars)
+        var leadCount = scalars.prefix { Self.leadingSeparators.contains($0) }.count
+        // ASV `man<S>5100</S>'s brother<S>80</S>`: присвійне «'s» належить ПОПЕРЕДНЬОМУ
+        // слову, а лексер приліпив його до вузла «brother» — підсвічувалось «'s brother».
+        // Відрізаємо разом із роздільниками (тест паритету — scripts/tests).
+        if scalars.count > leadCount + 2,
+           scalars[leadCount] == "'" || scalars[leadCount] == "\u{2019}",
+           scalars[leadCount + 1] == "s" || scalars[leadCount + 1] == "S",
+           Self.leadingSeparators.contains(scalars[leadCount + 2]) {
+            leadCount += 2
+            leadCount += scalars.dropFirst(leadCount).prefix { Self.leadingSeparators.contains($0) }.count
+        }
+        let leadText = String(String.UnicodeScalarView(scalars.prefix(leadCount)))
 
         // Нема чого відрізати, або сегмент — суцільні роздільники (тоді відрізання
         // лишило б Strong's без тексту взагалі).

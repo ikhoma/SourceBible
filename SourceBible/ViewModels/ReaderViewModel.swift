@@ -1514,16 +1514,19 @@ struct RenderingsSheetState: Identifiable, Equatable {
     let id = UUID()
     let strongsId: String
     let lemma: String
+    /// Транслітерація леми — підзаголовок аркуша (та сама, що в шапці Word-вкладки).
+    let transliteration: String
     let translationId: String
     var renderingFilter: Int?
     var bookFilter: String? = nil
     /// Вірш, з якого пішли в читанку, — до нього прокручуємо при поверненні.
     var anchorOccurrenceId: String? = nil
 
-    init(strongsId: String, lemma: String, translationId: String,
+    init(strongsId: String, lemma: String, transliteration: String = "", translationId: String,
          renderingFilter: Int?, bookFilter: String? = nil, anchorOccurrenceId: String? = nil) {
         self.strongsId = strongsId
         self.lemma = lemma
+        self.transliteration = transliteration
         self.translationId = translationId
         self.renderingFilter = renderingFilter
         self.bookFilter = bookFilter
@@ -1532,7 +1535,8 @@ struct RenderingsSheetState: Identifiable, Equatable {
 
     /// Та сама копія з новим `id`, щоб `.sheet(item:)` презентував її як новий аркуш.
     init(reopening s: RenderingsSheetState) {
-        self.init(strongsId: s.strongsId, lemma: s.lemma, translationId: s.translationId,
+        self.init(strongsId: s.strongsId, lemma: s.lemma, transliteration: s.transliteration,
+                  translationId: s.translationId,
                   renderingFilter: s.renderingFilter, bookFilter: s.bookFilter,
                   anchorOccurrenceId: s.anchorOccurrenceId)
     }

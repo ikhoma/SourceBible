@@ -669,6 +669,16 @@ final class DatabaseService: @unchecked Sendable {
         return exists
     }()
 
+    /// Колонка `hl` (точна підсвітка передачі) з'явилась пізніше за таблицю —
+    /// на старій базі SELECT бере NULL замість неї.
+    private lazy var hasRenderingHighlight: Bool = {
+        var has = false
+        query("SELECT 1 FROM pragma_table_info('word_rendering') WHERE name = 'hl'") { _ in
+            has = true
+        }
+        return has
+    }()
+
     /// Як переклад `translation` передає слово `strongsId` (ADR-041).
     ///
     /// - Parameters:
@@ -749,7 +759,8 @@ final class DatabaseService: @unchecked Sendable {
         var out: [Int: RenderingOccurrence] = [:]
         let sql = """
             SELECT e.rendering_id, b.id,
-                   (e.verse_key / 1000) % 1000, e.verse_key % 1000, e.seg_ord, v.text
+                   (e.verse_key / 1000) % 1000, e.verse_key % 1000, e.seg_ord, v.text,
+                   \(hasRenderingHighlight ? "e.hl" : "NULL")
             FROM rendering_example e
             JOIN book  b ON b.num = e.verse_key / 1000000
             JOIN verse v ON v.translation = e.translation
@@ -767,7 +778,8 @@ final class DatabaseService: @unchecked Sendable {
             out[rid] = RenderingOccurrence(
                 id: "\(bookId)|\(ch)|\(vs)|\(ord)", renderingId: rid,
                 bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
-                rawText: optString(stmt, 5) ?? "")
+                rawText: optString(stmt, 5) ?? "",
+                highlight: optString(stmt, 6))
         }
         return out
     }
@@ -783,7 +795,7 @@ final class DatabaseService: @unchecked Sendable {
             SELECT w.rendering_id, b.id,
                    (w.verse_key / 1000) % 1000 AS ch,
                    w.verse_key % 1000          AS vs,
-                   w.seg_ord, v.text
+                   w.seg_ord, v.text, \(hasRenderingHighlight ? "w.hl" : "NULL")
             FROM word_rendering w
             JOIN book  b ON b.num = w.verse_key / 1000000
             JOIN verse v ON v.translation = w.translation
@@ -802,7 +814,8 @@ final class DatabaseService: @unchecked Sendable {
                 id: "\(bookId)|\(ch)|\(vs)|\(ord)",
                 renderingId: Int(sqlite3_column_int(stmt, 0)),
                 bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
-                rawText: optString(stmt, 5) ?? ""
+                rawText: optString(stmt, 5) ?? "",
+                highlight: optString(stmt, 6)
             ))
         }
         return out

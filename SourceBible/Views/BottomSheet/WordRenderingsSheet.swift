@@ -126,6 +126,7 @@ struct WordRenderingsSheet: View {
                 }
                 .pinnedHeaderEdge()
                 .navigationTitle(Text(verbatim: state.lemma))
+                .transliterationSubtitle(state.transliteration)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -236,10 +237,15 @@ struct WordRenderingsSheet: View {
             }
             .pickerStyle(.inline)
         } label: {
-            if let b = bookFilter {
-                Text(verbatim: vm.translationBookNames[b]?.short ?? BibleBookNames.short(for: b))
-            } else {
-                Text("search.filter.all_books")
+            // Шеврон — та сама ознака вибору, що в тулбарі читанки й чипах Пошуку.
+            HStack(spacing: 4) {
+                if let b = bookFilter {
+                    Text(verbatim: vm.translationBookNames[b]?.short ?? BibleBookNames.short(for: b))
+                } else {
+                    Text("search.filter.all_books")
+                }
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
             }
         }
     }
@@ -259,7 +265,8 @@ private struct OccurrenceRow: View {
                 ReferenceLabel(reference)
                 Text(VerseHighlight.attributed(raw: occurrence.rawText,
                                                verseId: occurrence.id,
-                                               taggedOrdinal: occurrence.segOrd))
+                                               taggedOrdinal: occurrence.segOrd,
+                                               spans: occurrence.highlight))
                     .font(.callout)
                 }
             Spacer(minLength: 8)
@@ -278,8 +285,15 @@ private struct OccurrenceRow: View {
 /// build-скрипті (`seg_ord`), тож підсвічується саме те слово, яке зіставлено,
 /// а не всі збіги номера у вірші (як у старому `highlightedVerseText` для Usage).
 enum VerseHighlight {
-    static func attributed(raw: String, verseId: String, taggedOrdinal: Int) -> AttributedString {
+    /// - Parameter spans: `hl` з бази — «ord:start:len;…»: підсвітити лише передачу
+    ///   («for his **mercy**», а не весь сегмент), у т.ч. слово, розбите на кілька
+    ///   сегментів («**put** him **to death**»). Зсуви — в Unicode-скалярах тексту
+    ///   сегмента, як рахує Python-порт `VerseParser`. `nil` або зсув за межами
+    ///   тексту → весь сегмент `taggedOrdinal`, як раніше.
+    static func attributed(raw: String, verseId: String, taggedOrdinal: Int,
+                           spans: String? = nil) -> AttributedString {
         let parsed = VerseParser.parse(verseId: verseId, rawText: raw)
+        let ranges = parseSpans(spans)
         var pieces: [(String, Bool)] = []
         var ord = -1
         for seg in parsed.segments {
@@ -288,7 +302,15 @@ enum VerseHighlight {
             var hit = false
             if !seg.strongs.isEmpty {
                 ord += 1
-                hit = ord == taggedOrdinal
+                if let ranges {
+                    if let r = ranges[ord], let split = split(seg.text, r) {
+                        pieces.append(contentsOf: split)
+                        continue
+                    }
+                    hit = ranges[ord] != nil      // зсув не ліг — хоч увесь сегмент
+                } else {
+                    hit = ord == taggedOrdinal
+                }
             }
             // Пробіл перед комою прибирає сам VerseParser (bug-056).
             if !seg.text.isEmpty { pieces.append((seg.text, hit)) }
@@ -307,6 +329,48 @@ enum VerseHighlight {
             result += a
         }
         return result
+    }
+
+    /// «3:0:3;5:1:8» → [3: 0..<3, 5: 1..<9]. Будь-що непарсабельне → nil (весь сегмент).
+    private static func parseSpans(_ spec: String?) -> [Int: Range<Int>]? {
+        guard let spec, !spec.isEmpty else { return nil }
+        var out: [Int: Range<Int>] = [:]
+        for part in spec.split(separator: ";") {
+            let f = part.split(separator: ":").compactMap { Int($0) }
+            guard f.count == 3, f[1] >= 0, f[2] > 0 else { return nil }
+            out[f[0]] = f[1]..<(f[1] + f[2])
+        }
+        return out.isEmpty ? nil : out
+    }
+
+    /// Текст сегмента → [до, передача, після] за зсувами в Unicode-скалярах.
+    private static func split(_ text: String, _ r: Range<Int>) -> [(String, Bool)]? {
+        let scalars = Array(text.unicodeScalars)
+        guard r.upperBound <= scalars.count else { return nil }
+        func str(_ s: ArraySlice<Unicode.Scalar>) -> String {
+            var v = String.UnicodeScalarView()
+            v.append(contentsOf: s)
+            return String(v)
+        }
+        return [(str(scalars[..<r.lowerBound]), false),
+                (str(scalars[r]), true),
+                (str(scalars[r.upperBound...]), false)].filter { !$0.0.isEmpty }
+    }
+}
+
+// MARK: - Transliteration subtitle
+
+private extension View {
+    /// Транслітерація під лемою — системний підзаголовок навбару (iOS 26: менший
+    /// шрифт, secondary-колір — стиль дає система, своїх не заводимо). iOS 18 цього
+    /// API не має — там лишається тільки лема, як було.
+    @ViewBuilder
+    func transliterationSubtitle(_ xlit: String) -> some View {
+        if #available(iOS 26.0, *), !xlit.isEmpty {
+            navigationSubtitle(Text(verbatim: xlit))
+        } else {
+            self
+        }
     }
 }
 

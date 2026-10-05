@@ -11,7 +11,8 @@ from collections import Counter
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from build_word_rendering import (  # noqa: E402
-    Normalizer, merge_forms, pair_words, parse_segments, pick_examples)
+    Normalizer, merge_forms, pair_words, pair_words_merged, parse_segments, pick_examples,
+    highlight_spec)
 
 KJV_EXO_34_6 = ('And the LORD<S>3068</S> passed by<S>5674</S> before him<S>6440</S>, and proclaimed<S>7121</S>, '
                 'The LORD<S>3068</S>, The LORD<S>3068</S> God<S>410</S>, merciful<S>7349</S> and gracious<S>2587</S>, '
@@ -144,6 +145,32 @@ class TestCase_(unittest.TestCase):
         rows = [("H3068", [("LORD", "lord")], 1, 0)] * 2
         self.assertEqual(apply_case(rows, "en")[0][1], "LORD")
 
+    def test_sentence_start_singleton_not_capitalised(self):
+        from build_word_rendering import apply_case
+        # RST Пс 110:4 «Памятными соделал…» — єдине входження, на початку вірша
+        rows = [("H2143", [("Памятными", "памятный", True)], 1, 0)]
+        rows = [("H2143", [("Памятными", "памятный", True)], 1, 0),
+                ("H2142", [("памятное", "памятный", False)], 2, 0)]   # з малої під іншим номером
+        self.assertEqual(apply_case(rows, "ru")[0][1], "памятный")
+
+    def test_rare_name_only_at_sentence_start_keeps_capital(self):
+        from build_word_rendering import apply_case
+        rows = [("H5917", [("Achar", "achar", True)], 1, 0)]       # KJV 1Пар 2:7
+        self.assertEqual(apply_case(rows, "en")[0][1], "Achar")
+
+    def test_sentence_start_does_not_outvote_mid_sentence(self):
+        from build_word_rendering import apply_case
+        rows = [("H430", [("God", "god", True)], 1, 0)] * 5 + [("H430", [("God", "god", False)], 2, 0)]
+        self.assertEqual(apply_case(rows, "en")[0][1], "God")
+        rows = [("H3068", [("LORD", "lord", True)], 1, 0)]
+        self.assertEqual(apply_case(rows, "en")[0][1], "LORD")   # усі великі — завжди доказ
+
+    def test_sentence_start_detection(self):
+        n = Normalizer("en")
+        self.assertTrue(n.tokens("Mercy", "")[0][2])
+        self.assertTrue(n.tokens(" Mercy", "and it was so. ")[0][2])
+        self.assertFalse(n.tokens(" Mercy", "and the ")[0][2])
+
     def test_hyphen_stays_inside_word(self):
         self.assertEqual(Normalizer("en")("to God-ward"), "god-ward")
 
@@ -164,3 +191,158 @@ class TestPickExamples(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSplitTags(unittest.TestCase):
+    """Одне слово оригіналу, розмічене в перекладі кількома тегами."""
+    MT_26_59 = "to<S>3704</S> put<S>2289</S> him<S>846</S> to death<S>2289</S>;"
+
+    def test_surplus_tag_is_merged_not_dropped(self):
+        words = [(1, "G3704"), (2, "G2289"), (3, "G846")]
+        out = pair_words_merged(words, parse_segments(self.MT_26_59))
+        w = [x for x in out if x[0] == 2][0]
+        self.assertEqual(w[2], 1)                        # seg_ord першого шматка
+        self.assertEqual(w[4], [(3, "to death")])        # доклеєний шматок
+        # стара функція (порт Swift) — без змін
+        self.assertEqual([x[2] for x in pair_words(words, parse_segments(self.MT_26_59))], [0, 1, 2])
+
+    def test_highlight_spec(self):
+        toks = [("put", "put", False, 0, 3, 1), ("to", "to", False, 0, 2, 3), ("death", "death", False, 3, 8, 3)]
+        self.assertEqual(highlight_spec(toks, 1, {1: "put", 3: "to death"}), "1:0:3;3:0:8")
+        self.assertIsNone(highlight_spec([("mercy", "mercy", False, 0, 5, 0)], 0, {0: "mercy"}))
+        self.assertEqual(highlight_spec([("mercy", "mercy", False, 8, 13, 0)], 0, {0: "for his mercy"}), "0:8:5")
+
+    def test_kept_phrase_not_collapsed_below(self):
+        m = merge_forms({"G2289": Counter({"put to death": 3, "cause to be put to death": 2, "death": 2})},
+                        "en", {"G2289": {"put to death", "cause to be put to death"}})
+        self.assertEqual(m[("G2289", "cause to be put to death")], "put to death")
+        self.assertEqual(m[("G2289", "put to death")], "put to death")
+
+    def test_gap_filled_from_kept_phrase(self):
+        # ASV Мк 14:55: «to» розмічене як εἰς → склейка «put death»
+        m = merge_forms({"G2289": Counter({"put to death": 10, "put death": 1})},
+                        "en", {"G2289": {"put to death", "put death"}})   # обидва — склейки
+        self.assertEqual(m[("G2289", "put death")], "put to death")
+        self.assertEqual(m[("G2289", "put to death")], "put to death")
+
+
+class TestRuHead(unittest.TestCase):
+    def setUp(self):
+        try:
+            self.n = Normalizer("ru")
+        except SystemExit:
+            self.skipTest("pymorphy3 не встановлено")
+
+    def head(self, *words):
+        toks = [(w, self.n.lemma(w.lower()), False, 0, 0, 0) for w in words]
+        return " ".join(t[1] for t in self.n.ru_head(toks))
+
+    def test_aux_verb_dropped(self):
+        self.assertEqual(self.head("будут", "преследовать"), "преследовать")
+        self.assertEqual(self.head("было", "помочь"), "помочь")
+
+    def test_adjective_agrees_and_order_is_unified(self):
+        self.assertEqual(self.head("хлебного", "приношения"), "хлебное приношение")
+        self.assertEqual(self.head("приношение", "хлебное"), "хлебное приношение")
+
+    def test_noun_with_prepositional_phrase(self):
+        self.assertEqual(self.head("жертву", "за", "грех"), "жертва за грех")
+
+
+class TestRuLemma(unittest.TestCase):
+    def setUp(self):
+        try:
+            self.n = Normalizer("ru")
+        except SystemExit:
+            self.skipTest("pymorphy3 не встановлено")
+
+    def test_unknown_names_use_text_vocabulary(self):
+        self.n.vocab = frozenset({"иоав", "иоава", "авессалом", "израилев", "едом", "ед"})
+        self.assertEqual(self.n.lemma("иоава"), "иоав")
+        self.assertEqual(self.n.lemma("авессалом"), "авессалом")   # не «авессало»
+        self.assertEqual(self.n.lemma("израилевой"), "израилев")
+        self.assertEqual(self.n.lemma("едом"), "едом")             # не «ед»
+        self.assertEqual(self.n.lemma("соделал"), "соделать")      # дієслово не чіпаємо
+
+    def test_overrides(self):
+        self.assertEqual(self.n.lemma("род"), "род")
+        self.assertEqual(self.n.lemma("сиклей"), "сикль")
+
+    def test_gore_by_context(self):
+        self.assertEqual([t[1] for t in self.n.tokens("Горе")], ["горе"])
+        self.assertEqual([t[1] for t in self.n.tokens("на горе")], ["гора"])
+
+
+class TestPickGroups(unittest.TestCase):
+    """Групи звіту docs/features/report-adr041-rendering-cases.md."""
+    def setUp(self):
+        self.n = Normalizer("en")
+
+    def w(self, seg, cls, gloss=""):
+        r = self.n.pick(seg, "", cls, gloss)
+        return None if r is None else " ".join(t[0] for t in r)
+
+    def test_pronoun_original_has_no_row(self):
+        self.assertIsNone(self.w("them", "pron"))
+
+    def test_useful_pronouns_shown_clean(self):
+        self.assertEqual(self.w("unto him", "pron_show"), "him")      # ἐκεῖνος
+        self.assertEqual(self.w("of that", "pron_show"), "that")
+        self.assertEqual(self.w("the same", "pron_show"), "same")
+        self.assertEqual(self.w("a certain man", "pron_show"), "certain")   # τις, «man» — курсив KJV
+        self.assertEqual(self.w("one another", "pron_show"), "one another")
+
+    def test_function_word_original_kept(self):
+        self.assertEqual(self.w("against", "prep"), "against")
+        self.assertEqual(self.w("unto him for", "prep"), "for")
+        self.assertEqual(self.w("thereof round about", "adv"), "round about")
+        self.assertEqual(self.w("according to", "prep"), "according to")
+
+    def test_gloss_span(self):
+        self.assertEqual(self.w("the master of the house", "noun", "master of the house"),
+                         "master of the house")
+        self.assertEqual(self.w("the goodman of the house", "noun", "master of the house"),
+                         "goodman of the house")
+        self.assertEqual(self.w("the brother of Goliath", "noun", "Goliath"), "Goliath")
+
+    def test_stopword_collision_and_fallback(self):
+        self.assertEqual(self.w("until the even", "noun", "evening"), "even")
+        self.assertEqual(self.w("ye shall do", "verb", "do"), "do")
+
+    def test_possessive_blanked(self):
+        from build_word_rendering import blank_possessive
+        self.assertEqual(self.w(blank_possessive("'s brother"), "noun", "brother"), "brother")
+
+
+class TestPossessiveSplit(unittest.TestCase):
+    def test_possessive_split_off_tagged_segment(self):
+        # ASV Мк 12:19 — «'s» окремим сегментом без Strong's, як у VerseParser.swift
+        segs = parse_segments("If a man<S>5100</S>'s brother<S>80</S> die<S>599</S>")
+        tagged = [(sg.text, sg.strongs) for sg in segs if sg.strongs]
+        self.assertEqual(tagged[1][0], "brother")
+        self.assertIn("'s ", [sg.text for sg in segs if not sg.strongs])
+
+    def test_son_of_mans_sake(self):
+        # ASV Лк 6:22 «Son<S>5207</S> of man<S>444</S>'s sake<S>5207</S>»
+        segs = parse_segments("for the Son<S>5207</S> of man<S>444</S>'s sake<S>5207</S>.")
+        self.assertEqual([sg.text for sg in segs if sg.strongs][-1], "sake")
+
+
+class TestAsvTagDrift(unittest.TestCase):
+    def test_rom_4_7(self):
+        from fix_asv_tag_drift import fix_verse
+        text = ("saying<S>3107</S>, Blessed are they whose<S>3739</S> iniquities<S>458</S> "
+                "are forgiven<S>863</S>.")
+        words = [(1, "G3107"), (2, "G3739"), (3, "G863"), (4, "G458")]
+        info = {1: ("adj", "Blessed"), 2: ("pron", "of whom"), 3: ("verb", "are forgiven"),
+                4: ("noun", "lawless deeds")}
+        new, n = fix_verse(text, words, info)
+        self.assertEqual(n, 1)
+        self.assertTrue(new.startswith("saying, Blessed<S>3107</S> are they whose<S>3739</S>"))
+        self.assertEqual(fix_verse(new, words, info)[1], 0)      # повторно — нічого
+
+    def test_correct_tag_untouched(self):
+        from fix_asv_tag_drift import fix_verse
+        text = "and the name<S>8034</S> of his city<S>5892</S>."
+        info = {1: ("noun", "name"), 2: ("noun", "city")}
+        self.assertEqual(fix_verse(text, [(1, "H8034"), (2, "H5892")], info)[1], 0)

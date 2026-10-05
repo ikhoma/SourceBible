@@ -371,6 +371,7 @@ struct WordMeaningView: View {
                             // «‹ Назад» з читанки відкриває його знову).
                             vm.renderingsSheet = RenderingsSheetState(
                                 strongsId: entry.id, lemma: entry.originalWord,
+                                transliteration: entry.headerTransliteration,
                                 translationId: summary.translationId,
                                 renderingFilter: item.id)
                         } label: {
@@ -451,9 +452,7 @@ struct WordMeaningView: View {
                         .font(.title3)
                     // Header shows the LEMMA form (entry.originalWord), so use the LEMMA xlit.
                     // Surface-form xlit (vm.selectedWord?.xlit) is shown in contextSection below.
-                    let xlit: String = !entry.xlitSimple.isEmpty
-                        ? entry.xlitSimple
-                        : entry.transliteration
+                    let xlit = entry.headerTransliteration
                     if !xlit.isEmpty {
                         Text(xlit)
                             .font(.title3)
@@ -801,6 +800,9 @@ struct ConcordanceView: View {
 
     @ViewBuilder
     private func renderingExamples(_ summary: RenderingSummary) -> some View {
+        // Власний VStack(spacing: 0): PillSection ставить між дітьми 12pt, і рядки
+        // з Divider розходились далі, ніж в аркуші всіх входжень (там spacing 0).
+        VStack(alignment: .leading, spacing: 0) {
         ForEach(summary.items) { item in
             if let ex = examples[item.id] {
                 Button {
@@ -823,11 +825,13 @@ struct ConcordanceView: View {
         .buttonStyle(.plain)
         .foregroundStyle(Color.appBlue)
         .padding(.vertical, 12)
+        }
     }
 
     private func openSheet(_ summary: RenderingSummary, rendering: Int?) {
         vm.renderingsSheet = RenderingsSheetState(
             strongsId: entry.id, lemma: entry.originalWord,
+            transliteration: entry.headerTransliteration,
             translationId: summary.translationId, renderingFilter: rendering)
     }
 }
@@ -841,32 +845,39 @@ private struct RenderingExampleRow: View {
     let example: RenderingOccurrence
     let reference: String
 
+    // Анатомія — як у аркуші всіх входжень (WordRenderingsSheet): рядок групи
+    // (там — книга, тут — передача) тим самим стилем, що `bookHeader`, далі рядок
+    // вірша як `OccurrenceRow`: ReferenceLabel + текст + шеврон, ті самі відступи.
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(verbatim: item.text)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer(minLength: 8)
-                    Text(verbatim: "\(item.count)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                Text(verbatim: reference)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Text(VerseHighlight.attributed(raw: example.rawText,
-                                               verseId: example.id,
-                                               taggedOrdinal: example.segOrd))
-                    .font(.callout)
-                    .multilineTextAlignment(.leading)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(verbatim: item.text)
+                Spacer()
+                Text(verbatim: "\(item.count)")
+                    .monospacedDigit()
             }
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.quaternary)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 8)
+
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ReferenceLabel(reference)
+                    Text(VerseHighlight.attributed(raw: example.rawText,
+                                                   verseId: example.id,
+                                                   taggedOrdinal: example.segOrd,
+                                                   spans: example.highlight))
+                        .font(.callout)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.quaternary)
+            }
+            .padding(.vertical, 10)
         }
-        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

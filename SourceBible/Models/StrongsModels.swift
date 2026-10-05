@@ -53,6 +53,14 @@ struct RenderingSummary: Equatable {
 /// Одне входження слова в перекладі з його передачею (ADR-041, stacked sheet).
 /// `segOrd` — № сегмента з Strong's у вірші (0-based), той самий, що пише build-скрипт;
 /// за ним підсвічується саме це слово, а не всі збіги номера у вірші.
+extension StrongsEntry {
+    /// Транслітерація леми для шапок: спрощена (STEPBible), інакше академічна.
+    /// Одне джерело для шапки Word-вкладки і підзаголовка аркуша передач.
+    var headerTransliteration: String {
+        !xlitSimple.isEmpty ? xlitSimple : transliteration
+    }
+}
+
 struct RenderingOccurrence: Identifiable {
     let id: String            // "BOOK|ch|v|segOrd"
     let renderingId: Int
@@ -61,6 +69,9 @@ struct RenderingOccurrence: Identifiable {
     let verse: Int
     let segOrd: Int
     let rawText: String       // сирий текст з <S>-тегами — для підсвітки
+    /// Що саме підсвітити: «ord:start:len;…» (зсуви в Unicode-скалярах тексту
+    /// сегмента). `nil` — увесь сегмент `segOrd`, як до цього поля (стара база теж).
+    var highlight: String? = nil
 }
 
 // MARK: - Book Usage Group

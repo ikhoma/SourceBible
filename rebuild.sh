@@ -43,6 +43,12 @@ echo "\n▸ Indexing verse_org reverse hop (original → translation)..."
 # build_versification.py on purpose (additive, no row data touched).
 sqlite3 sourcebible.db "CREATE INDEX IF NOT EXISTS idx_verse_org_rev ON verse_org(translation, org_book_id, org_chapter, org_verse);"
 
+echo "\n▸ Fixing ASV Strong's tag drift (tag sits before the clause punctuation)..."
+# ~8 тис. тегів ASV стоять у кінці попередньої фрази («stead<S>8034</S>; and the name»).
+# Переносимо на слово, що збігається з глосою Macula (95% збіг із позицією в KJV).
+# Пише verse.text для ASV; еталони Рим 4:7 / 1 Хр 1:46 — інакше rollback і `set -e`.
+python3 scripts/fix_asv_tag_drift.py sourcebible.db
+
 echo "\n▸ Verifying parallel-translation alignment (ADR-028, bug-036)..."
 # Панель «Переклади» читає вірш ІНШОГО перекладу, тож мусить іти через verse_org, а не
 # через той самий номер. Гейт перевіряє еталони (Пісн 1:15, Пс 51, Еккл 5:1, Дан 4:1,
