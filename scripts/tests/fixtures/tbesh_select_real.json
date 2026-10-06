@@ -1,0 +1,536 @@
+{
+ "H3581": {
+  "glosses": {
+   "strength": 67,
+   "power": 44,
+   "might": 4,
+   "ability": 4,
+   "stamina": 1,
+   "wealth": 1,
+   "force": 1,
+   "yield": 1,
+   "strong": 1,
+   "savage": 1
+  },
+  "variants": {
+   "H3581a": [
+    {
+     "gloss": "reptile",
+     "meaning": "1) a small reptile, probably a kind of lizard, which is unclean<br>1a) perhaps an extinct animal, exact meaning is unknown",
+     "morph": "H:N-M",
+     "dstrong": "H3581A",
+     "relation": ""
+    }
+   ],
+   "H3581b": [
+    {
+     "gloss": "strength",
+     "meaning": "1) strength, power, might<br>1a) human strength<br>1b) strength (of angels)<br>1c) power (of God)<br>1d) strength (of animals)<br>1e) strength, produce, wealth (of soil)",
+     "morph": "H:N-M",
+     "dstrong": "H3581B",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H3581a",
+   "H3581b"
+  ]
+ },
+ "H5483": {
+  "glosses": {
+   "horses": 95,
+   "horse": 36,
+   "horses’": 3,
+   "horse’s": 1,
+   "mounted": 1,
+   "stallions": 1
+  },
+  "variants": {
+   "H5483a": [
+    {
+     "gloss": "swallow",
+     "meaning": "swallow, swift",
+     "morph": "H:N-M",
+     "dstrong": "H5483A",
+     "relation": ""
+    }
+   ],
+   "H5483b": [
+    {
+     "gloss": "Horse (Gate)",
+     "meaning": "<BR> This name means horse",
+     "morph": "H:N-M",
+     "dstrong": "H5483B",
+     "relation": ""
+    },
+    {
+     "gloss": "horse",
+     "meaning": "1) horse<br>1a) chariot horses",
+     "morph": "H:N-M",
+     "dstrong": "H5483M",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H5483a",
+   "H5483b"
+  ]
+ },
+ "H2896": {
+  "glosses": {
+   "good": 294,
+   "better": 76,
+   "well": 12,
+   "pleases": 11,
+   "best": 8,
+   "prosperity": 7,
+   "beautiful": 5,
+   "fine": 5,
+   "handsome": 5,
+   "gracious": 5
+  },
+  "variants": {
+   "H2896a": [
+    {
+     "gloss": "pleasant",
+     "meaning": "adj<br>1) good, pleasant, agreeable<br>1a) pleasant, agreeable (to the senses)<br>1b) pleasant (to the higher nature)<br>1c) good, excellent (of its kind)<br>1d) good, rich, valuable in estimation<br>1e) good, appropriate, becoming<br>1f) better (comparative)<br>1g) glad, happy, prosperous (of man's",
+     "morph": "H:A",
+     "dstrong": "H2896A",
+     "relation": ""
+    }
+   ],
+   "H2896b": [
+    {
+     "gloss": "good",
+     "meaning": "1) a good thing, benefit, welfare<br>1a) welfare, prosperity, happiness<br>1b) good things (collective)<br>1c) good, benefit<br>1d) moral good",
+     "morph": "H:N-M",
+     "dstrong": "H2896B",
+     "relation": ""
+    }
+   ],
+   "H2896c": [
+    {
+     "gloss": "welfare",
+     "meaning": "1) welfare, benefit, good things<br>1a) welfare, prosperity, happiness<br>1b) good things (collective)<br>1c) bounty",
+     "morph": "H:N-F",
+     "dstrong": "H2896C",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H2896a",
+   "H2896b",
+   "H2896c"
+  ]
+ },
+ "H6635": {
+  "glosses": {
+   "hosts": 288,
+   "army": 61,
+   "war": 31,
+   "host": 28,
+   "division": 20,
+   "divisions": 19,
+   "service": 9,
+   "battle": 7,
+   "armies": 6,
+   "company": 5
+  },
+  "variants": {
+   "H6635a": [
+    {
+     "gloss": "army",
+     "meaning": ": army<br>1) that which goes forth, army, war, warfare, host<br>1a) army, host<br>1a1) host (of organised army)<br>1a2) host (of angels)<br>1a3) of sun, moon, and stars<br>1a4) of whole creation<br>1b) war, warfare, service, go out to war<br>1c) service",
+     "morph": "H:N-M",
+     "dstrong": "H6635A",
+     "relation": ""
+    },
+    {
+     "gloss": "army: war",
+     "meaning": ": war<br>1) that which goes forth, army, war, warfare, host<br>1a) army, host<br>1a1) host (of organised army)<br>1a2) host (of angels)<br>1a3) of sun, moon, and stars<br>1a4) of whole creation<br>1b) war, warfare, service, go out to war<br>1c) service",
+     "morph": "H:N-M",
+     "dstrong": "H6635H",
+     "relation": "a Meaning of"
+    },
+    {
+     "gloss": "army: duty",
+     "meaning": ": duty<br>1) that which goes forth, army, war, warfare, host<br>1a) army, host<br>1a1) host (of organised army)<br>1a2) host (of angels)<br>1a3) of sun, moon, and stars<br>1a4) of whole creation<br>1b) war, warfare, service, go out to war<br>1c) service",
+     "morph": "H:N-M",
+     "dstrong": "H6635I",
+     "relation": "a Meaning of"
+    }
+   ],
+   "H6635b": [
+    {
+     "gloss": "Hosts",
+     "meaning": "The Hosts (of the Lord)<BR>Another name of <i>ye.ho.vah</i> (יהוה \"LORD\" H3068G)",
+     "morph": "N:N-M-T",
+     "dstrong": "H6635B",
+     "relation": "a Name of"
+    }
+   ]
+  },
+  "order": [
+   "H6635a",
+   "H6635b"
+  ]
+ },
+ "H2617": {
+  "glosses": {
+   "steadfast love": 130,
+   "kindness": 37,
+   "love": 37,
+   "loyalty": 12,
+   "kindly": 5,
+   "good deeds": 2,
+   "favor": 2,
+   "loyally": 1,
+   "merciful": 1,
+   "faithful deeds": 1
+  },
+  "variants": {
+   "H2617a": [
+    {
+     "gloss": "kindness",
+     "meaning": "goodness, kindness, faithfulness",
+     "morph": "H:N-M",
+     "dstrong": "H2617A",
+     "relation": ""
+    }
+   ],
+   "H2617b": [
+    {
+     "gloss": "shame",
+     "meaning": "a reproach, shame",
+     "morph": "H:N-M",
+     "dstrong": "H2617B",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H2617a",
+   "H2617b"
+  ]
+ },
+ "H1004": {
+  "glosses": {
+   "house": 1406,
+   "temple": 172,
+   "houses": 152,
+   "household": 81,
+   "palace": 51,
+   "home": 47,
+   "house of": 20,
+   "family": 18,
+   "inside": 16,
+   "households": 13
+  },
+  "variants": {
+   "H1004a": [
+    {
+     "gloss": "place",
+     "meaning": "nm<br> place, origin, between",
+     "morph": "H:A",
+     "dstrong": "H1004A",
+     "relation": ""
+    }
+   ],
+   "H1004b": [
+    {
+     "gloss": "house: home",
+     "meaning": ": home/temple/building<br>nm<br>1) house<br>1a) house, dwelling habitation<br>1b) shelter or abode of animals<br>1c) human bodies (fig.)<br>1d) of Sheol<br>1e) of abode of light and darkness<br>1f) of land of Ephraim<br>2) place<br>3) receptacle<br>4) home, house as containing a family<br>5) househo",
+     "morph": "H:N-M",
+     "dstrong": "H1004B",
+     "relation": ""
+    },
+    {
+     "gloss": "Beth-(ashbea)",
+     "meaning": "nm<br> This name is used for a house, habitation<BR>Combined with <i>ash.be.a</i> (אַשְׁבֵּעַ \"Ashbea\" H0791)",
+     "morph": "H:N-M",
+     "dstrong": "H1004G",
+     "relation": ""
+    },
+    {
+     "gloss": "Beth (Haggan)",
+     "meaning": "nm<br> This name is used for a house, habitation<BR>Combined with <i>hag</i> (גַּן \"Haggan\" H1588)",
+     "morph": "H:N-M",
+     "dstrong": "H1004H",
+     "relation": ""
+    },
+    {
+     "gloss": "Beth-(togarmah)",
+     "meaning": "nm<br> This name is used for a house, habitation<BR>Combined with <i>to.gar.mah</i> (תֹּגַרְמָה \"-togarmah\" H8425H)",
+     "morph": "H:N-M",
+     "dstrong": "H1004I",
+     "relation": "a Part of"
+    },
+    {
+     "gloss": "House (of the Forest)",
+     "meaning": "<BR> means: house, dwelling, household",
+     "morph": "H:N-M",
+     "dstrong": "H1004J",
+     "relation": ""
+    },
+    {
+     "gloss": "House (of the Forests of Lebanon)",
+     "meaning": "<BR> means: house, dwelling, household",
+     "morph": "H:N-M",
+     "dstrong": "H1004K",
+     "relation": ""
+    },
+    {
+     "gloss": "Beth-(baal-meon)",
+     "meaning": "nm<br> This name mewans house, dwelling<BR>Combined with <i>ba.al me.on</i> (בַּ֫עַל מְעוֹן \"Baal-meon\" H1186)",
+     "morph": "H:N-M",
+     "dstrong": "H1004L",
+     "relation": "a Part of"
+    },
+    {
+     "gloss": "house: household",
+     "meaning": ": household<br>nm<br>1) house<br>1a) house, dwelling habitation<br>1b) shelter or abode of animals<br>1c) human bodies (fig.)<br>1d) of Sheol<br>1e) of abode of light and darkness<br>1f) of land of Ephraim<br>2) place<br>3) receptacle<br>4) home, house as containing a family<br>5) household, family<",
+     "morph": "H:N-M",
+     "dstrong": "H1004M",
+     "relation": "a Meaning of"
+    },
+    {
+     "gloss": "house: container",
+     "meaning": ": container<br>nm<br>1) house<br>1a) house, dwelling habitation<br>1b) shelter or abode of animals<br>1c) human bodies (fig.)<br>1d) of Sheol<br>1e) of abode of light and darkness<br>1f) of land of Ephraim<br>2) place<br>3) receptacle<br>4) home, house as containing a family<br>5) household, family<",
+     "morph": "H:N-M",
+     "dstrong": "H1004N",
+     "relation": "a Meaning of"
+    },
+    {
+     "gloss": "house: inside",
+     "meaning": ": inside<br>nm<br>1) house<br>1a) house, dwelling habitation<br>1b) shelter or abode of animals<br>1c) human bodies (fig.)<br>1d) of Sheol<br>1e) of abode of light and darkness<br>1f) of land of Ephraim<br>2) place<br>3) receptacle<br>4) home, house as containing a family<br>5) household, family<br>",
+     "morph": "H:N-M",
+     "dstrong": "H1004O",
+     "relation": "a Meaning of"
+    },
+    {
+     "gloss": "house: palace",
+     "meaning": ": home/temple/building<br>nm<br>1) house<br>1a) house, dwelling habitation<br>1b) shelter or abode of animals<br>1c) human bodies (fig.)<br>1d) of Sheol<br>1e) of abode of light and darkness<br>1f) of land of Ephraim<br>2) place<br>3) receptacle<br>4) home, house as containing a family<br>5) househo",
+     "morph": "H:N-M",
+     "dstrong": "H1004P",
+     "relation": "in Hebrew of"
+    },
+    {
+     "gloss": "house: temple",
+     "meaning": ": home/temple/building<br>nm<br>1) house<br>1a) house, dwelling habitation<br>1b) shelter or abode of animals<br>1c) human bodies (fig.)<br>1d) of Sheol<br>1e) of abode of light and darkness<br>1f) of land of Ephraim<br>2) place<br>3) receptacle<br>4) home, house as containing a family<br>5) househo",
+     "morph": "H:N-M",
+     "dstrong": "H1004Q",
+     "relation": "in Hebrew of"
+    }
+   ]
+  },
+  "order": [
+   "H1004a",
+   "H1004b"
+  ]
+ },
+ "H5892": {
+  "glosses": {
+   "city": 625,
+   "cities": 346,
+   "towns": 81,
+   "town": 35,
+   "villages": 3,
+   "ir-shemesh": 1,
+   "inner room": 1
+  },
+  "variants": {
+   "H5892a": [
+    {
+     "gloss": "excitement",
+     "meaning": "1) excitement, anguish<br>1a) of terror",
+     "morph": "H:N-M",
+     "dstrong": "H5892A",
+     "relation": ""
+    }
+   ],
+   "H5892b": [
+    {
+     "gloss": "city",
+     "meaning": "1) city, town (a place of waking, guarded)<br>1a) city, town (a place of waking, guarded)<br>1a) city, town",
+     "morph": "H:N-F",
+     "dstrong": "H5892B",
+     "relation": ""
+    },
+    {
+     "gloss": "City (of On)",
+     "meaning": "Combined with <i>on</i> (אֹן \"On\" H0204)<BR> This name means  city, town <BR>Another name of <i>on</i> (אֹן \"On\" H0204)",
+     "morph": "H:N-M",
+     "dstrong": "H5892G",
+     "relation": "a Part of"
+    },
+    {
+     "gloss": "Ir-",
+     "meaning": "#A man of the tribe of Judah  living at the time of Divided Monarchy, only mentioned at 1Ch.4.12; <br> son of: Tehinnah (H8468)",
+     "morph": "H:N-F",
+     "dstrong": "H5892H",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H5892a",
+   "H5892b"
+  ]
+ },
+ "H7014": {
+  "glosses": {
+   "cain": 16
+  },
+  "variants": {
+   "H7014a": [
+    {
+     "gloss": "Kain",
+     "meaning": "<BR> § Kenite = \"smiths\"<br>n pr gent<br> the tribe from which the father-in-law of Moses was a member and which lived in the area between southern Palestine and the mountains of Sinai",
+     "morph": "N:N-M-PG",
+     "dstrong": "H7014A",
+     "relation": ""
+    },
+    {
+     "gloss": "Kenite",
+     "meaning": "Ancestors of Heber (H2268H) or Hobab (H2246), first mentioned at Gen.15.19<BR>Group of <i>qe.ni</i> (קֵינִי \"Kenite\" H7017)<BR> § Cain = \"possession\"<br> eldest son of Adam and Eve and the first murderer having murdered his brother",
+     "morph": "N:N-M-PG",
+     "dstrong": "H7014G",
+     "relation": "a group of"
+    }
+   ],
+   "H7014b": [
+    {
+     "gloss": "Cain",
+     "meaning": "A man living at the time before the Flood, first mentioned at Gen.4.1; <br> son of: Adam (H0121) and Eve (H2332); <br> brother of: Abel (H1893) and Seth (H8352); <br> father of: Enoch (H2585)<BR>Also named: <i>Kain</i> (Κάϊν \"Cain\" G2535)<BR> § Cain = \"possession\"<br> eldest son of Adam and Eve and ",
+     "morph": "N:N-M-P",
+     "dstrong": "H7014B",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H7014a",
+   "H7014b"
+  ]
+ },
+ "H5553": {
+  "glosses": {
+   "rock": 41,
+   "rocks": 8,
+   "cliff": 3,
+   "rocky": 2,
+   "cliffs": 2,
+   "mountain": 1,
+   "crags": 1
+  },
+  "variants": {
+   "H5553": [
+    {
+     "gloss": "rock",
+     "meaning": "The Rock<BR>Sela (H5554)<BR>",
+     "morph": "H:N-M",
+     "dstrong": "H5553G",
+     "relation": "a Name of"
+    },
+    {
+     "gloss": "crag",
+     "meaning": "1) crag, cliff, rock<br>1a) crag, cliff<br>1b) as stronghold of Jehovah, of security (fig.)",
+     "morph": "H:N-M",
+     "dstrong": "H5553H",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H5553"
+  ]
+ },
+ "H4428": {
+  "glosses": {
+   "king": 1997,
+   "kings": 282,
+   "king’s": 234,
+   "royal": 8,
+   "kings’": 2
+  },
+  "variants": {
+   "H4428": [
+    {
+     "gloss": "king",
+     "meaning": "1) king<br> Aramaic equivalent: <i>me.lekh</i> (מֶ֫לֶךְ \"king\" H4430)",
+     "morph": "H:N-M",
+     "dstrong": "H4428G",
+     "relation": ""
+    },
+    {
+     "gloss": "`the king`",
+     "meaning": "'the king' or a name, Hammelech in KJV of Jer.36.26; 38.6- a man living at the time of Divided Monarchy, first mentioned at Jer.36.26; <br> father of: Jerahmeel (H3396I) and Malchijah (H4441H); also translated \"the king\"; <BR> § A man living at the time of Divided Monarchy, first mentioned at Jer.36",
+     "morph": "H:N-M",
+     "dstrong": "H4428H",
+     "relation": ""
+    },
+    {
+     "gloss": "King's",
+     "meaning": "King's (Highway) (Num.20.17)",
+     "morph": "H:N-M",
+     "dstrong": "H4428I",
+     "relation": ""
+    },
+    {
+     "gloss": "King's",
+     "meaning": "<BR>Another name of <i>she.lach</i> (שֶׁ֫לַח \"Shelah\" H7975A)",
+     "morph": "H:N-M",
+     "dstrong": "H4428J",
+     "relation": "a Name of"
+    },
+    {
+     "gloss": "Milcom",
+     "meaning": "<BR>Another name of <i>mo.lekh</i> (מֹ֫לֶךְ \"Molech\" H4432)",
+     "morph": "H:N-M",
+     "dstrong": "H4428K",
+     "relation": "a Name of"
+    },
+    {
+     "gloss": "King's",
+     "meaning": "King's (Valley) (Gen.14.17)<br>",
+     "morph": "H:N-M",
+     "dstrong": "H4428L",
+     "relation": ""
+    }
+   ]
+  },
+  "order": [
+   "H4428"
+  ]
+ },
+ "H7704a": {
+  "glosses": {
+   "field": 12,
+   "highland": 1
+  },
+  "variants": {
+   "H7704a": [
+    {
+     "gloss": "Sirion",
+     "meaning": "This name means  field, land, plain<BR>Another spelling of <i>cher.mon</i> (חֶרְמוֹן \"(Mount )Hermon\" H2768)",
+     "morph": "H:N-M",
+     "dstrong": "H7704A",
+     "relation": "a Spelling of"
+    },
+    {
+     "gloss": "field",
+     "meaning": "1) field, land<br>1a) cultivated field<br>1b) of home of wild beasts<br>1c) plain (opposed to mountain)<br>1d) land (opposed to sea)",
+     "morph": "H:N-M",
+     "dstrong": "H7704M",
+     "relation": "a Spelling of"
+    }
+   ]
+  },
+  "order": [
+   "H7704a"
+  ]
+ }
+}

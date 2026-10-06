@@ -50,6 +50,15 @@ from collections import defaultdict
 DB = "sourcebible.db"
 OUT = "SourceBible/Generated/StrongsMergeMap.swift"
 OUT_TRUST = "SourceBible/Generated/StrongsDefinitionTrust.swift"
+# Звіт кроку 4d build_db.py (bug-057): legacy-визначення id, які крок змінив.
+TBESH_REPORT = "data/lexicon/tbesh_resolution.tsv"
+
+# Еталони списку довіри: (id, мусить_бути_прихованим, чому).
+GOLDEN_TRUST = [
+    ("H2617a", True,  "hesed II «ганьба» не сміє показувати «kindness» (bug-046)"),
+    ("H3641b", True,  "הוּא «він» показувало «Calneh» (bug-046)"),
+    ("H835a",  False, "אַשְׁרֵי — одна лексема з H835 за мапою злиття, визначення законне"),
+]
 
 SUB_RE = re.compile(r"^([HG]\d+)([a-z]+)$")
 
@@ -152,7 +161,28 @@ def render(groups: dict[str, list[str]]) -> str:
     return "\n".join(lines)
 
 
-def untrusted_definitions(conn: sqlite3.Connection, groups: dict[str, list[str]]) -> list[str]:
+def load_legacy_short_defs(path: str) -> dict[str, str]:
+    """id → short_def ДО кроку 4d (лише для id, які крок змінив). Без звіту — помилка:
+    інакше список довіри порахувався б лише на нових значеннях і мовчки розкрив би
+    підзаписи, сховані bug-046 (заміряно 2026-10-05: 45 id, серед них H6862a «narrow»)."""
+    out: dict[str, str] = {}
+    with open(path, encoding="utf-8") as fh:
+        header = None
+        for line in fh:
+            if line.startswith("#"):
+                continue
+            cols = line.rstrip("\n").split("\t")
+            if header is None:
+                header = cols
+                continue
+            row = dict(zip(header, cols))
+            if row["legacy_short_def"] != row["short_def"]:
+                out[row["id"]] = row["legacy_short_def"]
+    return out
+
+
+def untrusted_definitions(conn: sqlite3.Connection, groups: dict[str, list[str]],
+                          legacy: dict[str, str] | None = None) -> list[str]:
     """Підзаписи, чиє визначення насправді належить БАЗОВОМУ номеру (bug-046).
 
     Критерій: `short_def` збігається з базовим І пара НЕ визнана однією лексемою
@@ -164,19 +194,28 @@ def untrusted_definitions(conn: sqlite3.Connection, groups: dict[str, list[str]]
     із 388 сигналу немає. Це евристика, а евристичне зіставлення цей проєкт уже
     купив один раз (ADR-028, verse_map, 57% хибних рядків). Правильні дані в TBESH
     існують (H2617b = «shame»), але їх зіставлення — куроване рішення, не формула.
+
+    bug-057: критерій рахується ДВІЧІ — на поточних визначеннях і на legacy (до
+    кроку 4d), — і береться об'єднання. Виправлення голого id (H3581 «reptile» →
+    «strength») не має мовчки розкрити підзапис: розкриття — окреме рішення (B з
+    bug-046) зі своєю вибіркою.
     """
     defs = dict(conn.execute("SELECT id, short_def FROM strongs"))
-    out = []
-    for sid in defs:
-        m = SUB_RE.match(sid)
-        if not m:
-            continue
-        base = m.group(1)
-        if base not in defs or defs[sid] is None or defs[sid] != defs[base]:
-            continue
-        if base in groups.get(sid, []):
-            continue          # та сама лексема — спільне визначення законне
-        out.append(sid)
+    snapshots = [defs]
+    if legacy:
+        snapshots.append({**defs, **legacy})
+    out = set()
+    for snap in snapshots:
+        for sid in snap:
+            m = SUB_RE.match(sid)
+            if not m:
+                continue
+            base = m.group(1)
+            if base not in snap or snap[sid] is None or snap[sid] != snap[base]:
+                continue
+            if base in groups.get(sid, []):
+                continue      # та сама лексема — спільне визначення законне
+            out.add(sid)
     return sorted(out)
 
 
@@ -240,8 +279,20 @@ def main() -> int:
         parts = "  ".join(f"{m}={counts.get(m,0)}" for m in g)
         print(f"    {parts}")
 
-    untrusted = untrusted_definitions(conn, groups)
-    print(f"\nнедостовірних визначень (bug-046): {len(untrusted)}")
+    try:
+        legacy = load_legacy_short_defs(TBESH_REPORT)
+    except FileNotFoundError:
+        print(f"⛔ немає {TBESH_REPORT} — спершу build_db.py (крок 4d, bug-057)", file=sys.stderr)
+        return 1
+    untrusted = untrusted_definitions(conn, groups, legacy)
+    only_new = set(untrusted_definitions(conn, groups))
+    print(f"\nнедостовірних визначень (bug-046): {len(untrusted)}"
+          f"  (з них лише через legacy, тобто НЕ розкрито свідомо: {len(set(untrusted) - only_new)})")
+    bad = [f"  {sid}: очікували {'ПРИХОВАНИЙ' if hide else 'ВИДИМИЙ'} — {why}"
+           for sid, hide, why in GOLDEN_TRUST if (sid in untrusted) != hide]
+    if bad:
+        print("⛔ ЕТАЛОНИ СПИСКУ ДОВІРИ НЕ ЗІЙШЛИСЬ:\n" + "\n".join(bad), file=sys.stderr)
+        return 1
 
     if args.dry_run:
         print(f"--dry-run: {OUT} і {OUT_TRUST} не змінено")

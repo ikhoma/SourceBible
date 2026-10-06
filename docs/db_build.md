@@ -273,6 +273,25 @@ if m_base:
 
 ---
 
+### ❌ Голий Strong's id показує визначення ІНШОГО омоніма (H3581 «сила» → «reptile») — bug-057 / bug-059
+
+**Виявлено:** жовтень 2026. Пропагація вище (суфіксований рядок TBESH → голий id) бере **перший
+варіант у файлі**, а суфікси TBESH і Macula — різні схеми: `TBESH H3581a = reptile, H3581b =
+strength`, `Macula H3581 = сила, H3581a = ящірка`. Заміряно: 414 голих id у групі ризику.
+Окремо (bug-059): `short_def` береться з ПЕРШОГО рядка групи, `long_def` перезаписується до
+ОСТАННЬОГО — «king» мав long_def «King's (Valley)», «field» мав short_def «Sirion».
+
+**Виправлення — крок 4d `resolve_tbesh_definitions` (після імпорту Macula):** варіант обирає
+куратор (`data/lexicon/tbesh_variant_overrides.tsv`) або AGREE за глосами Macula
+(`scripts/tbesh_select.py`), інакше лишається перший і id іде у звіт
+`data/lexicon/tbesh_resolution.tsv`. Рядок — перший не-ім'я; short_def і long_def з одного рядка.
+
+- ⛔ Не вмикати рішення за одним сигналом (лише глоси TBESH або лише Meaning) — кожен окремо дає
+  хибні рішення на частотних словах (H2896 «good», H6635 «hosts») чи іменах (Kain/Cain).
+- ⛔ Не «зсувати суфікс» — перевірено на корпусі bug-046: 82 виграші, 41 програш, 265 без сигналу.
+- ⛔ `build_strongs_merge_map.py` читає `tbesh_resolution.tsv` (legacy-визначення): без нього список
+  довіри bug-046 мовчки розкрив би підзаписи. Файл трекається в git разом із кураторським.
+
 ### ❌ Старий bundled DB у Xcode після збірки
 
 **Симптом:** `no such column: w.gloss_macula` або лексичні дані не оновились.

@@ -1437,6 +1437,173 @@ def import_stepbible_lexicons(cur):
     print(f"  Total updated: {total_updated:,}")
 
 # ─────────────────────────────────────────────
+# Step 4d — bug-057: вибір варіанта й рядка TBESH за глосами Macula
+# ─────────────────────────────────────────────
+#
+# import_stepbible_lexicons (4b) пише TBESH «як лежить у файлі»: голий id без
+# власного рядка отримує ПЕРШИЙ суфіксований варіант (H3581 «сила» → «reptile»),
+# short_def — з першого рядка групи, а long_def — з ОСТАННЬОГО (H4428 «king» →
+# «King's (Valley)»). Цей крок іде ПІСЛЯ імпорту Macula, бо сигнал — word.gloss.
+# Логіка вибору — scripts/tbesh_select.py (чиста, з тестами); тут лише I/O.
+#
+# Рішення по групі ризику:
+#   OVERRIDE  — рядок у data/lexicon/tbesh_variant_overrides.tsv (людина вирішила);
+#   AUTO      — AGREE: G і GF не суперечать (заміряно: 270 спрацювань, 0 хибних);
+#   CURATE / NO_SIGNAL — лишається перший варіант (як раніше), id іде у звіт.
+# Звіт data/lexicon/tbesh_resolution.tsv фіксує і legacy-значення: з нього
+# build_strongs_merge_map.py будує список довіри bug-046 так, щоб жоден
+# прихований підзапис не розкрився мовчки.
+
+TBESH_OVERRIDES = ROOT / "data" / "lexicon" / "tbesh_variant_overrides.tsv"
+TBESH_REPORT    = ROOT / "data" / "lexicon" / "tbesh_resolution.tsv"
+
+# Еталони: (id, поле, перевірка, пояснення). Негативні ловлять протилежну помилку.
+TBESH_GOLDEN = [
+    ("H3581",  "short_def", lambda s: s.startswith("strength"),  "כֹּחַ «сила», не «reptile» (bug-057)"),
+    ("H1004",  "short_def", lambda s: s.startswith("house"),     "בַּיִת «дім», не «place»"),
+    ("H5892",  "short_def", lambda s: s.startswith("city"),      "עִיר «місто», не «excitement»"),
+    ("H5483",  "short_def", lambda s: s.startswith("horse"),     "סוּס «кінь», не «swallow» і не рядок-ім'я «Horse (Gate)»"),
+    ("H3581a", "short_def", lambda s: s == "reptile",            "Macula H3581a — ящірка (Лев 11:30): НЕ зламати"),
+    ("H2617",  "short_def", lambda s: s == "kindness",           "hesed I лишається (неоднозначний → перший варіант)"),
+    ("H2617a", "short_def", lambda s: s == "kindness",           "= базі → список довіри bug-046 ховає «ганьбу»"),
+    ("H7704",  "short_def", lambda s: s != "Sirion",             "שָׂדֶה «поле», не рядок-ім'я «Sirion»"),
+    ("H4428",  "long_def",  lambda s: not s.startswith("King's") and "king" in s.lower(),
+                                                                 "long_def «king» не з рядка «King's (Valley)» (bug-059)"),
+    ("H1",     "long_def",  lambda s: not s.startswith("The father of Gibeon"),
+                                                                 "long_def «father» не біографія (bug-059)"),
+]
+
+
+def _load_tbesh_overrides(path, candidates):
+    """id → варіант. Невідомий id/варіант = помилка збірки (а не мовчазне ігнорування)."""
+    out = {}
+    if not path.exists():
+        return out
+    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("\t")
+        if len(parts) < 2:
+            raise SystemExit(f"⛔ {path.name}:{n}: очікувалось «id<TAB>варіант<TAB>примітка», маємо {line!r}")
+        sid, var = parts[0].strip(), parts[1].strip()
+        if sid not in candidates:
+            raise SystemExit(f"⛔ {path.name}:{n}: {sid} не в групі ризику (немає вибору варіанта)")
+        if var not in candidates[sid]:
+            raise SystemExit(f"⛔ {path.name}:{n}: {sid} → {var}, а варіанти TBESH: {candidates[sid]}")
+        out[sid] = var
+    return out
+
+
+def resolve_tbesh_definitions(cur):
+    import tbesh_select as TS
+    from collections import Counter, defaultdict
+    print("\n[4d] Resolving TBESH variant/row per Macula id (bug-057)...")
+    path = _find_stepbible_file("TBESH")
+    if not path:
+        raise SystemExit("⛔ TBESH не знайдено — крок 4d неможливий (4b теж би не відпрацював)")
+    rows = _parse_stepbible_file(path.read_text(encoding="utf-8", errors="replace"))
+    last_col = list(rows[0].keys())[-1]
+    groups = defaultdict(list)                       # eStrong → рядки у файловому порядку
+    for r in rows:
+        sid = normalize_strongs(_find_col(r, "estrong#", "estrong"), "H")
+        if sid:
+            groups[sid].append({
+                "gloss":   _find_col(r, "gloss"),
+                "meaning": r.get(last_col, ""),
+                "morph":   r.get("morph", ""),
+                "dstrong": (r.get("dstrong", "").split() or [""])[0],
+                "relation": r.get("dstrong", "").partition("=")[2].strip(),
+            })
+    first_pos = {sid: i for i, sid in enumerate(groups)}
+    by_base = defaultdict(list)
+    for sid in groups:
+        m = re.match(r'^(H\d+)([a-z])$', sid)
+        if m:
+            by_base[m.group(1)].append(sid)
+
+    gl = defaultdict(Counter); mcls = defaultdict(Counter); cnt = Counter()
+    for sid, g, morph in cur.execute(
+            "SELECT strongs_id, gloss, morph FROM word WHERE strongs_id LIKE 'H%'"):
+        cnt[sid] += 1
+        gl[sid][(g or "").strip().lower()] += 1
+        mcls[sid][TS.macula_class(morph)] += 1
+
+    legacy = {i: (s, l) for i, s, l in cur.execute(
+        "SELECT id, short_def, long_def FROM strongs WHERE id LIKE 'H%'")}
+
+    # група ризику: голий id з Macula, без власного рядка, ≥2 варіанти з різними глосами
+    candidates = {}
+    for base, vs in by_base.items():
+        if base in groups or base not in legacy or not cnt[base]:
+            continue
+        vs = sorted(vs, key=first_pos.get)
+        if len(vs) >= 2 and len({groups[v][0]["gloss"] for v in vs}) >= 2:
+            candidates[base] = vs
+    overrides = _load_tbesh_overrides(TBESH_OVERRIDES, candidates)
+
+    report = []; stats = Counter(); changed = 0
+    for sid in sorted(legacy, key=lambda s: (int(re.sub(r'\D', '', s) or 0), s)):
+        if sid in groups:
+            variant, decision, info = sid, "OWN", None
+        elif sid in candidates:
+            vs = candidates[sid]
+            vmap = {v: groups[v] for v in vs}
+            dec, pick, info = TS.decide_variant(gl[sid], vmap, vs)
+            if sid in overrides:
+                variant, decision = overrides[sid], "OVERRIDE"
+            elif dec == "AUTO":
+                variant, decision = pick, "AUTO"
+            else:
+                variant, decision = vs[0], dec          # не вгадуємо: як було, + у звіт
+        elif by_base.get(sid):
+            variant, decision, info = sorted(by_base[sid], key=first_pos.get)[0], "SINGLE", None
+        else:
+            continue
+        grp = groups[variant]
+        row = TS.pick_row(grp, mcls[sid])
+        new_s = row["gloss"][:200] or legacy[sid][0]
+        meaning_rows = [row] + [r for r in grp if r is not row and not TS.is_name_row(r)] + grp
+        new_l = next((c for c in (_clean_stepbible_html(r["meaning"])[:5000] for r in meaning_rows) if c),
+                     legacy[sid][1])
+        stats[decision] += 1
+        if (new_s, new_l) != legacy[sid]:
+            cur.execute("UPDATE strongs SET short_def = ?, long_def = ? WHERE id = ?", (new_s, new_l, sid))
+            changed += 1
+        if sid in candidates or (new_s, new_l) != legacy[sid]:
+            def fmt(k):
+                return ", ".join(f"{v[len(sid):]}:{c:.2f}" for v, c in info[k][2].items()) if info else ""
+            report.append([sid, str(cnt[sid]), decision,
+                           (candidates.get(sid) or [variant])[0], variant, row["dstrong"],
+                           legacy[sid][0] or "", new_s or "",
+                           (legacy[sid][1] or "")[:70].replace("\n", " ").replace("\t", " "),
+                           (new_l or "")[:70].replace("\n", " ").replace("\t", " "),
+                           fmt("G"), fmt("GF")])
+
+    TBESH_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    with TBESH_REPORT.open("w", encoding="utf-8") as fh:
+        fh.write("# ЗГЕНЕРОВАНО build_db.py (крок 4d, bug-057) — НЕ РЕДАГУВАТИ. Рішення людини — у tbesh_variant_overrides.tsv\n")
+        fh.write("# decision: OWN/SINGLE — власна група (змінено лише вибір рядка); AUTO — AGREE; OVERRIDE — куратор;\n")
+        fh.write("#           CURATE/NO_SIGNAL — сигнал не розсудив, лишився перший варіант (кандидат для куратора)\n")
+        fh.write("\t".join(["id", "occurrences", "decision", "variant_first", "variant_chosen", "row_dstrong",
+                            "legacy_short_def", "short_def", "legacy_long_def_head", "long_def_head",
+                            "cov_G", "cov_GF"]) + "\n")
+        for r in report:
+            fh.write("\t".join(x.replace("\t", " ").replace("\n", " ") for x in r) + "\n")
+
+    failures = []
+    for sid, field, ok, why in TBESH_GOLDEN:
+        val = cur.execute(f"SELECT {field} FROM strongs WHERE id = ?", (sid,)).fetchone()
+        val = (val[0] if val else None) or ""
+        if not ok(val):
+            failures.append(f"  {sid}.{field}: отримали {val[:60]!r} — очікування: {why}")
+    in_risk = sum(1 for _ in candidates)
+    print(f"  група ризику: {in_risk} id; рішення: {dict(stats)}; змінено рядків strongs: {changed}")
+    print(f"  звіт: {TBESH_REPORT.name} ({len(report)} рядків)")
+    if failures:
+        raise SystemExit("⛔ ЕТАЛОНИ TBESH (bug-057) НЕ ЗІЙШЛИСЬ:\n" + "\n".join(failures))
+
+# ─────────────────────────────────────────────
 # Step 5 — Translations (MyBible SQLite format)
 # ─────────────────────────────────────────────
 #
@@ -2654,6 +2821,7 @@ def main():
     verify_morphology_source_fields(cur)                # ADR-040 step 3: fail-fast on value-set/sentinel drift
     generate_morph_decode_hebrew_tsv(cur)                # ADR-040: regenerate git-versioned audit artifact
     _backfill_strongs_originals_from_macula(cur); con.commit()  # fills strongs.original from word.lemma (Macula)
+    resolve_tbesh_definitions(cur); con.commit()  # bug-057: варіант/рядок TBESH за глосами Macula (після Macula!)
     _apply_word_table_xlit_fallback(cur); con.commit()          # fills xlit_simple/short_def for ~507 sub-entry stubs not in TBESH
     import_translations(cur);            con.commit()
     import_footnotes(cur);          con.commit()
