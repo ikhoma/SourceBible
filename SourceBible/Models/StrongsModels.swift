@@ -50,9 +50,6 @@ struct RenderingSummary: Equatable {
     var coverage: Double { total > 0 ? Double(matched) / Double(total) : 0 }
 }
 
-/// Одне входження слова в перекладі з його передачею (ADR-041, stacked sheet).
-/// `segOrd` — № сегмента з Strong's у вірші (0-based), той самий, що пише build-скрипт;
-/// за ним підсвічується саме це слово, а не всі збіги номера у вірші.
 extension StrongsEntry {
     /// Транслітерація леми для шапок: спрощена (STEPBible), інакше академічна.
     /// Одне джерело для шапки Word-вкладки і підзаголовка аркуша передач.
@@ -61,8 +58,11 @@ extension StrongsEntry {
     }
 }
 
+/// Одне входження слова в перекладі з його передачею (ADR-041, stacked sheet).
+/// `segOrd` — № сегмента з Strong's у вірші (0-based), той самий, що пише build-скрипт;
+/// за ним підсвічується саме це слово, а не всі збіги номера у вірші.
 struct RenderingOccurrence: Identifiable {
-    let id: String            // "BOOK|ch|v|segOrd"
+    let id: String            // "BOOK|ch|v|segOrd|renderingId"
     let renderingId: Int
     let bookId: String
     let chapter: Int

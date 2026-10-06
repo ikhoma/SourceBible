@@ -346,3 +346,41 @@ class TestAsvTagDrift(unittest.TestCase):
         text = "and the name<S>8034</S> of his city<S>5892</S>."
         info = {1: ("noun", "name"), 2: ("noun", "city")}
         self.assertEqual(fix_verse(text, [(1, "H8034"), (2, "H5892")], info)[1], 0)
+
+
+class SwiftCanonicalSyncTests(unittest.TestCase):
+    """Ключ групи в застосунку = strongs_key у базі (code review 2026-10-06)."""
+
+    SRC = """enum StrongsMergeMap {
+    static let groups: [String: [String]] = [
+        "H835": ["H835", "H835a"],
+        "H835a": ["H835", "H835a"],
+    ]
+}"""
+
+    def test_parses_first_member(self):
+        from build_word_rendering import swift_canonical
+        self.assertEqual(swift_canonical(self.SRC), {"H835": "H835", "H835a": "H835"})
+
+    def test_in_sync(self):
+        from build_word_rendering import canonical_mismatches, swift_canonical
+        self.assertEqual(canonical_mismatches({"H835": "H835", "H835a": "H835"},
+                                              swift_canonical(self.SRC)), [])
+
+    def test_stale_swift_map_detected(self):
+        from build_word_rendering import canonical_mismatches, swift_canonical
+        # База вже зливає H2617/H2617a, а згенерований Swift — ще ні.
+        bad = canonical_mismatches({"H835": "H835", "H835a": "H835",
+                                    "H2617": "H2617", "H2617a": "H2617"},
+                                   swift_canonical(self.SRC))
+        self.assertEqual(bad, ["H2617a: застосунок → H2617a, база → H2617"])
+
+    def test_real_generated_file_in_sync_with_build_rule(self):
+        # Справжній згенерований файл узгоджений сам із собою: кожен член групи
+        # вказує на той самий перший id.
+        from build_word_rendering import SWIFT_MERGE_MAP, swift_canonical
+        with open(SWIFT_MERGE_MAP, encoding="utf-8") as f:
+            m = swift_canonical(f.read())
+        self.assertTrue(m)
+        for sid, first in m.items():
+            self.assertEqual(m.get(first), first, sid)

@@ -679,6 +679,15 @@ final class DatabaseService: @unchecked Sendable {
         return has
     }()
 
+    /// Таблиця `rendering_example` (ADR-041 ч.5) з'явилась пізніше за `word_rendering`.
+    private lazy var hasRenderingExampleTable: Bool = {
+        var exists = false
+        query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rendering_example'") { _ in
+            exists = true
+        }
+        return exists
+    }()
+
     /// Як переклад `translation` передає слово `strongsId` (ADR-041).
     ///
     /// - Parameters:
@@ -749,12 +758,7 @@ final class DatabaseService: @unchecked Sendable {
     /// перехресних посилань OpenBible, обраний build-скриптом (`rendering_example`).
     /// Ключ — `rendering.id`. Порожньо, якщо таблиці ще немає (стара база).
     func loadRenderingExamples(strongsId: String, translation: String) -> [Int: RenderingOccurrence] {
-        guard isAvailable, hasWordRenderingTable else { return [:] }
-        var hasTable = false
-        query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rendering_example'") { _ in
-            hasTable = true
-        }
-        guard hasTable else { return [:] }
+        guard isAvailable, hasWordRenderingTable, hasRenderingExampleTable else { return [:] }
         let key = StrongsMergeMap.canonical(strongsId)
         var out: [Int: RenderingOccurrence] = [:]
         let sql = """
@@ -776,7 +780,7 @@ final class DatabaseService: @unchecked Sendable {
             let vs  = Int(sqlite3_column_int(stmt, 3))
             let ord = Int(sqlite3_column_int(stmt, 4))
             out[rid] = RenderingOccurrence(
-                id: "\(bookId)|\(ch)|\(vs)|\(ord)", renderingId: rid,
+                id: "\(bookId)|\(ch)|\(vs)|\(ord)|\(rid)", renderingId: rid,
                 bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
                 rawText: optString(stmt, 5) ?? "",
                 highlight: optString(stmt, 6))
@@ -784,42 +788,8 @@ final class DatabaseService: @unchecked Sendable {
         return out
     }
 
-    /// Усі входження слова в перекладі, з передачею кожного (ADR-041, stacked sheet).
-    /// Канонічний порядок: книга → глава → вірш → сегмент. `verse_key` — це вірш
-    /// ПЕРЕКЛАДУ (build-скрипт іде по віршах перекладу), тож verse_org тут не потрібен.
-    func loadRenderingOccurrences(strongsId: String, translation: String) -> [RenderingOccurrence] {
-        guard isAvailable, hasWordRenderingTable else { return [] }
-        let key = StrongsMergeMap.canonical(strongsId)
-        var out: [RenderingOccurrence] = []
-        let sql = """
-            SELECT w.rendering_id, b.id,
-                   (w.verse_key / 1000) % 1000 AS ch,
-                   w.verse_key % 1000          AS vs,
-                   w.seg_ord, v.text, \(hasRenderingHighlight ? "w.hl" : "NULL")
-            FROM word_rendering w
-            JOIN book  b ON b.num = w.verse_key / 1000000
-            JOIN verse v ON v.translation = w.translation
-                        AND v.book_id     = b.id
-                        AND v.chapter     = (w.verse_key / 1000) % 1000
-                        AND v.verse       = w.verse_key % 1000
-            WHERE w.translation = ? AND w.strongs_key = ?
-            ORDER BY w.verse_key, w.seg_ord
-            """
-        query(sql, bindings: [translation, key]) { stmt in
-            let bookId = string(stmt, 1)
-            let ch  = Int(sqlite3_column_int(stmt, 2))
-            let vs  = Int(sqlite3_column_int(stmt, 3))
-            let ord = Int(sqlite3_column_int(stmt, 4))
-            out.append(RenderingOccurrence(
-                id: "\(bookId)|\(ch)|\(vs)|\(ord)",
-                renderingId: Int(sqlite3_column_int(stmt, 0)),
-                bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
-                rawText: optString(stmt, 5) ?? "",
-                highlight: optString(stmt, 6)
-            ))
-        }
-        return out
-    }
+    // Усі входження слова для аркуша — RenderingOccurrenceLoader (власне з'єднання,
+    // поза головним потоком; code review 2026-10-06).
 
     // MARK: - Book Usage Groups (per-book concordance for ConcordanceView)
 

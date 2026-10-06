@@ -699,6 +699,33 @@ def canonical_map(conn) -> dict[str, str]:
     return {sid: members[0] for sid, members in groups.items()}
 
 
+SWIFT_MERGE_MAP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                               "SourceBible", "Generated", "StrongsMergeMap.swift")
+
+
+def swift_canonical(swift_src: str) -> dict[str, str]:
+    """`groups` зі згенерованого StrongsMergeMap.swift → {id: перший член групи} —
+    рівно те, що повертає `StrongsMergeMap.canonical` у застосунку."""
+    out = {}
+    for sid, members in re.findall(r'"([HG]\d+[a-z]?)":\s*\[([^\]]*)\]', swift_src):
+        first = re.search(r'"([^"]+)"', members)
+        if first:
+            out[sid] = first.group(1)
+    return out
+
+
+def canonical_mismatches(canon: dict[str, str], swift: dict[str, str]) -> list[str]:
+    """Ключі, за якими застосунок шукав би інший strongs_key, ніж записав скрипт
+    (code review 2026-10-06: синхронність трималась лише на коментарі ⛔)."""
+    bad = []
+    for sid in sorted(set(canon) | set(swift)):
+        app = swift.get(sid, sid)
+        built = canon.get(sid, sid)
+        if app != built:
+            bad.append(f"{sid}: застосунок → {app}, база → {built}")
+    return bad
+
+
 def verse_key(book_num: int, ch: int, v: int) -> int:
     return book_num * 1_000_000 + ch * 1000 + v
 
@@ -1092,6 +1119,16 @@ def main() -> int:
         return rid_cache[k]
 
     failures = []
+    # Ключ групи в застосунку (Generated/StrongsMergeMap.swift) мусить збігатися
+    # з тим, що пишемо в strongs_key, — інакше слово мовчки без «Translated as».
+    with open(SWIFT_MERGE_MAP, encoding="utf-8") as f:
+        mism = canonical_mismatches(canon, swift_canonical(f.read()))
+    if mism:
+        failures.append("StrongsMergeMap.swift розійшовся з базою (перезапусти "
+                        "build_strongs_merge_map.py): " + "; ".join(mism[:5])
+                        + (f" … ще {len(mism) - 5}" if len(mism) > 5 else ""))
+    else:
+        print(f"  ✓ ключі груп Strong's збігаються зі StrongsMergeMap.swift ({len(canon)} id)")
     for tr in TRANSLATIONS:
         lang = LANG[tr]
         rows, stats, keep = collect(conn, tr, canon, Normalizer(lang))

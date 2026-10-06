@@ -54,14 +54,16 @@ struct WordRenderingsSheet: View {
 
     private struct BookSection: Identifiable {
         let id: String
-        let items: [RenderingOccurrence]
+        var items: [RenderingOccurrence]
     }
 
+    /// Лінійно: дописуємо в останню секцію на місці (раніше `items + [o]` копіював
+    /// масив на кожен рядок — O(n²) для καί у KJV, 8 624 входження).
     private var sections: [BookSection] {
         var out: [BookSection] = []
         for o in visible {
             if out.last?.id == o.bookId {
-                out[out.count - 1] = BookSection(id: o.bookId, items: out[out.count - 1].items + [o])
+                out[out.count - 1].items.append(o)
             } else {
                 out.append(BookSection(id: o.bookId, items: [o]))
             }
@@ -148,8 +150,8 @@ struct WordRenderingsSheet: View {
                 .task(id: state.id) {
                     summary = vm.renderingSummaryForSheet(strongsId: state.strongsId,
                                                           translation: state.translationId)
-                    occurrences = vm.renderingOccurrences(strongsId: state.strongsId,
-                                                          translation: state.translationId)
+                    occurrences = await vm.renderingOccurrences(strongsId: state.strongsId,
+                                                                translation: state.translationId)
                     loaded = true
                     // Повернення з читанки: до вірша, з якого пішли.
                     if let anchor = state.anchorOccurrenceId {

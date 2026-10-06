@@ -1384,8 +1384,10 @@ class ReaderViewModel: ObservableObject {
     }
 
     /// Усі входження слова в перекладі для stacked sheet (ADR-041 частина 3).
-    func renderingOccurrences(strongsId: String, translation: String) -> [RenderingOccurrence] {
-        db.loadRenderingOccurrences(strongsId: strongsId, translation: translation)
+    /// Поза головним потоком — до 8 624 рядків з текстом віршів (καί у KJV).
+    func renderingOccurrences(strongsId: String, translation: String) async -> [RenderingOccurrence] {
+        await RenderingOccurrenceLoader.shared.load(
+            strongsKey: StrongsMergeMap.canonical(strongsId), translation: translation)
     }
 
     /// Вірші-приклади для Usage (ADR-041 ч.5), ключ — rendering.id.
@@ -1498,8 +1500,6 @@ class ReaderViewModel: ObservableObject {
 
 // MARK: - Verse Navigation Source (ADR-024)
 
-/// Describes what triggered a `navigateToVerse(id:source:)` call.
-/// Controls how the cross-ref back stack is updated.
 /// Крок історії переходів у Study Mode (ADR-024). `renderingsSheet` — якщо перехід
 /// був з аркуша входжень (ADR-041 ч.4): «‹ Назад» тоді відкриває аркуш знову.
 struct CrossRefBackEntry: Equatable {
@@ -1542,6 +1542,8 @@ struct RenderingsSheetState: Identifiable, Equatable {
     }
 }
 
+/// Describes what triggered a `navigateToVerse(id:source:)` call.
+/// Controls how the cross-ref back stack is updated.
 enum VerseNavSource: Equatable {
     /// Fresh tap (verse row, search, bookmarks, notes, pendingVerseId).
     /// Clears the back stack — this is a new entry point.
