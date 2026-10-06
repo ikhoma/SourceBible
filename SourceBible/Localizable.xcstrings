@@ -3509,24 +3509,6 @@
         }
       }
     },
-    "morph.renderings.coverage": {
-      "comment": "ADR-041: shown under Translated-in only when some occurrences have no matched rendering (e.g. 237 of 245 in ASV) — numbers passed pre-formatted as strings (no noun, no plural)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ of %2$@"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ з %2$@"
-          }
-        }
-      }
-    },
     "morph.renderings.show_all": {
       "comment": "ADR-041: expands the Translated-in list to all renderings",
       "extractionState": "manual",

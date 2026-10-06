@@ -394,15 +394,9 @@ struct WordMeaningView: View {
                         .foregroundStyle(Color.appBlue)
                     }
                     Spacer(minLength: 8)
-                    // Чесно показуємо, що зіставлено не все (ASV 237 з 245) —
-                    // інакше сума стовпчиків мовчки розходилась би з лічильником Usage.
-                    if summary.matched < summary.total {
-                        Text(t.string(for: MorphKey.renderingsCoverage,
-                                      String(summary.matched), String(summary.total)))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
+                    // Підпис покриття «46 of 47» прибрано (рішення Івана 2026-10-05): без пояснення
+                    // він незрозумілий. Розбіжність — легітимні вживання без власного слова в перекладі
+                    // (Втор 14:4: другий שֶׂה розчинився в «goat»).
                 }
                 .padding(.top, 6)
             }
