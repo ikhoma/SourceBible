@@ -446,7 +446,8 @@ def test_spot_check_org_anchoring_matches_verse_org(db, core_db):
     for book_id, ch, vs in checks:
         row = core_db.execute(
             "SELECT org_book_id, org_chapter, org_verse FROM verse_org "
-            "WHERE translation='KJV' AND book_id=? AND chapter=? AND verse=?",
+            "WHERE translation='KJV' AND book_id=? AND chapter=? AND verse=? "
+            "AND source != 'superscription'",   # bug-058: якір = зміст, як OrgResolver
             (book_id, ch, vs),
         ).fetchone()
         assert row is not None, f"verse_org has no KJV row for {book_id} {ch}:{vs}"

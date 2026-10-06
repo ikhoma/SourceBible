@@ -179,9 +179,19 @@ def audit_translation(con, tr, macula, signed):
         "WHERE v.translation = ?", (tr,)
     ).fetchall()
 
+    # bug-058: вірш 1 псалма KJV/ASV/NASB = надпис + зміст (кілька рядків). Порядковий
+    # аудит «сусід кращий» тут хибить за визначенням: кожна половина покриває лише частину
+    # тегів. Обидві половини вже доведені в build_versification.py (O2 по кожній / структура
+    # модуля + еталони), тож аудит їх не судить — лише рахує.
+    with_heading = {(b, c, v) for b, c, v, *_r, src in rows if src == "superscription"}
+
     for b, c, v, text, ob, oc, ov, source in rows:
         ref = "%s %d:%d" % (b, c, v)
         stats["total"] += 1
+
+        if (b, c, v) in with_heading:
+            stats["надпис+зміст (bug-058, доведено в build)"] += 1
+            continue
 
         if (tr, b, c, v) in signed:
             stats["підписано в overrides.tsv"] += 1
@@ -314,6 +324,7 @@ def main():
         else:
             print("    O2 неможливий: у цьому перекладі немає тегів Стронга")
         for k in ("без оракула (мало рідкісних тегів)", "no-original (свідомо)",
+                  "надпис+зміст (bug-058, доведено в build)",
                   "підписано в overrides.tsv"):
             if st[k]:
                 print("    %-32s %6d" % (k, st[k]))

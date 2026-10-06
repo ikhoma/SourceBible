@@ -53,6 +53,68 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VRS_DIR = os.path.join(REPO, "data", "versification")
 OVERRIDES = os.path.join(VRS_DIR, "overrides.tsv")
 REPORT = os.path.join(REPO, "data", "versification_build.tsv")
+ENG_VRS = os.path.join(VRS_DIR, "eng.vrs.txt")
+
+# ── bug-058 / feat-two-originals: НАДПИСАННЯ ПСАЛМІВ ───────────────────────────
+# Англійська схема (eng.vrs) рахує надпис віршем 0: `PSA 42:0-11 = PSA 42:1-12`.
+# Наші модулі KJV/ASV/NASB вірша 0 не мають — вливають надпис у вірш 1 (KJV — у текст
+# із тегами Strong's, ASV — у `<n>…</n>`, NASB — у `<t>(…)`; заміряно 2026-10-06 на всіх
+# 63 псалмах). Тож вірш 1 перекладу = надпис оригіналу (1 або 2 вірші) + зміст.
+# До цього фікса надпис не мав жодного рядка verse_org: «Оригінал» його не показував,
+# тап по «sons» (Пс 42:1 KJV) давав неповну картку.
+# Рядки надпису пишуться з source='superscription' ПЕРЕД змістовим рядком. Якір для
+# паралелей/крос-рефів (orgRef у Swift, verify_parallel_alignment) їх ПРОПУСКАЄ —
+# рішення Івана 2026-10-06: якір = змістовий вірш, інакше паралель KJV Пс 42:1 показала
+# б RST 41:1 (сам надпис). RST/UBIO мають надпис окремим віршем — їх це не стосується.
+SUPERSCRIPTION_TRANSLATIONS = {"KJV", "ASV", "NASB"}
+
+# Еталони verse_org (переклад, книга, глава, вірш) → очікувані org-таргети по порядку.
+# Негативні ловлять протилежну помилку (надпис там, де його немає / де він окремим віршем).
+SUPERSCRIPTION_GOLDEN = [
+    ("KJV",  "PSA", 42, 1, [(42, 1), (42, 2)]),          # bug-058: «sons of Korah»
+    ("KJV",  "PSA", 60, 1, [(60, 1), (60, 2), (60, 3)]), # надпис на ДВА вірші (план §11)
+    ("ASV",  "PSA", 3,  1, [(3, 1), (3, 2)]),            # надпис у <n>…</n>
+    ("NASB", "PSA", 51, 1, [(51, 1), (51, 2), (51, 3)]), # надпис у <t>(…), два вірші
+    ("KJV",  "PSA", 42, 2, [(42, 3)]),                   # зміст далі — без змін
+    ("KJV",  "PSA", 1,  1, [(1, 1)]),                    # псалом без надпису
+    ("RST",  "PSA", 41, 1, [(42, 1)]),                   # RST: надпис — окремий вірш
+]
+SUPERSCRIPTION_EXPECTED_ROWS = 67   # 63 псалми, у 4 надпис на два вірші (eng.vrs)
+
+
+def superscription_verdict(raw_v1, t_str, heading_strs):
+    """Чи справді вірш 1 перекладу містить надпис оригіналу. Чиста функція (тести).
+
+    -> (прийнято, verified, overlap, як)
+       O2         — ≥2 спільних Strong's із віршем-надписом (KJV: 67/67);
+       structure  — тегів на надписі немає, але вірш починається з `<n>` (ASV) або
+                    `<t>(` (NASB): форма модуля доводить надпис, Strong's — ні (verified=0);
+       not-in-v1  — нічого з цього: рядок НЕ пишемо (краще неповно, ніж чуже).
+    """
+    head = re.sub(r"^\s*(?:<pb/>\s*)*", "", raw_v1 or "")
+    ol = len(t_str & heading_strs) if (t_str and heading_strs) else 0
+    if ol >= 2:
+        return True, 1, ol, "O2"
+    if head.startswith("<n>") or head.startswith("<t>("):
+        return True, 0, ol, "structure"
+    return False, 0, ol, "not-in-v1"
+
+
+def verify_superscriptions(cur) -> List[str]:
+    """Еталони + повнота: кожен надпис eng у KJV/ASV/NASB має рядок. -> список провалів."""
+    fails = []
+    for tr, b, c, v, want in SUPERSCRIPTION_GOLDEN:
+        got = [(oc, ov) for oc, ov in cur.execute(
+            "SELECT org_chapter, org_verse FROM verse_org WHERE translation=? AND book_id=? "
+            "AND chapter=? AND verse=? ORDER BY org_chapter, org_verse", (tr, b, c, v))]
+        if got != want:
+            fails.append("    %s %s %d:%d: очікували %s, отримали %s" % (tr, b, c, v, want, got))
+    for tr in sorted(SUPERSCRIPTION_TRANSLATIONS):
+        n = cur.execute("SELECT COUNT(*) FROM verse_org WHERE translation=? AND source='superscription'",
+                        (tr,)).fetchone()[0]
+        if n and n != SUPERSCRIPTION_EXPECTED_ROWS:
+            fails.append("    %s: рядків superscription %d, очікували %d" % (tr, n, SUPERSCRIPTION_EXPECTED_ROWS))
+    return fails
 
 # translation -> список СХЕМ-КАНДИДАТІВ у порядку переваги.
 # RST має кілька, бо «RST=rso» спростовано вимірюванням (ADR-028 R1).
@@ -234,6 +296,9 @@ def main():
 
     org_map, org_maxv, _, _ = schemes["org.json"]
 
+    import vrs  # scripts/vrs.py — .vrs зберігає надписи (вірш 0), які JSON губить (PSA 60:0 → 60:1)
+    eng_vrs = vrs.parse_vrs(ENG_VRS, "eng")
+
     def org_expected(b, c):
         exp = org_maxv.get(b)
         return int(exp[c - 1]) if exp and c <= len(exp) else None
@@ -313,6 +378,7 @@ def main():
         # весь текст перекладу: (book,ch,vs) -> frozenset Strong's, + maxv
         cur.execute("SELECT book_id, chapter, verse, text FROM verse WHERE translation=?", (tr,))
         tr_strongs = {}
+        tr_raw_v1 = {}              # (book,ch) -> сирий текст вірша 1 (перевірка надпису)
         tr_maxv = defaultdict(int)
         tagged = 0
         for b, c, v, txt in cur.fetchall():
@@ -320,6 +386,8 @@ def main():
                 continue
             s = extract_translation_strongs(txt, testament_prefix(b))
             tr_strongs[(b, c, v)] = s
+            if v == 1:
+                tr_raw_v1[(b, c)] = txt
             if s:
                 tagged += 1
             if v > tr_maxv[(b, c)]:
@@ -359,6 +427,14 @@ def main():
                         best_score, best_fn = score, fn
                 chapter_scheme[(b, c)] = best_fn
 
+        # bug-058: глави, де вірш 1 перекладу накриває надпис оригіналу (eng, без вірша 0)
+        heading_plan = {}
+        if tr in SUPERSCRIPTION_TRANSLATIONS:
+            for (hb, hc), targets in eng_vrs.superscriptions.items():
+                if chapter_scheme.get((hb, hc)) == "eng.json" and (hb, hc, 0) not in tr_strongs \
+                        and (hb, hc, 1) in tr_strongs:
+                    heading_plan[(hb, hc)] = targets
+
         s = defaultdict(int)
         # монотонність рахуємо per-chapter
         per_chapter_assign = defaultdict(list)   # (book,ch) -> [(tr_vs, org_ch, org_vs)]
@@ -392,6 +468,21 @@ def main():
                               1 if ol >= 2 else 0, ol, t_str, macula,
                               note="override overlap=%d" % ol)
                 continue
+
+            # bug-058: рядки надпису — ПЕРЕД змістовим (порядок = порядок читання)
+            if v == 1 and (b, c) in heading_plan:
+                for (hoc, hov) in heading_plan[(b, c)]:
+                    m_h = macula.get((b, hoc, hov), frozenset())
+                    ok, hver, hol, how = superscription_verdict(tr_raw_v1.get((b, c)), t_str, m_h)
+                    if ok:
+                        _emit(cur, report_rows, s, per_chapter_assign,
+                              tr, b, c, v, (b, hoc, hov), "eng.json", "superscription",
+                              hver, hol, t_str, macula, note="надпис у v1 (%s)" % how)
+                    else:
+                        s["superscription_rejected"] += 1
+                        report_rows.append(("CHECK", tr, "%s %d:%d" % (b, c, v),
+                                            "%s %d:%d" % (b, hoc, hov),
+                                            "надпис eng.vrs не знайдено у v1 — рядок НЕ записано"))
 
             fn = chapter_scheme.get((b, c))
 
@@ -512,6 +603,8 @@ def main():
         print("    ubs-mapped              %6d" % s["ubs_total"])
         print("    empirical               %6d" % s["empirical_total"])
         print("    override                %6d" % s["override_total"])
+        print("    superscription (bug-058)%6d   відкинуто: %d"
+              % (s["superscription_total"], s["superscription_rejected"]))
         print("    verified=0 (недоведені) %6d" % s["unverified"])
         print("    weak (лише часті S)     %6d" % s["weak_common_only"])
         print("    потребують override     %6d" % s["needs_override"])
@@ -527,6 +620,8 @@ def main():
 
     con.commit()
 
+    sup_fails = verify_superscriptions(cur)
+
     with open(REPORT, "w", encoding="utf-8") as f:
         f.write("type\ttranslation\tref\torg_or_detail\tnote\n")
         for r in report_rows:
@@ -536,6 +631,12 @@ def main():
     total_conf = sum(g["conflict"] for g in grand.values())
     print("  Звіт: %s  (%d рядків)" % (REPORT, len(report_rows)))
     print("  verse_org записано у БД поряд зі старим verse_map (нічого не видалено).")
+    if sup_fails:
+        print("\n  ✗ ЕТАЛОНИ НАДПИСІВ (bug-058) НЕ ЗІЙШЛИСЬ:\n" + "\n".join(sup_fails))
+        con.close()
+        sys.exit(1)
+    print("  ✓ надписи (bug-058): еталони %d, рядків на переклад %d"
+          % (len(SUPERSCRIPTION_GOLDEN), SUPERSCRIPTION_EXPECTED_ROWS))
     if total_conf:
         print("\n  ✗ CONFLICT: %d рядків (обидва боки ≥2 тегів, overlap=0)." % total_conf)
         print("    Це або хибний мапінг довідника, або переверсифікований модуль.")

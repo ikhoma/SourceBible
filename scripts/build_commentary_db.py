@@ -135,9 +135,12 @@ class OrgResolver:
     def __init__(self, core_db_path):
         con = sqlite3.connect(f"file:{core_db_path}?mode=ro", uri=True)
         try:
+            # bug-058: KJV вірш 1 псалма має ДВА+ рядки (надпис source='superscription' +
+            # зміст). Якір коментаря — ЗМІСТ, як в orgRef (Swift): рядки надпису
+            # відкидаються, інакше dict нижче взяв би випадковий (останній) рядок.
             rows = con.execute(
                 "SELECT book_id, chapter, verse, org_book_id, org_chapter, org_verse "
-                "FROM verse_org WHERE translation='KJV'"
+                "FROM verse_org WHERE translation='KJV' AND source != 'superscription'"
             ).fetchall()
         finally:
             con.close()

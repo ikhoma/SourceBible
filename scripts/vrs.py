@@ -50,6 +50,13 @@ class VrsScheme:
         self.unequal_ranges: list[tuple[str, str]] = []
         # мапінги між РІЗНИМИ книгами — поза межами цієї моделі
         self.cross_book: list[tuple[str, str]] = []
+        # bug-058: (book, ch) -> [(org_ch, org_vs), …] — куди йде вірш 0 ПЕРЕКЛАДУ
+        # (надписання псалма) там, де в оригіналі воно має справжній номер:
+        # eng `PSA 42:0-11 = PSA 42:1-12` дає (PSA, 42) -> [(42, 1)];
+        # `PSA 60:0 = PSA 60:1` + `PSA 60:0 = PSA 60:2` -> [(60, 1), (60, 2)].
+        # У mappings вірш 0 не потрапляє (нормалізація нижче) — його долю
+        # вирішує конвеєр: наші модулі KJV/ASV/NASB вливають надпис у вірш 1.
+        self.superscriptions: dict[tuple[str, int], list[tuple[int, int]]] = defaultdict(list)
 
     @property
     def merged_sources(self) -> list[tuple[str, int, int]]:
@@ -109,6 +116,12 @@ def parse_vrs(path: str, name: str | None = None) -> VrsScheme:
                     # verify_versification_completeness.py вважав би вічно
                     # "втраченим". Заміряно 2026-08-27: без фільтра PSA 9:22 і
                     # PSA 113:9 (RST/UBIO) — фантомні 2-таргетні злиття.
+                    if sv == 0 and dv != 0:
+                        # надпис перекладу → реальний вірш оригіналу (eng): не мапінг,
+                        # а окремий факт — див. self.superscriptions.
+                        if (dc, dv) not in scheme.superscriptions[(sb, sc)]:
+                            scheme.superscriptions[(sb, sc)].append((dc, dv))
+                        continue
                     if sv == 0 or dv == 0:
                         continue
                     tgt = (dc, dv)
@@ -128,4 +141,5 @@ def parse_vrs(path: str, name: str | None = None) -> VrsScheme:
                     counts[idx] = int(vs)
                 scheme.max_verses[book] = counts
     scheme.mappings = dict(scheme.mappings)
+    scheme.superscriptions = dict(scheme.superscriptions)
     return scheme

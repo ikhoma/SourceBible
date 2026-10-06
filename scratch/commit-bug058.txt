@@ -1,0 +1,21 @@
+fix(bug-058): psalm superscriptions get their own verse_org rows (KJV/ASV/NASB)
+
+KJV/ASV/NASB fold the psalm title into verse 1 (the eng scheme counts it as
+verse 0), but verse_org tied verse 1 only to the text half: 63 titles had no
+row, so tapping «sons» in KJV Ps 42:1 gave an incomplete word card and the
+Original pill skipped the title. build_versification.py now writes
+source='superscription' rows BEFORE the text row (targets from eng.vrs via
+vrs.superscriptions; JSON loses the second title verse of Ps 60). Each row is
+verified: KJV by Strong's (67/67), ASV/NASB by module form (<n> / <t>(); no
+tags on the title). Goldens + completeness (67 per translation) in the script.
+verse_org 155 621 -> 155 822. orgRef / verify_parallel_alignment /
+build_commentary_db keep the TEXT verse as the cross-translation anchor;
+4 «keep» overrides (KJV Ps 18/59/60/88) removed. ADR-028 amended.
+
+Decision: psalm title = separate verse_org row before the text row, verified per row (bug-058)
+Decision: cross-translation anchor stays the text verse; title rows sort last
+Decision: remaining two-originals work (19 .vrs merges) is part 2 of feat-two-originals
+Refs: bug-058, ADR-028, feat-two-originals
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_013zFyofHq5n3CHUJxoEXhok

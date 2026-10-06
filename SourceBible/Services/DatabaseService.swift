@@ -950,7 +950,8 @@ final class DatabaseService: @unchecked Sendable {
     ///
     /// ## Merged verses (one translation verse ⇒ several originals)
     ///
-    /// Rows are ordered by `(org_chapter, org_verse)` and the FIRST non-NULL is taken.
+    /// Rows are ordered by `(org_chapter, org_verse)` (title rows last, see below) and the
+    /// FIRST non-NULL is taken.
     /// That is a DECISION, not an accident of the data — record it before changing it.
     ///
     /// This hop exists to answer "which verse in ANOTHER translation is this one?"
@@ -971,6 +972,15 @@ final class DatabaseService: @unchecked Sendable {
     /// left half of every merge (`mappedVerses` is an object, and the `.vrs` original
     /// expresses one⇒two by repeating the key). 17 verses are affected. The claim is
     /// removed because a fix to the data must NOT quietly invalidate a code comment.
+    ///
+    /// ## Psalm superscriptions (bug-058) — rows with `source = 'superscription'` sort LAST
+    ///
+    /// KJV/ASV/NASB fold the psalm title into verse 1, so e.g. KJV PSA 42:1 maps to
+    /// Heb 42:1 (title, `superscription`) AND Heb 42:2 (text). The anchor stays the TEXT
+    /// verse (Ivan's decision 2026-10-06): anchoring on the title would make the parallel of
+    /// KJV Ps 42:1 show RST 41:1 — the title alone — instead of the verse being read. Hence
+    /// `ORDER BY (source = 'superscription')` first. The Original pill still shows the title:
+    /// `loadOriginalWords` concatenates every row.
     private func orgRef(bookId: String, chapter: Int, verse: Int, translation: String)
         -> (sawRows: Bool, org: (bookId: String, chapter: Int, verse: Int)?) {
         var sawRows = false
@@ -978,7 +988,7 @@ final class DatabaseService: @unchecked Sendable {
         let sql = """
             SELECT org_book_id, org_chapter, org_verse FROM verse_org
             WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
-            ORDER BY org_chapter, org_verse
+            ORDER BY (source = 'superscription'), org_chapter, org_verse
             """
         query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
             sawRows = true
