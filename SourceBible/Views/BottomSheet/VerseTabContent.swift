@@ -625,25 +625,19 @@ struct CommentaryDetailView: View {
     /// "era · style" caption animate away on scroll.
     private var commentaryNavBar: some View {
         let progress    = headerCollapseProgress
-        let avatarSize  = 52 * (1 - progress)
+        // iOS 26: портрет = діаметру скляної кнопки закриття (32 + падінги .glass = 48 pt),
+        // інакше на 4 pt більший виглядав як баг (Іван, 2026-10-06). iOS 18 — як було.
+        let avatarBase: CGFloat
+        if #available(iOS 26, *) { avatarBase = 48 } else { avatarBase = 52 }
+        let avatarSize  = avatarBase * (1 - progress)
         let vPadding    = 14 - (14 - 8) * progress
         let captionH    = 15 * (1 - progress)
 
         return HStack(spacing: 14) {
-            Button {
+            CommentaryCloseButton {
                 Haptics.selectionChanged()
                 dismiss()
-            } label: {
-                ZStack {
-                    Circle().fill(Color(.systemGray5))
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color(.systemGray))
-                }
-                .frame(width: 30, height: 30)
             }
-            .accessibilityLabel(Text("action.close"))
-            .frame(width: 44, height: 44)
 
             Image(theologian.imageName)
                 .resizable()
@@ -700,6 +694,42 @@ struct CommentaryDetailView: View {
                 loadedWork = work
                 return
             }
+        }
+    }
+}
+
+// MARK: - Commentary close button
+
+/// Кнопка закриття у власному хедері коментаря (2026-10-06, консистентність з
+/// аркушем Usage і навігацією по книгах). Хедер — не системний тулбар, тому
+/// `SheetCloseButton` (Button(role: .close) у `.cancellationAction`) тут не дає
+/// скляного кола; на iOS 26 той самий вигляд дає `.glass` + `.circle`.
+/// iOS 18 — колишнє сіре коло (без змін).
+private struct CommentaryCloseButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26, *) {
+            Button(action: action) {
+                Label("action.close", systemImage: "xmark")
+                    .labelStyle(.iconOnly)
+                    .imageScale(.large)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+        } else {
+            Button(action: action) {
+                ZStack {
+                    Circle().fill(Color(.systemGray5))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color(.systemGray))
+                }
+                .frame(width: 30, height: 30)
+            }
+            .accessibilityLabel(Text("action.close"))
+            .frame(width: 44, height: 44)
         }
     }
 }

@@ -92,39 +92,48 @@ struct WordRenderingsSheet: View {
             ScrollViewReader { proxy in
                 // ScrollView + LazyVStack, а не List — та сама анатомія, що в
                 // результатах Пошуку (resultsScroll): поля 20, рядок ±10, Divider.
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        chips
-                            .padding(.top, 4)
-                            .padding(.bottom, 12)
-                        if !loaded {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 20)
-                        } else {
-                            ForEach(sections) { section in
-                                Section {
-                                    ForEach(section.items) { occ in
-                                        OccurrenceRow(occurrence: occ,
-                                                      reference: "\(bookName(occ.bookId)) \(occ.chapter):\(occ.verse)")
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.vertical, 10)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture { open(occ) }
-                                            .accessibilityAddTraits(.isButton)
-                                            .id(occ.id)
-                                        Divider()
+                // Divider НАД ScrollView, а не .safeAreaInset: інакше ScrollView торкається
+                // верхньої safe area й на iOS 26 прокручується під прозорий тулбар (текст
+                // просвічує під заголовком через soft edge effect). Так вміст обрізається
+                // по дівайдеру, як у Study mode і коментарях (Іван, 2026-10-06).
+                VStack(spacing: 0) {
+                    Divider()
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            chips
+                                .padding(.top, 12)
+                                .padding(.bottom, 12)
+                            if !loaded {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
+                            } else {
+                                // Заголовки книг з кількістю лишаються, але НЕ липкі (Іван, 2026-10-06):
+                                // прокручуються разом зі списком — кількість достатньо побачити раз,
+                                // а книга й так видна в посиланні кожного рядка.
+                                ForEach(sections) { section in
+                                    Section {
+                                        ForEach(section.items) { occ in
+                                            OccurrenceRow(occurrence: occ,
+                                                          reference: "\(bookName(occ.bookId)) \(occ.chapter):\(occ.verse)")
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.vertical, 10)
+                                                .contentShape(Rectangle())
+                                                .onTapGesture { open(occ) }
+                                                .accessibilityAddTraits(.isButton)
+                                                .id(occ.id)
+                                            Divider()
+                                        }
+                                    } header: {
+                                        bookHeader(section)
                                     }
-                                } header: {
-                                    bookHeader(section)
                                 }
                             }
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
                 }
-                .pinnedHeaderEdge()
                 .navigationTitle(Text(verbatim: state.lemma))
                 .transliterationSubtitle(state.transliteration)
                 .navigationBarTitleDisplayMode(.inline)
@@ -160,8 +169,8 @@ struct WordRenderingsSheet: View {
         }
     }
 
-    /// Липкий заголовок книги: назва + кількість. Непрозорий фон аркуша, щоб
-    /// рядки не просвічували під ним під час прокрутки.
+    /// Заголовок книги: назва + кількість. Прокручується зі списком (не липкий),
+    /// тож власного фону не потребує.
     private func bookHeader(_ section: BookSection) -> some View {
         HStack {
             Text(verbatim: bookName(section.id))
@@ -172,7 +181,6 @@ struct WordRenderingsSheet: View {
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .padding(.vertical, 8)
-        .background(colorTheme.sheetBackground)
     }
 
     // MARK: Chips
@@ -368,22 +376,6 @@ private extension View {
     func transliterationSubtitle(_ xlit: String) -> some View {
         if #available(iOS 26.0, *), !xlit.isEmpty {
             navigationSubtitle(Text(verbatim: xlit))
-        } else {
-            self
-        }
-    }
-}
-
-// MARK: - Pinned header edge
-
-private extension View {
-    /// iOS 26: тулбар аркуша прозорий, і рядки видно в смузі між ним та липким
-    /// заголовком книги. Apple радить `.hard` для прокрутки з закріпленими
-    /// заголовками — край під тулбаром стає суцільним. iOS 18: бар і так непрозорий.
-    @ViewBuilder
-    func pinnedHeaderEdge() -> some View {
-        if #available(iOS 26.0, *) {
-            scrollEdgeEffectStyle(.hard, for: .top)
         } else {
             self
         }
