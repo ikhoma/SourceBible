@@ -1057,14 +1057,14 @@ VERSE_GOLDEN = [
     ("KJV", "H1121", "GEN 27:18", "son"),                 # «my son» — займенник геть
     ("KJV", "G1438", "LUK 9:23",  "himself"),             # зворотний займенник — показуємо
     ("ASV", "G5207", "LUK 6:22",  "Son"),                 # «'s sake» — не шматок υἱός
-    ("ASV", "G3107", "ROM 4:7",   "blessed"),             # зсув тегу ASV (fix_asv_tag_drift.py)
+    ("ASV", "G3107", "ROM 4:7",   "blessed"),             # зсув тегу в ASV+ (ADR-042 прибрав джерело)
 ]
 
 
 GOLDEN = [
     # (translation, strongs_key, expected_total, expected_top_rendering)
     ("KJV", "H2617", 245, "mercy"),
-    ("ASV", "H2617", 239, "lovingkindness"),   # 237 → 239: fix_asv_tag_drift повернув 2 зсунуті теги
+    ("ASV", "H2617", 244, "lovingkindness"),   # 239 → 244: ADR-042, ASV з OpenBible (Macula: 245; KJV 245)
 ]
 
 

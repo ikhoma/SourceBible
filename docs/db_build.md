@@ -24,7 +24,9 @@
 | `TBESH*.txt` | [STEPBible-Data/Lexicons](https://github.com/STEPBible/STEPBible-Data/tree/master/Lexicons) | CC BY 4.0 |
 | `TBESG*.txt` | [STEPBible-Data/Lexicons](https://github.com/STEPBible/STEPBible-Data/tree/master/Lexicons) | CC BY 4.0 |
 | `KJV+.zip` | MyBible модуль | Public domain |
-| `ASV+.zip` | MyBible модуль | Public domain |
+| `obi-asv/` (`usx-english-aligned/`, `usx-original-aligned/`) | [openbibleinfo/American-Standard-Version-Bible](https://github.com/openbibleinfo/American-Standard-Version-Bible) @ **`b6580247af63991b406f02f612f73deca85235ff`** — див. розділ «ASV — OpenBible» нижче | Текст ASV — Public domain; вирівнювання — **CC BY 4.0** (MACULA, SBLGNT, SBLGNT-TEI, OSHB, Westminster Hebrew Syntax, Cherith; атрибуція + позначка змін — Menu → About). LLM-судження вирівнювання — CC0 |
+| `ASV.SQLite3`, `ASV.commentaries.SQLite3`, `ASV.alignment.tsv` | **Генерує** `scripts/build_asv_module.py` з `obi-asv/` (ADR-042) — руками не класти | як вище |
+| ~~`ASV+.zip`~~ | MyBible модуль (Cross Word Project) — **замінено ADR-042**; лишається лише для відкату | Public domain |
 | `NASB+.zip` | MyBible модуль | Licensed — не розповсюджувати |
 | `RST+.zip` | MyBible модуль | Public domain |
 | `UBIO'88.zip` | MyBible модуль (Огієнко 1962/1988) | **CC BY-SA 3.0** — прямий дозвіл УБТ на видання Огієнка **до 1991**, включно з ювілейним 1988 (ADR-029, блокер знято 2026-07-31). Дозволяє похідні й **комерційне** використання за атрибуції (Menu → About) + SA на похідні від самого тексту. Межа «до 1991»: пізніші редакції УБТ НЕ покриті |
@@ -36,6 +38,41 @@ Cross-references завантажуються автоматично з OpenBibl
 **`data/versification/` трекається в git** (виняток у `.gitignore`, решта `data/` — ні):
 `.vrs` малі й MIT, а `overrides.tsv` — курований build-input, який не можна втратити.
 Використовується кроком `scripts/build_versification.py` (verse_org, ADR-028).
+
+## ASV — OpenBible (ADR-042)
+
+ASV більше не береться з MyBible `ASV+`: `scripts/build_asv_module.py` (перший крок `rebuild.sh`,
+ДО `build_db.py`) збирає власний MyBible-модуль із **закріпленого коміту** OpenBible.
+
+| | |
+|---|---|
+| Репо | `openbibleinfo/American-Standard-Version-Bible` (текст ASV тут з 2016; вирівнювання додано 2026-09-18/19) |
+| Коміт | `b6580247af63991b406f02f612f73deca85235ff` (2026-09-19, «Add original-language tagged texts») |
+| Що потрібно | лише `usx-english-aligned/` + `usx-original-aligned/` (134 файли, 288 МБ) → `data/obi-asv/` |
+| Контрольні суми | `data/asv/obi-asv.SHA256SUMS` (трекається); sha256 самого маніфесту `9d8540a800769878d8de56232fc96da7ef85ee6531c796fe0da5183d5793b95f` зашитий у конвертер |
+| Куровані входи (трекаються) | `data/asv/name_strongs.tsv` — 1 705 токенів без Strong's у джерелі (складені імена: Бет-Ель, Вифлеєм…), номер з того самого токена Macula; `data/strongs/canonical_greek.tsv` — 57 грецьких номерів форм → номер леми Macula (G4675→G4771, G2076→G1510, G5124→G3778…), спільна таблиця, поки застосовується лише до ASV |
+| Виходи (gitignored) | `data/ASV.SQLite3`, `data/ASV.commentaries.SQLite3` (10 116 виносок), `data/ASV.alignment.tsv` (повне вирівнювання, задаток для `verse_markup`, фаза 2) |
+
+Конвертер звіряє кожен файл входу з маніфестом і падає на розбіжності; еталони (Бут 22:8,
+Мт 26:26, Пс 3:1 …) і гейти кількості (31 086 віршів, 10 116 виносок, ≥ 400 000 тегів, 116
+надписів `<n>`, 0 «’», 0 NBSP у віршах / 384 у виносках) зашиті в код. Після `build_db.py`
+`scripts/verify_asv_alignment.py` перевіряє те, що потребує Macula: головний токен = голова
+слота ≥ 99% (заміряно 99,98%), межі слів = слоти ≥ 99% (99,97%), незіставлені ≤ 3% (1,81%).
+
+**Пастки, які зникли разом з `ASV+`** (не відроджувати латки): Йов 21:5 «480» замість «Mark»,
+1 Хр 5:5 «400» замість «Micah» (числа в тексті → у словнику автодоповнення), `[[Selah` у 56
+віршах, 247 осучаснених місць (Мт 18:15 «your brother»), пропущені слова (Ів 20:25), немає
+Пісн 1:1, перестановки тегів (Бут 22:8 «will<S>1121</S>»), дрейф тегу на службове слово —
+його лікував `fix_asv_tag_drift.py` (видалено разом із `measure_asv_tag_drift.py`).
+
+**Нові особливості, які варто знати:**
+- Межі віршів як у друці 1901: 1 Хр 27:30 закінчується «…Jaziz the Hagrite.», Єр 39:1
+  починається «(in the ninth…». `verse_org` лишається identity — зсув усередині вірша, не вірша.
+  8 слів 1 Хр 27:30 вирівнювання позначило `added` (не перетинає межу вірша) — без тега.
+- Виноска в USX стоїть ПЕРЕД словом; якір `<f>[n]</f>` ставиться ПІСЛЯ одиниці цього слова з
+  тегами (як у RST). Виноска в надписі псалма — після `</n>`.
+- Тексти виносок пишуться з `<i>…</i>`; тултіп поки знімає теги (`strippingFootnoteHTML`).
+- Відкат: у `TRANSLATIONS` повернути `DATA_DIR / "ASV+.zip"` і перезібрати.
 
 ## Збірка
 
@@ -436,12 +473,14 @@ _backfill_strongs_originals ← strongs.original з word.lemma (Macula)
 _apply_word_table_xlit_fallback ← 4th fallback: xlit_simple + short_def для ~507 sub-entry
                                stubs (H871a, H1886a, H2050b…) що не є в TBESH/openscriptures;
                                бере найпоширенішу word.xlit / word.gloss для кожного strongs_id
-import_translations
-import_footnotes
+import_translations         ← ASV = data/ASV.SQLite3 (згенерований build_asv_module.py, ADR-042)
+import_footnotes            ← ASV.commentaries.SQLite3 — «Strategy 2», сусідній файл
 import_cross_references
 finalize
 
-# ── Окремі кроки після build_db.py — усі в rebuild.sh ──
+# ── Окремі кроки — усі в rebuild.sh ──
+build_asv_module.py     ← ДО build_db.py: OpenBible → data/ASV.* (ADR-042); еталони + гейти
+verify_asv_alignment.py ← після build_db.py: ASV ↔ Macula (голова слота, межі, незіставлені)
 build_versification.py  ← verse_org (ADR-028); падає на CONFLICT, set -e аборти до cp
 idx_verse_org_rev       ← індекс зворотного хопу; створює rebuild.sh, НЕ скрипт
 import_commentaries.py  ← commentary, ~36 071 вірші

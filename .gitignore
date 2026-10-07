@@ -37,6 +37,15 @@ scripts/.cache/
 !data/lexicon/
 !data/lexicon/**
 
+# EXCEPTION: ADR-042 curated inputs of the ASV converter — small, derived once and reviewable:
+# obi-asv.SHA256SUMS pins the OpenBible input, name_strongs.tsv fills Strong's the source lacks,
+# strongs/canonical_greek.tsv maps Greek form numbers to Macula lemma numbers (shared table).
+# The OpenBible data itself (data/obi-asv/, ~290 MB) stays ignored — see docs/BUILD.md.
+!data/asv/
+!data/asv/**
+!data/strongs/
+!data/strongs/**
+
 # EXCEPTION: Hebrew morph-decode audit artifact (ADR-040) — one row per unique
 # (morph, lang) pair actually seen in the corpus (892 rows) with its decoded
 # fields, generated from the Macula TSV for auditability/regression-diffing.

@@ -27,8 +27,17 @@ PY
 python3 -c "import pymorphy3" 2>/dev/null || {
   echo "\n✗ pymorphy3 не встановлено: python3 -m pip install --user --break-system-packages -r requirements-build.txt\n"; exit 1; }
 
+echo "\n▸ Building ASV module from OpenBible ASV Interlinear (ADR-042)..."
+# data/obi-asv (закріплений коміт, маніфест data/asv/obi-asv.SHA256SUMS) → data/ASV.SQLite3 +
+# ASV.commentaries.SQLite3 + ASV.alignment.tsv. Еталони (Бут 22:8, Мт 26:26 …) і гейти кількості
+# зашиті в скрипт; провал = ненульовий код, `set -e` спиняє білд ДО build_db.py.
+python3 scripts/build_asv_module.py
+
 echo "\n▸ Building database..."
 python3 scripts/build_db.py
+
+echo "\n▸ Verifying ASV ↔ Macula (ADR-042: head token = slot head, word bounds, unmatched)..."
+python3 scripts/verify_asv_alignment.py sourcebible.db
 
 echo "\n▸ Building verse_org (versification: Original tab + cross-references, ADR-028)..."
 # Curated + O2-verified mapping of each translation verse → Macula (Hebrew/Greek).
@@ -42,12 +51,6 @@ echo "\n▸ Indexing verse_org reverse hop (original → translation)..."
 # Used by cross-refs and concordance display; kept out of the frozen
 # build_versification.py on purpose (additive, no row data touched).
 sqlite3 sourcebible.db "CREATE INDEX IF NOT EXISTS idx_verse_org_rev ON verse_org(translation, org_book_id, org_chapter, org_verse);"
-
-echo "\n▸ Fixing ASV Strong's tag drift (tag sits before the clause punctuation)..."
-# ~8 тис. тегів ASV стоять у кінці попередньої фрази («stead<S>8034</S>; and the name»).
-# Переносимо на слово, що збігається з глосою Macula (95% збіг із позицією в KJV).
-# Пише verse.text для ASV; еталони Рим 4:7 / 1 Хр 1:46 — інакше rollback і `set -e`.
-python3 scripts/fix_asv_tag_drift.py sourcebible.db
 
 echo "\n▸ Verifying parallel-translation alignment (ADR-028, bug-036)..."
 # Панель «Переклади» читає вірш ІНШОГО перекладу, тож мусить іти через verse_org, а не

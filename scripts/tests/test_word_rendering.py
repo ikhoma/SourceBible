@@ -328,26 +328,6 @@ class TestPossessiveSplit(unittest.TestCase):
         self.assertEqual([sg.text for sg in segs if sg.strongs][-1], "sake")
 
 
-class TestAsvTagDrift(unittest.TestCase):
-    def test_rom_4_7(self):
-        from fix_asv_tag_drift import fix_verse
-        text = ("saying<S>3107</S>, Blessed are they whose<S>3739</S> iniquities<S>458</S> "
-                "are forgiven<S>863</S>.")
-        words = [(1, "G3107"), (2, "G3739"), (3, "G863"), (4, "G458")]
-        info = {1: ("adj", "Blessed"), 2: ("pron", "of whom"), 3: ("verb", "are forgiven"),
-                4: ("noun", "lawless deeds")}
-        new, n = fix_verse(text, words, info)
-        self.assertEqual(n, 1)
-        self.assertTrue(new.startswith("saying, Blessed<S>3107</S> are they whose<S>3739</S>"))
-        self.assertEqual(fix_verse(new, words, info)[1], 0)      # повторно — нічого
-
-    def test_correct_tag_untouched(self):
-        from fix_asv_tag_drift import fix_verse
-        text = "and the name<S>8034</S> of his city<S>5892</S>."
-        info = {1: ("noun", "name"), 2: ("noun", "city")}
-        self.assertEqual(fix_verse(text, [(1, "H8034"), (2, "H5892")], info)[1], 0)
-
-
 class SwiftCanonicalSyncTests(unittest.TestCase):
     """Ключ групи в застосунку = strongs_key у базі (code review 2026-10-06)."""
 

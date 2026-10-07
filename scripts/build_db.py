@@ -12,7 +12,7 @@ Local data (put files in SourceBible/data/):
 
 Translations — MyBible SQLite format (.zip or .SQLite3):
   KJV+.zip   — King James Version with Strong's   (public domain)
-  ASV+.zip   — American Standard Version          (public domain)
+  ASV.SQLite3 — American Standard Version (PD) — генерує build_asv_module.py з OpenBible (ADR-042)
   NASB+.zip  — New American Standard Bible        (licensed)
   RST+.zip   — Russian Synodal Translation        (public domain)
 
@@ -1613,7 +1613,10 @@ def resolve_tbesh_definitions(cur):
 
 TRANSLATIONS = [
     ("KJV",  "King James Version",          "en", DATA_DIR / "KJV+.zip"),
-    ("ASV",  "American Standard Version",   "en", DATA_DIR / "ASV+.zip"),
+    # ADR-042: власний модуль з OpenBible ASV Interlinear (scripts/build_asv_module.py, крок rebuild.sh
+    # ПЕРЕД build_db.py). Виноски — сусідній ASV.commentaries.SQLite3 («Strategy 2»).
+    # Відкат = повернути DATA_DIR / "ASV+.zip" і перезібрати.
+    ("ASV",  "American Standard Version",   "en", DATA_DIR / "ASV.SQLite3"),
     ("NASB", "New American Standard Bible", "en", DATA_DIR / "NASB+.zip"),
     ("RST",  "Синодальний переклад",        "ru", DATA_DIR / "RST+.zip"),
     # ⚠️ LICENSED — не розповсюджувати публічно без дозволу (як NASB). Огієнко НЕ
@@ -1776,7 +1779,8 @@ def _search_text(text):
     multi-number ASV/NASB tags behind (see the note above `_SEARCH_STRONGS_RE`).
 
     ⚠️ What this canNOT fix: verses where the SOURCE module has a word replaced by a number
-    (ASV Job 21:5 has `480` where the word "Mark" belongs, 1Ch 5:5 has `400` for "Micah").
+    (the old ASV+ had `480` for "Mark" in Job 21:5 and `400` for "Micah" in 1Ch 5:5 — gone since
+    ADR-042 rebuilt ASV from OpenBible; NASB/KJV may still carry such digits).
     Those digits are plain text in `verse.text` with no markup around them — 100 terms in
     the English dictionary after this fix. That is a dataset defect in ASV, not a stripping
     one; the numeric ceiling is set above it deliberately.
