@@ -103,3 +103,6 @@ commit_all.sh
 scripts/_to_delete/
 SourceBible/Resources/sourcebible-backup.db
 sb_baseline.db*
+
+# Робочі вивантаження агента (скріншоти, JSON-заміри) — не для репо (code review 2026-10-08)
+Claude outputs/
