@@ -3509,6 +3509,24 @@
         }
       }
     },
+    "morph.renderings.other": {
+      "comment": "ADR-041: chip that groups rare renderings (fewer than 3 occurrences) in the all-occurrences sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Інші"
+          }
+        }
+      }
+    },
     "morph.renderings.show_all": {
       "comment": "ADR-041: expands the Translated-in list to all renderings",
       "extractionState": "manual",

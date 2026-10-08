@@ -114,6 +114,7 @@ enum MorphKey {
     // ADR-041 «Translated as» — секція в Meaning після лексикону
     static let sectionTranslatedIn    = "morph.section.translated_in"      // "Translated in %@"
     static let renderingsShowAll      = "morph.renderings.show_all"
+    static let renderingsOther        = "morph.renderings.other"
     static let renderingsShowLess     = "morph.renderings.show_less"
     static let renderingsThisVerse    = "morph.renderings.this_verse"
     static let sectionGreekEquiv      = "morph.section.greek_equivalent"

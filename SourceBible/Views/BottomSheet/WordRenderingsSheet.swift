@@ -33,7 +33,39 @@ struct WordRenderingsSheet: View {
 
     private var byRendering: [RenderingOccurrence] {
         guard let r = renderingFilter else { return occurrences }
+        if r == Self.otherFilter {
+            let ids = Set(chipSplit.other.map(\.id))
+            return occurrences.filter { ids.contains($0.renderingId) }
+        }
         return occurrences.filter { $0.renderingId == r }
+    }
+
+    // MARK: Chip split («Other»)
+
+    // Довгий хвіст передач по 1–2 входження (עַל у ASV — 218 передач, 111 з них по одній)
+    // витісняв вірші з екрана, а це переважно ідіоми-уламки й сміття вирівнювання.
+    // Правило (Іван, 2026-10-08; заміряно на ASV/KJV/RST — максимум 12 чипів, у 99% слів ≤ 10):
+    //   • передач < 10 — показуємо всі, навіть по 1 (рідкісні передачі малого слова змістовні);
+    //   • інакше окремий чип лише для передач із ≥ 3 входжень, не більше 12, решта — один «Other»;
+    //   • «Other» з однієї передачі не буває — тоді показуємо її саму.
+    private static let otherFilter = -1
+    private static let showAllBelow = 10
+    private static let minChipCount = 3
+    private static let maxChips = 12
+
+    private var chipSplit: (shown: [WordRendering], other: [WordRendering]) {
+        guard let items = summary?.items else { return ([], []) }   // за спаданням count
+        guard items.count >= Self.showAllBelow else { return (items, []) }
+        let k = min(Self.maxChips, items.prefix { $0.count >= Self.minChipCount }.count)
+        guard items.count - k > 1 else { return (items, []) }
+        var shown = Array(items.prefix(k))
+        let other = Array(items.dropFirst(k))
+        // Аркуш відкрито з рядка передачі, що потрапила в хвіст (Meaning → тап по рядку,
+        // «‹ Назад» з читанки): показуємо її чип вибраним, щоб фільтр не був невидимий.
+        if let r = renderingFilter, let sel = other.first(where: { $0.id == r }) {
+            shown.append(sel)
+        }
+        return (shown, other)
     }
 
     private var visible: [RenderingOccurrence] {
@@ -197,11 +229,19 @@ struct WordRenderingsSheet: View {
             FlowLayout(spacing: 8) {
                 chip(label: Text("search.filter.all"), count: summary.matched,
                      selected: renderingFilter == nil) { renderingFilter = nil }
-                ForEach(summary.items) { item in
+                let split = chipSplit
+                ForEach(split.shown) { item in
                     chip(label: Text(verbatim: item.text), count: item.count,
                          selected: renderingFilter == item.id) {
                         // Повторний тап по активному чипу знімає фільтр (m5 з review).
                         renderingFilter = (renderingFilter == item.id) ? nil : item.id
+                    }
+                }
+                if !split.other.isEmpty {
+                    chip(label: Text(LocalizedStringKey(MorphKey.renderingsOther)),
+                         count: split.other.reduce(0) { $0 + $1.count },
+                         selected: renderingFilter == Self.otherFilter) {
+                        renderingFilter = (renderingFilter == Self.otherFilter) ? nil : Self.otherFilter
                     }
                 }
             }
@@ -220,21 +260,22 @@ struct WordRenderingsSheet: View {
         .font(.subheadline.weight(.medium))
         .lineLimit(1)
 
-        // Системні капсули, як фільтри Пошуку: вибраний — prominent з акцентом.
-        if selected {
-            Button(action: action) { content }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
-                .tint(.appBlue)
-                .accessibilityAddTraits(.isSelected)
-        } else {
-            Button(action: action) { content }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
-                .tint(.primary)
+        // Власна капсула фіксованими кольорами, а не системні `.bordered` / `.borderedProminent`
+        // (Іван, 2026-10-08): у stacked sheet напівпрозора заливка `.bordered` перші ~секунду
+        // малюється яскравіше й потім тьмяніє (непрозорий `.borderedProminent` — ні). Той самий
+        // ефект, що з Divider тут і в коментарях. Першопричину не знайдено: перевірено й
+        // відкинуто запізнення колірної схеми у вкладеному sheet (Match Device → Dark нічого не
+        // змінив). Вигляд той самий: сіра капсула, вибрана — синя з білим текстом.
+        Button(action: action) {
+            content
+                .foregroundStyle(selected ? Color.white : Color.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(selected ? Color.appBlue
+                                                    : Color(uiColor: .tertiarySystemFill)))
         }
+        .buttonStyle(ChipPressStyle())
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     // MARK: Book picker
@@ -399,5 +440,14 @@ private struct SheetHairline: View {
         Rectangle()
             .fill(Color(uiColor: .separator))
             .frame(height: 1 / displayScale)
+    }
+}
+
+/// Натиск чипа: легке притемнення, як у системних кнопок.
+private struct ChipPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            .contentShape(Capsule())
     }
 }
