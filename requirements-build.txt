@@ -1,0 +1,9 @@
+# Python-залежності збірки бази (rebuild.sh). Лише для Mac-білду, не для застосунку.
+# ADR-041: лематизація RST для «Translated as». Версії перевірено на PyPI 2026-09-28.
+# Ставити в той python3, що перший у PATH (CLAUDE.md, розділ Python):
+#   python3 -m pip install --user --break-system-packages -r requirements-build.txt
+# --user — пакети чисто-Python, системний site-packages не чіпаємо. --break-system-packages
+# потрібен лише якщо інтерпретатор externally-managed (PEP 668, напр. Homebrew); на
+# python.org-інсталяторі прапорець нешкідливий, тож команда одна для обох.
+pymorphy3==2.0.6
+pymorphy3-dicts-ru==2.4.417150.4580142

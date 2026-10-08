@@ -27,6 +27,53 @@ struct StrongsEntry: Identifiable {
     var usageLoaded: Bool = false
 }
 
+// MARK: - Word Renderings (ADR-041 «Translated as»)
+
+/// Одна передача слова оригіналу в перекладі: «mercy» × 149.
+struct WordRendering: Identifiable, Equatable {
+    let id: Int          // rendering.id
+    let text: String
+    let count: Int
+}
+
+/// Як поточний переклад читанки передає слово — дані секції «Translated as» у Meaning.
+struct RenderingSummary: Equatable {
+    let translationId: String
+    let items: [WordRendering]      // за спаданням count
+    /// Входжень, для яких знайдено передачу (сума `items.count`).
+    let matched: Int
+    /// Усі входження слова в Macula (та сама група, що в Usage).
+    let total: Int
+    /// Передача слова в ПОТОЧНОМУ вірші, якщо відома.
+    let currentRenderingId: Int?
+
+    var coverage: Double { total > 0 ? Double(matched) / Double(total) : 0 }
+}
+
+extension StrongsEntry {
+    /// Транслітерація леми для шапок: спрощена (STEPBible), інакше академічна.
+    /// Одне джерело для шапки Word-вкладки і підзаголовка аркуша передач.
+    var headerTransliteration: String {
+        !xlitSimple.isEmpty ? xlitSimple : transliteration
+    }
+}
+
+/// Одне входження слова в перекладі з його передачею (ADR-041, stacked sheet).
+/// `segOrd` — № сегмента з Strong's у вірші (0-based), той самий, що пише build-скрипт;
+/// за ним підсвічується саме це слово, а не всі збіги номера у вірші.
+struct RenderingOccurrence: Identifiable {
+    let id: String            // "BOOK|ch|v|segOrd|renderingId"
+    let renderingId: Int
+    let bookId: String
+    let chapter: Int
+    let verse: Int
+    let segOrd: Int
+    let rawText: String       // сирий текст з <S>-тегами — для підсвітки
+    /// Що саме підсвітити: «ord:start:len;…» (зсуви в Unicode-скалярах тексту
+    /// сегмента). `nil` — увесь сегмент `segOrd`, як до цього поля (стара база теж).
+    var highlight: String? = nil
+}
+
 // MARK: - Book Usage Group
 
 /// Aggregated concordance data for one Bible book.
@@ -171,7 +218,10 @@ extension Theologian {
         styleKey: "theologian.edwards.style",
         imageName: "edwards"
     ) }
-    static var all: [Theologian] { [calvin, henry, spurgeon, owen, edwards] }
+    /// Chronological order by era (century), tie-broken alphabetically by surname
+    /// within the same century: Calvin 16th c. · Owen 17th c. · Edwards/Henry 18th c.
+    /// (Edwards before Henry, E < H) · Spurgeon 19th c.
+    static var all: [Theologian] { [calvin, owen, edwards, henry, spurgeon] }
 
     /// This theologian's published work(s) — see `CommentaryWork`. Spurgeon is
     /// the only one with more than one; everyone else has a single work whose

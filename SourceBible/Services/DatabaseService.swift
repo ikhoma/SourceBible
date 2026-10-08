@@ -162,7 +162,9 @@ final class DatabaseService: @unchecked Sendable {
     func loadTranslations() -> [Translation] {
         guard isAvailable else { return [Translation.kjv] }
         var translations: [Translation] = []
-        query("SELECT id, name, language FROM translation ORDER BY id") { stmt in
+        // Синодальний переклад (RST) завжди останній у списку, незалежно від id;
+        // решта — за id, як і раніше.
+        query("SELECT id, name, language FROM translation ORDER BY (id = 'RST'), id") { stmt in
             translations.append(Translation(
                 id:       string(stmt, 0),
                 name:     string(stmt, 1),
@@ -225,8 +227,24 @@ final class DatabaseService: @unchecked Sendable {
                                      words: [], parsed: parsed,
                                      footnotes: footnotes[id] ?? [:]))
         }
+        // Літери знаків виносок — у межах глави, у порядку читання (вірш → якір у вірші).
+        // Лише для маркерів із текстом: якір без запису знака не має (див. VerseTextView),
+        // тож і літери не забирає, інакше в главі з'являлися б пропуски «a, c».
+        var labelIndex = 0
+        for i in verses.indices {
+            guard !verses[i].footnotes.isEmpty, let parsed = verses[i].parsed else { continue }
+            var labels: [String: String] = [:]
+            for seg in parsed.segments {
+                guard let marker = seg.footnoteAnchorId, labels[marker] == nil,
+                      verses[i].footnotes[marker] != nil else { continue }
+                labels[marker] = footnoteLabelText(labelIndex)
+                labelIndex += 1
+            }
+            verses[i].footnoteLabels = labels
+        }
         return verses
     }
+
 
     /// Translator footnotes for a whole chapter: verseId → (marker → plain text).
     ///
@@ -238,7 +256,7 @@ final class DatabaseService: @unchecked Sendable {
     /// `marker` matches the `<f>…</f>` anchor text in `verse.text` verbatim (`[2]`), which is
     /// what `VerseParser` stores as `VerseSegment.footnoteAnchorId`.
     ///
-    /// Only UBIO and RST carry these. KJV's `<n>…</n>` notes are a DIFFERENT mechanism —
+    /// ASV (ADR-042), UBIO and RST carry these. KJV's `<n>…</n>` notes are a DIFFERENT mechanism —
     /// inline in the verse text, no anchor, parsed into `ParsedVerse.footnotes` — and are not
     /// in this table.
     func loadFootnotes(bookId: String, chapter: Int,
@@ -654,6 +672,141 @@ final class DatabaseService: @unchecked Sendable {
         return entries
     }
 
+    // MARK: - Word renderings (ADR-041 «Translated as»)
+
+    /// Таблиця `word_rendering` будується окремим кроком `rebuild.sh`
+    /// (scripts/build_word_rendering.py). Старіша база її не має — тоді фіча мовчки
+    /// вимкнена, без помилок у консолі на кожне слово.
+    private lazy var hasWordRenderingTable: Bool = {
+        var exists = false
+        query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'word_rendering'") { _ in
+            exists = true
+        }
+        return exists
+    }()
+
+    /// Колонка `hl` (точна підсвітка передачі) з'явилась пізніше за таблицю —
+    /// на старій базі SELECT бере NULL замість неї.
+    private lazy var hasRenderingHighlight: Bool = {
+        var has = false
+        query("SELECT 1 FROM pragma_table_info('word_rendering') WHERE name = 'hl'") { _ in
+            has = true
+        }
+        return has
+    }()
+
+    /// Таблиця `rendering_example` (ADR-041 ч.5) з'явилась пізніше за `word_rendering`.
+    private lazy var hasRenderingExampleTable: Bool = {
+        var exists = false
+        query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'rendering_example'") { _ in
+            exists = true
+        }
+        return exists
+    }()
+
+    /// Як переклад `translation` передає слово `strongsId` (ADR-041).
+    ///
+    /// - Parameters:
+    ///   - current: вірш читанки + порядковий № сегмента з Strong's у ньому (0-based,
+    ///     рахуються лише сегменти з непорожнім `strongs`) — для позначки «this verse».
+    ///     Це той самий `seg_ord`, що пише build-скрипт.
+    /// - Returns: `nil`, якщо таблиці немає або для слова в цьому перекладі нема рядків.
+    ///   Поріг покриття застосовує викликач — тут лише дані.
+    func loadRenderingSummary(
+        strongsId: String,
+        translation: String,
+        current: (bookId: String, chapter: Int, verse: Int, segOrd: Int)?
+    ) -> RenderingSummary? {
+        guard isAvailable, hasWordRenderingTable else { return nil }
+        let key = StrongsMergeMap.canonical(strongsId)
+
+        var items: [WordRendering] = []
+        let sql = """
+            SELECT r.id, r.text, COUNT(*) AS n
+            FROM word_rendering w
+            JOIN rendering r ON r.id = w.rendering_id
+            WHERE w.translation = ? AND w.strongs_key = ?
+            GROUP BY w.rendering_id
+            ORDER BY n DESC, r.text
+            """
+        query(sql, bindings: [translation, key]) { stmt in
+            items.append(WordRendering(
+                id: Int(sqlite3_column_int(stmt, 0)),
+                text: string(stmt, 1),
+                count: Int(sqlite3_column_int(stmt, 2))
+            ))
+        }
+        guard !items.isEmpty else { return nil }
+
+        // Знаменник покриття — та сама група id, що й загальна кількість у Usage (bug-045).
+        let mergeIds = StrongsMergeMap.expand(strongsId)
+        let placeholders = Array(repeating: "?", count: mergeIds.count).joined(separator: ", ")
+        var total = 0
+        query("SELECT COUNT(*) FROM word WHERE strongs_id IN (\(placeholders))",
+              bindings: mergeIds) { stmt in
+            total = Int(sqlite3_column_int(stmt, 0))
+        }
+
+        var currentId: Int?
+        if let c = current {
+            let curSQL = """
+                SELECT w.rendering_id FROM word_rendering w
+                WHERE w.translation = ? AND w.strongs_key = ?
+                  AND w.verse_key = (SELECT num FROM book WHERE id = ?) * 1000000 + ? * 1000 + ?
+                  AND w.seg_ord = ?
+                LIMIT 1
+                """
+            query(curSQL, bindings: [translation, key, c.bookId, c.chapter, c.verse, c.segOrd]) { stmt in
+                currentId = Int(sqlite3_column_int(stmt, 0))
+            }
+        }
+
+        return RenderingSummary(
+            translationId: translation,
+            items: items,
+            matched: items.reduce(0) { $0 + $1.count },
+            total: total,
+            currentRenderingId: currentId
+        )
+    }
+
+    /// Вірш-приклад для кожної передачі (ADR-041 ч.5): найвагоміший за голосами
+    /// перехресних посилань OpenBible, обраний build-скриптом (`rendering_example`).
+    /// Ключ — `rendering.id`. Порожньо, якщо таблиці ще немає (стара база).
+    func loadRenderingExamples(strongsId: String, translation: String) -> [Int: RenderingOccurrence] {
+        guard isAvailable, hasWordRenderingTable, hasRenderingExampleTable else { return [:] }
+        let key = StrongsMergeMap.canonical(strongsId)
+        var out: [Int: RenderingOccurrence] = [:]
+        let sql = """
+            SELECT e.rendering_id, b.id,
+                   (e.verse_key / 1000) % 1000, e.verse_key % 1000, e.seg_ord, v.text,
+                   \(hasRenderingHighlight ? "e.hl" : "NULL")
+            FROM rendering_example e
+            JOIN book  b ON b.num = e.verse_key / 1000000
+            JOIN verse v ON v.translation = e.translation
+                        AND v.book_id     = b.id
+                        AND v.chapter     = (e.verse_key / 1000) % 1000
+                        AND v.verse       = e.verse_key % 1000
+            WHERE e.translation = ? AND e.strongs_key = ?
+            """
+        query(sql, bindings: [translation, key]) { stmt in
+            let rid = Int(sqlite3_column_int(stmt, 0))
+            let bookId = string(stmt, 1)
+            let ch  = Int(sqlite3_column_int(stmt, 2))
+            let vs  = Int(sqlite3_column_int(stmt, 3))
+            let ord = Int(sqlite3_column_int(stmt, 4))
+            out[rid] = RenderingOccurrence(
+                id: "\(bookId)|\(ch)|\(vs)|\(ord)|\(rid)", renderingId: rid,
+                bookId: bookId, chapter: ch, verse: vs, segOrd: ord,
+                rawText: optString(stmt, 5) ?? "",
+                highlight: optString(stmt, 6))
+        }
+        return out
+    }
+
+    // Усі входження слова для аркуша — RenderingOccurrenceLoader (власне з'єднання,
+    // поза головним потоком; code review 2026-10-06).
+
     // MARK: - Book Usage Groups (per-book concordance for ConcordanceView)
 
     /// Returns the true total occurrence count across the whole Bible plus a
@@ -813,7 +966,8 @@ final class DatabaseService: @unchecked Sendable {
     ///
     /// ## Merged verses (one translation verse ⇒ several originals)
     ///
-    /// Rows are ordered by `(org_chapter, org_verse)` and the FIRST non-NULL is taken.
+    /// Rows are ordered by `(org_chapter, org_verse)` (title rows last, see below) and the
+    /// FIRST non-NULL is taken.
     /// That is a DECISION, not an accident of the data — record it before changing it.
     ///
     /// This hop exists to answer "which verse in ANOTHER translation is this one?"
@@ -834,6 +988,15 @@ final class DatabaseService: @unchecked Sendable {
     /// left half of every merge (`mappedVerses` is an object, and the `.vrs` original
     /// expresses one⇒two by repeating the key). 17 verses are affected. The claim is
     /// removed because a fix to the data must NOT quietly invalidate a code comment.
+    ///
+    /// ## Psalm superscriptions (bug-058) — rows with `source = 'superscription'` sort LAST
+    ///
+    /// KJV/ASV/NASB fold the psalm title into verse 1, so e.g. KJV PSA 42:1 maps to
+    /// Heb 42:1 (title, `superscription`) AND Heb 42:2 (text). The anchor stays the TEXT
+    /// verse (Ivan's decision 2026-10-06): anchoring on the title would make the parallel of
+    /// KJV Ps 42:1 show RST 41:1 — the title alone — instead of the verse being read. Hence
+    /// `ORDER BY (source = 'superscription')` first. The Original pill still shows the title:
+    /// `loadOriginalWords` concatenates every row.
     private func orgRef(bookId: String, chapter: Int, verse: Int, translation: String)
         -> (sawRows: Bool, org: (bookId: String, chapter: Int, verse: Int)?) {
         var sawRows = false
@@ -841,7 +1004,7 @@ final class DatabaseService: @unchecked Sendable {
         let sql = """
             SELECT org_book_id, org_chapter, org_verse FROM verse_org
             WHERE translation = ? AND book_id = ? AND chapter = ? AND verse = ?
-            ORDER BY org_chapter, org_verse
+            ORDER BY (source = 'superscription'), org_chapter, org_verse
             """
         query(sql, bindings: [translation, bookId, chapter, verse]) { stmt in
             sawRows = true
@@ -993,6 +1156,31 @@ final class DatabaseService: @unchecked Sendable {
             out[target] = text
         }
         return out
+    }
+
+    /// Where ONE verse of `source` lives in `target`'s own numbering, via `verse_org`
+    /// (ADR-028) — the same two curated hops as `loadParallelVerseTexts`, but returning the
+    /// target REFERENCE rather than text, because bookmarks (bug-037) need it for the card
+    /// header, the share text and the reader's bookmark toggle alike.
+    ///
+    /// Fallbacks mirror `loadParallelVerseTexts` exactly:
+    /// - `.identity` — same translation, no `verse_org` row (DB predates ADR-028), or an
+    ///   explicit "no original" row (`org_*` NULL): read the same book/chapter/verse.
+    /// - `.gap` — the target has no verse for this original (merge asymmetry, e.g. no RST
+    ///   verse for Heb PSA 90:6). Callers show NOTHING here. Falling back to identity in
+    ///   this case showed the neighbouring verse — ~170 source→target pairs on the shipped
+    ///   DB (e.g. ASV 2CO 11:32 read in RST = orig 11:33; code review 2026-10-08).
+    func hopVerse(bookId: String, chapter: Int, verse: Int,
+                  source: String, target: String) -> VerseHop {
+        guard isAvailable, source != target else { return .identity }
+
+        let (sawRows, org) = orgRef(bookId: bookId, chapter: chapter, verse: verse,
+                                    translation: source)
+        guard sawRows, let org else { return .identity }
+        guard let ref = translationRef(orgBookId: org.bookId, orgChapter: org.chapter,
+                                       orgVerse: org.verse, translation: target)
+        else { return .gap }
+        return .mapped(bookId: ref.bookId, chapter: ref.chapter, verse: ref.verse)
     }
 
     // MARK: - Cross References
@@ -1472,3 +1660,26 @@ private extension DatabaseService {
     }
 }
 
+/// Result of `DatabaseService.hopVerse` — see its doc comment for when each case applies.
+enum VerseHop: Equatable {
+    /// Read the same book/chapter/verse in the target.
+    case identity
+    /// The same verse of Scripture in the target's own numbering.
+    case mapped(bookId: String, chapter: Int, verse: Int)
+    /// The target has no verse for this original — show nothing, never the neighbour.
+    case gap
+}
+
+/// Літера знака виноски: 0 → "a", 25 → "z", 26 → "aa", 27 → "ab"… (бієктивна база 26, як
+/// стовпці таблиці). Глава ASV має до 35 виносок, тож однієї літери не завжди досить.
+/// File-level, а не метод: без стану й без `self` (CLAUDE.md, Swift 6).
+private func footnoteLabelText(_ index: Int) -> String {
+    var n = index + 1
+    var s = ""
+    while n > 0 {
+        n -= 1
+        s = String(UnicodeScalar(UInt8(97 + n % 26))) + s
+        n /= 26
+    }
+    return s
+}

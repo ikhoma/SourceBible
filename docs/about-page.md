@@ -43,7 +43,8 @@ We are grateful to everyone who made this scholarship freely available.
 **Translations**
 - Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA 3.0 · Wikisource
 - King James Version (KJV) — Public Domain
-- American Standard Version (ASV) — Public Domain
+- American Standard Version (ASV, 1901) — Public Domain · digital edition & translators' footnotes: OpenBible.info
+- ASV interlinear alignment — OpenBible.info, derived from MACULA (Biblica), SBLGNT (SBL & Logos), SBLGNT-TEI (J. J. McCollum), OpenScriptures Hebrew Bible, Westminster Hebrew Syntax (Groves Center), Cherith Glosses — CC BY 4.0 · modified: Strong's tags reduced to head words
 - Russian Synodal Translation (RST) — Public Domain
 
 **Commentaries**
@@ -93,7 +94,8 @@ We are grateful to everyone who made this scholarship freely available.
 **Переклади**
 - Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA 3.0 · Вікіджерела
 - King James Version (KJV) — суспільне надбання
-- American Standard Version (ASV) — суспільне надбання
+- American Standard Version (ASV, 1901) — суспільне надбання · цифрове видання й виноски перекладачів: OpenBible.info
+- Вирівнювання ASV з оригіналом — OpenBible.info, на основі MACULA (Biblica), SBLGNT (SBL і Logos), SBLGNT-TEI (J. J. McCollum), OpenScriptures Hebrew Bible, Westminster Hebrew Syntax (Groves Center), Cherith Glosses — CC BY 4.0 · змінено: теги Стронга зведено до головних слів
 - Синодальний переклад (RST) — суспільне надбання
 
 **Коментарі**

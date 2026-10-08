@@ -443,8 +443,19 @@ class ReaderViewModel: ObservableObject {
     /// so a word page opened from the Original pill can still be walked word-by-word.
     var wordNavSequence: [BibleWord] {
         let pairs = verseWordSegmentPairs
-        guard pairs.isEmpty else { return pairs.map { $0.word } }
-        return verseWordsWithStrongs
+        let raw = pairs.isEmpty ? verseWordsWithStrongs : pairs.map { $0.word }
+        // bug-054: upgrade each raw token to its slot-merged word so ‹› navigation shows the
+        // same composed word OriginalWordsView/long-press do, not a bare un-merged morpheme.
+        // Dedup by merged id — two raw tokens of the same slot could in principle each carry
+        // a Strong's tag and would otherwise show up as two identical stops.
+        let lookup = BibleWord.slotMergedLookup(selectedVerse?.words ?? [])
+        var seen: Set<String> = []
+        var merged: [BibleWord] = []
+        for w in raw {
+            let m = lookup[w.id] ?? w
+            if seen.insert(m.id).inserted { merged.append(m) }
+        }
+        return merged
     }
 
     /// True when the DISPLAYED translation has no Strong's tagging for the focused
@@ -826,7 +837,11 @@ class ReaderViewModel: ObservableObject {
     /// Stack of verse IDs representing the cross-ref navigation history.
     /// Top of the stack (last element) is the most recent origin.
     /// Session-scoped: cleared when the sheet is dismissed.
-    @Published private(set) var crossRefBackStack: [String] = []
+    @Published private(set) var crossRefBackStack: [CrossRefBackEntry] = []
+
+    /// Stacked sheet «усі входження» (ADR-041 частина 3–4). Живе у VM, а не у View,
+    /// бо «‹ Назад» з читанки мусить відкрити його знову з тим самим станом.
+    @Published var renderingsSheet: RenderingsSheetState?
 
     /// True when the back stack has at least one entry (i.e. user followed at least one cross-ref).
     var canCrossRefBack: Bool { !crossRefBackStack.isEmpty }
@@ -841,12 +856,43 @@ class ReaderViewModel: ObservableObject {
     /// Pops the previous verse from the stack and navigates to it.
     func crossRefBack() {
         guard let previous = crossRefBackStack.popLast() else { return }
-        navigateToVerse(id: previous, source: .back)
+        navigateToVerse(id: previous.verseId, source: .back)
+        // ADR-041 ч.4: перехід був з аркуша входжень — повертаємо слово і сам аркуш
+        // з тим самим фільтром і прокруткою.
+        if let ord = previous.wordSegOrd { reselectWord(taggedOrdinal: ord) }
+        if let sheet = previous.renderingsSheet {
+            Task { [weak self] in
+                await Task.yield()   // дати Study Mode завершити перехід до презентації
+                self?.renderingsSheet = RenderingsSheetState(reopening: sheet)
+            }
+        }
+    }
+
+    /// Тап по вірші в аркуші входжень (ADR-041 ч.4): аркуш закривається, читанка
+    /// переходить на вірш, а в back-stack кладеться поточний вірш РАЗОМ зі станом
+    /// аркуша — «‹ Назад» відкриє його знову.
+    func followRenderingOccurrence(to verseId: String, returnTo sheet: RenderingsSheetState) {
+        var ord: Int?
+        if let seg = selectedSegment, let segments = selectedVerse?.parsed?.segments {
+            ord = segments.filter { !$0.strongs.isEmpty }.firstIndex(where: { $0.id == seg.id })
+        }
+        renderingsSheet = nil
+        navigateToVerse(id: verseId, source: .crossRef,
+                        returnSheet: sheet, returnWordOrd: ord)
+    }
+
+    /// Знову вибирає слово у поточному вірші за № сегмента з Strong's (seg_ord).
+    private func reselectWord(taggedOrdinal: Int) {
+        guard let verse = selectedVerse,
+              let tagged = verse.parsed?.segments.filter({ !$0.strongs.isEmpty }),
+              taggedOrdinal < tagged.count else { return }
+        tapWord(tagged[taggedOrdinal], in: verse)
     }
 
     /// Clear the back stack — called from onDismiss so the next sheet entry starts fresh.
     func resetCrossRefStack() {
         crossRefBackStack.removeAll()
+        renderingsSheet = nil
     }
 
     /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
@@ -857,7 +903,9 @@ class ReaderViewModel: ObservableObject {
 
     /// Navigate to a specific verse by its compound ID "BOOK|chapter|verse" (e.g. "ROM|5|1").
     /// Switches book/chapter if needed, then scrolls to the verse and opens the bottom sheet.
-    private func navigateToVerse(id verseId: String, source: VerseNavSource) {
+    private func navigateToVerse(id verseId: String, source: VerseNavSource,
+                                 returnSheet: RenderingsSheetState? = nil,
+                                 returnWordOrd: Int? = nil) {
         let parts = verseId.split(separator: "|")
         guard parts.count == 3,
               let chapter = Int(parts[1]) else { return }
@@ -895,7 +943,10 @@ class ReaderViewModel: ObservableObject {
                 // Push the current verse (if the sheet is open and a verse is selected)
                 // so the user can navigate back to it.
                 if activeSheet == .verse, let current = selectedVerse, current.id != verseId {
-                    crossRefBackStack.append(current.id)
+                    crossRefBackStack.append(CrossRefBackEntry(
+                        verseId: current.id,
+                        renderingsSheet: returnSheet,
+                        wordSegOrd: returnSheet == nil ? nil : returnWordOrd))
                 }
                 // Хаптика: перехід по перехресному — це стрибок в інше місце Біблії,
                 // а не крок по сусідніх віршах. Тому impact, а не selection: те саме
@@ -979,7 +1030,8 @@ class ReaderViewModel: ObservableObject {
                 BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                            number: v.number, text: v.text, words: v.words,
                            highlightColor: highlightColors[v.id],
-                           parsed: v.parsed)
+                           parsed: v.parsed,
+                           footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             }
         pageVersesCache[key] = loaded
         pageVersesCacheOrder.append(key)
@@ -1011,7 +1063,8 @@ class ReaderViewModel: ObservableObject {
                 BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                            number: v.number, text: v.text, words: v.words,
                            highlightColor: highlightColors[v.id],
-                           parsed: v.parsed)
+                           parsed: v.parsed,
+                           footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             }
         isLoading = false
     }
@@ -1030,7 +1083,8 @@ class ReaderViewModel: ObservableObject {
             let v = verses[idx]
             verses[idx] = BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                                      number: v.number, text: v.text, words: words,
-                                     highlightColor: v.highlightColor, parsed: v.parsed)
+                                     highlightColor: v.highlightColor, parsed: v.parsed,
+                                     footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             selectedVerse = verses[idx]
         }
     }
@@ -1071,6 +1125,13 @@ class ReaderViewModel: ObservableObject {
 
     func tapVerse(_ verse: BibleVerse) {
         Haptics.lightTransition()
+        // TapVerseTip (spec-minimal-tap-onboarding.md §5): dismiss forever on
+        // the FIRST tap of ANY verse, not just the anchor verse (Gen 1:1).
+        // Guarded so the dismissed event fires once, on the real transition.
+        if !TapVerseTip.hasTappedAnyVerse {
+            TapVerseTip.hasTappedAnyVerse = true
+            analytics.track(.onboardingTapHintDismissed(reason: "verse_tapped"))
+        }
         selectedVerse = verse
         selectedWord = nil
         selectedSegment = nil
@@ -1099,17 +1160,41 @@ class ReaderViewModel: ObservableObject {
     /// Called from VerseTextView long press — receives a VerseSegment with strongs: [String].
     /// Bridges to the matching BibleWord so WordMeaningView shows full morphology/xlit/greek.
     func tapWord(_ segment: VerseSegment, in verse: BibleVerse) {
+        // TapVerseTip (code-review fix): long-press is also a valid first
+        // discovery of Study Mode -- same guarded donation as tapVerse(_:),
+        // so a user whose first interaction is a long-press doesn't leave
+        // the tip armed forever. See spec-minimal-tap-onboarding.md §6.
+        if !TapVerseTip.hasTappedAnyVerse {
+            TapVerseTip.hasTappedAnyVerse = true
+            analytics.track(.onboardingTapHintDismissed(reason: "word_long_pressed"))
+        }
         selectedVerse = verse
         selectedSegment = segment
         bottomSheetMode = .word
         activeSheet = .verse
 
         // Ensure Macula words are loaded
+        // bug-054 follow-up: `verse` is a value-type snapshot from BEFORE this load — it
+        // stays empty even after loadWordsForSelectedVerse() populates `self.selectedVerse`
+        // (which IS updated in place). The first long-press on a freshly-opened verse used
+        // to build the slot-merge lookup from this stale, still-empty `verse.words`, so ONLY
+        // the very first tap fell back to the raw un-merged word again — every tap after that
+        // worked because `verse.words` was no longer empty by then. Read `selectedVerse?.words`
+        // (same source `verseWordSegmentPairs` below already uses) instead of the parameter.
         if verse.words.isEmpty { loadWordsForSelectedVerse() }
+        let wordsForLookup = selectedVerse?.words ?? verse.words
 
         // Bridge to the exact Macula word paired with THIS segment instance in the canonical
         // mapping — handles repeated words (e.g. לֹא…לֹא…לֹא) without jumping to a prior instance.
-        selectedWord = verseWordSegmentPairs.first { $0.segment.id == segment.id }?.word
+        // bug-054: upgrade the raw paired token to its slot-merged form (the same composed
+        // word OriginalWordsView shows) — otherwise a compound Hebrew word opened by long-press
+        // loses its composition row and part of its own surface form vs. opening it from
+        // "Оригінал".
+        if let raw = verseWordSegmentPairs.first(where: { $0.segment.id == segment.id })?.word {
+            selectedWord = BibleWord.slotMergedLookup(wordsForLookup)[raw.id] ?? raw
+        } else {
+            selectedWord = nil
+        }
 
         // Prefer the Macula word's strongsId (e.g. H3887a) over the segment ID (e.g. H3887).
         // The strongs table is backfilled from Macula, so bare OpenScriptures IDs like H3887
@@ -1230,9 +1315,12 @@ class ReaderViewModel: ObservableObject {
     func autoSelectFirstWordIfNeeded() {
         guard selectedWord == nil && selectedSegment == nil else { return }
         if let first = verseWordSegmentPairs.first {
-            selectedWord = first.word
+            // bug-054: show the composed slot word, not the bare raw token, the moment the
+            // sheet auto-opens on the first word — mirrors the tapWord(_ segment:) fix.
+            let merged = BibleWord.slotMergedLookup(selectedVerse?.words ?? [])[first.word.id] ?? first.word
+            selectedWord = merged
             selectedSegment = first.segment
-            loadStrongs(for: first.word)
+            loadStrongs(for: merged)
         }
     }
 
@@ -1269,6 +1357,51 @@ class ReaderViewModel: ObservableObject {
         guard raw.hasPrefix("S") else { return raw }
         let testament = allBooks.first(where: { $0.id == bookId })?.testament ?? .old
         return (testament == .old ? "H" : "G") + raw.dropFirst()
+    }
+
+    // MARK: - Word renderings (ADR-041 «Translated as»)
+
+    /// Нижче цієї частки зіставлених входжень графік брехав би: σύ (G4771) у KJV має
+    /// передачу лише для 6% вживань (займенник часто не тегується окремим словом).
+    static let renderingCoverageThreshold = 0.8
+
+    /// Як поточний переклад читанки передає слово `entry` — для секції в Meaning.
+    /// `nil` = секцію не показуємо: переклад без Strong's-розмітки (UBIO), NASB (ADR-041
+    /// Amendment — рядків немає), стара база без таблиці, або покриття нижче порогу.
+    func renderingSummary(for entry: StrongsEntry) -> RenderingSummary? {
+        var current: (bookId: String, chapter: Int, verse: Int, segOrd: Int)?
+        if let verse = selectedVerse, let seg = selectedSegment,
+           let segments = verse.parsed?.segments {
+            // seg_ord = № серед сегментів З Strong's — так само рахує build-скрипт.
+            let tagged = segments.filter { !$0.strongs.isEmpty }
+            if let ord = tagged.firstIndex(where: { $0.id == seg.id }) {
+                current = (verse.bookId, verse.chapter, verse.number, ord)
+            }
+        }
+        guard let summary = db.loadRenderingSummary(strongsId: entry.id,
+                                                    translation: currentTranslation.id,
+                                                    current: current),
+              summary.coverage >= Self.renderingCoverageThreshold
+        else { return nil }
+        return summary
+    }
+
+    /// Усі входження слова в перекладі для stacked sheet (ADR-041 частина 3).
+    /// Поза головним потоком — до 8 624 рядків з текстом віршів (καί у KJV).
+    func renderingOccurrences(strongsId: String, translation: String) async -> [RenderingOccurrence] {
+        await RenderingOccurrenceLoader.shared.load(
+            strongsKey: StrongsMergeMap.canonical(strongsId), translation: translation)
+    }
+
+    /// Вірші-приклади для Usage (ADR-041 ч.5), ключ — rendering.id.
+    func renderingExamples(strongsId: String, translation: String) -> [Int: RenderingOccurrence] {
+        db.loadRenderingExamples(strongsId: strongsId, translation: translation)
+    }
+
+    /// Підсумок передач для аркуша — без позначки поточного вірша й без порогу
+    /// (аркуш відкривається лише з секції, яка поріг уже пройшла).
+    func renderingSummaryForSheet(strongsId: String, translation: String) -> RenderingSummary? {
+        db.loadRenderingSummary(strongsId: strongsId, translation: translation, current: nil)
     }
 
     /// Load Strong's entry for a Macula BibleWord (future — called once word table is populated).
@@ -1359,7 +1492,8 @@ class ReaderViewModel: ObservableObject {
                 id: v.id, bookId: v.bookId, chapter: v.chapter, number: v.number,
                 text: v.text, words: v.words,
                 highlightColor: highlightColors[v.id],
-                parsed: v.parsed
+                parsed: v.parsed,
+                footnotes: v.footnotes, footnoteLabels: v.footnoteLabels
             )
             if selectedVerse?.id == v.id {
                 selectedVerse = verses[idx]
@@ -1369,6 +1503,48 @@ class ReaderViewModel: ObservableObject {
 }
 
 // MARK: - Verse Navigation Source (ADR-024)
+
+/// Крок історії переходів у Study Mode (ADR-024). `renderingsSheet` — якщо перехід
+/// був з аркуша входжень (ADR-041 ч.4): «‹ Назад» тоді відкриває аркуш знову.
+struct CrossRefBackEntry: Equatable {
+    let verseId: String
+    var renderingsSheet: RenderingsSheetState? = nil
+    /// № сегмента з Strong's вибраного слова (seg_ord) — щоб повернутись на Word-таб.
+    var wordSegOrd: Int? = nil
+}
+
+/// Стан stacked sheet «усі входження» — достатній, щоб відкрити його знову.
+struct RenderingsSheetState: Identifiable, Equatable {
+    let id = UUID()
+    let strongsId: String
+    let lemma: String
+    /// Транслітерація леми — підзаголовок аркуша (та сама, що в шапці Word-вкладки).
+    let transliteration: String
+    let translationId: String
+    var renderingFilter: Int?
+    var bookFilter: String? = nil
+    /// Вірш, з якого пішли в читанку, — до нього прокручуємо при поверненні.
+    var anchorOccurrenceId: String? = nil
+
+    init(strongsId: String, lemma: String, transliteration: String = "", translationId: String,
+         renderingFilter: Int?, bookFilter: String? = nil, anchorOccurrenceId: String? = nil) {
+        self.strongsId = strongsId
+        self.lemma = lemma
+        self.transliteration = transliteration
+        self.translationId = translationId
+        self.renderingFilter = renderingFilter
+        self.bookFilter = bookFilter
+        self.anchorOccurrenceId = anchorOccurrenceId
+    }
+
+    /// Та сама копія з новим `id`, щоб `.sheet(item:)` презентував її як новий аркуш.
+    init(reopening s: RenderingsSheetState) {
+        self.init(strongsId: s.strongsId, lemma: s.lemma, transliteration: s.transliteration,
+                  translationId: s.translationId,
+                  renderingFilter: s.renderingFilter, bookFilter: s.bookFilter,
+                  anchorOccurrenceId: s.anchorOccurrenceId)
+    }
+}
 
 /// Describes what triggered a `navigateToVerse(id:source:)` call.
 /// Controls how the cross-ref back stack is updated.

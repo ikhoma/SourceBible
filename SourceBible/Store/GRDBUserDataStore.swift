@@ -148,6 +148,18 @@ final class GRDBUserDataStore: UserDataStoreProtocol {
             try db.execute(sql: "ALTER TABLE bookmarks DROP COLUMN category_id")
         }
 
+        // v3: bug-037 — a bookmark previously stored only a verse NUMBER, so switching
+        // to a translation with a different versification scheme (e.g. UBIO/RST Psalter,
+        // LXX-numbered) showed either the wrong verse or nothing at all (see
+        // BookmarkCardView). New column is additive and nullable: existing rows get NULL
+        // and keep today's identity-lookup behavior untouched (Ivan's decision
+        // 2026-09-22 — do not guess which translation a legacy bookmark was made in).
+        // Only newly-saved bookmarks populate it, which lets BookmarkCardView hop through
+        // verse_org the same way loadParallelVerseTexts does (bug-036).
+        migrator.registerMigration("v3_bookmark_verses_translation") { db in
+            try db.execute(sql: "ALTER TABLE bookmark_verses ADD COLUMN translation TEXT")
+        }
+
         try migrator.migrate(dbQueue)
     }
 
@@ -307,6 +319,7 @@ final class GRDBUserDataStore: UserDataStoreProtocol {
         static var databaseTableName: String { "bookmark_verses" }
         var bookmark_id: String
         var verse_id: String
+        var translation: String?   // bug-037 — nil on legacy rows, see v3 migration above
     }
 
     // MARK: - Highlights
@@ -488,22 +501,30 @@ final class GRDBUserDataStore: UserDataStoreProtocol {
                 .order(Column("created_at").desc)
                 .fetchAll(db)
             return try rows.map { row in
-                let verseIds = try BookmarkVerseRow
+                let verseRows = try BookmarkVerseRow
                     .filter(Column("bookmark_id") == row.id)
                     .fetchAll(db)
-                    .map(\.verse_id)
-                return BookmarkWithVerses(bookmark: row.toDomain(), verseIds: verseIds)
+                let verseIds = verseRows.map(\.verse_id)
+                // bug-037: only present for verses saved after v3 — legacy rows are
+                // absent here on purpose, so callers keep their old identity lookup.
+                var verseTranslations: [String: String] = [:]
+                for vr in verseRows {
+                    if let t = vr.translation { verseTranslations[vr.verse_id] = t }
+                }
+                return BookmarkWithVerses(bookmark: row.toDomain(), verseIds: verseIds,
+                                          verseTranslations: verseTranslations)
             }
         }) ?? []
     }
 
-    func saveBookmark(_ bookmark: Bookmark, verseIds: [String]) {
+    func saveBookmark(_ bookmark: Bookmark, verseIds: [String], translation: String?) {
         dbWrite { db in
             try BookmarkRow.from(bookmark).save(db)
             try db.execute(sql: "DELETE FROM bookmark_verses WHERE bookmark_id = ?",
                            arguments: [bookmark.id])
             for verseId in verseIds {
-                try BookmarkVerseRow(bookmark_id: bookmark.id, verse_id: verseId).insert(db)
+                try BookmarkVerseRow(bookmark_id: bookmark.id, verse_id: verseId,
+                                     translation: translation).insert(db)
             }
         }
     }

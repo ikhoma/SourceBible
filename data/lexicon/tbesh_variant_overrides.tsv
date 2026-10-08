@@ -1,0 +1,48 @@
+# Кураторські рішення: який варіант TBESH показувати для ГОЛОГО Strong's-id Macula (bug-057).
+# Читає build_db.py, крок 4d. Рядок: id<TAB>варіант<TAB>примітка. Невідомий id/варіант = збірка падає.
+# Діє лише на групу ризику (голий id без власного рядка TBESH, ≥2 варіанти) і ПЕРЕМАГАЄ автоматику (AGREE).
+# Кандидати — рядки data/lexicon/tbesh_resolution.tsv з decision CURATE / NO_SIGNAL.
+#
+# 2026-10-06: 39 рішень підписав Іван (куратор) — пропозиції агента з розмітки 2026-10-05,
+# переглянуті у сторінці «Куратор варіантів TBESH»; решта 105 неоднозначних лишаються на
+# першому варіанті (за розміткою — показуються правильно).
+
+H7462	H7462b	Macula: feed, shepherd, pasture → було «House of Shepherds» → «to pasture» (86 вжив.; Іван, куратор)
+H6887	H6887b	Macula: distressed, in distress, besiege → було «to confine» → «to constrain» (45 вжив.; Іван, куратор)
+H7014	H7014b	Macula: cain → було «Kain» → «Cain» (16 вжив.; Іван, куратор)
+H7641	H7641b	Macula: ears, ears of grain, shibboleth → було «stream» → «ear» (16 вжив.; Іван, куратор)
+H6544	H6544b	Macula: dishevel, ignores, taking ~ away → було «to lead» → «to neglect» (15 вжив.; Іван, куратор)
+H7997	H7997b	Macula: plundered, plunder, seize → було «to take» → «to loot» (14 вжив.; Іван, куратор)
+H6957	H6957b	Macula: line, measuring line, voice → було «cord» → «line» (13 вжив.; Іван, куратор)
+H6154	H6154b	Macula: woof → було «racial-mix» → «mixture» (9 вжив.; Іван, куратор)
+H2151	H2151b	Macula: glutton, gluttonous eaters, gluttons → було «to shake» → «be vile» (8 вжив.; Іван, куратор)
+H1238	H1238b	Macula: emptied out, lay waste, to be laid waste → було «be luxuriant» → «to empty» (8 вжив.; Іван, куратор)
+H7663	H7663b	Macula: look, hope, wait → було «to inspect» → «to await» (6 вжив.; Іван, куратор)
+H7423	H7423b	Macula: faulty, lazy, slack → було «deceit» → «slackness» (6 вжив.; Іван, куратор)
+H2300	H2300b	Macula: sharpened, sharpens, menacing → було «be sharp» → «to sharpen» (6 вжив.; Іван, куратор)
+H328	H328b	Macula: slowly, gently, dejectedly → було «mutterer» → «softly» (5 вжив.; Іван, куратор)
+H5858	H5858b	Macula: ebal → було «Obal» → «Ebal» (5 вжив.; Іван, куратор)
+H5299	H5299b	Macula: naphoth, naphath → було «sieve» → «height» (3 вжив.; Іван, куратор)
+H6060	H6060b	Macula: chains, pendants, jewel → було «neck» → «necklace» (3 вжив.; Іван, куратор)
+H3272	H3272b	Macula: counselors, agreed → було «to counsel» → «counsellor» (3 вжив.; Іван, куратор)
+H6075	H6075b	Macula: dared, puffed up → було «to swell» → «to presume» (2 вжив.; Іван, куратор)
+H6087	H6087b	Macula: fashioned, image → було «to hurt» → «to shape» (2 вжив.; Іван, куратор)
+H5737	H5737b	Macula: hoed → було «to help» → «to hoe» (2 вжив.; Іван, куратор)
+H5077	H5077b	Macula: exclude, put off → було «to drive away» → «to put away» (2 вжив.; Іван, куратор)
+H7739	H7739b	Macula: made → було «be like» → «be set» (2 вжив.; Іван, куратор)
+H5198	H5198b	Macula: stacte → було «drop» → «gum» (1 вжив.; Іван, куратор)
+H6767	H6767c	Macula: cricket → було «buzzing» → «whirring» (1 вжив.; Іван, куратор)
+H805	H805b	Macula: ashurites → було «Asshurim» → «Ashurite» (1 вжив.; Іван, куратор)
+H5543	H5543b	Macula: sallu → було «`valor`» → «Sallu» (1 вжив.; Іван, куратор)
+H5425	H5425b	Macula: let loose → було «to start» → «to free» (1 вжив.; Іван, куратор)
+H4551	H4551b	Macula: dart → було «quarry» → «missile» (1 вжив.; Іван, куратор)
+H7189	H7189b	Macula: what is right → було «bow» → «truth» (1 вжив.; Іван, куратор)
+H6793	H6793b	Macula: cold → було «hook» → «coolness» (1 вжив.; Іван, куратор)
+H3856	H3856b	Macula: madman → було «to languish» → «to amaze» (1 вжив.; Іван, куратор)
+H1713	H1713b	Macula: distinguished → було «to look» → «to set a banner» (1 вжив.; Іван, куратор)
+H5868	H5868b	Macula: scorching → було «iniquities» → «heat» (1 вжив.; Іван, куратор)
+H5183	H5183b	Macula: descending blow → було «quietness» → «descent» (1 вжив.; Іван, куратор)
+H4718	H4718b	Macula: excavation → було «hammer» → «hole» (1 вжив.; Іван, куратор)
+H6089	H6089b	Macula: pot → було «toil» → «vessel» (1 вжив.; Іван, куратор)
+H6245	H6245b	Macula: take notice → було «to gleam» → «to think» (1 вжив.; Іван, куратор)
+H5115	H5115b	Macula: at rest → було «to beautify» → «to dwell» (1 вжив.; Іван, куратор)

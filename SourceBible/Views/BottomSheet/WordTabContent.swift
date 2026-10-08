@@ -291,6 +291,9 @@ struct WordMeaningView: View {
     /// does not inflate the counter (Slice 3 §E).
     @State private var lastTrackedEntryId: String = ""
 
+    /// ADR-041 «Translated as»: як поточний переклад передає слово. nil = секцію не показуємо.
+    @State private var renderings: RenderingSummary?
+
     private let t: TranslationProvider = BundleTranslationProvider()
 
     var body: some View {
@@ -302,12 +305,18 @@ struct WordMeaningView: View {
                 morphologySection(word: word)
             }
             lexicalSection
+            renderingSection
             if let word = vm.selectedWord,
                let greek = word.greek, !greek.isEmpty {
                 greekSection(word)
             }
         }
         .padding(.bottom, 20)
+        // ADR-041: перечитуємо при зміні слова, перекладу читанки або натиснутого сегмента
+        // («this verse»). Індексований запит — синхронно на MainActor, як і решта лексикону.
+        .task(id: renderingTaskKey) {
+            renderings = vm.renderingSummary(for: entry)
+        }
         // Dedup: fire once per unique entry.id (chevron nav changes the entry → new fire).
         // .onAppear handles the initial display; .onChange handles subsequent word navigations
         // while the view stays mounted (no teardown between chevron taps).
@@ -325,6 +334,111 @@ struct WordMeaningView: View {
         }
     }
 
+    // MARK: Translated in (ADR-041)
+
+    private var renderingTaskKey: String {
+        "\(entry.id)|\(vm.currentTranslation.id)|\(vm.selectedSegment?.id.uuidString ?? "-")"
+    }
+
+    /// Скільки рядків видно у вкладці; решта — в аркуші за «Show all» (як на Usage,
+    /// рішення Івана 2026-10-08: без розгортання списку на місці). Рядок передачі
+    /// з поточного вірша показується завжди, навіть поза топом.
+    private static let renderingsCollapsedCount = 5
+
+    @ViewBuilder
+    private var renderingSection: some View {
+        if let summary = renderings {
+            let all = summary.items
+            let visible: [WordRendering] = {
+                if all.count <= Self.renderingsCollapsedCount { return all }
+                var top = Array(all.prefix(Self.renderingsCollapsedCount))
+                if let cur = summary.currentRenderingId,
+                   !top.contains(where: { $0.id == cur }),
+                   let row = all.first(where: { $0.id == cur }) {
+                    top.append(row)
+                }
+                return top
+            }()
+            let maxCount = max(all.first?.count ?? 1, 1)
+
+            VStack(alignment: .leading, spacing: 0) {
+                sectionLabel(t.string(for: MorphKey.sectionTranslatedIn, summary.translationId))
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(visible) { item in
+                        Button {
+                            // Аркуш презентує VerseBottomSheetView зі стану VM (ч.4:
+                            // «‹ Назад» з читанки відкриває його знову).
+                            vm.renderingsSheet = RenderingsSheetState(
+                                strongsId: entry.id, lemma: entry.originalWord,
+                                transliteration: entry.headerTransliteration,
+                                translationId: summary.translationId,
+                                renderingFilter: item.id)
+                        } label: {
+                            renderingRow(item, maxCount: maxCount,
+                                         isCurrent: item.id == summary.currentRenderingId)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                HStack(alignment: .firstTextBaseline) {
+                    if all.count > Self.renderingsCollapsedCount {
+                        Button {
+                            // Той самий аркуш, що «Show all» на Usage: усі передачі, без фільтра.
+                            vm.renderingsSheet = RenderingsSheetState(
+                                strongsId: entry.id, lemma: entry.originalWord,
+                                transliteration: entry.headerTransliteration,
+                                translationId: summary.translationId,
+                                renderingFilter: nil)
+                        } label: {
+                            Text(t.string(for: MorphKey.renderingsShowAll))
+                                .font(.callout)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.appBlue)
+                    }
+                    Spacer(minLength: 8)
+                    // Підпис покриття «46 of 47» прибрано (рішення Івана 2026-10-05): без пояснення
+                    // він незрозумілий. Розбіжність — легітимні вживання без власного слова в перекладі
+                    // (Втор 14:4: другий שֶׂה розчинився в «goat»).
+                }
+                .padding(.top, 6)
+            }
+        }
+    }
+
+    private func renderingRow(_ item: WordRendering, maxCount: Int, isCurrent: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(item.text)
+                .font(.callout)
+                .lineLimit(1)
+                .layoutPriority(1)
+            GeometryReader { geo in
+                // Capsule: both ends equally rounded; the 8 pt minimum keeps a
+                // rare rendering visible as a dot. One colour for every bar: the
+                // rendering in this verse is already highlighted in the verse card.
+                Capsule()
+                    .fill(Color.appBlue)
+                    .frame(width: max(8, geo.size.width * CGFloat(item.count) / CGFloat(maxCount)),
+                           height: 8)
+                    .frame(maxHeight: .infinity, alignment: .center)
+            }
+            .frame(height: 20)
+            Text(verbatim: "\(item.count)")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            // Без шеврона — рішення Івана (2026-09-29): у барах він зайвий шум.
+            // Рядок усе одно відкриває аркуш усіх входжень цієї передачі.
+        }
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: isCurrent
+            ? "\(item.text), \(item.count), \(t.string(for: MorphKey.renderingsThisVerse))"
+            : "\(item.text), \(item.count)"))
+    }
+
     // MARK: Header
 
     private var headerSection: some View {
@@ -335,9 +449,7 @@ struct WordMeaningView: View {
                         .font(.title3)
                     // Header shows the LEMMA form (entry.originalWord), so use the LEMMA xlit.
                     // Surface-form xlit (vm.selectedWord?.xlit) is shown in contextSection below.
-                    let xlit: String = !entry.xlitSimple.isEmpty
-                        ? entry.xlitSimple
-                        : entry.transliteration
+                    let xlit = entry.headerTransliteration
                     if !xlit.isEmpty {
                         Text(xlit)
                             .font(.title3)
@@ -613,6 +725,13 @@ struct ConcordanceView: View {
     // Мова інтерфейсу для plural-правил (bug-041), не системна.
     @Environment(\.locale) private var locale
 
+    /// ADR-041 ч.5: коли переклад розмічений (гейт покриття пройдено) — приклад на
+    /// кожну передачу замість прикладу на книгу. nil → стара розбивка по книгах (UBIO).
+    @State private var renderings: RenderingSummary?
+    @State private var examples: [Int: RenderingOccurrence] = [:]
+
+    private var usesRenderings: Bool { renderings != nil && !examples.isEmpty }
+
     var body: some View {
         // bug-041: було `String(format:)` без plural-правил — «2 випадків» замість «2 випадки».
         // Ключ тепер має plural-варіації, а локаль передається ЯВНО: swizzle підміняє бандл,
@@ -626,7 +745,9 @@ struct ConcordanceView: View {
             // Usage data loads lazily HERE (not in loadStrongs) — see loadUsageIfNeeded.
             // Until it lands, show a spinner instead of a false "no data" flash.
             // The bookGroups check keeps DEBUG previews (pre-populated samples) working.
-            if !entry.usageLoaded && entry.bookGroups.isEmpty {
+            if usesRenderings, let summary = renderings {
+                renderingExamples(summary)
+            } else if !entry.usageLoaded && entry.bookGroups.isEmpty {
                 HStack { Spacer(); ProgressView().padding(.vertical, 16); Spacer() }
             } else if entry.bookGroups.isEmpty {
                 Text(LocalizedStringKey(MorphKey.emptyNoData))
@@ -663,6 +784,101 @@ struct ConcordanceView: View {
         .onChange(of: entry.id) { _, _ in
             vm.loadUsageIfNeeded()
         }
+        .task(id: "\(entry.id)|\(vm.currentTranslation.id)") {
+            let summary = vm.renderingSummary(for: entry)
+            renderings = summary
+            examples = summary.map {
+                vm.renderingExamples(strongsId: entry.id, translation: $0.translationId)
+            } ?? [:]
+        }
+    }
+
+    // MARK: Examples per rendering (ADR-041 ч.5)
+
+    @ViewBuilder
+    private func renderingExamples(_ summary: RenderingSummary) -> some View {
+        // Власний VStack(spacing: 0): PillSection ставить між дітьми 12pt, і рядки
+        // з Divider розходились далі, ніж в аркуші всіх входжень (там spacing 0).
+        VStack(alignment: .leading, spacing: 0) {
+        ForEach(summary.items) { item in
+            if let ex = examples[item.id] {
+                // Тап по рядку = той самий аркуш, що «Show all», з початку списку
+                // (рішення Івана 2026-10-08). Шеврона тут немає: він обіцяв перехід у
+                // читанку, а рядок відкриває аркуш. У самому аркуші вірші з шевронами
+                // ведуть у читанку.
+                Button {
+                    openSheet(summary, rendering: nil)
+                } label: {
+                    RenderingExampleRow(
+                        item: item, example: ex,
+                        reference: "\(vm.translationBookNames[ex.bookId]?.long ?? BibleBookNames.full(for: ex.bookId)) \(ex.chapter):\(ex.verse)")
+                }
+                .buttonStyle(.plain)
+                Divider()
+            }
+        }
+        Button {
+            openSheet(summary, rendering: nil)
+        } label: {
+            Text(LocalizedStringKey(MorphKey.renderingsShowAll))
+                .font(.callout)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.appBlue)
+        .padding(.vertical, 12)
+        }
+    }
+
+    private func openSheet(_ summary: RenderingSummary, rendering: Int?) {
+        vm.renderingsSheet = RenderingsSheetState(
+            strongsId: entry.id, lemma: entry.originalWord,
+            transliteration: entry.headerTransliteration,
+            translationId: summary.translationId, renderingFilter: rendering)
+    }
+}
+
+// MARK: - Rendering Example Row (ADR-041 ч.5)
+
+/// Передача + скільки разів + вірш-приклад (найвагоміший за перехресними посиланнями).
+/// Тап відкриває аркуш усіх входжень (без фільтра). Без шеврона — див. renderingExamples.
+private struct RenderingExampleRow: View {
+    let item: WordRendering
+    let example: RenderingOccurrence
+    let reference: String
+
+    // Анатомія — як у аркуші всіх входжень (WordRenderingsSheet): рядок групи
+    // (там — книга, тут — передача) тим самим стилем, що `bookHeader`, далі рядок
+    // вірша як `OccurrenceRow`: ReferenceLabel + текст, ті самі відступи (шеврона немає —
+    // рядок відкриває аркуш, а не вірш у читанці).
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(verbatim: item.text)
+                Spacer()
+                Text(verbatim: "\(item.count)")
+                    .monospacedDigit()
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 8)
+
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ReferenceLabel(reference)
+                    Text(VerseHighlight.attributed(raw: example.rawText,
+                                                   verseId: example.id,
+                                                   taggedOrdinal: example.segOrd,
+                                                   spans: example.highlight))
+                        .font(.callout)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 8)
+            }
+            .padding(.vertical, 10)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }
 

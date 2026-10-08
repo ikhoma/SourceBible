@@ -30,6 +30,22 @@ scripts/.cache/
 !data/glosses/
 !data/glosses/**
 
+# EXCEPTION: TBESH variant curation (bug-057) — tbesh_variant_overrides.tsv holds hand-signed
+# decisions (which TBESH homonym a bare Macula Strong's id shows); tbesh_resolution.tsv is the
+# build's audit report AND the legacy snapshot build_strongs_merge_map.py needs so no bug-046
+# sub-entry is silently un-hidden. Small, reviewable — MUST be tracked.
+!data/lexicon/
+!data/lexicon/**
+
+# EXCEPTION: ADR-042 curated inputs of the ASV converter — small, derived once and reviewable:
+# obi-asv.SHA256SUMS pins the OpenBible input, name_strongs.tsv fills Strong's the source lacks,
+# strongs/canonical_greek.tsv maps Greek form numbers to Macula lemma numbers (shared table).
+# The OpenBible data itself (data/obi-asv/, ~290 MB) stays ignored — see docs/BUILD.md.
+!data/asv/
+!data/asv/**
+!data/strongs/
+!data/strongs/**
+
 # EXCEPTION: Hebrew morph-decode audit artifact (ADR-040) — one row per unique
 # (morph, lang) pair actually seen in the corpus (892 rows) with its decoded
 # fields, generated from the Macula TSV for auditability/regression-diffing.
@@ -87,3 +103,6 @@ commit_all.sh
 scripts/_to_delete/
 SourceBible/Resources/sourcebible-backup.db
 sb_baseline.db*
+
+# Робочі вивантаження агента (скріншоти, JSON-заміри) — не для репо (code review 2026-10-08)
+Claude outputs/

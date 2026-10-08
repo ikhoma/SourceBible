@@ -204,19 +204,35 @@ private struct CommentaryChunkTextView: UIViewRepresentable {
     ///
     /// НЕ через uiView.sizeThatFits(_:) напряму — той може повернути висоту,
     /// заміряну під СТАРУ ширину textContainer з попереднього layout-проходу
-    /// (кешовану), а не під ширину, яку щойно запропонував SwiftUI. У списку
-    /// чанків (LazyVStack) це проявлялось як обрізаний останній видимий
-    /// шматок тексту внизу секції — ScrollView вважав контент коротшим, ніж
-    /// він є насправді, і не давав доскролити до кінця (Ivan, manual test,
-    /// 2026-09-02, /engineering:debug). Фікс: примусово виставляємо ширину
-    /// textContainer і питаємо layoutManager про usedRect — це форсує
-    /// реальний перерахунок під ЦЮ конкретну ширину, а не читає кеш.
+    /// (кешовану), а не під ширину, яку щойно запропонував SwiftUI (Ivan,
+    /// manual test, 2026-09-02, /engineering:debug).
+    ///
+    /// НЕ через uiView.layoutManager.ensureLayout(for:) + usedRect(for:)
+    /// (це БУВ фікс від 2026-09-02, замінений цим комітом) — на iOS 27
+    /// (Ivan, фізичний пристрій, /engineering:debug, 2026-09-22) ensureLayout
+    /// перестав гарантувати повний синхронний розклад під greatestFiniteMagnitude
+    /// height: usedRect тепер повертає ЧАСТКОВУ висоту (заміряно: Кальвін
+    /// Мт 6:33-34, 1217 символів — usedRect.height=94.6pt проти
+    /// boundingRect.height=701.8pt, ~13% від реального; textLayoutManager
+    /// лишався nil, тобто TextKit-1-компат режим спрацював як і раніше —
+    /// зламався саме ensureLayout/usedRect, а не сам компат-перехід).
+    /// Симптом у користувача: коментар обривається на 5-90% тексту, відсоток
+    /// не сталий і не корелює з довжиною секції чи кількістю чанків — це
+    /// одна секція = один чанк у кожному заміряному випадку, тож стара
+    /// підозра на алгоритм нарізки (buildChunks) не підтвердилась.
+    ///
+    /// Натомість NSAttributedString.boundingRect(with:options:context:) не
+    /// залежить від layoutManager/textContainer стану — рахує напряму з
+    /// глифів рядка під задану ширину, підтверджено правильним числом на
+    /// тому ж пристрої (701.8pt зійшлось з видимою кількістю рядків).
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width > 0 else { return nil }
-        uiView.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
-        uiView.layoutManager.ensureLayout(for: uiView.textContainer)
-        let used = uiView.layoutManager.usedRect(for: uiView.textContainer)
-        return CGSize(width: width, height: ceil(used.height))
+        let bounding = uiView.attributedText.boundingRect(
+            with: CGSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        return CGSize(width: width, height: ceil(bounding.height))
     }
 
     func makeCoordinator() -> Coordinator {

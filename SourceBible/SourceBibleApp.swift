@@ -2,6 +2,7 @@
 // SourceBible
 
 import SwiftUI
+import TipKit
 
 @main
 struct SourceBibleApp: App {
@@ -93,6 +94,17 @@ struct SourceBibleApp: App {
         // iOS 18: явний UITabBarAppearance (bug-032). No-op на iOS 26.
         // Має стояти ДО побудови сцени — проксі не чіпає вже створені бари.
         LegacyTabBarAppearance.install()
+
+        // TapVerseTip (spec-minimal-tap-onboarding.md §5, code-review fix): must
+        // configure before any Tip's rules/parameters are evaluated -- moved out
+        // of the post-first-render `.task` (was racing ReaderView's first frame
+        // on cold launch) into init(), same "before scene is built" rule as
+        // LocalizedBundle.install above.
+        do {
+            try Tips.configure()
+        } catch {
+            print("TipKit configure error: \(error.localizedDescription)")
+        }
 
         // Build the GRDB store — crashes on failure are intentional at init time
         // (a corrupted DB is unrecoverable; better to surface it immediately).

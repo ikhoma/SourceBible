@@ -163,7 +163,9 @@ struct AboutView: View {
                 LicenseGroup(title: "Переклади", items: [
                     "Біблія в перекладі Івана Огієнка (1988) — Українське Біблійне Товариство — CC BY-SA 4.0 · Вікіджерела",
                     "King James Version (KJV) — суспільне надбання. У Великій Британії права на Authorized Version належать Короні й адмініструються патентовласником Корони, Cambridge University Press",
-                    "American Standard Version (ASV) — суспільне надбання",
+                    "American Standard Version (ASV, 1901) — суспільне надбання · цифрове видання й виноски перекладачів: OpenBible.info",
+                    // ADR-042: CC BY 4.0 вимагає назвати джерела й позначити зміни (LICENSE.md OpenBible).
+                    "Вирівнювання ASV з оригіналом — OpenBible.info, на основі MACULA (Biblica), SBLGNT (SBL і Logos), SBLGNT-TEI (J. J. McCollum), OpenScriptures Hebrew Bible, Westminster Hebrew Syntax (Groves Center), Cherith Glosses — CC BY 4.0 · змінено: теги Стронга зведено до головних слів",
                     "Синодальний переклад (RST) — суспільне надбання",
                 ]),
                 LicenseGroup(title: "Коментарі", items: [
@@ -216,7 +218,9 @@ struct AboutView: View {
             LicenseGroup(title: "Translations", items: [
                 "Bible, Ivan Ohiienko Translation (1988) — Ukrainian Bible Society — CC BY-SA 4.0 · Wikisource",
                 "King James Version (KJV) — Public Domain. In the United Kingdom, rights in the Authorized Version are vested in the Crown and administered by the Crown's patentee, Cambridge University Press",
-                "American Standard Version (ASV) — Public Domain",
+                "American Standard Version (ASV, 1901) — Public Domain · digital edition & translators' footnotes: OpenBible.info",
+                // ADR-042: CC BY 4.0 requires naming the sources and indicating changes (OpenBible LICENSE.md).
+                "ASV interlinear alignment — OpenBible.info, derived from MACULA (Biblica), SBLGNT (SBL & Logos), SBLGNT-TEI (J. J. McCollum), OpenScriptures Hebrew Bible, Westminster Hebrew Syntax (Groves Center), Cherith Glosses — CC BY 4.0 · modified: Strong's tags reduced to head words",
                 "Russian Synodal Translation (RST) — Public Domain",
             ]),
             LicenseGroup(title: "Commentaries", items: [

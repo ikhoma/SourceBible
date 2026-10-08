@@ -17,6 +17,7 @@ final class InMemoryUserDataStore: UserDataStoreProtocol {
     private var noteVersesMap:     [String: [String]]    = [:]  // noteId → [verseId]
     private var bookmarkRecords:   [String: Bookmark]    = [:]
     private var bookmarkVersesMap: [String: [String]]    = [:]  // bookmarkId → [verseId]
+    private var bookmarkVerseTranslationsMap: [String: [String: String]] = [:]  // bookmarkId → [verseId: translation] (bug-037)
 
     private let previewUserId = "preview-user"
 
@@ -134,13 +135,23 @@ final class InMemoryUserDataStore: UserDataStoreProtocol {
     func bookmarks() -> [BookmarkWithVerses] {
         bookmarkRecords.values
             .filter { $0.deletedAt == nil }
-            .map { BookmarkWithVerses(bookmark: $0, verseIds: bookmarkVersesMap[$0.id] ?? []) }
+            .map {
+                BookmarkWithVerses(bookmark: $0, verseIds: bookmarkVersesMap[$0.id] ?? [],
+                                   verseTranslations: bookmarkVerseTranslationsMap[$0.id] ?? [:])
+            }
             .sorted { $0.bookmark.createdAt > $1.bookmark.createdAt }
     }
 
-    func saveBookmark(_ bookmark: Bookmark, verseIds: [String]) {
+    func saveBookmark(_ bookmark: Bookmark, verseIds: [String], translation: String?) {
         bookmarkRecords[bookmark.id]   = bookmark
         bookmarkVersesMap[bookmark.id] = verseIds
+        if let translation {
+            var dict: [String: String] = [:]
+            for verseId in verseIds { dict[verseId] = translation }
+            bookmarkVerseTranslationsMap[bookmark.id] = dict
+        } else {
+            bookmarkVerseTranslationsMap[bookmark.id] = [:]
+        }
     }
 
     func deleteBookmark(id: String) {

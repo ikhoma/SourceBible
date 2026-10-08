@@ -104,6 +104,27 @@ class TestVerseZeroStripped(unittest.TestCase):
         self.assertEqual(len(s.mappings), 7)  # верші 1..7, НЕ 0..7
 
 
+class TestSuperscriptions(unittest.TestCase):
+    """bug-058: вірш 0 перекладу (надпис) з реальним оригінальним віршем — окремий факт.
+    Рядки дослівно з eng.vrs.txt (223, 245-247)."""
+
+    def test_heading_target_recorded_not_mapped(self):
+        s = parse_vrs(_tmp("PSA 42:0-11 = PSA 42:1-12\n"))
+        self.assertEqual(s.superscriptions[("PSA", 42)], [(42, 1)])
+        self.assertNotIn(("PSA", 42, 0), s.mappings)
+        self.assertEqual(s.mappings[("PSA", 42, 1)], [(42, 2)])   # зміст — як було
+
+    def test_two_verse_heading_keeps_both_in_order(self):
+        s = parse_vrs(_tmp("PSA 60:0 = PSA 60:1\nPSA 60:0 = PSA 60:2\nPSA 60:1-12 = PSA 60:3-14\n"))
+        self.assertEqual(s.superscriptions[("PSA", 60)], [(60, 1), (60, 2)])
+        self.assertEqual(s.mappings[("PSA", 60, 1)], [(60, 3)])
+
+    def test_rso_zero_to_zero_is_not_a_superscription(self):
+        # rso `PSA 10:0-7 = PSA 11:0-7`: оригінальний вірш 0 не існує — нічого не записуємо.
+        s = parse_vrs(_tmp("PSA 10:0-7 = PSA 11:0-7\nPSA 9:22 = PSA 10:0\n"))
+        self.assertEqual(s.superscriptions, {})
+
+
 class TestMaxVerses(unittest.TestCase):
     def test_counts_indexed_by_chapter(self):
         s = parse_vrs(_tmp("GEN 1:31 2:25 3:24\n"))

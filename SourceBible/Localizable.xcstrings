@@ -2,16 +2,6 @@
   "sourceLanguage": "en",
   "strings": {
     "": {},
-    "%@ · %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$@ · %2$@"
-          }
-        }
-      }
-    },
     "%@ %lld:%lld": {
       "localizations": {
         "en": {
@@ -22,7 +12,19 @@
         }
       }
     },
+    "%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "%lld": {},
+    "%lld ": {},
+    "%lld%%": {},
     "%lld. %@": {
       "localizations": {
         "en": {
@@ -33,7 +35,18 @@
         }
       }
     },
-    "%lld%%": {},
+    "Built by Bible students and teachers, for Bible students and teachers.": {},
+    "Contact": {},
+    "Effective 17 July 2026": {},
+    "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in Source Bible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training.": {},
+    "Source Bible is built to keep your data private. Most of what you create stays on your device, and analytics are collected only if you agree to them.": {},
+    "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої, а аналітика збирається лише за вашою згодою.": {},
+    "Sources & licenses": {},
+    "Support Source Bible": {},
+    "The original-language texts are drawn from the Westminster Leningrad Codex for the Hebrew Old Testament and the Nestle 1904 edition of the Greek New Testament, with word-level analysis from the Macula project.": {},
+    "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it.": {},
+    "We are grateful to everyone who made this scholarship freely available.": {},
+    "We bridge the gap between modern readers and the world of the biblical text.": {},
     "a11y.nav.next_chapter": {
       "localizations": {
         "en": {
@@ -314,13 +327,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anonymous usage stats show which features people use, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
+            "value": "Anonymous usage stats show which features people use, so we know what to improve. Notes, highlights, and search queries are never shared. You can change this any time in the Menu, details in the [Privacy Policy](https://source-bible.vercel.app/privacy)."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Анонімна статистика показує, якими функціями користуються, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
+            "value": "Анонімна статистика показує, якими функціями користуються, і так видно, що покращувати. Нотатки, виділення й пошукові запити не передаються ніколи. Рішення можна змінити будь-коли в Меню, деталі в [Політиці конфіденційності](https://source-bible.vercel.app/privacy)."
           }
         }
       }
@@ -336,7 +349,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не ділитися"
+            "value": "Не ділитися"
           }
         }
       }
@@ -396,13 +409,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add verses to bookmarks\nfor quick access"
+            "value": "Add verses to bookmarks\nfor quick access"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Додайте вірші до закладок\nдля швидкого доступу"
+            "value": "Додайте вірші до закладок\nдля швидкого доступу"
           }
         }
       }
@@ -413,13 +426,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bookmark verses for quick access"
+            "value": "Bookmark verses for quick access"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Додайте вірші до закладок\nдля швидкого доступу"
+            "value": "Додайте вірші до закладок\nдля швидкого доступу"
           }
         }
       }
@@ -429,7 +442,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No bookmarks"
+            "value": "No bookmarks"
           }
         },
         "uk": {
@@ -456,21 +469,121 @@
         }
       }
     },
-    "Built by Bible students and teachers, for Bible students and teachers.": {},
-    "Contact": {},
     "commentary.menu.addToNote": {
       "comment": "Selection menu action on commentary text: attach the quote to a new note",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add to Note"
+            "value": "Add to Note"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Додати в нотатку"
+            "value": "Додати в нотатку"
+          }
+        }
+      }
+    },
+    "commentary.work.calvin.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commentary on the Scriptures"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Коментар на Святе Письмо"
+          }
+        }
+      }
+    },
+    "commentary.work.edwards.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes on Scripture"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нотатки до Святого Письма"
+          }
+        }
+      }
+    },
+    "commentary.work.henry.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commentary on the Whole Bible"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Коментар на всю Біблію"
+          }
+        }
+      }
+    },
+    "commentary.work.owen.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Exposition of Hebrews"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тлумачення Послання до Євреїв"
+          }
+        }
+      }
+    },
+    "commentary.work.spurgeon-tod.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Treasury of David"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скарбниця Давида"
+          }
+        }
+      }
+    },
+    "commentary.work.spurgeon-ve.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verse Expositions of the Bible"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пояснення віршів Біблії"
           }
         }
       }
@@ -565,7 +678,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Gospels"
+            "value": "The Gospels"
           }
         },
         "uk": {
@@ -597,7 +710,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Law"
+            "value": "The Law"
           }
         },
         "uk": {
@@ -683,7 +796,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мудрість і поезія"
+            "value": "Мудрість і поезія"
           }
         }
       }
@@ -709,7 +822,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Make a Donation"
+            "value": "Make a Donation"
           }
         },
         "uk": {
@@ -725,7 +838,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your donation supports the development of Source Bible. All features stay free for everyone."
+            "value": "Your donation supports the development of Source Bible. All features stay free for everyone."
           }
         },
         "uk": {
@@ -741,13 +854,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unable to load donation options. Check your connection and try again."
+            "value": "Unable to load donation options. Check your connection and try again."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не вдалося завантажити варіанти пожертв. Перевірте з'єднання та спробуйте ще раз."
+            "value": "Не вдалося завантажити варіанти пожертв. Перевірте з'єднання та спробуйте ще раз."
           }
         }
       }
@@ -763,7 +876,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Покупка не вдалася"
+            "value": "Покупка не вдалася"
           }
         }
       }
@@ -789,13 +902,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The purchase could not be verified."
+            "value": "The purchase could not be verified."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Не вдалося перевірити покупку."
+            "value": "Не вдалося перевірити покупку."
           }
         }
       }
@@ -837,13 +950,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Any outstanding transactions have been processed. Donations are one-time gifts, so there is nothing to restore."
+            "value": "Any outstanding transactions have been processed. Donations are one-time gifts, so there is nothing to restore."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Усі незавершені транзакції оброблено. Пожертви — це разові внески, тож відновлювати нічого."
+            "value": "Усі незавершені транзакції оброблено. Пожертви — це разові внески, тож відновлювати нічого."
           }
         }
       }
@@ -875,7 +988,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Спробувати ще раз"
+            "value": "Спробувати ще раз"
           }
         }
       }
@@ -885,7 +998,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terms of Use"
+            "value": "Terms of Use"
           }
         },
         "uk": {
@@ -917,13 +1030,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your donation was received. Thank you for supporting Source Bible!"
+            "value": "Your donation was received. Thank you for supporting Source Bible!"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вашу пожертву отримано. Дякуємо за підтримку Source Bible!"
+            "value": "Вашу пожертву отримано. Дякуємо за підтримку Source Bible!"
           }
         }
       }
@@ -960,7 +1073,6 @@
         }
       }
     },
-    "Effective 17 July 2026": {},
     "entries.filter.a11y": {
       "localizations": {
         "en": {
@@ -1014,13 +1126,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No entries match the filters"
+            "value": "No entries match the filters"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нічого не знайдено за цими фільтрами"
+            "value": "Нічого не знайдено за цими фільтрами"
           }
         }
       }
@@ -1251,6 +1363,71 @@
         }
       }
     },
+    "feedback.mail_unavailable.copy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Address"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопіювати адресу"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.message %@": {
+      "comment": "%@ = feedback email address",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please email us at %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Напишіть нам на %@"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.ok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Гаразд"
+          }
+        }
+      }
+    },
+    "feedback.mail_unavailable.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Mail App Found"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Немає застосунку пошти"
+          }
+        }
+      }
+    },
     "highlight.color.blue": {
       "localizations": {
         "en": {
@@ -1304,7 +1481,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No Highlight"
+            "value": "No Highlight"
           }
         },
         "uk": {
@@ -1449,13 +1626,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anonymous only. No notes or search text."
+            "value": "Anonymous usage data"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Тільки анонімно. Без нотаток і тексту запитів."
+            "value": "Анонімні дані про використання застосунку"
           }
         }
       }
@@ -1465,29 +1642,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Share anonymous usage"
+            "value": "Share statistics"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ділитися анонімною статистикою"
-          }
-        }
-      }
-    },
-    "menu.appearance_mode": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mode"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режим"
+            "value": "Ділитися статистикою"
           }
         }
       }
@@ -1535,7 +1696,23 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Як на пристрої"
+            "value": "Як на пристрої"
+          }
+        }
+      }
+    },
+    "menu.appearance_mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Режим"
           }
         }
       }
@@ -1601,7 +1778,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Переклад за замовчуванням"
+            "value": "Переклад за замовчуванням"
           }
         }
       }
@@ -1618,6 +1795,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Пожертва"
+          }
+        }
+      }
+    },
+    "menu.feedback": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зворотний зв'язок"
           }
         }
       }
@@ -1671,34 +1864,18 @@
         }
       }
     },
-    "menu.launch_behavior": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On launch open"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "При відкритті показувати"
-          }
-        }
-      }
-    },
     "menu.launch.last_bookmark": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last bookmark"
+            "value": "Open last bookmark"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Остання закладка"
+            "value": "Відкрити закладку"
           }
         }
       }
@@ -1740,13 +1917,29 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Where you left off"
+            "value": "Where you left off"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "З місця, де ви зупинились"
+            "value": "З місця, де ви зупинились"
+          }
+        }
+      }
+    },
+    "menu.launch_behavior": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On launch"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "При відкритті"
           }
         }
       }
@@ -1964,13 +2157,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Translation on launch"
+            "value": "Default"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Переклад при відкритті"
+            "value": "За замовчуванням"
           }
         }
       }
@@ -1986,7 +2179,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Останній відкритий"
+            "value": "Останній"
           }
         }
       }
@@ -1996,7 +2189,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The translation you read most recently"
+            "value": "The translation you read most recently"
           }
         },
         "uk": {
@@ -2194,6 +2387,142 @@
         }
       }
     },
+    "morph.aspect.weqatal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weqatal (consecutive)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weqatal (послідовний)"
+          }
+        }
+      }
+    },
+    "morph.case.accusative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accusative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Знахідний"
+          }
+        }
+      }
+    },
+    "morph.case.dative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Давальний"
+          }
+        }
+      }
+    },
+    "morph.case.genitive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genitive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Родовий"
+          }
+        }
+      }
+    },
+    "morph.case.nominative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nominative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Називний"
+          }
+        }
+      }
+    },
+    "morph.case.vocative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vocative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кличний"
+          }
+        }
+      }
+    },
+    "morph.degree.comparative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вищий"
+          }
+        }
+      }
+    },
+    "morph.degree.superlative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Superlative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Найвищий"
+          }
+        }
+      }
+    },
     "morph.gender.common": {
       "extractionState": "stale",
       "localizations": {
@@ -2241,6 +2570,125 @@
           "stringUnit": {
             "state": "translated",
             "value": "чол. р."
+          }
+        }
+      }
+    },
+    "morph.gender.neuter": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "neut."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "сер. р."
+          }
+        }
+      }
+    },
+    "morph.mood.imperative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imperative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наказовий"
+          }
+        }
+      }
+    },
+    "morph.mood.indicative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indicative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дійсний"
+          }
+        }
+      }
+    },
+    "morph.mood.optative": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optative"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бажальний"
+          }
+        }
+      }
+    },
+    "morph.mood.subjunctive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subjunctive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Умовний"
+          }
+        }
+      }
+    },
+    "morph.non_finite_form.infinitive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infinitive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Інфінітив"
+          }
+        }
+      }
+    },
+    "morph.non_finite_form.participle": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participle"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дієприкметник"
           }
         }
       }
@@ -2381,6 +2829,23 @@
         }
       }
     },
+    "morph.pos.aramaic_term": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aramaic term"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Арамейський вислів"
+          }
+        }
+      }
+    },
     "morph.pos.article": {
       "extractionState": "stale",
       "localizations": {
@@ -2415,6 +2880,40 @@
         }
       }
     },
+    "morph.pos.correlative_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correlative pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Співвідносний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.demonstrative_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demonstrative pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вказівний займенник"
+          }
+        }
+      }
+    },
     "morph.pos.direct_object_suffix": {
       "extractionState": "stale",
       "localizations": {
@@ -2428,6 +2927,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Суфікс прямого об'єкта"
+          }
+        }
+      }
+    },
+    "morph.pos.hebrew_term": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hebrew term"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Гебрейський вислів"
+          }
+        }
+      }
+    },
+    "morph.pos.indefinite_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indefinite pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неозначений займенник"
           }
         }
       }
@@ -2462,6 +2995,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Питальна частка"
+          }
+        }
+      }
+    },
+    "morph.pos.interrogative_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrogative pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Питальний займенник"
           }
         }
       }
@@ -2517,6 +3067,40 @@
         }
       }
     },
+    "morph.pos.personal_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Особовий займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.possessive_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Possessive pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Присвійний займенник"
+          }
+        }
+      }
+    },
     "morph.pos.preposition": {
       "extractionState": "stale",
       "localizations": {
@@ -2564,6 +3148,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.reciprocal_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reciprocal pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Взаємний займенник"
+          }
+        }
+      }
+    },
+    "morph.pos.reflexive_pronoun": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reflexive pronoun"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зворотний займенник"
           }
         }
       }
@@ -2891,6 +3509,60 @@
         }
       }
     },
+    "morph.renderings.show_all": {
+      "comment": "ADR-041: expands the Translated-in list to all renderings",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показати всі"
+          }
+        }
+      }
+    },
+    "morph.renderings.show_less": {
+      "comment": "ADR-041: collapses the Translated-in list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show less"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Згорнути"
+          }
+        }
+      }
+    },
+    "morph.renderings.this_verse": {
+      "comment": "ADR-041: marks the rendering used in the current verse",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this verse"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "у цьому вірші"
+          }
+        }
+      }
+    },
     "morph.row.aspect": {
       "extractionState": "stale",
       "localizations": {
@@ -2904,6 +3576,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Тип"
+          }
+        }
+      }
+    },
+    "morph.row.case": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Case"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відмінок"
           }
         }
       }
@@ -2925,6 +3614,23 @@
         }
       }
     },
+    "morph.row.degree": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Degree"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ступінь порівняння"
+          }
+        }
+      }
+    },
     "morph.row.grammatical_form": {
       "extractionState": "stale",
       "localizations": {
@@ -2942,13 +3648,47 @@
         }
       }
     },
+    "morph.row.mood": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mood"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Спосіб"
+          }
+        }
+      }
+    },
+    "morph.row.non_finite_form": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non-finite form"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неособова форма"
+          }
+        }
+      }
+    },
     "morph.row.part_of_speech": {
       "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Part of speech"
+            "value": "Part of speech"
           }
         },
         "uk": {
@@ -3010,6 +3750,23 @@
         }
       }
     },
+    "morph.row.tense": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tense"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Час"
+          }
+        }
+      }
+    },
     "morph.row.transliteration": {
       "extractionState": "stale",
       "localizations": {
@@ -3023,6 +3780,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Транслітерація"
+          }
+        }
+      }
+    },
+    "morph.row.voice": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Стан"
           }
         }
       }
@@ -3050,13 +3824,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Form in %@"
+            "value": "Form in %@"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Форма у %@"
+            "value": "Форма у %@"
           }
         }
       }
@@ -3129,6 +3903,24 @@
         }
       }
     },
+    "morph.section.translated_in": {
+      "comment": "ADR-041: section label in Word › Meaning; %@ = translation id (KJV)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translated in %@"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Як перекладено в %@"
+          }
+        }
+      }
+    },
     "morph.state.absolute": {
       "extractionState": "stale",
       "localizations": {
@@ -3180,19 +3972,53 @@
         }
       }
     },
+    "morph.stem.aphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aphel — causative active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aphel — каузативна активна (арам.)"
+          }
+        }
+      }
+    },
     "morph.stem.form_in_verse": {
       "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "form in this verse"
+            "value": "form in this verse"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "форма у вірші"
+            "value": "форма у вірші"
+          }
+        }
+      }
+    },
+    "morph.stem.haphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haphel — causative active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haphel — каузативна активна (арам.)"
           }
         }
       }
@@ -3214,6 +4040,40 @@
         }
       }
     },
+    "morph.stem.hishtaphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hishtaphel — reflexive of Shaphel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hishtaphel — рефлексивна (Shaphel)"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpaal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpaal — reflexive / passive of Pael"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpaal — рефлексивна / пасивна (Pael)"
+          }
+        }
+      }
+    },
     "morph.stem.hithpael": {
       "extractionState": "stale",
       "localizations": {
@@ -3227,6 +4087,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hithpael — рефлексивна"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpalpel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpalpel — reflexive of Pilpel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpalpel — рефлексивна (Pilpel)"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpeel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpeel — reflexive / passive of Peal"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpeel — рефлексивна / пасивна (Peal)"
+          }
+        }
+      }
+    },
+    "morph.stem.hithpolel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpolel — reflexive of Polel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hithpolel — рефлексивна (Polel)"
           }
         }
       }
@@ -3248,6 +4159,57 @@
         }
       }
     },
+    "morph.stem.ithpaal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpaal — reflexive / passive of Pael"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpaal — рефлексивна / пасивна (Pael)"
+          }
+        }
+      }
+    },
+    "morph.stem.ithpeel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpeel — reflexive / passive of Peal"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpeel — рефлексивна / пасивна (Peal)"
+          }
+        }
+      }
+    },
+    "morph.stem.ithpoel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpoel — reflexive / passive of Poel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ithpoel — рефлексивна / пасивна (Poel)"
+          }
+        }
+      }
+    },
     "morph.stem.niphal": {
       "extractionState": "stale",
       "localizations": {
@@ -3261,6 +4223,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "Niphal — пасивна / рефлексивна"
+          }
+        }
+      }
+    },
+    "morph.stem.nithpael": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nithpael — passive of Piel"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nithpael — пасивна (Piel)"
+          }
+        }
+      }
+    },
+    "morph.stem.pael": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pael — intensive active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pael — інтенсивна активна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.palel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palel — intensive, rare (geminate roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palel — інтенсивна, рідкісна (подвійні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.peal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peal — simple active (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peal — проста активна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.pealal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pealal — reduplicated intensive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pealal — редуплікована інтенсивна, рідкісна"
+          }
+        }
+      }
+    },
+    "morph.stem.peil": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peil — simple passive (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peil — проста пасивна (арам.)"
           }
         }
       }
@@ -3282,6 +4346,57 @@
         }
       }
     },
+    "morph.stem.pilel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilel — intensive, rare (hollow roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilel — інтенсивна, рідкісна (порожні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.pilpel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilpel — reduplicated intensive (weak roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pilpel — редуплікована інтенсивна (слабкі корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.poal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poal — intensive passive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poal — інтенсивна пасивна, рідкісна"
+          }
+        }
+      }
+    },
     "morph.stem.poel": {
       "extractionState": "stale",
       "localizations": {
@@ -3295,6 +4410,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Poel"
+          }
+        }
+      }
+    },
+    "morph.stem.polal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polal — intensive passive (hollow/geminate roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polal — інтенсивна пасивна (порожні/подвійні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.polel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polel — intensive active (hollow/geminate roots)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polel — інтенсивна активна (порожні подвійні корені)"
+          }
+        }
+      }
+    },
+    "morph.stem.polpal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polpal — reduplicated intensive passive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polpal — редуплікована інтенсивна пасивна, рідкісна"
           }
         }
       }
@@ -3316,6 +4482,23 @@
         }
       }
     },
+    "morph.stem.pulal": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulal — intensive passive, rare"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulal — інтенсивна пасивна, рідкісна"
+          }
+        }
+      }
+    },
     "morph.stem.qal": {
       "extractionState": "stale",
       "localizations": {
@@ -3329,6 +4512,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qal — проста активна"
+          }
+        }
+      }
+    },
+    "morph.stem.qal_passive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qal passive — simple passive (archaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пасивний Qal — проста пасивна (архаїчна)"
+          }
+        }
+      }
+    },
+    "morph.stem.saphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saphel — causative, rare (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saphel — каузативна, рідкісна (арам.)"
+          }
+        }
+      }
+    },
+    "morph.stem.shaphel": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shaphel — causative (Aramaic)"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shaphel — каузативна (арам.)"
           }
         }
       }
@@ -3435,6 +4669,176 @@
         }
       }
     },
+    "morph.tense.aorist": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aorist"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аорист"
+          }
+        }
+      }
+    },
+    "morph.tense.future": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Future"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Майбутній"
+          }
+        }
+      }
+    },
+    "morph.tense.imperfect": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imperfect"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Імперфект"
+          }
+        }
+      }
+    },
+    "morph.tense.perfect": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfect"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перфект"
+          }
+        }
+      }
+    },
+    "morph.tense.pluperfect": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pluperfect"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плюсквамперфект"
+          }
+        }
+      }
+    },
+    "morph.tense.present": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Present"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Теперішній"
+          }
+        }
+      }
+    },
+    "morph.voice.active": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активний"
+          }
+        }
+      }
+    },
+    "morph.voice.middle": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Middle"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Середній"
+          }
+        }
+      }
+    },
+    "morph.voice.middlepassive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Middle/Passive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Середньо-пасивний"
+          }
+        }
+      }
+    },
+    "morph.voice.passive": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passive"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пасивний"
+          }
+        }
+      }
+    },
     "nav.chapters_count": {
       "extractionState": "stale",
       "localizations": {
@@ -3506,13 +4910,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a verse in the Reader\nto add a note"
+            "value": "Tap a verse in the Reader\nto add a note"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
+            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
           }
         }
       }
@@ -3523,13 +4927,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a verse in the Reader to add a note"
+            "value": "Tap a verse in the Reader to add a note"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
+            "value": "Натисніть на вірш у Читачі\nщоб додати нотатку"
           }
         }
       }
@@ -3539,7 +4943,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No notes"
+            "value": "No notes"
           }
         },
         "uk": {
@@ -3572,18 +4976,17 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap to add text"
+            "value": "Tap to add text"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Торкніться щоб додати текст"
+            "value": "Торкніться щоб додати текст"
           }
         }
       }
     },
-    "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in Source Bible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training.": {},
     "picker.chapters_count": {
       "localizations": {
         "en": {
@@ -3605,13 +5008,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No book found"
+            "value": "No book found"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Книгу не знайдено"
+            "value": "Книгу не знайдено"
           }
         }
       }
@@ -3621,13 +5024,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the spelling or try a different name."
+            "value": "Check the spelling or try a different name."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Перевірте написання або спробуйте іншу назву."
+            "value": "Перевірте написання або спробуйте іншу назву."
           }
         }
       }
@@ -3766,13 +5169,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a word or phrase\nto find verses"
+            "value": "Enter a word or phrase\nto find verses"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введіть слово або фразу\nщоб знайти вірші"
+            "value": "Введіть слово або фразу\nщоб знайти вірші"
           }
         }
       }
@@ -3789,7 +5192,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Пошук за словом"
+            "value": "Пошук за словом"
           }
         }
       }
@@ -3800,7 +5203,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ask a question in natural language\ne.g. \"Where does it talk about success?\""
+            "value": "Ask a question in natural language\ne.g. \"Where does it talk about success?\""
           }
         },
         "uk": {
@@ -3940,22 +5343,6 @@
         }
       }
     },
-    "search.filter.testament_all": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OT / NT"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "СЗ / НЗ"
-          }
-        }
-      }
-    },
     "search.filter.testament.title": {
       "localizations": {
         "en": {
@@ -3968,6 +5355,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Заповіт"
+          }
+        }
+      }
+    },
+    "search.filter.testament_all": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OT / NT"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "СЗ / НЗ"
           }
         }
       }
@@ -3995,13 +5398,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a word or phrase\nSearch in %@ translation"
+            "value": "Enter a word or phrase\nSearch in %@ translation"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введіть слово або фразу\nПошук у перекладі %@"
+            "value": "Введіть слово або фразу\nПошук у перекладі %@"
           }
         }
       }
@@ -4012,13 +5415,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter a word or phrase\nSearch in %@ translation"
+            "value": "Enter a word or phrase\nSearch in %@ translation"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Введіть слово або фразу\nПошук у перекладі %@"
+            "value": "Введіть слово або фразу\nПошук у перекладі %@"
           }
         }
       }
@@ -4034,7 +5437,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Пошук по тексту"
+            "value": "Пошук по тексту"
           }
         }
       }
@@ -4060,7 +5463,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try a different query"
+            "value": "Try a different query"
           }
         },
         "uk": {
@@ -4082,7 +5485,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нічого не знайдено"
+            "value": "Нічого не знайдено"
           }
         }
       }
@@ -4092,13 +5495,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Word or phrase…"
+            "value": "Word or phrase…"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Слово або фраза…"
+            "value": "Слово або фраза…"
           }
         }
       }
@@ -4109,7 +5512,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Question in natural language…"
+            "value": "Question in natural language…"
           }
         },
         "uk": {
@@ -4194,7 +5597,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Results for \"%@\""
+            "value": "Results for \"%@\""
           }
         },
         "uk": {
@@ -4211,13 +5614,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "By word"
+            "value": "By word"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "За словом"
+            "value": "За словом"
           }
         }
       }
@@ -4301,7 +5704,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дії з віршем"
+            "value": "Дії з віршем"
           }
         }
       }
@@ -4338,9 +5741,6 @@
         }
       }
     },
-    "Source Bible is built to keep your data private. Most of what you create stays on your device, and analytics are collected only if you agree to them.": {},
-    "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої, а аналітика збирається лише за вашою згодою.": {},
-    "Sources & licenses": {},
     "studymode.back": {
       "localizations": {
         "en": {
@@ -4373,7 +5773,6 @@
         }
       }
     },
-    "Support Source Bible": {},
     "tab.bible": {
       "localizations": {
         "en": {
@@ -4487,7 +5886,6 @@
         }
       }
     },
-    "The original-language texts are drawn from the Westminster Leningrad Codex for the Hebrew Old Testament and the Nestle 1904 edition of the Greek New Testament, with word-level analysis from the Macula project.": {},
     "theologian.calvin.era": {
       "extractionState": "stale",
       "localizations": {
@@ -4551,7 +5949,75 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Текст і богослов'я"
+            "value": "Текст і богослов'я"
+          }
+        }
+      }
+    },
+    "theologian.edwards.era": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "18th c."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "XVIII ст."
+          }
+        }
+      }
+    },
+    "theologian.edwards.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jonathan Edwards"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Джонатан Едвардс"
+          }
+        }
+      }
+    },
+    "theologian.edwards.short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edwards"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Едвардс"
+          }
+        }
+      }
+    },
+    "theologian.edwards.style": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doctrine & experience"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доктрина і досвід"
           }
         }
       }
@@ -4619,7 +6085,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Серце і застосування"
+            "value": "Серце і застосування"
           }
         }
       }
@@ -4687,7 +6153,7 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Догматика і душа"
+            "value": "Догматика і душа"
           }
         }
       }
@@ -4755,7 +6221,39 @@
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Проповідь і образи"
+            "value": "Проповідь і образи"
+          }
+        }
+      }
+    },
+    "tip.tapVerse.message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explore original text, word meanings, commentary, and more."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дослідіть оригінал, значення слів, коментарі та інше."
+          }
+        }
+      }
+    },
+    "tip.tapVerse.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap any verse"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Торкніться будь-якого вірша"
           }
         }
       }
@@ -4766,7 +6264,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No commentaries available for this book."
+            "value": "No commentaries available for this book."
           }
         },
         "uk": {
@@ -4777,36 +6275,19 @@
         }
       }
     },
-    "verse.commentary_notice": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
-          }
-        }
-      }
-    },
     "verse.commentary.placeholder": {
       "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commentary will be loaded from the public domain database (Calvin, Henry, Spurgeon)."
+            "value": "Commentary will be loaded from the public domain database (Calvin, Henry, Spurgeon)."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
           }
         }
       }
@@ -4816,7 +6297,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No commentary available for this verse."
+            "value": "No commentary available for this verse."
           }
         },
         "uk": {
@@ -4827,12 +6308,29 @@
         }
       }
     },
+    "verse.commentary_notice": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+          }
+        }
+      }
+    },
     "verse.cross_refs.empty": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No cross references for this verse"
+            "value": "No cross references for this verse"
           }
         },
         "uk": {
@@ -4849,7 +6347,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No cross-references for this verse"
+            "value": "No cross-references for this verse"
           }
         },
         "uk": {
@@ -4900,7 +6398,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No translations available"
+            "value": "No translations available"
           }
         },
         "uk": {
@@ -5045,13 +6543,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Original Text in Greek Word by Word"
+            "value": "Original Text in Greek Word by Word"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Оригінальний текст грецькою слово за словом"
+            "value": "Оригінальний текст грецькою слово за словом"
           }
         }
       }
@@ -5061,13 +6559,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Original Text in Hebrew Word by Word"
+            "value": "Original Text in Hebrew Word by Word"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Оригінальний текст івритом слово за словом"
+            "value": "Оригінальний текст івритом слово за словом"
           }
         }
       }
@@ -5109,7 +6607,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No translations available"
+            "value": "No translations available"
           }
         },
         "uk": {
@@ -5120,15 +6618,12 @@
         }
       }
     },
-    "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it.": {},
-    "We are grateful to everyone who made this scholarship freely available.": {},
-    "We bridge the gap between modern readers and the world of the biblical text.": {},
     "word.definition.unavailable": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No definition available for this sub-entry"
+            "value": "No definition available for this sub-entry"
           }
         },
         "uk": {
@@ -5145,7 +6640,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Language data unavailable for this word"
+            "value": "Language data unavailable for this word"
           }
         },
         "uk": {
@@ -5162,13 +6657,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a word to explore"
+            "value": "Tap a word to explore"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Натисніть на слово для вивчення"
+            "value": "Натисніть на слово для вивчення"
           }
         }
       }
@@ -5178,13 +6673,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Linking every word of a translation to its Strong's number is a large, painstaking effort. Your support helps us make it happen."
+            "value": "Linking every word of a translation to its Strong's number is a large, painstaking effort. Your support helps us make it happen."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Мапінг кожного слова перекладу на номер Стронга — велика й копітка робота. Ваша підтримка допомагає нам її здійснити."
+            "value": "Мапінг кожного слова перекладу на номер Стронга — велика й копітка робота. Ваша підтримка допомагає нам її здійснити."
           }
         }
       }
@@ -5194,7 +6689,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Support the project"
+            "value": "Support the project"
           }
         },
         "uk": {
@@ -5210,13 +6705,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meanwhile, tap words in the Original tab — the lexicon already works there."
+            "value": "Meanwhile, tap words in the Original tab — the lexicon already works there."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Тим часом торкайтеся слів у вкладці «Оригінал» — лексикон там уже працює."
+            "value": "Тим часом торкайтеся слів у вкладці «Оригінал» — лексикон там уже працює."
           }
         }
       }
@@ -5226,13 +6721,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This translation is not yet linked to Strong's numbers"
+            "value": "This translation is not yet linked to Strong's numbers"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Цей переклад ще не повʼязано з номерами Стронга"
+            "value": "Цей переклад ще не повʼязано з номерами Стронга"
           }
         }
       }
@@ -5379,1404 +6874,14 @@
     },
     "Джерела та ліцензії": {},
     "Контакти": {},
-    "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати.": {},
     "Ми вдячні всім, хто зробив ці матеріали вільно доступними.": {},
     "Ми прокладаємо міст між сучасним читачем і світом біблійного тексту.": {},
+    "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати.": {},
     "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у Source Bible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту.": {},
     "Підтримати Source Bible": {},
     "Створено дослідниками й викладачами Біблії — для дослідників і викладачів Біблії.": {},
     "Тексти мовами оригіналу взято з Ленінградського кодексу (Westminster Leningrad Codex) для єврейського Старого Заповіту та видання Nestle 1904 для грецького Нового Заповіту, з послівним аналізом від проєкту Macula.": {},
-    "Чинна з 17 липня 2026": {},
-    "theologian.edwards.name": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jonathan Edwards"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Джонатан Едвардс"
-          }
-        }
-      }
-    },
-    "theologian.edwards.era": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "18th c."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "XVIII ст."
-          }
-        }
-      }
-    },
-    "theologian.edwards.style": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Doctrine & experience"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Доктрина і досвід"
-          }
-        }
-      }
-    },
-    "theologian.edwards.short": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edwards"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Едвардс"
-          }
-        }
-      }
-    },
-    "commentary.work.calvin.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commentary on the Scriptures"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Коментар на Святе Письмо"
-          }
-        }
-      }
-    },
-    "commentary.work.henry.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commentary on the Whole Bible"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Коментар на всю Біблію"
-          }
-        }
-      }
-    },
-    "commentary.work.owen.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An Exposition of Hebrews"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Тлумачення Послання до Євреїв"
-          }
-        }
-      }
-    },
-    "commentary.work.edwards.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notes on Scripture"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нотатки до Святого Письма"
-          }
-        }
-      }
-    },
-    "commentary.work.spurgeon-tod.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Treasury of David"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скарбниця Давида"
-          }
-        }
-      }
-    },
-    "commentary.work.spurgeon-ve.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verse Expositions of the Bible"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пояснення віршів Біблії"
-          }
-        }
-      }
-    },
-    "menu.feedback": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feedback"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Зворотний зв'язок"
-          }
-        }
-      }
-    },
-    "feedback.mail_unavailable.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No Mail App Found"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Немає застосунку пошти"
-          }
-        }
-      }
-    },
-    "feedback.mail_unavailable.message %@": {
-      "comment": "%@ = feedback email address",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Please email us at %@"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Напишіть нам на %@"
-          }
-        }
-      }
-    },
-    "feedback.mail_unavailable.copy": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Address"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скопіювати адресу"
-          }
-        }
-      }
-    },
-    "feedback.mail_unavailable.ok": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Гаразд"
-          }
-        }
-      }
-    },
-    "morph.row.case": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Case"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Відмінок"
-          }
-        }
-      }
-    },
-    "morph.row.tense": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tense"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Час"
-          }
-        }
-      }
-    },
-    "morph.row.voice": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voice"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Стан"
-          }
-        }
-      }
-    },
-    "morph.row.mood": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mood"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Спосіб"
-          }
-        }
-      }
-    },
-    "morph.row.degree": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Degree"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ступінь порівняння"
-          }
-        }
-      }
-    },
-    "morph.row.non_finite_form": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Non-finite form"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Неособова форма"
-          }
-        }
-      }
-    },
-    "morph.case.nominative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nominative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Називний"
-          }
-        }
-      }
-    },
-    "morph.case.genitive": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Genitive"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Родовий"
-          }
-        }
-      }
-    },
-    "morph.case.dative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Давальний"
-          }
-        }
-      }
-    },
-    "morph.case.accusative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accusative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Знахідний"
-          }
-        }
-      }
-    },
-    "morph.case.vocative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vocative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кличний"
-          }
-        }
-      }
-    },
-    "morph.tense.aorist": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aorist"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Аорист"
-          }
-        }
-      }
-    },
-    "morph.tense.present": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Present"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Теперішній"
-          }
-        }
-      }
-    },
-    "morph.tense.imperfect": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imperfect"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Імперфект"
-          }
-        }
-      }
-    },
-    "morph.tense.future": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Future"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Майбутній"
-          }
-        }
-      }
-    },
-    "morph.tense.perfect": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perfect"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перфект"
-          }
-        }
-      }
-    },
-    "morph.tense.pluperfect": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pluperfect"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Плюсквамперфект"
-          }
-        }
-      }
-    },
-    "morph.voice.active": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Active"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активний"
-          }
-        }
-      }
-    },
-    "morph.voice.middle": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Middle"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Середній"
-          }
-        }
-      }
-    },
-    "morph.voice.passive": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passive"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пасивний"
-          }
-        }
-      }
-    },
-    "morph.voice.middlepassive": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Middle/Passive"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Середньо-пасивний"
-          }
-        }
-      }
-    },
-    "morph.mood.indicative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Indicative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дійсний"
-          }
-        }
-      }
-    },
-    "morph.mood.imperative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imperative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Наказовий"
-          }
-        }
-      }
-    },
-    "morph.mood.subjunctive": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subjunctive"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Умовний"
-          }
-        }
-      }
-    },
-    "morph.mood.optative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Optative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Бажальний"
-          }
-        }
-      }
-    },
-    "morph.degree.comparative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comparative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вищий"
-          }
-        }
-      }
-    },
-    "morph.degree.superlative": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Superlative"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Найвищий"
-          }
-        }
-      }
-    },
-    "morph.non_finite_form.participle": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Participle"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дієприкметник"
-          }
-        }
-      }
-    },
-    "morph.non_finite_form.infinitive": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Infinitive"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Інфінітив"
-          }
-        }
-      }
-    },
-    "morph.gender.neuter": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "neut."
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "сер. р."
-          }
-        }
-      }
-    },
-    "morph.aspect.weqatal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weqatal (consecutive)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weqatal (послідовний)"
-          }
-        }
-      }
-    },
-    "morph.stem.peal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Peal — simple active (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Peal — проста активна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.peil": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Peil — simple passive (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Peil — проста пасивна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.pael": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pael — intensive active (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pael — інтенсивна активна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.haphel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haphel — causative active (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haphel — каузативна активна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.aphel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aphel — causative active (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aphel — каузативна активна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.shaphel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shaphel — causative (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shaphel — каузативна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.saphel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saphel — causative, rare (Aramaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saphel — каузативна, рідкісна (арам.)"
-          }
-        }
-      }
-    },
-    "morph.stem.hithpaal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpaal — reflexive / passive of Pael"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpaal — рефлексивна / пасивна (Pael)"
-          }
-        }
-      }
-    },
-    "morph.stem.ithpaal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ithpaal — reflexive / passive of Pael"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ithpaal — рефлексивна / пасивна (Pael)"
-          }
-        }
-      }
-    },
-    "morph.stem.hithpeel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpeel — reflexive / passive of Peal"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpeel — рефлексивна / пасивна (Peal)"
-          }
-        }
-      }
-    },
-    "morph.stem.ithpeel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ithpeel — reflexive / passive of Peal"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ithpeel — рефлексивна / пасивна (Peal)"
-          }
-        }
-      }
-    },
-    "morph.stem.ithpoel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ithpoel — reflexive / passive of Poel"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ithpoel — рефлексивна / пасивна (Poel)"
-          }
-        }
-      }
-    },
-    "morph.stem.hishtaphel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hishtaphel — reflexive of Shaphel"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hishtaphel — рефлексивна (Shaphel)"
-          }
-        }
-      }
-    },
-    "morph.stem.nithpael": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nithpael — passive of Piel"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nithpael — пасивна (Piel)"
-          }
-        }
-      }
-    },
-    "morph.stem.hithpolel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpolel — reflexive of Polel"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpolel — рефлексивна (Polel)"
-          }
-        }
-      }
-    },
-    "morph.stem.polel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polel — intensive active (hollow/geminate roots)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polel — інтенсивна активна (порожні подвійні корені)"
-          }
-        }
-      }
-    },
-    "morph.stem.polal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polal — intensive passive (hollow/geminate roots)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polal — інтенсивна пасивна (порожні/подвійні корені)"
-          }
-        }
-      }
-    },
-    "morph.stem.polpal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polpal — reduplicated intensive passive, rare"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Polpal — редуплікована інтенсивна пасивна, рідкісна"
-          }
-        }
-      }
-    },
-    "morph.stem.pilpel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pilpel — reduplicated intensive (weak roots)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pilpel — редуплікована інтенсивна (слабкі корені)"
-          }
-        }
-      }
-    },
-    "morph.stem.pilel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pilel — intensive, rare (hollow roots)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pilel — інтенсивна, рідкісна (порожні корені)"
-          }
-        }
-      }
-    },
-    "morph.stem.palel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Palel — intensive, rare (geminate roots)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Palel — інтенсивна, рідкісна (подвійні корені)"
-          }
-        }
-      }
-    },
-    "morph.stem.pealal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pealal — reduplicated intensive, rare"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pealal — редуплікована інтенсивна, рідкісна"
-          }
-        }
-      }
-    },
-    "morph.stem.poal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Poal — intensive passive, rare"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Poal — інтенсивна пасивна, рідкісна"
-          }
-        }
-      }
-    },
-    "morph.stem.pulal": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pulal — intensive passive, rare"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pulal — інтенсивна пасивна, рідкісна"
-          }
-        }
-      }
-    },
-    "morph.stem.qal_passive": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qal passive — simple passive (archaic)"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пасивний Qal — проста пасивна (архаїчна)"
-          }
-        }
-      }
-    },
-    "morph.pos.personal_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personal pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Особовий займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.demonstrative_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demonstrative pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вказівний займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.interrogative_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Interrogative pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Питальний займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.indefinite_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Indefinite pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Неозначений займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.reflexive_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reflexive pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Зворотний займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.possessive_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Possessive pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Присвійний займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.correlative_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correlative pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Співвідносний займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.reciprocal_pronoun": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reciprocal pronoun"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Взаємний займенник"
-          }
-        }
-      }
-    },
-    "morph.pos.hebrew_term": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hebrew term"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Гебрейський вислів"
-          }
-        }
-      }
-    },
-    "morph.pos.aramaic_term": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aramaic term"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Арамейський вислів"
-          }
-        }
-      }
-    },
-    "morph.stem.hithpalpel": {
-      "extractionState": "stale",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpalpel — reflexive of Pilpel"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hithpalpel — рефлексивна (Pilpel)"
-          }
-        }
-      }
-    }
+    "Чинна з 17 липня 2026": {}
   },
   "version": "1.0"
 }

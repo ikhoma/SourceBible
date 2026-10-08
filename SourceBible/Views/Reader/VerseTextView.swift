@@ -75,6 +75,16 @@ private final class HighlightableTextView: UITextView {
 struct VerseTextView: UIViewRepresentable {
 
     let parsed: ParsedVerse
+    /// EXPERIMENT (Geneva-style inline verse number, not yet committed): when set,
+    /// buildBaseAttributedString() prepends this number as a small raised run — the
+    /// FIRST run of the attributed string, carrying no .verseSegmentIndex — so word-tap
+    /// / footnote hit-testing (both purely attribute-lookups at a character index, see
+    /// Coordinator.handleLongPress / footnoteHit) simply never match it. nil keeps the
+    /// old behaviour (caller renders the number itself, e.g. the #Preview below).
+    var verseNumber: Int? = nil
+    /// Drives the verse-number run's colour (blue when this row is the selected/focused
+    /// verse) — mirrors what the old sibling Text(verse.number) did in VerseRowView.
+    var isSelected: Bool = false
     /// rawValue of HighlightColor, or nil if not highlighted.
     var highlightColor: String? = nil
     /// Сегмент що зараз виділений (word mode). nil — виділення знято.
@@ -84,6 +94,9 @@ struct VerseTextView: UIViewRepresentable {
     /// Примітки перекладача цього вірша: маркер (`[2]`) → текст. Керує ДВОМА речами —
     /// чи малювати хрестик і чи є що показати по тапу.
     var footnotes: [String: String] = [:]
+    /// Літера знака для кожного маркера (`[2]` → `"b"`), нумерація в межах глави
+    /// (`DatabaseService.loadChapter`). Немає літери → «†» як запасний знак.
+    var footnoteLabels: [String: String] = [:]
     var onVerseTap: () -> Void
     var onWordTap: (VerseSegment) -> Void
     /// Тап по хрестику: маркер + прямокутник глифа у координатах цього в'ю (для якоря
@@ -164,6 +177,7 @@ struct VerseTextView: UIViewRepresentable {
                           || coord.highlightColor  != highlightColor
                           || coord.redLetters      != redLetters
                           || coord.footnoteKeys    != Set(footnotes.keys)
+                          || coord.isSelected      != isSelected
         if contentChanged || tv.attributedText == nil || tv.attributedText.length == 0 {
             coord.baseAttributedString = buildBaseAttributedString()
         }
@@ -195,6 +209,7 @@ struct VerseTextView: UIViewRepresentable {
         coord.highlightColor = highlightColor
         coord.redLetters     = redLetters
         coord.footnoteKeys   = Set(footnotes.keys)
+        coord.isSelected     = isSelected
         coord.onVerseTap     = onVerseTap
         coord.onWordTap      = onWordTap
         coord.onFootnoteTap  = onFootnoteTap
@@ -205,6 +220,7 @@ struct VerseTextView: UIViewRepresentable {
                                 onVerseTap: onVerseTap, onWordTap: onWordTap,
                                 onFootnoteTap: onFootnoteTap)
         coord.redLetters = redLetters
+        coord.isSelected  = isSelected
         coord.baseAttributedString = buildBaseAttributedString()
         return coord
     }
@@ -234,9 +250,30 @@ struct VerseTextView: UIViewRepresentable {
     /// Does NOT include the selection blue background — that is applied separately
     /// in applySelection() so we can cheaply update just the selection without
     /// rebuilding the whole string.
+    /// Зазор (pt) між останньою літерою слова і надрядковою літерою виноски.
+    static let footnoteGap: CGFloat = 2
+
     func buildBaseAttributedString() -> NSAttributedString {
         let result   = NSMutableAttributedString()
         let baseFont = UIFont.preferredFont(forTextStyle: .body)
+
+        // EXPERIMENT — Geneva-style verse number: the FIRST run in the string, raised
+        // and undersized like a real typeset superscript, glued directly to the verse's
+        // first glyph (zero-width separator — Ivan's reference has no gap either).
+        // Deliberately carries no .verseSegmentIndex: a tap landing on the numeral just
+        // fails the segment/footnote attribute lookups below and falls through to
+        // onVerseTap(), same as tapping any other unstyled part of the verse.
+        if let number = verseNumber {
+            // Trailing space (not a separate run): Ivan's call after seeing 3-digit
+            // numbers ("176") render — true zero-gap read as "stuck" past 2 digits.
+            // One space keeps 1-2 digit verses close to the Geneva reference while
+            // giving wider numbers breathing room, without digit-count branching.
+            result.append(NSAttributedString(string: "\(number) ", attributes: [
+                .font:            UIFont.systemFont(ofSize: 11, weight: .semibold),
+                .foregroundColor: isSelected ? UIColor.appBlue : UIColor.tertiaryLabel,
+                .baselineOffset:  NSNumber(value: 7)
+            ]))
+        }
 
         for (index, seg) in parsed.segments.enumerated() {
 
@@ -258,6 +295,23 @@ struct VerseTextView: UIViewRepresentable {
                 // обіцяє й не дає. Немає нотатки → немає хрестика.
                 guard footnotes[anchorId] != nil else { continue }
 
+                // Знак — надрядкова ЛІТЕРА (рішення Івана 2026-10-07), а не †: літера читається
+                // як «примітка», розрізняє кілька виносок у вірші, а † у біблійному тексті
+                // несе значення (хрест / «помер» у генеалогіях). Цифра теж не годиться —
+                // зливалася б з інлайн-номером вірша.
+                // Повітря між словом і літерою (Іван 2026-10-08: «firmamentᵇ» злипалось).
+                // `.kern` на попередньому символі, а не пробіл: пробіл міг би перенести
+                // маркер на новий рядок окремо від слова. Між сусідніми маркерами («cd»)
+                // той самий зазор.
+                if result.length > 0 {
+                    let lastIdx = result.length - 1
+                    let lastChar = (result.string as NSString).character(at: lastIdx)
+                    if let scalar = UnicodeScalar(lastChar),
+                       !CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                        result.addAttribute(.kern, value: Self.footnoteGap,
+                                            range: NSRange(location: lastIdx, length: 1))
+                    }
+                }
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font:            UIFont.preferredFont(forTextStyle: .caption2),
                     .foregroundColor: UIColor.appBlue,
@@ -265,7 +319,8 @@ struct VerseTextView: UIViewRepresentable {
                     .verseSegmentIndex: index,
                     .footnoteMarker:  anchorId
                 ]
-                result.append(NSAttributedString(string: "†", attributes: attrs))
+                result.append(NSAttributedString(string: footnoteLabels[anchorId] ?? "†",
+                                                 attributes: attrs))
                 continue
             }
 
@@ -349,6 +404,8 @@ struct VerseTextView: UIViewRepresentable {
         /// Маркери приміток, з якими побудований поточний рядок — джерело правди про те,
         /// чи стоїть у тексті глиф † (див. contentChanged в updateUIView).
         var footnoteKeys:         Set<String> = []
+        /// Last-rendered row-selection state — see VerseTextView.isSelected.
+        var isSelected:            Bool = false
         var onVerseTap:           () -> Void
         var onWordTap:            (VerseSegment) -> Void
         var onFootnoteTap:        (String, CGRect) -> Void
@@ -402,38 +459,42 @@ struct VerseTextView: UIViewRepresentable {
             onVerseTap()
         }
 
-        /// Маркер примітки під точкою тапу + прямокутник глифа (для якоря поповера).
+        /// Маркер примітки під точкою тапу + прямокутник знака (для якоря поповера).
         ///
-        /// Глиф † — це один символ у `.caption2`, тобто цільова зона ~8×11 pt, утричі менша
-        /// за мінімальні 44×44 з HIG. Тому шукаємо не лише під пальцем, а й у сусідніх
-        /// позиціях: `closestPosition(to:)` віддає найближчу межу символу, і залежно від
-        /// того, з якого боку торкнулись, це може бути індекс ДО або ПІСЛЯ хрестика.
-        /// Без цього допуску тап «майже точно в хрестик» відкривав би sheet вірша.
+        /// Знак — одна-дві літери у `.caption2`, тобто ~6×11 pt. Зона натискання (рішення
+        /// Івана 2026-10-07): **на всю висоту рядка**, а по ширині — знак плюс `hitPadX` з
+        /// кожного боку, щоб не перекривати сусідні слова. 44×44 з HIG виглядали б у тексті
+        /// як дірка, тож висоту беремо від рядка (вона й так ≈ 1.3× кегля), а ширину не роздуваємо.
         ///
-        /// Прямокутник беремо з `firstRect(for:)` по діапазону самого глифа — це дає
-        /// поповеру якір на хрестику, а не на всьому вірші.
+        /// Геометрія — TextKit 1 (`layoutManager`), який цей в'ю й так використовує для
+        /// підсвітки рядків (`HighlightableTextView.draw`). Якщо зони двох знаків перетинаються
+        /// (`</f><f>` підряд), перемагає той, чий центр ближче до пальця.
+        private static let hitPadX: CGFloat = 8
+
         private func footnoteHit(in tv: UITextView, at point: CGPoint) -> (String, CGRect)? {
             guard let text = tv.attributedText, text.length > 0 else { return nil }
-            let charIdx = charIndex(in: tv, at: point)
-
-            // Порядок кандидатів значущий: точний індекс ПЕРШИЙ, сусідній зліва — лише як
-            // запасний. Так тап просто по хрестику завжди дає свій маркер, а допуск працює
-            // тільки тоді, коли під пальцем маркера немає.
-            // Межа допуску (заміряно 2026-08-08): у корпусі є РІВНО ОДИН вірш із двома
-            // анкерами поспіль (`</f><f>`). Тільки там дотик трохи лівіше другого хрестика
-            // відкриє перший. Ціна помилки — показана сусідня примітка, тож звужувати
-            // допуск заради одного вірша означало б зламати влучання в решті 1 436 анкерів.
-            for candidate in [charIdx, charIdx - 1] where candidate >= 0 && candidate < text.length {
-                guard let marker = text.attribute(.footnoteMarker, at: candidate,
-                                                  effectiveRange: nil) as? String else { continue }
-                let glyphRange = NSRange(location: candidate, length: 1)
-                guard let start = tv.position(from: tv.beginningOfDocument, offset: candidate),
-                      let end   = tv.position(from: tv.beginningOfDocument,
-                                              offset: candidate + glyphRange.length),
-                      let range = tv.textRange(from: start, to: end) else { continue }
-                return (marker, tv.firstRect(for: range))
+            let lm = tv.layoutManager
+            let tc = tv.textContainer
+            let origin = CGPoint(x: tv.textContainerInset.left, y: tv.textContainerInset.top)
+            var best: (marker: String, rect: CGRect, dist: CGFloat)?
+            text.enumerateAttribute(.footnoteMarker,
+                                    in: NSRange(location: 0, length: text.length)) { value, range, _ in
+                guard let marker = value as? String else { return }
+                let glyphs = lm.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+                guard glyphs.length > 0 else { return }
+                let glyphRect = lm.boundingRect(forGlyphRange: glyphs, in: tc)
+                    .offsetBy(dx: origin.x, dy: origin.y)
+                let lineRect  = lm.lineFragmentRect(forGlyphAt: glyphs.location, effectiveRange: nil)
+                    .offsetBy(dx: origin.x, dy: origin.y)
+                let hit = CGRect(x: glyphRect.minX - Self.hitPadX, y: lineRect.minY,
+                                 width: glyphRect.width + 2 * Self.hitPadX, height: lineRect.height)
+                guard hit.contains(point) else { return }
+                let dist = abs(point.x - glyphRect.midX)
+                if let current = best, current.dist <= dist { return }
+                best = (marker, glyphRect, dist)
             }
-            return nil
+            guard let best else { return nil }
+            return (best.marker, best.rect)
         }
 
         @objc func handleLongPress(_ gr: UILongPressGestureRecognizer) {

@@ -268,14 +268,33 @@ struct VerseParser {
     /// змінюється лише те, що саме підсвічується.
     private mutating func attachStrongs(_ ids: [String], toSegmentAt index: Int) {
         let segment = segments[index]
-        let lead = segment.text.unicodeScalars
-            .prefix { Self.leadingSeparators.contains($0) }
-        let leadText = String(String.UnicodeScalarView(lead))
+        let scalars = Array(segment.text.unicodeScalars)
+        var leadCount = scalars.prefix { Self.leadingSeparators.contains($0) }.count
+        // ASV `man<S>5100</S>'s brother<S>80</S>`: присвійне «'s» належить ПОПЕРЕДНЬОМУ
+        // слову, а лексер приліпив його до вузла «brother» — підсвічувалось «'s brother».
+        // Відрізаємо разом із роздільниками (тест паритету — scripts/tests).
+        if scalars.count > leadCount + 2,
+           scalars[leadCount] == "'" || scalars[leadCount] == "\u{2019}",
+           scalars[leadCount + 1] == "s" || scalars[leadCount + 1] == "S",
+           Self.leadingSeparators.contains(scalars[leadCount + 2]) {
+            leadCount += 2
+            leadCount += scalars.dropFirst(leadCount).prefix { Self.leadingSeparators.contains($0) }.count
+        }
+        let leadText = String(String.UnicodeScalarView(scalars.prefix(leadCount)))
 
         // Нема чого відрізати, або сегмент — суцільні роздільники (тоді відрізання
         // лишило б Strong's без тексту взагалі).
+        //
+        // bug-055: ДОДАВАТИ, а не присвоювати. Одне слово перекладу буває відповідником
+        // КІЛЬКОХ слів оригіналу, і переклад ставить теги підряд на той самий вузол:
+        // KJV «longsuffering<S>750</S> <S>639</S>» (אֶרֶךְ אַפַּיִם), RST НЗ
+        // «Бог<S>2316</S><S>3588</S>» (ὁ θεός — артикль, якого в російській немає).
+        // Присвоєння лишало тільки ОСТАННІЙ номер: «Бог»/«возлюбил» відкривали артикль ὁ,
+        // а θεός/ἀγαπάω не мали пари в «Оригіналі» (RST: 23 317 таких місць, KJV: 4 031).
+        // Порядок зберігається — перший номер лишається першим, тож `tapWord`
+        // (перша пара сегмента) відкриває головне слово, а не артикль.
         guard !leadText.isEmpty, leadText.count < segment.text.count else {
-            segments[index].strongs = ids
+            segments[index].strongs += ids
             return
         }
 
@@ -348,7 +367,35 @@ struct VerseParser {
     }
 
     private func result() -> ParsedVerse {
-        ParsedVerse(verseId: verseId, segments: segments, footnotes: footnotes)
+        ParsedVerse(verseId: verseId,
+                    segments: Self.droppingSpaceBeforePunctuation(segments),
+                    footnotes: footnotes)
+    }
+
+    /// bug-056: KJV «God-ward<S>4136</S> <S>430</S>, that» — пробіл між двома тегами
+    /// лишається окремим сегментом, і читанка показувала «God-ward , that» (1 073 вірші
+    /// KJV) або подвійний пробіл «which  thou» (2 605 віршів KJV, 3 ASV). Сегмент із
+    /// самих пробілів прибираємо, якщо він ЗАЙВИЙ: наступний видимий текст починається
+    /// з розділового знака чи пробілу, або попередній уже закінчується пробілом.
+    /// Єдиний пробіл між словами лишається (RST «сказал<S>3004</S> <i>Бог</i>» — див. handleText).
+    /// Сегменти з Strong's не зачіпаються, тож `seg_ord` (ADR-041) не зсувається.
+    /// Порт: `scripts/build_word_rendering.py` → `drop_space_before_punct`.
+    static func droppingSpaceBeforePunctuation(_ segs: [VerseSegment]) -> [VerseSegment] {
+        var out: [VerseSegment] = []
+        out.reserveCapacity(segs.count)
+        for (i, seg) in segs.enumerated() {
+            let blank = seg.strongs.isEmpty && seg.footnoteAnchorId == nil
+                && !seg.isLineBreak && !seg.isParagraphBreak
+                && !seg.text.isEmpty && seg.text.allSatisfy { $0 == " " }
+            if blank {
+                let nextFirst = segs[(i + 1)...].first(where: { !$0.text.isEmpty })?.text.first
+                let prevLast  = out.last(where: { !$0.text.isEmpty })?.text.last
+                if let ch = nextFirst, ",.;:!?) ".contains(ch) { continue }
+                if prevLast == " " { continue }
+            }
+            out.append(seg)
+        }
+        return out
     }
 
     private init(verseId: String) { self.verseId = verseId }

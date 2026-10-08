@@ -135,9 +135,12 @@ class OrgResolver:
     def __init__(self, core_db_path):
         con = sqlite3.connect(f"file:{core_db_path}?mode=ro", uri=True)
         try:
+            # bug-058: KJV вірш 1 псалма має ДВА+ рядки (надпис source='superscription' +
+            # зміст). Якір коментаря — ЗМІСТ, як в orgRef (Swift): рядки надпису
+            # відкидаються, інакше dict нижче взяв би випадковий (останній) рядок.
             rows = con.execute(
                 "SELECT book_id, chapter, verse, org_book_id, org_chapter, org_verse "
-                "FROM verse_org WHERE translation='KJV'"
+                "FROM verse_org WHERE translation='KJV' AND source != 'superscription'"
             ).fetchall()
         finally:
             con.close()
@@ -475,8 +478,31 @@ def strip_p_tag_format(html: str) -> str:
     was still encoded when the strip regexes ran and survived verbatim
     into the stored text once unescaping (last step, until now) revealed
     it. Unescape FIRST so every tag -- plain or escaped -- is literal
-    before any stripping regex sees it."""
+    before any stripping regex sees it.
+
+    N4 (session 2026-09-22, Ivan /engineering:debug -- leading-dot report):
+    Calvin's raw MyBible rows sometimes open with a self-citation anchor --
+    e.g. <a href='B:20 20:7'>Exo 20:7</a><p/>. <i>Thou shalt not take the
+    name... -- where the <p/> paragraph-break tag sits BETWEEN the citation
+    and its own trailing punctuation. Verified against the independent
+    SWORD CalvinCommentaries.zip source (not MyBible-derived) that this
+    citation is genuine Calvin/CCEL editorial content -- section-opening
+    verses are headed "Exodus 20:7." in bold, inline with the body, no
+    paragraph break -- so the citation itself must stay; MyBible's own
+    conversion is what misplaced the <p/> before the period. Left as-is,
+    converting that <p/> to "\n\n" orphans a lone ".", ",", ";" or ":" at
+    the very start of the next paragraph (339 Calvin sections measured).
+    Re-attach the punctuation to the citation BEFORE the generic <p/>
+    split runs, so "Exo 20:7</a><p/>. Thou..." becomes "Exo 20:7</a>. Thou
+    ..." -- one unbroken line, matching the SWORD source's own formatting."""
     text = _unescape_entities(html)
+    # N4 cont'd: one row (Mar 7:24) has an <i> between </a> and <p/> --
+    # </a><i><p/>. He wished... -- same misplaced-<p/> defect, the inline
+    # tag just sits in the gap. Swallow it too, not only bare whitespace.
+    text = re.sub(
+        r"(?i)(</a>)(?:\s*<(?:i|b|u|em|strong|span)>)?\s*<p\s*/?>\s*([.,;:])\s*",
+        r"\1\2 ", text,
+    )
     text = re.sub(r"(?i)<p\s*/?>", "\n\n", text)
     text = re.sub(r"(?i)</p>", "\n\n", text)
     text = re.sub(r"(?i)<a\s+[^>]*>", "", text)
@@ -484,6 +510,24 @@ def strip_p_tag_format(html: str) -> str:
     text = re.sub(r"(?i)</?(?:i|b|u|em|strong|span)[^>]*>", "", text)
     text = re.sub(r"(?i)<br\s*/?>", "\n", text)
     text = _HTML_TAG.sub(" ", text)
+    # N5 (session 2026-09-25, Ivan -- recurrence of the N4 leading-punctuation
+    # symptom, different shape): 17 Calvin sections (measured against the
+    # live commentaries-en.db, zero elsewhere -- JOS 10:8, PSA 119:152, JHN
+    # 4:13, ROM 1:8/4:5/10:4/10:6/13:3, GAL 2:5, COL 1:4/3:17, 2TH
+    # 1:9/2:6/2:7, 1TI 1:13/3:13/5:6) have NO misplaced <p/> tag at all --
+    # the raw MyBible source text simply opens with an orphaned ".", ","
+    # or ";" where a bold verse-number digit should precede it (confirmed
+    # present in the independent SWORD CalvinCommentaries.zip source, e.g.
+    # "<hi type='bold'>6</hi>. She who is in luxury..." for 1Tim 5:6) --
+    # MyBible's own conversion dropped the digit, not this script. Rather
+    # than reconstruct it from a second source (redundant: the app's own
+    # UI header already shows the verse number), strip punctuation orphaned
+    # at the very start of a section OR right after a paragraph break --
+    # the same shape N4 fixed for the <p/>-before-punctuation case,
+    # generalized here so this single pass also covers N4's own mechanism
+    # as a safety net, should a future source update reproduce it without
+    # an <a> citation to re-anchor to.
+    text = re.sub(r"(^|\n\n)\s*[.,;:]+\s*", r"\1", text)
     return _collapse_whitespace(text)
 
 

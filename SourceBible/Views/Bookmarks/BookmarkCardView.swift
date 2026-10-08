@@ -9,8 +9,21 @@
 // translation, since BookmarkWithVerses stores only the verseId, not a text snapshot.
 // bug-026: this used DatabaseService.defaultFallbackTranslation ("KJV"), so a bookmark
 // added while reading RST rendered its preview in English — reported as "bookmark saved
-// against EN instead of RST". The bookmark itself is translation-agnostic by design;
-// only the preview was wrong.
+// against EN instead of RST".
+//
+// bug-037 (fixed 2026-09-22): a plain identity lookup (same chapter/verse number in the
+// new translation) is wrong whenever the two translations use different versification
+// schemes — Ivan hit it live switching UBIO → KJV: Пс 3:6 showed KJV's DIFFERENT verse
+// (off by one — KJV folds the Psalm superscription into verse 1, UBIO numbers it
+// separately) and Пс 4:9 showed NOTHING (KJV's Psalm 4 has no verse 9 at all). Since
+// v3 (BookmarkWithVerses.verseTranslations), a bookmark stores the translation it was
+// created in, and loadVerseText() hops book/chapter/verse → verse_org original →
+// target's own ref (same two curated hops as loadParallelVerseTexts, bug-036) whenever
+// the active translation differs from it. The reference in the header RENUMBERS along
+// with the hop (Ivan's decision) — the bookmark points at a verse of Scripture, and the
+// number is just that verse's spelling in whichever translation is open right now.
+// Legacy bookmarks saved before v3 have no stored translation and keep the old identity
+// lookup untouched — Ivan's call: never guess which translation they were made in.
 
 import SwiftUI
 
@@ -21,6 +34,11 @@ struct BookmarkCardView: View {
     @Environment(\.colorTheme) private var colorTheme
 
     @State private var verseText: String?
+    /// Verse reference actually shown/looked-up — may differ from the raw stored
+    /// numbers when a translation hop (bug-037) renumbered it. nil until first load,
+    /// and nil when the active translation has no counterpart (header keeps the
+    /// stored numbers, no preview text).
+    @State private var resolvedRef: BookmarkVerseResolver.Ref?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -64,11 +82,16 @@ struct BookmarkCardView: View {
 
     // MARK: - Derived values
 
-    /// "John 3:16" — locale-aware short name, no translation suffix
-    /// (translation is not stored on Bookmark).
+    /// "John 3:16" — locale-aware short name. Renumbers once `resolvedRef` is loaded
+    /// (bug-037: e.g. RST Пс 50:1 reads as "Пс 51:1" once KJV is the active translation).
+    /// Before the first load (or for a verseId we can't parse), falls back to the raw
+    /// stored numbers — same as before this fix.
     private var verseRef: String {
         guard let first = item.verseIds.first else {
             return NSLocalizedString("bookmarks.row.default_title", comment: "")
+        }
+        if let resolvedRef {
+            return "\(readerVM.shortBookName(for: resolvedRef.bookId)) \(resolvedRef.chapter):\(resolvedRef.verse)"
         }
         let parts = first.split(separator: "|")
         guard parts.count == 3 else { return first }
@@ -77,20 +100,25 @@ struct BookmarkCardView: View {
 
     /// Fetch verse text synchronously from DB using the reader's active translation.
     /// Consistent with how ReaderViewModel accesses DatabaseService from MainActor.
+    ///
+    /// bug-037: the stored number is resolved into the active translation first
+    /// (`BookmarkVerseResolver` — shared with the share text and the reader's toggle).
+    /// A merge gap shows NO text — the same honest gap as the parallel-translations
+    /// panel — instead of the neighbouring verse that happens to carry the number.
     private func loadVerseText() {
         guard let first = item.verseIds.first else { return }
-        let parts = first.split(separator: "|")
-        guard parts.count == 3,
-              let chapter = Int(parts[1]),
-              let verse   = Int(parts[2])
-        else { return }
-
-        verseText = DatabaseService.shared.loadVerseText(
-            bookId:      String(parts[0]),
-            chapter:     chapter,
-            verse:       verse,
-            translation: readerVM.currentTranslation.id
-        )
+        let target = readerVM.currentTranslation.id
+        switch BookmarkVerseResolver.resolve(verseId: first,
+                                             savedIn: item.verseTranslations[first],
+                                             activeTranslation: target) {
+        case .verse(let ref):
+            resolvedRef = ref
+            verseText = DatabaseService.shared.loadVerseText(
+                bookId: ref.bookId, chapter: ref.chapter, verse: ref.verse, translation: target)
+        case .noCounterpart, nil:
+            resolvedRef = nil
+            verseText = nil
+        }
     }
 }
 

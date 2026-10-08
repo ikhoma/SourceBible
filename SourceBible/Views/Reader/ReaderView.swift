@@ -2,6 +2,7 @@
 // SourceBible
 
 import SwiftUI
+import TipKit
 
 struct ReaderView: View {
 
@@ -250,6 +251,10 @@ struct ReaderView: View {
 /// neighbour page renders the wrong book's cover, heading and verses.
 struct ChapterScrollContent: View {
     @EnvironmentObject var vm: ReaderViewModel
+    @Environment(\.analytics) private var analytics
+    // Bug fix 2026-09-16 (real-device report): gates TapVerseTip so it never
+    // competes on screen with the first-launch analytics consent sheet.
+    @Environment(\.consentFlowPending) private var consentFlowPending
     // Locale dependency kept for BibleBookNames fallback paths (see ReaderView).
     @Environment(\.locale) private var locale
     @Environment(\.titleFontStyle) private var titleFontStyle
@@ -326,6 +331,33 @@ struct ChapterScrollContent: View {
                                         onWordTap:  { seg in vm.tapWord(seg, in: verse) }
                                     )
                                     .id(verse.id)
+                                    // TapVerseTip (spec-minimal-tap-onboarding.md): anchored only
+                                    // to the app's first-launch default target (Genesis 1:1). Not
+                                    // a rewrite of VerseRowView -- attached from the caller so the
+                                    // tuned row view itself stays untouched.
+                                    .popoverTip(
+                                        (verse.bookId == "GEN" && verse.chapter == 1 && verse.number == 1 && !consentFlowPending)
+                                            ? TapVerseTip() : nil,
+                                        arrowEdge: .top
+                                    )
+                                    .task(id: consentFlowPending) {
+                                        // Bug fix 2026-09-16 (real-device report): re-runs when the
+                                        // consent sheet resolves, so the "shown" event can't fire while
+                                        // the tip is held off screen by !consentFlowPending above.
+                                        guard !consentFlowPending else { return }
+                                        guard verse.bookId == "GEN", verse.chapter == 1, verse.number == 1 else { return }
+                                        guard !TapVerseTip.hasShownTapHint else { return }
+                                        for await shouldDisplay in TapVerseTip().shouldDisplayUpdates where shouldDisplay {
+                                            TapVerseTip.hasShownTapHint = true
+                                            // Environment analytics (not vm.analytics): this task can run
+                                            // before ReaderView's own `.task { vm.analytics = analytics }`
+                                            // wiring below has executed -- reading straight from the
+                                            // environment (same pattern as SearchView.swift/ContentView.swift)
+                                            // sidesteps that ordering race entirely.
+                                            analytics.track(.onboardingTapHintShown)
+                                            break
+                                        }
+                                    }
                                     // Measure EVERY row's INTRINSIC height (stable; unaffected
                                     // by scroll) into a per-id store. Done for all rows, not
                                     // just the selected one: onGeometryChange does NOT re-fire
@@ -619,22 +651,26 @@ struct VerseRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                // Verse number
-                Text("\(verse.number)")
-                    .font(.caption)
-                    .foregroundStyle(isSelected ? Color.appBlue : Color(UIColor.tertiaryLabel))
-                    .frame(width: 24, alignment: .trailing)
-                    .padding(.top, 12)
-
-                // Verse text — UITextView renderer when parsed; plain Text fallback
+            HStack(alignment: .top, spacing: 0) {
+                // Verse text — UITextView renderer when parsed; plain Text fallback.
+                // EXPERIMENT (Geneva-style inline verse number, not committed): the
+                // number used to be a sibling Text() in a fixed 24pt trailing-aligned
+                // gutter, which (a) looked nothing like Ivan's Geneva reference and
+                // (b) overflowed further LEFT as digit count grew ("176" vs "2"),
+                // crowding the bigger 32pt corner test above. Now the number is fused
+                // as the first run of the SAME attributed string / Text (see
+                // VerseTextView.buildBaseAttributedString and the fallback below) —
+                // true inline typesetting, zero gap, reflows with the paragraph.
                 if let parsed = verse.parsed {
                     VerseTextView(
                         parsed: parsed,
+                        verseNumber: verse.number,
+                        isSelected: isSelected,
                         highlightColor: verse.highlightColor,
                         selectedSegment: selectedSegment,
                         redLetters: redLetters,
                         footnotes: verse.footnotes,
+                        footnoteLabels: verse.footnoteLabels,
                         onVerseTap: onVerseTap,
                         onWordTap: onWordTap,
                         onFootnoteTap: { marker, rect in
@@ -667,13 +703,22 @@ struct VerseRowView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 12)
                     .padding(.trailing, 12)
+                    .padding(.leading, 16)
                 } else {
-                    Text(verse.text)
-                        .font(.body)
+                    // Same fusion, done the plain-SwiftUI way: Text concatenation keeps
+                    // both runs in ONE Text, so they wrap as a single paragraph instead
+                    // of the old two-view HStack (which pinned the number to the row's
+                    // top-left regardless of how the text below it wrapped).
+                    (Text("\(verse.number) ")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.appBlue : Color(UIColor.tertiaryLabel))
+                        .baselineOffset(7)
+                     + Text(verse.text).font(.body))
                         .lineSpacing(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 12)
                         .padding(.trailing, 12)
+                        .padding(.leading, 16)
                         .background(verse.highlightColor.map {
                             HighlightColor.from($0).color.opacity(0.22)
                         } ?? Color.clear)
@@ -687,7 +732,7 @@ struct VerseRowView: View {
                         // iOS 26: ConcentricRectangle автоматично рахує inner radius
                         // containerShape(r=12) → ConcentricRectangle з padding 2pt → inner r=10
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 12).fill(Color.appBlue)
+                            RoundedRectangle(cornerRadius: 32).fill(Color.appBlue)
                             ConcentricRectangle()
                                 .fill(colorTheme.appBackground)
                                 .padding(.leading, 2)
@@ -695,7 +740,7 @@ struct VerseRowView: View {
                                 .fill(Color.appBlue.opacity(0.1))
                                 .padding(.leading, 2)
                         }
-                        .containerShape(RoundedRectangle(cornerRadius: 12))
+                        .containerShape(RoundedRectangle(cornerRadius: 32))
                     } else {
                         // iOS 17–25: три шари вручну
                         // 1) синій (акцент-смужка) → 2) grouped bg (ховає синій) → 3) синій тінт
@@ -711,7 +756,10 @@ struct VerseRowView: View {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: isSelected ? 12 : 0))
+            .clipShape(RoundedRectangle(cornerRadius: {
+                guard isSelected else { return 0 }
+                if #available(iOS 26, *) { return 32 } else { return 12 }
+            }()))
 
         }
     }
