@@ -120,6 +120,8 @@ FUNCTION_WORDS = {
     "i", "me", "my", "mine", "thou", "thee", "thy", "thine", "ye", "you", "your", "we", "us", "our",
 }
 
+FRAGMENT_SKIP_PHRASES = {"one of"}
+
 ATTRIBUTION = (
     "American Standard Version (1901): public domain; digital edition, footnotes and "
     "interlinear alignment by OpenBible.info (github.com/openbibleinfo/American-Standard-Version-Bible, "
@@ -411,6 +413,12 @@ def render_verse(sid: str, items: list[Item], org: dict[str, dict], canon: dict[
         if u["status"] == "added" or not u["src"]:
             stats["units_no_source"] += 1
             continue
+        # Одиниця, чия англійська — лише «the» («the<S>1121</S> Egyptians» ← בְּנֵי־מִצְרַיִם, Єз 16:26):
+        # тег на артиклі відкривав би «син», а «Translated as» отримував чип «the». Пари в англійській
+        # тут нема — слово лишається неклікабельним. «a/an» НЕ входять: «a man» ← אֶחָד — законно.
+        if all(items[i].text.lower() == "the" for i in u["idx"]):
+            stats["the_only_units_skipped"] += 1
+            continue
         nums = []
         for s in u["src"]:
             if VARIANT_RE.search(s):
@@ -459,6 +467,11 @@ def render_verse(sid: str, items: list[Item], org: dict[str, dict], canon: dict[
         frags.append(cur_f)
         for fr in frags:
             if end_of[key] in fr:
+                continue
+            # «one of» — частка, не переклад: «one of<S>1121</S> his sons» (1 Цар 13:11) давало чип
+            # «one his sons». «one» сам по собі НЕ службове: «one … another» ← ἀλλήλων, «lofty One».
+            if " ".join(items[i].text.lower() for i in fr) in FRAGMENT_SKIP_PHRASES:
+                stats["split_fragment_phrase_skipped"] += 1
                 continue
             if all(items[i].text.lower() in FUNCTION_WORDS for i in fr):
                 stats["split_fragment_function_skipped"] += 1
@@ -595,6 +608,9 @@ GOLDEN_CONTAINS = [
     (("PSA", 3, 1), "<n>A Psalm of David, when he fled from Absalom his son.</n> Jehovah<S>3068</S>"),
     (("SNG", 1, 1), "The Song<S>7892</S> of songs<S>7892</S>"),  # вірш, якого не було в ASV+
     (("JHN", 1, 18), "<f>[1]</f>"),
+    (("EZK", 16, 26), "with<S>413</S> the Egyptians<S>4714</S>"),        # «the»-одиниця без тега (не H1121)
+    (("1KI", 13, 11), "and one of his sons<S>1121</S>"),                 # уламок «one of» без тега
+    (("MRK", 4, 41), "one<S>240</S> to<S>4314</S> another<S>240</S>"),   # «one … another» ← ἀλλήλων — тег лишається
 ]
 # (ref, точний текст) — контрольні: службові слова/префікси БЕЗ тега
 GOLDEN_EXACT = [

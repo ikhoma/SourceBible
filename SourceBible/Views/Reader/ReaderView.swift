@@ -670,6 +670,7 @@ struct VerseRowView: View {
                         selectedSegment: selectedSegment,
                         redLetters: redLetters,
                         footnotes: verse.footnotes,
+                        footnoteLabels: verse.footnoteLabels,
                         onVerseTap: onVerseTap,
                         onWordTap: onWordTap,
                         onFootnoteTap: { marker, rect in

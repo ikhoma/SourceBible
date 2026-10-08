@@ -73,6 +73,17 @@ class Rendered(unittest.TestCase):
     def test_split_unit_fragment_tag_only_when_unique(self):
         self.assertIn("put<S>2289</S> him<S>846</S> to death<S>2289</S>", self.v("MRK", 14, 55))
 
+    def test_the_only_unit_untagged(self):
+        # בְּנֵי־מִצְרַיִם → «the Egyptians»: OpenBible вирівняв בְּנֵי на «the». Тег на артиклі
+        # відкривав би «син» і давав чип «the» — одиниця лишається без тега.
+        t = self.v("EZK", 16, 26)
+        self.assertIn("with<S>413</S> the Egyptians<S>4714</S>", t)
+        self.assertNotIn("<S>1121</S>", t)
+
+    def test_one_of_fragment_untagged(self):
+        # «one of … his sons» ← בְּנוֹ: уламок «one of» без тега, інакше чип «one his sons».
+        self.assertIn("and one of his sons<S>1121</S>", self.v("1KI", 13, 11))
+
     # ── виноски ──
     def test_footnote_anchor_after_unit_of_next_word(self):
         self.assertIn("provide<S>7200</S><f>[1]</f>", self.v("GEN", 22, 8))

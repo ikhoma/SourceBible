@@ -1030,7 +1030,8 @@ class ReaderViewModel: ObservableObject {
                 BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                            number: v.number, text: v.text, words: v.words,
                            highlightColor: highlightColors[v.id],
-                           parsed: v.parsed)
+                           parsed: v.parsed,
+                           footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             }
         pageVersesCache[key] = loaded
         pageVersesCacheOrder.append(key)
@@ -1062,7 +1063,8 @@ class ReaderViewModel: ObservableObject {
                 BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                            number: v.number, text: v.text, words: v.words,
                            highlightColor: highlightColors[v.id],
-                           parsed: v.parsed)
+                           parsed: v.parsed,
+                           footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             }
         isLoading = false
     }
@@ -1081,7 +1083,8 @@ class ReaderViewModel: ObservableObject {
             let v = verses[idx]
             verses[idx] = BibleVerse(id: v.id, bookId: v.bookId, chapter: v.chapter,
                                      number: v.number, text: v.text, words: words,
-                                     highlightColor: v.highlightColor, parsed: v.parsed)
+                                     highlightColor: v.highlightColor, parsed: v.parsed,
+                                     footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             selectedVerse = verses[idx]
         }
     }
@@ -1489,7 +1492,8 @@ class ReaderViewModel: ObservableObject {
                 id: v.id, bookId: v.bookId, chapter: v.chapter, number: v.number,
                 text: v.text, words: v.words,
                 highlightColor: highlightColors[v.id],
-                parsed: v.parsed
+                parsed: v.parsed,
+                footnotes: v.footnotes, footnoteLabels: v.footnoteLabels
             )
             if selectedVerse?.id == v.id {
                 selectedVerse = verses[idx]

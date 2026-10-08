@@ -94,6 +94,9 @@ struct VerseTextView: UIViewRepresentable {
     /// Примітки перекладача цього вірша: маркер (`[2]`) → текст. Керує ДВОМА речами —
     /// чи малювати хрестик і чи є що показати по тапу.
     var footnotes: [String: String] = [:]
+    /// Літера знака для кожного маркера (`[2]` → `"b"`), нумерація в межах глави
+    /// (`DatabaseService.loadChapter`). Немає літери → «†» як запасний знак.
+    var footnoteLabels: [String: String] = [:]
     var onVerseTap: () -> Void
     var onWordTap: (VerseSegment) -> Void
     /// Тап по хрестику: маркер + прямокутник глифа у координатах цього в'ю (для якоря
@@ -289,6 +292,10 @@ struct VerseTextView: UIViewRepresentable {
                 // обіцяє й не дає. Немає нотатки → немає хрестика.
                 guard footnotes[anchorId] != nil else { continue }
 
+                // Знак — надрядкова ЛІТЕРА (рішення Івана 2026-10-07), а не †: літера читається
+                // як «примітка», розрізняє кілька виносок у вірші, а † у біблійному тексті
+                // несе значення (хрест / «помер» у генеалогіях). Цифра теж не годиться —
+                // зливалася б з інлайн-номером вірша.
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font:            UIFont.preferredFont(forTextStyle: .caption2),
                     .foregroundColor: UIColor.appBlue,
@@ -296,7 +303,8 @@ struct VerseTextView: UIViewRepresentable {
                     .verseSegmentIndex: index,
                     .footnoteMarker:  anchorId
                 ]
-                result.append(NSAttributedString(string: "†", attributes: attrs))
+                result.append(NSAttributedString(string: footnoteLabels[anchorId] ?? "†",
+                                                 attributes: attrs))
                 continue
             }
 
@@ -435,38 +443,42 @@ struct VerseTextView: UIViewRepresentable {
             onVerseTap()
         }
 
-        /// Маркер примітки під точкою тапу + прямокутник глифа (для якоря поповера).
+        /// Маркер примітки під точкою тапу + прямокутник знака (для якоря поповера).
         ///
-        /// Глиф † — це один символ у `.caption2`, тобто цільова зона ~8×11 pt, утричі менша
-        /// за мінімальні 44×44 з HIG. Тому шукаємо не лише під пальцем, а й у сусідніх
-        /// позиціях: `closestPosition(to:)` віддає найближчу межу символу, і залежно від
-        /// того, з якого боку торкнулись, це може бути індекс ДО або ПІСЛЯ хрестика.
-        /// Без цього допуску тап «майже точно в хрестик» відкривав би sheet вірша.
+        /// Знак — одна-дві літери у `.caption2`, тобто ~6×11 pt. Зона натискання (рішення
+        /// Івана 2026-10-07): **на всю висоту рядка**, а по ширині — знак плюс `hitPadX` з
+        /// кожного боку, щоб не перекривати сусідні слова. 44×44 з HIG виглядали б у тексті
+        /// як дірка, тож висоту беремо від рядка (вона й так ≈ 1.3× кегля), а ширину не роздуваємо.
         ///
-        /// Прямокутник беремо з `firstRect(for:)` по діапазону самого глифа — це дає
-        /// поповеру якір на хрестику, а не на всьому вірші.
+        /// Геометрія — TextKit 1 (`layoutManager`), який цей в'ю й так використовує для
+        /// підсвітки рядків (`HighlightableTextView.draw`). Якщо зони двох знаків перетинаються
+        /// (`</f><f>` підряд), перемагає той, чий центр ближче до пальця.
+        private static let hitPadX: CGFloat = 8
+
         private func footnoteHit(in tv: UITextView, at point: CGPoint) -> (String, CGRect)? {
             guard let text = tv.attributedText, text.length > 0 else { return nil }
-            let charIdx = charIndex(in: tv, at: point)
-
-            // Порядок кандидатів значущий: точний індекс ПЕРШИЙ, сусідній зліва — лише як
-            // запасний. Так тап просто по хрестику завжди дає свій маркер, а допуск працює
-            // тільки тоді, коли під пальцем маркера немає.
-            // Межа допуску (заміряно 2026-08-08): у корпусі є РІВНО ОДИН вірш із двома
-            // анкерами поспіль (`</f><f>`). Тільки там дотик трохи лівіше другого хрестика
-            // відкриє перший. Ціна помилки — показана сусідня примітка, тож звужувати
-            // допуск заради одного вірша означало б зламати влучання в решті 1 436 анкерів.
-            for candidate in [charIdx, charIdx - 1] where candidate >= 0 && candidate < text.length {
-                guard let marker = text.attribute(.footnoteMarker, at: candidate,
-                                                  effectiveRange: nil) as? String else { continue }
-                let glyphRange = NSRange(location: candidate, length: 1)
-                guard let start = tv.position(from: tv.beginningOfDocument, offset: candidate),
-                      let end   = tv.position(from: tv.beginningOfDocument,
-                                              offset: candidate + glyphRange.length),
-                      let range = tv.textRange(from: start, to: end) else { continue }
-                return (marker, tv.firstRect(for: range))
+            let lm = tv.layoutManager
+            let tc = tv.textContainer
+            let origin = CGPoint(x: tv.textContainerInset.left, y: tv.textContainerInset.top)
+            var best: (marker: String, rect: CGRect, dist: CGFloat)?
+            text.enumerateAttribute(.footnoteMarker,
+                                    in: NSRange(location: 0, length: text.length)) { value, range, _ in
+                guard let marker = value as? String else { return }
+                let glyphs = lm.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+                guard glyphs.length > 0 else { return }
+                let glyphRect = lm.boundingRect(forGlyphRange: glyphs, in: tc)
+                    .offsetBy(dx: origin.x, dy: origin.y)
+                let lineRect  = lm.lineFragmentRect(forGlyphAt: glyphs.location, effectiveRange: nil)
+                    .offsetBy(dx: origin.x, dy: origin.y)
+                let hit = CGRect(x: glyphRect.minX - Self.hitPadX, y: lineRect.minY,
+                                 width: glyphRect.width + 2 * Self.hitPadX, height: lineRect.height)
+                guard hit.contains(point) else { return }
+                let dist = abs(point.x - glyphRect.midX)
+                if let current = best, current.dist <= dist { return }
+                best = (marker, glyphRect, dist)
             }
-            return nil
+            guard let best else { return nil }
+            return (best.marker, best.rect)
         }
 
         @objc func handleLongPress(_ gr: UILongPressGestureRecognizer) {

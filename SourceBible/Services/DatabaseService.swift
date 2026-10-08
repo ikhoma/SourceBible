@@ -227,8 +227,24 @@ final class DatabaseService: @unchecked Sendable {
                                      words: [], parsed: parsed,
                                      footnotes: footnotes[id] ?? [:]))
         }
+        // Літери знаків виносок — у межах глави, у порядку читання (вірш → якір у вірші).
+        // Лише для маркерів із текстом: якір без запису знака не має (див. VerseTextView),
+        // тож і літери не забирає, інакше в главі з'являлися б пропуски «a, c».
+        var labelIndex = 0
+        for i in verses.indices {
+            guard !verses[i].footnotes.isEmpty, let parsed = verses[i].parsed else { continue }
+            var labels: [String: String] = [:]
+            for seg in parsed.segments {
+                guard let marker = seg.footnoteAnchorId, labels[marker] == nil,
+                      verses[i].footnotes[marker] != nil else { continue }
+                labels[marker] = footnoteLabelText(labelIndex)
+                labelIndex += 1
+            }
+            verses[i].footnoteLabels = labels
+        }
         return verses
     }
+
 
     /// Translator footnotes for a whole chapter: verseId → (marker → plain text).
     ///
@@ -240,7 +256,7 @@ final class DatabaseService: @unchecked Sendable {
     /// `marker` matches the `<f>…</f>` anchor text in `verse.text` verbatim (`[2]`), which is
     /// what `VerseParser` stores as `VerseSegment.footnoteAnchorId`.
     ///
-    /// Only UBIO and RST carry these. KJV's `<n>…</n>` notes are a DIFFERENT mechanism —
+    /// ASV (ADR-042), UBIO and RST carry these. KJV's `<n>…</n>` notes are a DIFFERENT mechanism —
     /// inline in the verse text, no anchor, parsed into `ParsedVerse.footnotes` — and are not
     /// in this table.
     func loadFootnotes(bookId: String, chapter: Int,
@@ -1650,3 +1666,16 @@ private extension DatabaseService {
     }
 }
 
+/// Літера знака виноски: 0 → "a", 25 → "z", 26 → "aa", 27 → "ab"… (бієктивна база 26, як
+/// стовпці таблиці). Глава ASV має до 35 виносок, тож однієї літери не завжди досить.
+/// File-level, а не метод: без стану й без `self` (CLAUDE.md, Swift 6).
+private func footnoteLabelText(_ index: Int) -> String {
+    var n = index + 1
+    var s = ""
+    while n > 0 {
+        n -= 1
+        s = String(UnicodeScalar(UInt8(97 + n % 26))) + s
+        n /= 26
+    }
+    return s
+}

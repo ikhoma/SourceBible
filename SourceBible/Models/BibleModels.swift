@@ -46,12 +46,20 @@ struct BibleVerse: Identifiable {
     var highlightColor: String? = nil
     var parsed: ParsedVerse? = nil  // nil тільки для sample data без парсингу
     /// Примітки перекладача для цього вірша: маркер (`[2]`) → готовий до показу текст.
-    /// Заповнює `DatabaseService.loadChapter` із таблиці `footnote` (UBIO/RST).
+    /// Заповнює `DatabaseService.loadChapter` із таблиці `footnote` (ASV/UBIO/RST).
     ///
-    /// Порожній словник — нормальний стан: у KJV/ASV/NASB цих приміток немає взагалі, а
-    /// в UBIO 6.9% анкерів (92 з 1 329) не мають рядка в `footnote`. Рідер малює хрестик
+    /// Порожній словник — нормальний стан: у KJV/NASB цих приміток немає взагалі, а
+    /// в UBIO 6.9% анкерів (92 з 1 329) не мають рядка в `footnote`. Рідер малює знак
     /// ЛИШЕ там, де запис є (`VerseTextView`), інакше тап відкривав би порожнечу.
+    ///
+    /// ⛔ bug-061: кожне перебудування `BibleVerse(...)` (ReaderViewModel) МУСИТЬ передавати
+    /// `footnotes` і `footnoteLabels` далі — поле має дефолт `[:]`, тож пропуск компілюється
+    /// мовчки, і виноски зникають у всіх перекладах.
     var footnotes: [String: String] = [:]
+    /// Літера знака виноски: маркер (`[2]`) → `"a"`, `"b"`… Нумерація в межах ГЛАВИ, у порядку
+    /// читання (вірш, потім позиція якоря у вірші); після `z` — `aa`, `ab`… (ASV: до 35 на главу).
+    /// Заповнює `DatabaseService.loadChapter`; лише для маркерів, що мають текст у `footnotes`.
+    var footnoteLabels: [String: String] = [:]
 }
 
 // Manual Hashable — exclude `parsed` and `words` (expensive, not needed for equality)
