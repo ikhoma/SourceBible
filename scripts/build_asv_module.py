@@ -121,6 +121,17 @@ FUNCTION_WORDS = {
 }
 
 FRAGMENT_SKIP_PHRASES = {"one of"}
+# Зв'язка, яку ASV додає в іменному реченні (іврит/грецька без «бути»): OpenBible клеїть її до
+# одиниці присудка — «Blessed be<S>1288</S>», «Whose son art<S>1121</S>», «Good is<S>2896</S>».
+# Тег на зв'язці відкриває «благословити» з «be», а нормалізатор ADR-041 (COLLIDE_EN) бере
+# останнє слово сегмента → чип «be». Тег ставимо ПЕРЕД зв'язкою, як у KJV: «Blessed<S>1288</S> be».
+COPULA = {"is", "are", "was", "were", "be", "art", "am", "been"}
+# Номери, для яких зв'язка і є перекладом (הָיָה «бути», εἰμί, γίνομαι, אִיתַי «є», אוּלַי «may be»)
+# — тег не рухаємо (заміряно 2026-10-08 на всіх 690 переносах).
+BE_STRONGS = {"H1961", "H1933", "H1934", "H3426", "H383", "H194", "G1510", "G1096", "G5225", "G1762"}
+# «there be/is» — переносимо на «there» лише коли «there» і є словом оригіналу (שָׁם, ἐκεῖ);
+# інакше «Whatsoever man there be<S>376</S>» дало б чип «there» для אִישׁ.
+THERE_STRONGS = {"H8033", "G1563"}
 
 ATTRIBUTION = (
     "American Standard Version (1901): public domain; digital edition, footnotes and "
@@ -378,6 +389,16 @@ def strong_number(raw: str | None, canon: dict[str, str]) -> str | None:
     return str(int(m.group(1))) if m else None
 
 
+def _is_content(t: dict | None) -> bool:
+    """Змістове слово оригіналу: іменник/дієслово/прикметник (не числівник: «a» ← אֶחָד законно)."""
+    if not t:
+        return False
+    m = t.get("x-morph", "")
+    if t["x-id"].startswith("WLC."):
+        return m[:1] in ("N", "V", "A") and not m.startswith("Ac")
+    return m.split("-")[0] in ("N", "V", "A")
+
+
 def render_verse(sid: str, items: list[Item], org: dict[str, dict], canon: dict[str, str],
                  names: dict[str, str], stats: collections.Counter,
                  align_rows: list | None = None) -> tuple[str, list[str]]:
@@ -413,13 +434,17 @@ def render_verse(sid: str, items: list[Item], org: dict[str, dict], canon: dict[
         if u["status"] == "added" or not u["src"]:
             stats["units_no_source"] += 1
             continue
-        # Одиниця, чия англійська — лише «the» («the<S>1121</S> Egyptians» ← בְּנֵי־מִצְרַיִם, Єз 16:26):
+        # Одиниця, чия англійська — лише «the» («the<S>1121</S> Egyptians» ← בְּנֵי־מִצְרַיִם, Єз 16:26)
+        # або «of the» при змістовому слові оригіналу («of the<S>1121</S> Assyrians», Єз 23:9):
         # тег на артиклі відкривав би «син», а «Translated as» отримував чип «the». Пари в англійській
         # тут нема — слово лишається неклікабельним. «a/an» НЕ входять: «a man» ← אֶחָד — законно.
-        if all(items[i].text.lower() == "the" for i in u["idx"]):
+        # Голе «of» НЕ входить: «afraid of<S>6440</S>» (מִפְּנֵי) так само розмічає KJV (заміряно 2026-10-08).
+        words = {items[i].text.lower() for i in u["idx"]}
+        if words == {"the"} or (words == {"of", "the"} and any(_is_content(org.get(s)) for s in u["src"])):
             stats["the_only_units_skipped"] += 1
             continue
         nums = []
+        raws: list[str] = []
         for s in u["src"]:
             if VARIANT_RE.search(s):
                 stats["src_variant_skipped"] += 1
@@ -444,8 +469,18 @@ def render_verse(sid: str, items: list[Item], org: dict[str, dict], canon: dict[
                 stats["head_without_strong"] += 1
                 continue
             nums.append(n)
+            m = re.match(r"[HG]\d+", canon.get(raw, raw))
+            raws.append(m.group(0) if m else "")
+        tag_pos = pos
+        if (nums and contig and len(u["idx"]) >= 2
+                and items[u["idx"][-1]].text.lower() in COPULA
+                and items[u["idx"][-2]].text.lower() not in FUNCTION_WORDS
+                and (items[u["idx"][-2]].text.lower() != "there" or THERE_STRONGS.intersection(raws))
+                and not BE_STRONGS.intersection(raws)):
+            tag_pos = u["idx"][-2]
+            stats["copula_tag_moved"] += 1
         if nums:
-            tags_at[pos] = tags_at.get(pos, "") + "".join(f"<S>{n}</S>" for n in nums)
+            tags_at[tag_pos] = tags_at.get(tag_pos, "") + "".join(f"<S>{n}</S>" for n in nums)
             stats["tags"] += len(nums)
             unit_nums[key] = (nums, contig)
     # Розірвана одиниця («put … him … to death», θανατόω): тег і на інших фрагментах, як у KJV
@@ -609,8 +644,14 @@ GOLDEN_CONTAINS = [
     (("SNG", 1, 1), "The Song<S>7892</S> of songs<S>7892</S>"),  # вірш, якого не було в ASV+
     (("JHN", 1, 18), "<f>[1]</f>"),
     (("EZK", 16, 26), "with<S>413</S> the Egyptians<S>4714</S>"),        # «the»-одиниця без тега (не H1121)
+    (("EZK", 23, 9), "of the Assyrians<S>804</S>"),                      # «of the»-одиниця без тега (не H1121)
     (("1KI", 13, 11), "and one of his sons<S>1121</S>"),                 # уламок «one of» без тега
     (("MRK", 4, 41), "one<S>240</S> to<S>4314</S> another<S>240</S>"),   # «one … another» ← ἀλλήλων — тег лишається
+    (("GEN", 9, 26), "Blessed<S>1288</S> be Jehovah"),                   # зв'язка: тег перед «be», як у KJV
+    (("1SA", 17, 58), "Whose<S>4310</S> son<S>1121</S> art"),            # чип «art» для בֵּן зникає
+    (("JOS", 14, 7), "old<S>1121</S> was"),
+    (("DAN", 2, 10), "There is<S>383</S>"),                              # אִיתַי «є» — зв'язка і є перекладом
+    (("LEV", 17, 8), "there be<S>376</S>"),                              # «there» не слово оригіналу — не рухаємо
 ]
 # (ref, точний текст) — контрольні: службові слова/префікси БЕЗ тега
 GOLDEN_EXACT = [

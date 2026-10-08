@@ -1712,6 +1712,19 @@ def _open_mybible_sqlite(path):
 # All other semantic tags (<J>, <n>, <t>, <i>, <e>, <f>, <br/>) are preserved as-is.
 _STRIP_RE = re.compile(r'\[S\d+[a-z]?\]')
 
+# Кураторські правки ТЕКСТУ джерела: помилки упорядника модуля, яких немає сенсу чекати
+# від оновлення. verse.id → (як у джерелі після _clean_verse, як має бути). Кожна правка
+# мусить спрацювати рівно раз: якщо джерело змінилось і рядка вже немає — збірка падає,
+# правку переглядаємо руками (CLAUDE.md: перевірки в коді, ненульовий вихід).
+SOURCE_TEXT_FIXES = {
+    # UBIO Бут 1:2 — обидві виноски впорядник поставив у кінець вірша. [3] «Al pnei — на
+    # обличчі, на поверхні води» пояснює «над поверхнею», [4] «вода majim…» — «води».
+    # Єдиний вірш UBIO з двома маркерами підряд у кінці (з 1 230 з виносками, 2026-10-08).
+    "UBIO|GEN|1|2": ("ширяв над поверхнею води.<f>[3]</f><f>[4]</f>",
+                     "ширяв над поверхнею<f>[3]</f> води.<f>[4]</f>"),
+}
+
+
 def _clean_verse(text):
     """Strip legacy bracket Strong's markers and collapse whitespace.
     All XML-style tags are intentionally preserved for app-side parsing."""
@@ -1879,6 +1892,7 @@ def import_translations(cur):
         print(f"    First 5: { {k: book_mapping[k] for k in sorted(book_mapping)[:5]} }")
 
         rows = []
+        fixes_applied: set[str] = set()
         for row in src.execute(f'SELECT "{bcol}","{ccol}","{vcol}","{tcol}" FROM "{tname}"'):
             osis = book_mapping.get(int(row[0]))
             if not osis:
@@ -1887,8 +1901,18 @@ def import_translations(cur):
             text = _clean_verse(row[3] or "")
             if not text:
                 continue
-            rows.append((f"{tid}|{osis}|{ch}|{vs}", tid, osis, ch, vs,
-                         text, _search_text(text)))
+            vid = f"{tid}|{osis}|{ch}|{vs}"
+            fix = SOURCE_TEXT_FIXES.get(vid)
+            if fix:
+                if text.count(fix[0]) != 1:
+                    raise SystemExit(f"✗ SOURCE_TEXT_FIXES {vid}: у джерелі немає рядка «{fix[0]}» "
+                             f"(або він не єдиний) — джерело змінилось, переглянь правку.")
+                text = text.replace(fix[0], fix[1])
+                fixes_applied.add(vid)
+            rows.append((vid, tid, osis, ch, vs, text, _search_text(text)))
+        missing = [k for k in SOURCE_TEXT_FIXES if k.startswith(f"{tid}|") and k not in fixes_applied]
+        if missing:
+            raise SystemExit(f"✗ SOURCE_TEXT_FIXES: вірш(і) {missing} відсутні в джерелі {tid}.")
 
         src.close()
         if tmp_path:

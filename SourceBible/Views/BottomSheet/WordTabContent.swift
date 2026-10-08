@@ -293,7 +293,6 @@ struct WordMeaningView: View {
 
     /// ADR-041 «Translated as»: як поточний переклад передає слово. nil = секцію не показуємо.
     @State private var renderings: RenderingSummary?
-    @State private var showAllRenderings = false
 
     private let t: TranslationProvider = BundleTranslationProvider()
 
@@ -317,7 +316,6 @@ struct WordMeaningView: View {
         // («this verse»). Індексований запит — синхронно на MainActor, як і решта лексикону.
         .task(id: renderingTaskKey) {
             renderings = vm.renderingSummary(for: entry)
-            showAllRenderings = false
         }
         // Dedup: fire once per unique entry.id (chevron nav changes the entry → new fire).
         // .onAppear handles the initial display; .onChange handles subsequent word navigations
@@ -342,8 +340,9 @@ struct WordMeaningView: View {
         "\(entry.id)|\(vm.currentTranslation.id)|\(vm.selectedSegment?.id.uuidString ?? "-")"
     }
 
-    /// Скільки рядків видно до «Показати всі». Рядок передачі з поточного вірша
-    /// показується завжди, навіть поза топом.
+    /// Скільки рядків видно у вкладці; решта — в аркуші за «Show all» (як на Usage,
+    /// рішення Івана 2026-10-08: без розгортання списку на місці). Рядок передачі
+    /// з поточного вірша показується завжди, навіть поза топом.
     private static let renderingsCollapsedCount = 5
 
     @ViewBuilder
@@ -351,7 +350,7 @@ struct WordMeaningView: View {
         if let summary = renderings {
             let all = summary.items
             let visible: [WordRendering] = {
-                if showAllRenderings || all.count <= Self.renderingsCollapsedCount { return all }
+                if all.count <= Self.renderingsCollapsedCount { return all }
                 var top = Array(all.prefix(Self.renderingsCollapsedCount))
                 if let cur = summary.currentRenderingId,
                    !top.contains(where: { $0.id == cur }),
@@ -384,10 +383,14 @@ struct WordMeaningView: View {
                 HStack(alignment: .firstTextBaseline) {
                     if all.count > Self.renderingsCollapsedCount {
                         Button {
-                            withAnimation(.snappy) { showAllRenderings.toggle() }
+                            // Той самий аркуш, що «Show all» на Usage: усі передачі, без фільтра.
+                            vm.renderingsSheet = RenderingsSheetState(
+                                strongsId: entry.id, lemma: entry.originalWord,
+                                transliteration: entry.headerTransliteration,
+                                translationId: summary.translationId,
+                                renderingFilter: nil)
                         } label: {
-                            Text(t.string(for: showAllRenderings ? MorphKey.renderingsShowLess
-                                                                 : MorphKey.renderingsShowAll))
+                            Text(t.string(for: MorphKey.renderingsShowAll))
                                 .font(.callout)
                         }
                         .buttonStyle(.plain)
@@ -799,8 +802,12 @@ struct ConcordanceView: View {
         VStack(alignment: .leading, spacing: 0) {
         ForEach(summary.items) { item in
             if let ex = examples[item.id] {
+                // Тап по рядку = той самий аркуш, що «Show all», з початку списку
+                // (рішення Івана 2026-10-08). Шеврона тут немає: він обіцяв перехід у
+                // читанку, а рядок відкриває аркуш. У самому аркуші вірші з шевронами
+                // ведуть у читанку.
                 Button {
-                    openSheet(summary, rendering: item.id)
+                    openSheet(summary, rendering: nil)
                 } label: {
                     RenderingExampleRow(
                         item: item, example: ex,
@@ -833,7 +840,7 @@ struct ConcordanceView: View {
 // MARK: - Rendering Example Row (ADR-041 ч.5)
 
 /// Передача + скільки разів + вірш-приклад (найвагоміший за перехресними посиланнями).
-/// Тап відкриває аркуш усіх входжень з цією передачею.
+/// Тап відкриває аркуш усіх входжень (без фільтра). Без шеврона — див. renderingExamples.
 private struct RenderingExampleRow: View {
     let item: WordRendering
     let example: RenderingOccurrence
@@ -841,7 +848,8 @@ private struct RenderingExampleRow: View {
 
     // Анатомія — як у аркуші всіх входжень (WordRenderingsSheet): рядок групи
     // (там — книга, тут — передача) тим самим стилем, що `bookHeader`, далі рядок
-    // вірша як `OccurrenceRow`: ReferenceLabel + текст + шеврон, ті самі відступи.
+    // вірша як `OccurrenceRow`: ReferenceLabel + текст, ті самі відступи (шеврона немає —
+    // рядок відкриває аркуш, а не вірш у читанці).
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -865,9 +873,6 @@ private struct RenderingExampleRow: View {
                         .multilineTextAlignment(.leading)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.quaternary)
             }
             .padding(.vertical, 10)
         }

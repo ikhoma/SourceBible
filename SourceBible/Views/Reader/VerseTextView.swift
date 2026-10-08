@@ -250,6 +250,9 @@ struct VerseTextView: UIViewRepresentable {
     /// Does NOT include the selection blue background — that is applied separately
     /// in applySelection() so we can cheaply update just the selection without
     /// rebuilding the whole string.
+    /// Зазор (pt) між останньою літерою слова і надрядковою літерою виноски.
+    static let footnoteGap: CGFloat = 2
+
     func buildBaseAttributedString() -> NSAttributedString {
         let result   = NSMutableAttributedString()
         let baseFont = UIFont.preferredFont(forTextStyle: .body)
@@ -296,6 +299,19 @@ struct VerseTextView: UIViewRepresentable {
                 // як «примітка», розрізняє кілька виносок у вірші, а † у біблійному тексті
                 // несе значення (хрест / «помер» у генеалогіях). Цифра теж не годиться —
                 // зливалася б з інлайн-номером вірша.
+                // Повітря між словом і літерою (Іван 2026-10-08: «firmamentᵇ» злипалось).
+                // `.kern` на попередньому символі, а не пробіл: пробіл міг би перенести
+                // маркер на новий рядок окремо від слова. Між сусідніми маркерами («cd»)
+                // той самий зазор.
+                if result.length > 0 {
+                    let lastIdx = result.length - 1
+                    let lastChar = (result.string as NSString).character(at: lastIdx)
+                    if let scalar = UnicodeScalar(lastChar),
+                       !CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                        result.addAttribute(.kern, value: Self.footnoteGap,
+                                            range: NSRange(location: lastIdx, length: 1))
+                    }
+                }
                 let attrs: [NSAttributedString.Key: Any] = [
                     .font:            UIFont.preferredFont(forTextStyle: .caption2),
                     .foregroundColor: UIColor.appBlue,

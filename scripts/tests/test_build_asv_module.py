@@ -84,6 +84,12 @@ class Rendered(unittest.TestCase):
         # «one of … his sons» ← בְּנוֹ: уламок «one of» без тега, інакше чип «one his sons».
         self.assertIn("and one of his sons<S>1121</S>", self.v("1KI", 13, 11))
 
+    def test_copula_tag_before_supplied_copula(self):
+        # Іменне речення: ASV додає «are», OpenBible клеїть його до одиниці. Тег — перед зв'язкою.
+        self.assertIn("Blessed<S>835</S> are", self.v("PSA", 119, 1))
+        self.assertIn("Many<S>7227</S> are", self.v("PSA", 3, 1))
+        self.assertNotRegex(self.v("PSA", 119, 1), r"are<S>835</S>")
+
     # ── виноски ──
     def test_footnote_anchor_after_unit_of_next_word(self):
         self.assertIn("provide<S>7200</S><f>[1]</f>", self.v("GEN", 22, 8))
