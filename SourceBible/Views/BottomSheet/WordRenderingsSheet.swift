@@ -99,7 +99,7 @@ struct WordRenderingsSheet: View {
                 // просвічує під заголовком через soft edge effect). Так вміст обрізається
                 // по дівайдеру, як у Study mode і коментарях (Іван, 2026-10-06).
                 VStack(spacing: 0) {
-                    Divider()
+                    SheetHairline()
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             chips
@@ -124,7 +124,7 @@ struct WordRenderingsSheet: View {
                                                 .onTapGesture { open(occ) }
                                                 .accessibilityAddTraits(.isButton)
                                                 .id(occ.id)
-                                            Divider()
+                                            SheetHairline()
                                         }
                                     } header: {
                                         bookHeader(section)
@@ -150,8 +150,12 @@ struct WordRenderingsSheet: View {
                 .task(id: state.id) {
                     summary = vm.renderingSummaryForSheet(strongsId: state.strongsId,
                                                           translation: state.translationId)
-                    occurrences = await vm.renderingOccurrences(strongsId: state.strongsId,
-                                                                translation: state.translationId)
+                    let loadedOccurrences = await vm.renderingOccurrences(
+                        strongsId: state.strongsId, translation: state.translationId)
+                    // Лоадер не перевіряє скасування: якщо `state.id` встиг змінитись,
+                    // цей результат застарів — не перетирати ним новий (code review 2026-10-08).
+                    guard !Task.isCancelled else { return }
+                    occurrences = loadedOccurrences
                     loaded = true
                     // Повернення з читанки: до вірша, з якого пішли.
                     if let anchor = state.anchorOccurrenceId {
@@ -381,5 +385,19 @@ private extension View {
         } else {
             self
         }
+    }
+}
+
+/// Волосяна лінія фіксованим кольором сепаратора замість системного `Divider()`.
+/// Той самий баг, що в коментарях (VerseTabContent, 2026-09-02): у sheet-і системний
+/// Divider перші ~секунду після відкриття рендериться темнішим/насиченішим і «сідає» в
+/// нормальний колір лише після скролу (Іван, 2026-10-08, аркуш передач). Рука-лінія
+/// кольором `.separator` цього не має.
+private struct SheetHairline: View {
+    @Environment(\.displayScale) private var displayScale
+    var body: some View {
+        Rectangle()
+            .fill(Color(uiColor: .separator))
+            .frame(height: 1 / displayScale)
     }
 }

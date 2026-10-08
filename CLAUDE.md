@@ -475,8 +475,9 @@ word(id, book_id, chapter, verse, position, surface, lemma,
 Правильний шлях — два курованих хопи (`orgRef` → `translationRef`), як у
 `DatabaseService.loadParallelVerseTexts`. Гейт: `scripts/verify_parallel_alignment.py`
 (у `rebuild.sh`, перед `cp` у бандл).
-Відомий залишок того ж класу: закладки (bug-037) — `bookmark_verses` не зберігає переклад,
-тож хопати нема від чого; потребує рішення, не просто фіксу.
+Закладки (bug-037) — той самий клас, закрито: `bookmark_verses.translation` (міграція v3) і
+єдиний `BookmarkVerseResolver` для картки, share і перемикача в читанці. Merge gap → порожньо,
+не сусідній вірш (code review 2026-10-08).
 
 Очікуваний розмір: **155 823 рядки** = 155 622 вірші (5 перекладів × ~31k; ASV з OpenBible, ADR-042,
 додала Пісн 1:1) + 201 рядок надпису псалма (bug-058: KJV/ASV/NASB вливають надпис у вірш 1 →

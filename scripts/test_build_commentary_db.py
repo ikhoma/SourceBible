@@ -505,11 +505,15 @@ def test_org_resolver_verse_zero_anchors_via_chapter_v1(tmp_path):
     Malachi only has 3)."""
     db_path = tmp_path / "mini_core.db"
     con = sqlite3.connect(str(db_path))
+    # `source` — як у справжній схемі (build_versification.py, NOT NULL): OrgResolver
+    # з bug-058 відкидає рядки 'superscription', і фікстура без колонки падала
+    # «no such column: source» (code review 2026-10-08).
     con.execute(
         "CREATE TABLE verse_org(translation TEXT, book_id TEXT, chapter INTEGER, "
-        "verse INTEGER, org_book_id TEXT, org_chapter INTEGER, org_verse INTEGER)"
+        "verse INTEGER, org_book_id TEXT, org_chapter INTEGER, org_verse INTEGER, "
+        "source TEXT NOT NULL)"
     )
-    con.execute("INSERT INTO verse_org VALUES('KJV','MAL',4,1,'MAL',3,19)")
+    con.execute("INSERT INTO verse_org VALUES('KJV','MAL',4,1,'MAL',3,19,'ubs')")
     con.commit()
     con.close()
 

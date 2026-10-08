@@ -1,6 +1,6 @@
 # ADR-042: Власний модуль ASV з OpenBible ASV Interlinear замість MyBible `ASV+`
 
-**Status:** Proposed (2026-10-05; переписано того ж дня після рецензії — див. «Історія»)
+**Status:** Accepted (фаза 1 реалізована 2026-10-07; фаза 2 — окремий ADR = ADR-016 Phase 2 `verse_markup`) · v2 2026-10-05 після рецензії — див. «Історія»
 **Date:** 2026-10-05
 **Deciders:** Іван
 

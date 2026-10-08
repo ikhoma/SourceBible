@@ -177,7 +177,7 @@ struct VerseBottomSheetView: View {
                 Button {
                     bookmarksVM.toggleBookmark(verseId: verse.id, translation: vm.currentTranslation.id)
                 } label: {
-                    if bookmarksVM.isBookmarked(verseId: verse.id) {
+                    if bookmarksVM.isBookmarked(verseId: verse.id, translation: vm.currentTranslation.id) {
                         Label("action.bookmark", systemImage: "bookmark.fill")
                     } else {
                         Label("action.bookmark", systemImage: "bookmark")

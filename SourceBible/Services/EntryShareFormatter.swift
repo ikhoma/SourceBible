@@ -10,8 +10,8 @@
 //         then the user's own text (Ivan, 2026-09-23: «вірш + текст нотатки»).
 // Bookmark → exactly what BookmarkCardView shows: the ACTIVE translation, with the
 //         verse_org hop + renumbering for bookmarks whose creation translation is
-//         known and differs (bug-037). The resolution logic below deliberately
-//         duplicates BookmarkCardView.loadVerseText() — keep the two in sync.
+//         known and differs (bug-037). Both go through BookmarkVerseResolver, so the
+//         card and the share text cannot drift apart.
 
 import Foundation
 
@@ -60,30 +60,35 @@ enum EntryShareFormatter {
 
     // MARK: - Bookmark
 
-    /// nil when the verse text can't be resolved in the active translation.
+    /// The bookmarked verse in the active translation. When that translation has no
+    /// verse for it (merge gap, bug-037), shares it in the translation it was SAVED
+    /// under — the label names which — rather than the neighbouring verse that carries
+    /// the same number. nil only when the text can't be found at all.
     static func format(bookmark item: BookmarkWithVerses, readerVM: ReaderViewModel) -> String? {
         guard let first = item.verseIds.first else { return nil }
-        let p = first.split(separator: "|")
-        guard p.count == 3, let chapter = Int(p[1]), let verse = Int(p[2]) else { return nil }
-        let bookId = String(p[0])
         let target = readerVM.currentTranslation.id
+        let source = item.verseTranslations[first]
 
-        var ref  = (bookId: bookId, chapter: chapter, verse: verse)
-        var text: String?
-
-        if let source = item.verseTranslations[first], source != target,
-           let hop = DatabaseService.shared.loadHoppedVerse(
-               bookId: bookId, chapter: chapter, verse: verse,
-               source: source, target: target) {
-            ref  = (hop.bookId, hop.chapter, hop.verse)
-            text = hop.text
-        } else {
-            text = DatabaseService.shared.loadVerseText(
-                bookId: bookId, chapter: chapter, verse: verse, translation: target)
+        let ref: BookmarkVerseResolver.Ref
+        let translation: String
+        switch BookmarkVerseResolver.resolve(verseId: first, savedIn: source,
+                                             activeTranslation: target) {
+        case .verse(let r):
+            ref = r
+            translation = target
+        case .noCounterpart:
+            guard let source, let stored = BookmarkVerseResolver.Ref(verseId: first) else { return nil }
+            ref = stored
+            translation = source
+        case nil:
+            return nil
         }
 
-        guard let text, !text.isEmpty else { return nil }
-        let refString = "\(longBookName(ref.bookId, readerVM: readerVM)) \(ref.chapter):\(ref.verse) (\(target))"
+        guard let text = DatabaseService.shared.loadVerseText(
+                  bookId: ref.bookId, chapter: ref.chapter, verse: ref.verse,
+                  translation: translation),
+              !text.isEmpty else { return nil }
+        let refString = "\(longBookName(ref.bookId, readerVM: readerVM)) \(ref.chapter):\(ref.verse) (\(translation))"
         return "\"\(text)\"\n\n— \(refString)"
     }
 

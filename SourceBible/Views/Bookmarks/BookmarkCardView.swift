@@ -35,8 +35,10 @@ struct BookmarkCardView: View {
 
     @State private var verseText: String?
     /// Verse reference actually shown/looked-up — may differ from the raw stored
-    /// numbers when a translation hop (bug-037) renumbered it. nil until first load.
-    @State private var resolvedRef: (bookId: String, chapter: Int, verse: Int)?
+    /// numbers when a translation hop (bug-037) renumbered it. nil until first load,
+    /// and nil when the active translation has no counterpart (header keeps the
+    /// stored numbers, no preview text).
+    @State private var resolvedRef: BookmarkVerseResolver.Ref?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -99,39 +101,24 @@ struct BookmarkCardView: View {
     /// Fetch verse text synchronously from DB using the reader's active translation.
     /// Consistent with how ReaderViewModel accesses DatabaseService from MainActor.
     ///
-    /// bug-037: when this bookmark's own creation translation is known AND differs from
-    /// the active one, hop through verse_org (same two curated hops as
-    /// DatabaseService.loadParallelVerseTexts, bug-036) so the reference and text both
-    /// track the same verse of Scripture instead of the same number. Legacy bookmarks
-    /// (translation unknown) and same-translation reads keep the old identity lookup.
+    /// bug-037: the stored number is resolved into the active translation first
+    /// (`BookmarkVerseResolver` — shared with the share text and the reader's toggle).
+    /// A merge gap shows NO text — the same honest gap as the parallel-translations
+    /// panel — instead of the neighbouring verse that happens to carry the number.
     private func loadVerseText() {
         guard let first = item.verseIds.first else { return }
-        let parts = first.split(separator: "|")
-        guard parts.count == 3,
-              let chapter = Int(parts[1]),
-              let verse   = Int(parts[2])
-        else { return }
-        let bookId = String(parts[0])
         let target = readerVM.currentTranslation.id
-
-        if let source = item.verseTranslations[first], source != target,
-           let hop = DatabaseService.shared.loadHoppedVerse(
-               bookId: bookId, chapter: chapter, verse: verse,
-               source: source, target: target) {
-            resolvedRef = (hop.bookId, hop.chapter, hop.verse)
-            verseText   = hop.text
-            return
+        switch BookmarkVerseResolver.resolve(verseId: first,
+                                             savedIn: item.verseTranslations[first],
+                                             activeTranslation: target) {
+        case .verse(let ref):
+            resolvedRef = ref
+            verseText = DatabaseService.shared.loadVerseText(
+                bookId: ref.bookId, chapter: ref.chapter, verse: ref.verse, translation: target)
+        case .noCounterpart, nil:
+            resolvedRef = nil
+            verseText = nil
         }
-
-        // Legacy (no stored translation), already on the creation translation, or the
-        // hop came back empty (no verse_org row / no original counterpart / target has
-        // no verse for it) — identity lookup, same as before this fix. An empty result
-        // here is an honest gap, not a regression: it's the same case loadHoppedVerse
-        // itself falls back from.
-        resolvedRef = (bookId, chapter, verse)
-        verseText = DatabaseService.shared.loadVerseText(
-            bookId: bookId, chapter: chapter, verse: verse, translation: target
-        )
     }
 }
 

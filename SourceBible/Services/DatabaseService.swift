@@ -1158,35 +1158,29 @@ final class DatabaseService: @unchecked Sendable {
         return out
     }
 
-    /// Hops ONE verse from `source` numbering to `target` numbering via `verse_org`
-    /// (ADR-028), returning the target's OWN reference together with its text.
+    /// Where ONE verse of `source` lives in `target`'s own numbering, via `verse_org`
+    /// (ADR-028) — the same two curated hops as `loadParallelVerseTexts`, but returning the
+    /// target REFERENCE rather than text, because bookmarks (bug-037) need it for the card
+    /// header, the share text and the reader's bookmark toggle alike.
     ///
-    /// Same two curated hops as `loadParallelVerseTexts`, but for a single target where
-    /// the caller also needs the resulting (bookId, chapter, verse) — not just text keyed
-    /// by translation id. Added for bookmarks (bug-037): a bookmark stores only a verse
-    /// number under the translation it was created in, and switching translations must
-    /// re-point both the displayed reference and the preview text at the SAME verse of
-    /// Scripture, not the same number (Ivan's decision 2026-09-22: the header renumbers).
-    ///
-    /// - Returns: `nil` when there's no `verse_org` row for `source` (DB predates
-    ///   ADR-028), the verse has no original counterpart, or `target` has no verse for
-    ///   that original (a merge gap, e.g. no RST verse for Heb PSA 90:6). Callers fall
-    ///   back to identity lookup themselves in every `nil` case — same honest-gap
-    ///   behavior as `loadParallelVerseTexts`, never a neighboring verse's text.
-    func loadHoppedVerse(bookId: String, chapter: Int, verse: Int,
-                         source: String, target: String)
-        -> (bookId: String, chapter: Int, verse: Int, text: String)? {
-        guard isAvailable, source != target else { return nil }
+    /// Fallbacks mirror `loadParallelVerseTexts` exactly:
+    /// - `.identity` — same translation, no `verse_org` row (DB predates ADR-028), or an
+    ///   explicit "no original" row (`org_*` NULL): read the same book/chapter/verse.
+    /// - `.gap` — the target has no verse for this original (merge asymmetry, e.g. no RST
+    ///   verse for Heb PSA 90:6). Callers show NOTHING here. Falling back to identity in
+    ///   this case showed the neighbouring verse — ~170 source→target pairs on the shipped
+    ///   DB (e.g. ASV 2CO 11:32 read in RST = orig 11:33; code review 2026-10-08).
+    func hopVerse(bookId: String, chapter: Int, verse: Int,
+                  source: String, target: String) -> VerseHop {
+        guard isAvailable, source != target else { return .identity }
 
         let (sawRows, org) = orgRef(bookId: bookId, chapter: chapter, verse: verse,
                                     translation: source)
-        guard sawRows, let org,
-              let ref = translationRef(orgBookId: org.bookId, orgChapter: org.chapter,
-                                       orgVerse: org.verse, translation: target),
-              let text = verseText(bookId: ref.bookId, chapter: ref.chapter,
-                                   verse: ref.verse, translation: target)
-        else { return nil }
-        return (ref.bookId, ref.chapter, ref.verse, text)
+        guard sawRows, let org else { return .identity }
+        guard let ref = translationRef(orgBookId: org.bookId, orgChapter: org.chapter,
+                                       orgVerse: org.verse, translation: target)
+        else { return .gap }
+        return .mapped(bookId: ref.bookId, chapter: ref.chapter, verse: ref.verse)
     }
 
     // MARK: - Cross References
@@ -1664,6 +1658,16 @@ private extension DatabaseService {
         guard sqlite3_column_type(stmt, col) != SQLITE_NULL else { return nil }
         return Int(sqlite3_column_int(stmt, col))
     }
+}
+
+/// Result of `DatabaseService.hopVerse` — see its doc comment for when each case applies.
+enum VerseHop: Equatable {
+    /// Read the same book/chapter/verse in the target.
+    case identity
+    /// The same verse of Scripture in the target's own numbering.
+    case mapped(bookId: String, chapter: Int, verse: Int)
+    /// The target has no verse for this original — show nothing, never the neighbour.
+    case gap
 }
 
 /// Літера знака виноски: 0 → "a", 25 → "z", 26 → "aa", 27 → "ab"… (бієктивна база 26, як
