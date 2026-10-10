@@ -311,12 +311,31 @@ extension BibleWord {
     /// single-token slots where Macula and BSB simply disagree lexically. True alignment
     /// error: 0.94%. See ADR-020.
     private static func headToken(of tokens: [BibleWord]) -> BibleWord {
-        tokens.last(where: { !isEnclitic($0) }) ?? tokens[tokens.count - 1]
+        tokens.indices.last(where: { i in
+            !isEnclitic(tokens[i], after: i > 0 ? tokens[i - 1] : nil)
+        }).map { tokens[$0] } ?? tokens[tokens.count - 1]
     }
 
-    private static func isEnclitic(_ word: BibleWord) -> Bool {
+    private static func isEnclitic(_ word: BibleWord, after prev: BibleWord?) -> Bool {
         if word.lexicalClass == "x" { return true }               // enclitic particle
-        return word.morphology?.hasPrefix("S") ?? false           // pronominal suffix
+        if word.morphology?.hasPrefix("S") ?? false { return true } // pronominal suffix
+        // bug-060: Biblical Aramaic emphatic article -א is a SUFFIX (סָפְרָא = ספר + א):
+        // Macula splits it into a trailing `Td` token, which then won the head and opened
+        // the article's lexicon instead of the noun. A `Td` is enclitic when it follows a
+        // non-proclitic token in the same slot; the Hebrew article always comes after a
+        // proclitic (C/R/Td/Ti/Tr) or first, so Hebrew is untouched. Same rule as
+        // scripts/build_asv_module.py `_is_enclitic`. Measured 2026-10-10: changes exactly
+        // 860 slots (Dan 644, Ezra 211, Jer 10:11 5), 0 Hebrew.
+        if word.morphology == "Td", let prev, !isProclitic(prev.morphology) { return true }
+        return false
+    }
+
+    /// Macula proclitic classes that attach to the FRONT of a slot: conjunction (C),
+    /// preposition (R), article (Td), interrogative (Ti), relative (Tr).
+    private static func isProclitic(_ morph: String?) -> Bool {
+        guard let m = morph, let first = m.first else { return false }
+        if first == "C" || first == "R" { return true }
+        return ["Td", "Ti", "Tr"].contains(String(m.prefix(2)))
     }
 
     /// Merge one slot's tokens into a single representative BibleWord.
