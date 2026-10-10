@@ -823,7 +823,11 @@ private struct NavBarBottomReader: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> Proxy { Proxy() }
     func updateUIViewController(_ proxy: Proxy, context: Context) {
         proxy.onResolve = onResolve
-        proxy.resolve()
+        // Deferred one tick: resolve() writes vm.toolbarBottomY (@Published), and
+        // updateUIViewController runs INSIDE a SwiftUI view update — publishing there
+        // logs "Publishing changes from within view updates". viewDidLayoutSubviews
+        // runs outside the update pass, so it stays synchronous.
+        DispatchQueue.main.async { proxy.resolve() }
     }
 
     final class Proxy: UIViewController {

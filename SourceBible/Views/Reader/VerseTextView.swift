@@ -106,7 +106,9 @@ struct VerseTextView: UIViewRepresentable {
     // MARK: UIViewRepresentable
 
     func makeUIView(context: Context) -> UITextView {
-        let tv = HighlightableTextView()
+        // TextKit 1 from the start: draw(_:) and footnoteHit read `layoutManager`, which on
+        // a default (TextKit 2) UITextView triggers a runtime switch to compatibility mode.
+        let tv = HighlightableTextView(usingTextLayoutManager: false)
         tv.isEditable        = false
         tv.isSelectable      = false
         tv.isScrollEnabled   = false
