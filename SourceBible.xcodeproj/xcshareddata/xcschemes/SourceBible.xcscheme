@@ -46,7 +46,7 @@
       allowLocationSimulation = "YES"
       queueDebuggingEnableBacktraceRecording = "Yes">
       <StoreKitConfigurationFileReference
-         identifier = "../../../SourceBible.storekit">
+         identifier = "../SourceBible.storekit">
       </StoreKitConfigurationFileReference>
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
