@@ -154,6 +154,12 @@ enum MorphKey {
     static let usageTotalCount        = "word.usage.total_count"
     /// Pluralized: "1 Occurrence in this Book" / "5 Occurrences in this Book"
     static let usageBookCount         = "word.usage.book_count"
+    /// Pluralized: "48 occurrences" / "48 випадків" — без «у Біблії», для комбо-заголовка.
+    static let usageOccurrences       = "word.usage.occurrences"
+    /// Pluralized: "6 renderings" / "6 варіантів перекладу".
+    static let usageRenderings        = "word.usage.renderings"
+    /// "%1$@ · %2$@ in %3$@" → "48 occurrences · 6 renderings in RST".
+    static let usageHeaderCombo       = "word.usage.header_combo"
 
     // MARK: - ADR-040: new morphology categories (source-field columns)
 

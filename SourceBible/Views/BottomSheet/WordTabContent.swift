@@ -300,15 +300,21 @@ struct WordMeaningView: View {
         VStack(alignment: .leading, spacing: 0) {
             sectionLabel(t.string(for: MorphKey.sectionLemma), topPadding: 0)
             headerSection
+            // Порядок (рішення 2026-10-12): спершу ЛЕМА (що слово означає взагалі і
+            // як його передає переклад), потім ЦЕЙ ВІРШ (форма, граматика, LXX).
+            // Морфологія — найтехнічніший блок — не стоїть між коротким значенням і
+            // лексиконом. «Translated as» лишається одразу після лексикону (ADR-041:
+            // контраст «словник vs переклад» видно лише поруч). Картка вірша з
+            // підсвіченим словом і так стоїть над вкладкою — форма зверху не потрібна
+            // для орієнтації.
+            lexicalSection
+            renderingSection
             if let word = vm.selectedWord {
                 contextSection(word)
                 morphologySection(word: word)
-            }
-            lexicalSection
-            renderingSection
-            if let word = vm.selectedWord,
-               let greek = word.greek, !greek.isEmpty {
-                greekSection(word)
+                if let greek = word.greek, !greek.isEmpty {
+                    greekSection(word)
+                }
             }
         }
         .padding(.bottom, 20)
@@ -602,7 +608,7 @@ struct WordMeaningView: View {
                         VStack(alignment: .leading, spacing: 0) {
                             if !sec.stemName.isEmpty {
                                 // Сам розбір («Niphal perfect 3cp») тут НЕ дублюємо —
-                                // він уже стоїть у секції «Морфологія» вище.
+                                // він стоїть у секції «Морфологія» нижче.
                                 Text(sec.id == ranked.markedId
                                      ? "\(sec.stemName) (\(t.string(for: MorphKey.stemFormInVerse)))"
                                      : sec.stemName)
@@ -732,16 +738,46 @@ struct ConcordanceView: View {
 
     private var usesRenderings: Bool { renderings != nil && !examples.isEmpty }
 
+    /// Заголовок секції. Чиста функція (без стану в'ю) — тестується окремо.
+    ///
+    /// Розмічений переклад (`renderings` != nil) → комбо «48 випадків · 6 варіантів
+    /// перекладу в RST» (рішення Івана 2026-10-12): загальна кількість + скільки
+    /// передач у поточному перекладі. Кількість передач = рядки, що реально показані
+    /// нижче (є приклад), щоб число збігалося зі списком.
+    /// nil → фолбек (розбивка по книгах) зі старим лічильником «… у Біблії».
+    ///
+    /// bug-041: було `String(format:)` без plural-правил — «2 випадків» замість
+    /// «2 випадки». Локаль передається ЯВНО: swizzle підміняє бандл, але не
+    /// `Locale.current`, тож без неї CLDR узяв би англійські правила (заміряно).
+    static func headerTitle(totalCount: Int,
+                            renderings: RenderingSummary?,
+                            examples: [Int: RenderingOccurrence],
+                            locale: Locale) -> String {
+        guard let summary = renderings else {
+            return String(
+                format: NSLocalizedString(MorphKey.usageTotalCount, comment: ""),
+                locale: locale, totalCount)
+        }
+        let shown = summary.items.filter { examples[$0.id] != nil }.count
+        let occurrences = String(
+            format: NSLocalizedString(MorphKey.usageOccurrences, comment: ""),
+            locale: locale, totalCount)
+        let renderingsLabel = String(
+            format: NSLocalizedString(MorphKey.usageRenderings, comment: ""),
+            locale: locale, shown)
+        return String(
+            format: NSLocalizedString(MorphKey.usageHeaderCombo, comment: ""),
+            locale: locale, occurrences, renderingsLabel, summary.translationId)
+    }
+
     var body: some View {
-        // bug-041: було `String(format:)` без plural-правил — «2 випадків» замість «2 випадки».
-        // Ключ тепер має plural-варіації, а локаль передається ЯВНО: swizzle підміняє бандл,
-        // але не `Locale.current`, тож без неї CLDR узяв би англійські правила (заміряно).
-        let totalLabel = String(
-            format: NSLocalizedString(MorphKey.usageTotalCount, comment: ""),
-            locale: locale,
-            entry.totalCount
+        let title = Self.headerTitle(
+            totalCount: entry.totalCount,
+            renderings: usesRenderings ? renderings : nil,
+            examples: examples,
+            locale: locale
         )
-        return PillSection(verbatimTitle: totalLabel) {
+        return PillSection(verbatimTitle: title) {
             // Usage data loads lazily HERE (not in loadStrongs) — see loadUsageIfNeeded.
             // Until it lands, show a spinner instead of a false "no data" flash.
             // The bookGroups check keeps DEBUG previews (pre-populated samples) working.
