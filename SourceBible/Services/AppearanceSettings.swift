@@ -123,6 +123,10 @@ enum TitleFontStyle: String, CaseIterable, Identifiable {
     case modern
     case antique
 
+    /// Дефолт для тих, хто ще не обирав шрифт заголовків (рішення Івана 2026-10-12:
+    /// Antique). Єдине джерело правди — @AppStorage-дефолти й EnvironmentKey беруть звідси.
+    static let `default`: TitleFontStyle = .antique
+
     var id: String { rawValue }
 
     var labelKey: LocalizedStringKey {
@@ -182,7 +186,7 @@ private struct ColorThemeKey: EnvironmentKey {
 }
 
 private struct TitleFontStyleKey: EnvironmentKey {
-    static let defaultValue: TitleFontStyle = .modern
+    static let defaultValue: TitleFontStyle = .default
 }
 
 extension EnvironmentValues {

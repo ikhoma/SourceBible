@@ -8,7 +8,7 @@ struct MenuView: View {
     @State private var brightness: Double = Double(UIScreen.main.brightness)
     @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.matchDevice.rawValue
     @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
-    @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
+    @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.default.rawValue
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
     @AppStorage(AppStorageKeys.defaultTranslationId) private var defaultTranslationId: String = AppLanguage.defaultTranslationId
@@ -38,7 +38,7 @@ struct MenuView: View {
     // Typed views over the raw @AppStorage values (single source of truth stays
     // in UserDefaults; the environment re-injects from SourceBibleApp).
     private var colorTheme: ColorTheme { ColorTheme(rawValue: colorThemeRaw) ?? .paper }
-    private var titleFontStyle: TitleFontStyle { TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern }
+    private var titleFontStyle: TitleFontStyle { TitleFontStyle(rawValue: titleFontStyleRaw) ?? .default }
     private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .matchDevice }
 
     private var launchBehaviorLabel: LocalizedStringKey {

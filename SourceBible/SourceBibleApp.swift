@@ -37,7 +37,7 @@ struct SourceBibleApp: App {
     // re-render immediately when the user switches them in Menu.
     @AppStorage(AppStorageKeys.appearanceMode) private var appearanceModeRaw = AppearanceMode.matchDevice.rawValue
     @AppStorage(AppStorageKeys.colorTheme) private var colorThemeRaw = ColorTheme.paper.rawValue
-    @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.modern.rawValue
+    @AppStorage(AppStorageKeys.titleFontStyle) private var titleFontStyleRaw = TitleFontStyle.default.rawValue
 
     private var appearanceMode: AppearanceMode { AppearanceMode(rawValue: appearanceModeRaw) ?? .matchDevice }
 
@@ -196,7 +196,7 @@ struct SourceBibleApp: App {
                     LegacyTabBarAppearance.refresh()
                 }
                 .environment(\.colorTheme, ColorTheme(rawValue: colorThemeRaw) ?? .paper)
-                .environment(\.titleFontStyle, TitleFontStyle(rawValue: titleFontStyleRaw) ?? .modern)
+                .environment(\.titleFontStyle, TitleFontStyle(rawValue: titleFontStyleRaw) ?? .default)
                 // Localization
                 //
                 // Обидва місця проганяють значення через `AppLanguage.narrowed`,
