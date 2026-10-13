@@ -52,6 +52,9 @@ struct ChapterPagerView: UIViewControllerRepresentable {
 
         // Study Mode locks chapter paging (product decision N1).
         co.setPagingEnabled(vm.activeSheet != .verse)
+        // iOS 27: розмиття внизу під плаваючим шітом Study Mode — див.
+        // `setStudyBottomFade` нижче.
+        co.setStudyBottomFade(active: vm.activeSheet == .verse)
 
         // External chapter change (chevron / book picker / cross-ref / resume):
         // animate the native slide for a ±1 step, snap for far jumps.
@@ -271,6 +274,64 @@ struct ChapterPagerView: UIViewControllerRepresentable {
             }
         }
 
+        // MARK: Study Mode bottom fade (iOS 27)
+
+        /// Смуга розмиття внизу екрана, поки відкритий Study Mode.
+        ///
+        /// ⛔ Чому власна, а не системний scroll edge effect. На iOS 26 під плаваючим
+        /// шітом було м'яке розмиття (система «перетягувала» його від таб-бару). iOS 27
+        /// обмежив ефект геометрією edge elements, а в Study Mode таб-бару немає — смуга
+        /// під шітом гола, текст читанки наліз на текст шіта. Заміряно на пристрої
+        /// 2026-10-13 (iPhone18,3, iOS 27.0): ні `.scrollEdgeEffectStyle(.soft, for: .bottom)`,
+        /// ні UIScrollEdgeElementContainerInteraction на прозорій смузі (геометрія й
+        /// прив'язка до скролу правильні) нічого не малюють — скрол сторінки SwiftUI-шний
+        /// (HostingScrollView). Apple сама радить для «заповнити зону» власний матеріал.
+        ///
+        /// Висота = висота статус-бару (рішення Івана 2026-10-13) — дзеркально до
+        /// розмиття під статус-баром зверху. Матеріал + градієнтна маска: щільно внизу,
+        /// прозоро вгорі. Лише iOS 27 — на 26 це робить система.
+        private var studyBottomFadeView: GradientMaskedBlurView?
+        private var studyBottomFadeHeight: NSLayoutConstraint?
+
+        func setStudyBottomFade(active: Bool) {
+            guard #available(iOS 27.0, *), let pageVC else { return }
+            if active {
+                let fade: GradientMaskedBlurView
+                if let existing = studyBottomFadeView {
+                    fade = existing
+                } else {
+                    fade = GradientMaskedBlurView()
+                    fade.isUserInteractionEnabled = false
+                    fade.translatesAutoresizingMaskIntoConstraints = false
+                    pageVC.view.addSubview(fade)
+                    let height = fade.heightAnchor.constraint(equalToConstant: 0)
+                    NSLayoutConstraint.activate([
+                        fade.leadingAnchor.constraint(equalTo: pageVC.view.leadingAnchor),
+                        fade.trailingAnchor.constraint(equalTo: pageVC.view.trailingAnchor),
+                        fade.bottomAnchor.constraint(equalTo: pageVC.view.bottomAnchor),
+                        height,
+                    ])
+                    studyBottomFadeView = fade
+                    studyBottomFadeHeight = height
+                }
+                studyBottomFadeHeight?.constant = Self.statusBarHeight(of: pageVC.view.window)
+                pageVC.view.bringSubviewToFront(fade)
+            } else if let fade = studyBottomFadeView {
+                fade.tearDown()
+                fade.removeFromSuperview()
+                studyBottomFadeView = nil
+                studyBottomFadeHeight = nil
+            }
+        }
+
+        /// 54 pt — лише поки в'ю ще не у вікні (статус-бар iPhone з Dynamic Island).
+        /// Висота перераховується на кожному updateUIViewController, тож реальне
+        /// значення підхопиться з першим же оновленням стану.
+        private static func statusBarHeight(of window: UIWindow?) -> CGFloat {
+            let bar = window?.windowScene?.statusBarManager?.statusBarFrame.height ?? 0
+            return bar > 0 ? bar : (window?.safeAreaInsets.top ?? 54)
+        }
+
         // MARK: Scroll-edge effect plumbing
 
         /// Point the navigation bar's scroll-edge machinery (Liquid Glass blur)
@@ -319,5 +380,79 @@ struct ChapterPagerView: UIViewControllerRepresentable {
                 }
             }
         }
+    }
+}
+
+// MARK: - Gradient-masked blur
+
+/// Імітація системного scroll edge effect (iOS 27) публічними API.
+///
+/// Заміряно на пристрої 2026-10-13 (ефект під статус-баром, ScrollEdgeEffectView):
+/// gaussianBlur radius 16 з opacity 0.5 під лінійною маскою (край → 0 на межі зони)
+/// + variableBlur radius 2 (майже непомітний). Тонування кольором — НЕМАЄ.
+///
+/// Публічно маємо лише UIBlurEffect: фіксований радіус + вбудоване тонування стилю.
+/// Тому: (1) сила маски біля краю = `edgeOpacity`, лінійно до 0;
+/// (2) розмиття на частковій силі через паузований UIViewPropertyAnimator
+/// (`blurFraction`) — знижує і радіус, і тонування стилю, наближаючи до «чистого»
+/// розмиття ~16pt. Обидва числа — підбирати тут.
+final class GradientMaskedBlurView: UIVisualEffectView {
+    /// 1.0, а не системні 0.5: під статус-баром поверх шару 0.5 лежить ще BackdropView
+    /// (gaussianBlur 16, opacity 1, 155pt) під кнопками тулбара, тож сумарно там повна сила.
+    /// До того ж під шітом видно лише нижні ~8pt смуги. 0.5 вийшло помітно слабшим (Іван).
+    static let edgeOpacity: CGFloat = 1.0
+    static let blurFraction: CGFloat = 0.85
+
+    private let fadeMask = CAGradientLayer()
+    private var animator: UIViewPropertyAnimator?
+    private var foregroundObserver: NSObjectProtocol?
+
+    init() {
+        super.init(effect: nil)
+        fadeMask.startPoint = CGPoint(x: 0.5, y: 0)
+        fadeMask.endPoint = CGPoint(x: 0.5, y: 1)
+        fadeMask.colors = [UIColor.black.withAlphaComponent(0).cgColor,
+                           UIColor.black.withAlphaComponent(Self.edgeOpacity).cgColor]
+        layer.mask = fadeMask
+        applyBlur()
+        // Паузований аніматор система «відпускає» після бекграунду — відновлюємо.
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applyBlur() }
+        }
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        fadeMask.frame = bounds
+    }
+
+    private func applyBlur() {
+        animator?.stopAnimation(true)
+        effect = nil
+        let a = UIViewPropertyAnimator(duration: 1, curve: .linear) { [weak self] in
+            self?.effect = UIBlurEffect(style: .regular)
+        }
+        a.pausesOnCompletion = true
+        a.fractionComplete = Self.blurFraction
+        animator = a
+    }
+
+    /// ⛔ Викликати перед прибиранням: паузований аніматор не можна звільняти.
+    func tearDown() {
+        animator?.stopAnimation(true)
+        animator = nil
+        if let o = foregroundObserver { NotificationCenter.default.removeObserver(o) }
+        foregroundObserver = nil
+    }
+
+    /// Страховка, якщо в'ю звільнили без `tearDown()` (pager знесли, поки Study Mode
+    /// відкритий: перебудова ієрархії, закриття сцени). Звільнення паузованого
+    /// аніматора в стані `.active` — NSInternalInconsistencyException.
+    isolated deinit {
+        tearDown()
     }
 }
