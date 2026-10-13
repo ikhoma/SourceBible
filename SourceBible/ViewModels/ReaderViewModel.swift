@@ -24,6 +24,10 @@ class ReaderViewModel: ObservableObject {
 
     @Published var verses: [BibleVerse] = []
     @Published var isLoading: Bool = false
+    /// Перший розділ після холодного старту вже показано. На відміну від `isLoading`
+    /// (вмикається на КОЖЕН розділ) — перемикається один раз і назавжди. Його слухає
+    /// LaunchGate, щоб прибрати лого запуску.
+    @Published private(set) var hasLoadedInitialChapter: Bool = false
     @Published var errorMessage: String? = nil
 
     // Bottom Sheet
@@ -139,6 +143,7 @@ class ReaderViewModel: ObservableObject {
             availableTranslations = [.kjv]
             verses               = BibleVerse.sampleVerses
             isLoading            = false
+            hasLoadedInitialChapter = true
             return
         }
         #endif
@@ -1067,6 +1072,7 @@ class ReaderViewModel: ObservableObject {
                            footnotes: v.footnotes, footnoteLabels: v.footnoteLabels)
             }
         isLoading = false
+        if !hasLoadedInitialChapter { hasLoadedInitialChapter = true }
     }
 
     /// Load original-language words for the selected verse on demand (Original pill).

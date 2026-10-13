@@ -50,6 +50,10 @@ struct SourceBibleApp: App {
     /// dialogs) don't count as an open. See the scenePhase onChange below.
     @State private var wasBackgrounded = false
 
+    /// Оверлей запуску (LaunchOverlay.swift) — спільний для ContentView і
+    /// модифікатора згоди на аналітику.
+    @StateObject private var launchGate = LaunchGate()
+
     // MARK: - Init
 
     init() {
@@ -134,6 +138,8 @@ struct SourceBibleApp: App {
                 .environment(\.analytics, analytics)
                 .environment(\.sessionTracker, sessionTracker)
                 .analyticsConsentIfNeeded()
+                // Після модифікатора згоди — щоб він теж був нащадком і бачив гейт.
+                .environmentObject(launchGate)
                 // ── Consent runtime toggle ────────────────────────────────────
                 .onChange(of: analyticsEnabled) { _, enabled in
                     if enabled {

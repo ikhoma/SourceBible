@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Launch screen — LaunchScreen.storyboard: лого з жорсткими 120×120 pt
+	     (UILaunchScreen-словник малював SVG більшим, ніж 120, і лого стрибало
+	     при передачі в LaunchOverlay). Решта Info.plist генерується з build settings. -->
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+</dict>
+</plist>

@@ -15,6 +15,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.analytics) private var analytics
     @Environment(\.sessionTracker) private var sessionTracker
+    @EnvironmentObject private var launchGate: LaunchGate
 
     @MainActor
     init(store: UserDataStoreProtocol) {
@@ -26,6 +27,18 @@ struct ContentView: View {
 
     var body: some View {
         tabView
+            // Оверлей запуску — див. LaunchOverlay.swift / LaunchGate.swift.
+            // Сигнал — одноразовий `hasLoadedInitialChapter`, а не `isLoading`
+            // (той вмикається на кожен розділ). В'ю лише передає його в гейт.
+            .overlay {
+                if launchGate.isOverlayVisible { LaunchOverlay() }
+            }
+            .onAppear {
+                if readerVM.hasLoadedInitialChapter { dismissLaunchOverlay() }
+            }
+            .onChange(of: readerVM.hasLoadedInitialChapter) { _, loaded in
+                if loaded { dismissLaunchOverlay() }
+            }
             // Wire analytics + tracker into annotation VMs so note/highlight/bookmark
             // events fire discrete events and increment the session counter (Slice 3 §D).
             .task {
@@ -52,6 +65,12 @@ struct ContentView: View {
                     readerVM.flushReadingPosition()
                 }
             }
+    }
+
+    /// Один тік затримки: `verses` уже опубліковано, але читанці треба кадр,
+    /// щоб змонтуватись під оверлеєм — інакше перший видимий кадр порожній.
+    private func dismissLaunchOverlay() {
+        Task { @MainActor in launchGate.dismissOverlay() }
     }
 
     // MARK: - Tab view (split out to keep body concise)
@@ -139,4 +158,5 @@ enum AppTab {
 #Preview {
     @MainActor in
     ContentView(store: InMemoryUserDataStore())
+        .environmentObject(LaunchGate())
 }

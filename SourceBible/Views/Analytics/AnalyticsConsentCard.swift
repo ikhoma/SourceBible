@@ -168,6 +168,8 @@ struct AnalyticsConsentModifier: ViewModifier {
     // .environment(\.colorTheme) in SourceBibleApp: the later modifier wraps the chain,
     // so it is an ancestor and the value flows down.
     @Environment(\.colorTheme) private var colorTheme
+    /// Картку показуємо лише ПІСЛЯ оверлея запуску, не поверх лого.
+    @EnvironmentObject private var launchGate: LaunchGate
     @AppStorage(AppStorageKeys.analyticsEnabled) private var analyticsEnabled: Bool = AnalyticsConsentPolicy.defaultConsent
     @State private var showSheet = false
     @State private var sheetHeight: CGFloat = 300
@@ -235,7 +237,7 @@ struct AnalyticsConsentModifier: ViewModifier {
     /// (заміряно `probe=388 | present@388`), а на холодному старті пристрою —
     /// не завжди.
     private func presentIfReady() {
-        guard consentPending, heightMeasured else { return }
+        guard consentPending, heightMeasured, !launchGate.isOverlayVisible else { return }
         consentPending = false
         consentShown = true
         // ⛔ Показ ВІДКЛАДАЄМО на наступний тік.
@@ -288,6 +290,9 @@ struct AnalyticsConsentModifier: ViewModifier {
                     .themedSheet(colorTheme)
             }
             .environment(\.consentFlowPending, isPending)
+            .onChange(of: launchGate.isOverlayVisible) { _, visible in
+                if !visible { presentIfReady() }
+            }
     }
 }
 
