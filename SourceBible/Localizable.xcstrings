@@ -6249,13 +6249,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Explore original text, word meanings, commentary, and more."
+            "value": "Explore the original text and commentary. Touch and hold a word to see its meaning."
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Дослідіть оригінал, значення слів, коментарі та інше."
+            "value": "Дослідіть оригінал і коментарі. Утримуйте слово, щоб побачити його значення."
           }
         }
       }
