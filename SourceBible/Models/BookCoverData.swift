@@ -40,11 +40,12 @@ enum BookCoverData {
 
     // MARK: - Image assets
     // Add entries here as new pre-composited cover images are added to xcassets.
-    // Legacy names (genesis_header, psalms_header) kept as-is to avoid asset rename.
+    // Naming: `<bookId lowercased>_header` with `<bookId lowercased>.png` inside
+    // (genesis_header / psalms_header renamed to gen_/psa_ on 2026-10-16).
 
     private static let coverImages: [String: String] = [
         // — Law —
-        "GEN": "genesis_header",
+        "GEN": "gen_header",
         "EXO": "exo_header",
         "LEV": "lev_header",
         "NUM": "num_header",
@@ -64,7 +65,7 @@ enum BookCoverData {
         "EST": "est_header",
         // — Wisdom —
         "JOB": "job_header",
-        "PSA": "psalms_header",
+        "PSA": "psa_header",
         "PRO": "pro_header",
         "ECC": "ecc_header",
         "SNG": "sng_header",
@@ -116,7 +117,7 @@ enum BookCoverData {
         "1JN": "1jn_header",
         "2JN": "1jn_header",
         "3JN": "1jn_header",
-        "JUD": "jud_header",
+        "JUD": "jas_header",
         // — Prophecy —
         "REV": "rev_header",
     ]

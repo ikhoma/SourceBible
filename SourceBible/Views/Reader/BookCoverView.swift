@@ -4,8 +4,8 @@
 // Full-bleed book cover shown at the top of every book's first chapter.
 // Design: a pre-composited square (440×440) blue Doré cover image, rendered
 // full-bleed in a PROPORTIONAL 4:3 window (height = width / (4:3), e.g. 440→330).
-// The square asset is drawn `width` tall and center-cropped to the window, so the
-// extra height is the parallax headroom (½ each side). A black bottom gradient keeps
+// The square asset is drawn `width` tall and TOP-aligned in the window: the whole crop
+// comes off the bottom (art sits ~½·extra lower than the old centered framing). A black bottom gradient keeps
 // the bottom-left title + subtitle legible. Always blue — identical in light/dark mode.
 
 import SwiftUI
@@ -61,10 +61,13 @@ struct BookCoverView: View {
                 GeometryReader { geo in
                     let w = geo.size.width
                     let h = geo.size.height                 // = coverHeight (302)
-                    // Center-aligned window: the image sits at rest with the extra height
-                    // split evenly above/below, so the safe parallax travel in one
-                    // direction is HALF the extra height — beyond that the window would
-                    // run off the asset and expose an empty gap at the top.
+                    // Top-aligned window: at rest the image top is flush with the window
+                    // top, so there is NO image headroom above. Parallax shifts the image
+                    // down by up to `travel`, which opens an empty (brand-blue) band of the
+                    // same height above the art — deliberately: shift = 0.35·|minY| is
+                    // always less than the |minY| of cover already scrolled off-screen, so
+                    // the band stays outside the visible area. Travel kept at the previous
+                    // value (half the extra height, ≈55pt at 440 wide) so motion is unchanged.
                     let travel = max(0, (w - h) / 2)
                     Image(assetName)
                         .resizable()
@@ -82,10 +85,9 @@ struct BookCoverView: View {
                                 .scaleEffect(zoom, anchor: .bottom)
                                 .offset(y: shift)
                         }
-                        // Visible window: center-aligned → at rest the crop is split
-                        // evenly (≈50pt top / 50pt bottom) rather than 100pt off the top;
-                        // the parallax still reveals upward toward the top of the asset.
-                        .frame(width: w, height: h, alignment: .center)
+                        // Visible window: top-aligned → at rest the whole crop (≈110pt at
+                        // 440 wide) comes off the bottom, under/below the title gradient.
+                        .frame(width: w, height: h, alignment: .top)
                         .clipped()
                 }
             }

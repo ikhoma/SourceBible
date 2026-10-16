@@ -149,8 +149,8 @@ enum BookCoverData {
 
 | Book | Asset name | Status |
 |---|---|---|
-| Genesis | `genesis_header` | ✅ exists |
-| Psalms | `psalms_header` | ✅ exists |
+| Genesis | `gen_header` | ✅ exists |
+| Psalms | `psa_header` | ✅ exists |
 | Exodus | `cover_exo` | ⏳ pending |
 | Joshua | `cover_jos` | ⏳ pending |
 | Amos | `cover_amo` | ⏳ pending |
@@ -225,8 +225,8 @@ Semantics: toggle is **off by default** (covers visible). Turning it on hides co
 
 ### Naming convention
 All cover images live in `Assets.xcassets` as `cover_{bookId_lowercased}`, **except** the two legacy assets which keep their existing names:
-- `genesis_header` → mapped in `coverImages["GEN"]`
-- `psalms_header` → mapped in `coverImages["PSA"]`
+- `gen_header` (was `genesis_header`) → mapped in `coverImages["GEN"]`
+- `psa_header` (was `psalms_header`) → mapped in `coverImages["PSA"]`
 
 New images follow `cover_exo`, `cover_jos`, `cover_amo`, etc.
 
