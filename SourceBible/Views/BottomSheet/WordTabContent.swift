@@ -797,7 +797,7 @@ struct ConcordanceView: View {
                 Text(LocalizedStringKey(MorphKey.emptyNoData))
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .padding(.bottom, 8)
+                    .padding(.top, 16).padding(.bottom, 8)
             } else {
                 // ⛔ Рядок НЕ клікабельний — навмисно (2026-08-02).
                 // Раніше тап перекидав на вірш-приклад, але афордансу не було
@@ -843,8 +843,8 @@ struct ConcordanceView: View {
 
     @ViewBuilder
     private func renderingExamples(_ summary: RenderingSummary) -> some View {
-        // Власний VStack(spacing: 0): PillSection ставить між дітьми 12pt, і рядки
-        // з Divider розходились далі, ніж в аркуші всіх входжень (там spacing 0).
+        // VStack(spacing: 0), як і PillSection (з 2026-10-16): ритм задають самі
+        // картки (16 зверху/знизу), так само, як в аркуші всіх входжень.
         VStack(alignment: .leading, spacing: 0) {
         ForEach(summary.items) { item in
             if let ex = examples[item.id] {
@@ -959,7 +959,7 @@ private struct BookUsageRow: View {
                 .font(.callout)
                 .lineSpacing(3)
         }
-        .padding(.vertical, 4)   // 12 (PillSection) + 4 = 16
+        .padding(.vertical, 16)
     }
 }
 

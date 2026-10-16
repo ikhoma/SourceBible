@@ -104,7 +104,10 @@ struct PillSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // Spacing 0 (Іван, 2026-10-16): every child owns its vertical rhythm — list rows
+        // carry 16 top/bottom, non-row content (empty states, spinners) its own 16 top.
+        // So title → first row = 16 and row ↔ divider = 16 everywhere, one rule.
+        VStack(alignment: .leading, spacing: 0) {
             headerView
             content()
         }
@@ -198,8 +201,7 @@ struct CrossRefsView: View {
                         // instead of router.requestNavigation (cross-tab hop, not needed here).
                         vm.followCrossReference(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
                     }
-                    // Row rhythm 16/16: PillSection's 12pt spacing + 4 here.
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 16)
                     if ref.id != refs.last?.id {
                         Divider()
                     }
@@ -219,6 +221,7 @@ struct TranslationsView: View {
             if parallels.isEmpty {
                 Text("verse.translations.empty")
                     .font(.callout).foregroundStyle(.secondary)
+                    .padding(.top, 16)
             } else {
                 ForEach(parallels) { vt in
                     VStack(alignment: .leading, spacing: 6) {
@@ -227,7 +230,7 @@ struct TranslationsView: View {
                         Text(vt.text)
                             .font(.callout)
                     }
-                    .padding(.vertical, 4)   // 12 (PillSection) + 4 = 16
+                    .padding(.vertical, 16)
                     if vt.id != parallels.last?.id {
                         Divider()
                     }
@@ -277,7 +280,7 @@ struct OriginalWordsView: View {
             if displayWords.isEmpty {
                 Text("verse.original.empty")
                     .font(.callout).foregroundStyle(.secondary)
-                    .padding(.vertical, 8)
+                    .padding(.top, 16).padding(.bottom, 8)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(displayWords.enumerated()), id: \.element.id) { i, word in
@@ -369,7 +372,7 @@ struct CommentariesView: View {
                         }
                     }
                     .foregroundStyle(.primary)
-                    .padding(.vertical, 4)   // 12 (PillSection) + 4 = 16
+                    .padding(.vertical, 16)
                     if t.id != visibleTheologians.last?.id {
                         Divider()
                     }
