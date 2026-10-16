@@ -43,13 +43,12 @@ struct BookmarkCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
 
-            // ── Header: verse reference + bookmark icon ──────────────────
+            // ── Header: verse reference ──────────────────────────────────
+            // Corner bookmark icon removed (Іван, 2026-10-16): the card already sits
+            // in the Bookmarks list, the icon only repeated that.
             HStack(alignment: .center) {
                 ReferenceLabel(verseRef)
                 Spacer(minLength: 12)
-                Image(systemName: "bookmark.fill")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary)
             }
 
             // ── Verse text with left accent bar ──────────────────────────

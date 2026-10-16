@@ -42,6 +42,7 @@ struct NotesListView: View {
                                 notesVM.deleteNote(id: item.note.id)
                             } label: {
                                 Label("action.delete", systemImage: "trash")
+                                    .labelStyle(.iconOnly)   // round icon button on iOS 26; title stays for VoiceOver
                             }
                             .tint(.red)
                             Button {
@@ -50,6 +51,7 @@ struct NotesListView: View {
                                 }
                             } label: {
                                 Label("action.share", systemImage: "square.and.arrow.up")
+                                    .labelStyle(.iconOnly)   // round icon button on iOS 26; title stays for VoiceOver
                             }
                             .tint(Color.appBlue)
                         }
