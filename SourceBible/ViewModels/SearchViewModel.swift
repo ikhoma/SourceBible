@@ -29,10 +29,29 @@ final class SearchViewModel: ObservableObject {
 
     // MARK: - Recent queries (persisted)
 
+    /// A Recent entry: the query plus the translation it was searched in, so tapping it
+    /// re-runs the search there (via the search-local translation filter — never the
+    /// reader's translation). `translationId == nil` = legacy entry saved before
+    /// translations were recorded → runs in whatever the filter currently shows.
+    struct RecentSearch: Identifiable, Hashable {
+        let text: String
+        let translationId: String?
+        var id: String { "\(text)\t\(translationId ?? "")" }
+    }
+
+    /// Storage: one entry per line, `query\tTRANSLATION_ID` (legacy lines: just `query`).
+    /// Same AppStorage key as before — old data stays readable, no migration.
     @AppStorage(AppStorageKeys.searchRecentQueries) private var recentRaw: String = ""
 
-    var recentQueries: [String] {
-        recentRaw.components(separatedBy: "\n").filter { !$0.isEmpty }
+    var recentQueries: [RecentSearch] {
+        recentRaw.components(separatedBy: "\n").compactMap { line in
+            guard !line.isEmpty else { return nil }
+            let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
+            let text = String(parts[0])
+            guard !text.isEmpty else { return nil }
+            let tid = parts.count > 1 && !parts[1].isEmpty ? String(parts[1]) : nil
+            return RecentSearch(text: text, translationId: tid)
+        }
     }
 
     // MARK: - Private
@@ -111,7 +130,7 @@ final class SearchViewModel: ObservableObject {
 
             // Record to Recent only when the query actually matched something —
             // dead queries (nonsense, or words absent from this translation) are noise.
-            if total > 0 { self.saveRecent(trimmed) }
+            if total > 0 { self.saveRecent(trimmed, translationId: translation) }
 
             // Analytics: fire search_committed AFTER results are populated.
             // Also increment the session search counter.
@@ -186,12 +205,22 @@ final class SearchViewModel: ObservableObject {
 
     // MARK: - Recent queries
 
-    func saveRecent(_ query: String) {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
+    func saveRecent(_ query: String, translationId: String) {
+        // Tab / newline are the storage separators — never let them into the text.
+        let trimmed = query
+            .replacingOccurrences(of: "\t", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        var recents = recentQueries.filter { $0 != trimmed }
-        recents.insert(trimmed, at: 0)
-        recentRaw = recents.prefix(12).joined(separator: "\n")
+        // Same query in a DIFFERENT translation is a separate entry (it finds different
+        // verses). A legacy copy of the same text (no translation) is superseded.
+        var recents = recentQueries.filter {
+            !($0.text == trimmed && ($0.translationId == translationId || $0.translationId == nil))
+        }
+        recents.insert(RecentSearch(text: trimmed, translationId: translationId), at: 0)
+        recentRaw = recents.prefix(12)
+            .map { r in r.translationId.map { "\(r.text)\t\($0)" } ?? r.text }
+            .joined(separator: "\n")
     }
 
     func clearRecent() {

@@ -664,13 +664,16 @@ struct SearchView: View {
                     ForEach(vm.results) { result in
                         SearchResultRow(result: result)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 16)
                             .contentShape(Rectangle())
                             .onTapGesture { navigate(to: result) }
                             // Infinite scroll: prefetch the next page as the tail
                             // of the loaded window comes into view.
                             .onAppear { prefetchIfNeeded(after: result) }
-                        Divider()
+                        // No hairline under the final row — unless more pages follow.
+                        if result.id != vm.results.last?.id || vm.canLoadMore {
+                            Divider()
+                        }
                     }
 
                     if vm.canLoadMore {
@@ -735,20 +738,30 @@ struct SearchView: View {
                 .padding(.bottom, 8)
                 Divider()
 
-                ForEach(vm.recentQueries.prefix(8), id: \.self) { recent in
+                let recents = Array(vm.recentQueries.prefix(8))
+                ForEach(recents) { recent in
                     HStack {
                         Image(systemName: "clock").foregroundStyle(.tertiary).frame(width: 20)
-                        Text(recent)
+                        Text(recent.text)
                         Spacer()
+                        // The translation this query was searched in — tapping re-runs it
+                        // there, so the row must say where (same id as the filter chip).
+                        // Hidden when this build doesn't ship it (NASB in the App Store build):
+                        // openRecent then searches the current filter, and the label would lie.
+                        if let tid = recent.translationId,
+                           readerVM.availableTranslations.contains(where: { $0.id == tid }) {
+                            Text(verbatim: tid)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                         Image(systemName: "chevron.right").font(.caption).foregroundStyle(.quaternary)
                     }
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 16)
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        searchText = recent
-                        commit(query: recent)
+                    .onTapGesture { openRecent(recent) }
+                    if recent.id != recents.last?.id {
+                        Divider()
                     }
-                    Divider()
                 }
             }
             .padding(.horizontal, 20)
@@ -795,6 +808,28 @@ struct SearchView: View {
         committedQuery = q
         runSearch(q)
         dismissKeyboard()
+    }
+
+    /// Re-runs a Recent entry in the translation it was originally searched in, by
+    /// setting the SEARCH-local translation filter (the reader's translation is never
+    /// touched). Legacy entries, or a translation this build no longer ships (e.g. NASB
+    /// in the App Store build), keep whatever the filter currently shows.
+    private func openRecent(_ recent: SearchViewModel.RecentSearch) {
+        searchText = recent.text
+        guard let tid = recent.translationId,
+              tid != effectiveTranslationId,
+              readerVM.availableTranslations.contains(where: { $0.id == tid })
+        else {
+            commit(query: recent.text)
+            return
+        }
+        // Translation changes → let `.onChange(of: selectedTranslationId)` run the query
+        // (via rerunSearchIfNeeded, which sees the committed query below). Calling
+        // commit() here as well would search twice and log search_committed twice.
+        committedQuery = recent.text
+        dismissKeyboard()
+        // nil = "follow the reader" — keeps the chip semantics when they coincide.
+        selectedTranslationId = (tid == readerVM.currentTranslation.id) ? nil : tid
     }
 
     /// (Re)runs a query with the current filter set. Filters live in SQL — the
