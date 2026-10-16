@@ -1774,9 +1774,7 @@ struct WordRow: View {
             Spacer(minLength: 8)
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                RowChevron()
             }
         }
         .padding(.vertical, 16)

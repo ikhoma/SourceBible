@@ -757,10 +757,10 @@ struct SearchView: View {
                     // there, so the row must say where (same id as the filter chip).
                     if let tid = recent.translationId {
                         Text(verbatim: tid)
-                            .font(.footnote)
+                            .font(.body)   // trailing value, as in Menu's LabeledContent
                             .foregroundStyle(.secondary)
                     }
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.quaternary)
+                    RowChevron()
                 }
                 .padding(.vertical, 16)
                 .contentShape(Rectangle())
@@ -935,9 +935,7 @@ private struct SearchResultRow: View {
                     .font(.callout)
             }
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.quaternary)
+            RowChevron()
         }
     }
 

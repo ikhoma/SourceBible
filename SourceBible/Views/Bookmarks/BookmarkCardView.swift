@@ -43,12 +43,15 @@ struct BookmarkCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
 
-            // ── Header: verse reference ──────────────────────────────────
-            // Corner bookmark icon removed (Іван, 2026-10-16): the card already sits
-            // in the Bookmarks list, the icon only repeated that.
-            HStack(alignment: .center) {
+            // ── Header: verse reference + date ──────────────────────────
+            // Same anatomy as NoteCardView (Іван, 2026-10-16). The corner bookmark
+            // icon is gone — the card already sits in the Bookmarks list.
+            HStack(alignment: .firstTextBaseline) {
                 ReferenceLabel(verseRef)
                 Spacer(minLength: 12)
+                Text(dateLabel)
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
             }
 
             // ── Verse text with left accent bar ──────────────────────────
@@ -85,6 +88,14 @@ struct BookmarkCardView: View {
     /// (bug-037: e.g. RST Пс 50:1 reads as "Пс 51:1" once KJV is the active translation).
     /// Before the first load (or for a verseId we can't parse), falls back to the raw
     /// stored numbers — same as before this fix.
+    /// "May 23, 2026" — same format as NoteCardView. Bookmarks are never edited,
+    /// so this is the creation date.
+    private var dateLabel: String {
+        item.bookmark.createdAt.formatted(
+            .dateTime.month(.abbreviated).day().year()
+        )
+    }
+
     private var verseRef: String {
         guard let first = item.verseIds.first else {
             return NSLocalizedString("bookmarks.row.default_title", comment: "")

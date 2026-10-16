@@ -329,9 +329,7 @@ private struct OccurrenceRow: View {
                     .font(.callout)
                 }
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.quaternary)
+            RowChevron()
         }
         .accessibilityElement(children: .combine)
     }

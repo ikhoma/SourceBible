@@ -191,9 +191,7 @@ struct CrossRefsView: View {
                             }
                         }
                         Spacer(minLength: 8)
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.quaternary)
+                        RowChevron()
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -368,7 +366,7 @@ struct CommentariesView: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                            RowChevron()
                         }
                     }
                     .foregroundStyle(.primary)
