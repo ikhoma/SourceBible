@@ -73,8 +73,8 @@ struct AboutView: View {
 
                     // ── Team / war ──
                     Text(uk
-                         ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати."
-                         : "We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it.")
+                         ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. Слово Боже для нас не хобі — це скеля, на якій ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати."
+                         : "We are a team of independent developers from Ukraine. We build this app while our country is at war. The word of God is not a hobby for us — it is the rock we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it.")
                         .fixedSize(horizontal: false, vertical: true)
 
                     // ── Support (primary action → existing donation flow) ──
@@ -104,6 +104,8 @@ struct AboutView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(group.title)
                                 .font(.subheadline.weight(.semibold))
+                                // Group title → first item 8 (4 stack + 4); items stay 4 apart.
+                                .padding(.bottom, 4)
                             ForEach(group.items, id: \.self) { item in
                                 Text(item)
                                     .font(.footnote)

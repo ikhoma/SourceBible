@@ -22,7 +22,7 @@ The original-language texts are drawn from the **Westminster Leningrad Codex** f
 
 **Built by Bible students and teachers, for Bible students and teachers.**
 
-We are a team of independent developers from Ukraine. We build this app while our country is at war. In these circumstances the word of God is not a hobby for us — it is the ground we stand on. We keep SourceBible free for everyone, with the help of those who choose to support it.
+We are a team of independent developers from Ukraine. We build this app while our country is at war. The word of God is not a hobby for us — it is the rock we stand on. We keep SourceBible free for everyone, with the help of those who choose to support it.
 
 **[ Support SourceBible ]**  ← large blue button
 
@@ -73,7 +73,7 @@ We are grateful to everyone who made this scholarship freely available.
 
 **Створено дослідниками й викладачами Біблії — для дослідників і викладачів Біблії.**
 
-Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. За таких обставин Слово Боже для нас не захоплення — це ґрунт, на якому ми стоїмо. Ми зберігаємо SourceBible безкоштовним для всіх завдяки тим, хто вирішує його підтримати.
+Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. Слово Боже для нас не хобі — це скеля, на якій ми стоїмо. Ми зберігаємо SourceBible безкоштовним для всіх завдяки тим, хто вирішує його підтримати.
 
 **[ Підтримати SourceBible ]**  ← велика синя кнопка
 
