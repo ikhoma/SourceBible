@@ -174,11 +174,23 @@ struct NoteEditorView: View {
 
     private func saveAndDismiss() {
         var updatedBlocks = noteWithBlocks.blocks
+        let encoded = (try? JSONEncoder().encode(TextBlockContent(body: textBody)))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{\"body\":\"\"}"
+        let now = Date()
         if let idx = updatedBlocks.firstIndex(where: { $0.type == .text }) {
-            let encoded = (try? JSONEncoder().encode(TextBlockContent(body: textBody)))
-                .flatMap { String(data: $0, encoding: .utf8) } ?? "{\"body\":\"\"}"
             updatedBlocks[idx].content   = encoded
-            updatedBlocks[idx].updatedAt = Date()
+            updatedBlocks[idx].updatedAt = now
+        } else if !textBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // No .text block — a note from a newer version that keeps its text in a
+            // block type this build doesn't know. Without this, whatever the user typed
+            // here would be silently dropped on save. Appended last, so the blocks we
+            // can't render keep their positions.
+            let nextPosition = (updatedBlocks.map(\.position).max() ?? -1) + 1
+            updatedBlocks.append(NoteBlock(
+                id: UUID().uuidString, noteId: noteWithBlocks.note.id,
+                position: nextPosition, type: .text,
+                verseId: nil, strongsId: nil, content: encoded,
+                createdAt: now, updatedAt: now))
         }
         var note = noteWithBlocks.note
         note.updatedAt = Date()

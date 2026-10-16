@@ -94,6 +94,20 @@ enum NoteBlockType: RawRepresentable, Codable, Hashable {
         case .unsupported(let raw): return raw
         }
     }
+
+    // Explicit Codable: always the bare raw string («text», «heading»…), the same value
+    // as `note_blocks.type`. Left to synthesis, an enum with an associated value may be
+    // encoded as a keyed object ({"unsupported":{"_0":"heading"}}) — a format a future
+    // backup/sync of NoteBlock must not inherit.
+    nonisolated init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = NoteBlockType(rawValue: raw) ?? .unsupported(raw)
+    }
+
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 /// One ordered content unit inside a note.
