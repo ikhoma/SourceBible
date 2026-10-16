@@ -4923,6 +4923,22 @@
         }
       }
     },
+    "notes.editor.newer_version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part of this note was created in a newer version of Source Bible. Update the app to see all of it — nothing will be lost."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Частину цієї нотатки створено в новішій версії Source Bible. Оновіть застосунок, щоб побачити її повністю, — нічого не загубиться."
+          }
+        }
+      }
+    },
     "notes.empty.body": {
       "localizations": {
         "en": {

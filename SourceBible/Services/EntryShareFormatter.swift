@@ -50,8 +50,8 @@ enum EntryShareFormatter {
                 let body = c.body.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !body.isEmpty { parts.append(body) }
 
-            case .word, .ai:
-                // No UI creates these in v1 — nothing to share yet.
+            case .word, .ai, .unsupported:
+                // No UI creates these in v1 (unsupported = from a newer app version).
                 continue
             }
         }

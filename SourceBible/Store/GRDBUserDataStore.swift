@@ -273,7 +273,8 @@ final class GRDBUserDataStore: UserDataStoreProtocol {
         func toDomain() -> NoteBlock {
             NoteBlock(
                 id: id, noteId: note_id, position: Int(position),
-                type: NoteBlockType(rawValue: type) ?? .text,
+                // Unknown strings → .unsupported(raw), preserved on save (never `.text`).
+                type: NoteBlockType(rawValue: type) ?? .unsupported(type),
                 verseId: verse_id, strongsId: strongs_id, content: content,
                 createdAt: msToDate(created_at), updatedAt: msToDate(updated_at)
             )

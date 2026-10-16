@@ -65,6 +65,18 @@ struct NoteEditorView: View {
                         }
                     }
 
+                    // Forward-compat notice: the note holds blocks this build can't show
+                    // (created in a newer version). They are kept intact on save.
+                    if hasHiddenBlocks {
+                        Label {
+                            Text("notes.editor.newer_version")
+                        } icon: {
+                            Image(systemName: "info.circle")
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    }
+
                     // Note text editor — plain, no background; auto-sizes to content
                     NoteTextEditor(text: $textBody, contentHeight: $editorHeight)
                         .frame(height: editorHeight)
@@ -113,6 +125,22 @@ struct NoteEditorView: View {
 
     private var quoteBlocks: [NoteBlock] {
         noteWithBlocks.blocks.filter { $0.type == .quote }
+    }
+
+    /// True when the note contains blocks this editor doesn't render: types with no v1
+    /// UI (.word/.ai), types from a newer app version (.unsupported), or any text block
+    /// after the first (only the first is editable here). saveAndDismiss() passes every
+    /// block back untouched, so nothing is lost — the notice just says so.
+    private var hasHiddenBlocks: Bool {
+        var textCount = 0
+        for block in noteWithBlocks.blocks {
+            switch block.type {
+            case .verse, .quote: continue
+            case .text: textCount += 1
+            case .word, .ai, .unsupported: return true
+            }
+        }
+        return textCount > 1
     }
 
     private var navigationTitle: String {

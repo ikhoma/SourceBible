@@ -49,12 +49,51 @@ struct Note: Identifiable, Codable {
 
 // MARK: - Note Block
 
-enum NoteBlockType: String, Codable {
+/// Block type, stored as its raw string in `note_blocks.type`.
+///
+/// Forward-compatibility guard (2026-10, before the 1.0 App Store release): a type this
+/// build doesn't know — e.g. a `heading` / `checklist` added in a later version and read
+/// here via sync or a restored backup — becomes `.unsupported(raw)` instead of silently
+/// falling back to `.text`. The raw string AND the block's `content` JSON round-trip
+/// untouched through `saveNote` (which deletes + reinserts every block), so an older
+/// build can open and save a newer note without destroying the parts it can't render.
+/// Before this, `NoteBlockType(rawValue:) ?? .text` turned such a block into an empty
+/// text block on the next save — permanent data loss.
+///
+/// ⚠️ Never remove or rename a case's raw string: old rows keep it forever.
+enum NoteBlockType: RawRepresentable, Codable, Hashable {
     case text   // free text
     case verse  // attached Bible verse (snapshot)
     case word   // Strong's word entry
     case quote  // theologian commentary quote
     case ai     // AI-generated content (v2+)
+    /// A type from a newer app version. Preserve, don't render, never rewrite.
+    case unsupported(String)
+
+    /// Never fails — unknown strings map to `.unsupported`.
+    /// `nonisolated`: the GRDB row mapping calls this off the main actor (module
+    /// default isolation is MainActor).
+    nonisolated init?(rawValue: String) {
+        switch rawValue {
+        case "text":  self = .text
+        case "verse": self = .verse
+        case "word":  self = .word
+        case "quote": self = .quote
+        case "ai":    self = .ai
+        default:      self = .unsupported(rawValue)
+        }
+    }
+
+    nonisolated var rawValue: String {
+        switch self {
+        case .text:  return "text"
+        case .verse: return "verse"
+        case .word:  return "word"
+        case .quote: return "quote"
+        case .ai:    return "ai"
+        case .unsupported(let raw): return raw
+        }
+    }
 }
 
 /// One ordered content unit inside a note.
