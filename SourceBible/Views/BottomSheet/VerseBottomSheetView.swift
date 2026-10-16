@@ -306,7 +306,7 @@ struct VerseBottomSheetView: View {
             }
             .padding(.horizontal, 20)
         }
-        .padding(.top, 10).padding(.bottom, 12)
+        .padding(.top, 12).padding(.bottom, 16)   // segments→pills 8+12=20; pills→divider 16
     }
 
     private func pillBtn(_ label: LocalizedStringKey, isActive: Bool, action: @escaping () -> Void) -> some View {

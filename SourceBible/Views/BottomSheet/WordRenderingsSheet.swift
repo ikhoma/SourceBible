@@ -145,18 +145,22 @@ struct WordRenderingsSheet: View {
                                 // Заголовки книг з кількістю лишаються, але НЕ липкі (Іван, 2026-10-06):
                                 // прокручуються разом зі списком — кількість достатньо побачити раз,
                                 // а книга й так видна в посиланні кожного рядка.
+                                // Computed once: `sections` is a computed property.
+                                let lastOccId = sections.last?.items.last?.id
                                 ForEach(sections) { section in
                                     Section {
                                         ForEach(section.items) { occ in
                                             OccurrenceRow(occurrence: occ,
                                                           reference: "\(bookName(occ.bookId)) \(occ.chapter):\(occ.verse)")
                                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                                .padding(.vertical, 10)
+                                                .padding(.vertical, 16)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture { open(occ) }
                                                 .accessibilityAddTraits(.isButton)
                                                 .id(occ.id)
-                                            SheetHairline()
+                                            if occ.id != lastOccId {
+                                                SheetHairline()
+                                            }
                                         }
                                     } header: {
                                         bookHeader(section)
@@ -218,7 +222,7 @@ struct WordRenderingsSheet: View {
         }
         .font(.subheadline)
         .foregroundStyle(.secondary)
-        .padding(.vertical, 8)
+        .padding(.top, 16)   // group label → first row: 0 + row's 16 = 16
     }
 
     // MARK: Chips

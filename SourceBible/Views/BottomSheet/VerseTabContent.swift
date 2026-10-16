@@ -198,8 +198,11 @@ struct CrossRefsView: View {
                         // instead of router.requestNavigation (cross-tab hop, not needed here).
                         vm.followCrossReference(to: "\(ref.bookId)|\(ref.chapter)|\(ref.verse)")
                     }
-                    .padding(.bottom, 8)
-                    Divider()
+                    // Row rhythm 16/16: PillSection's 12pt spacing + 4 here.
+                    .padding(.vertical, 4)
+                    if ref.id != refs.last?.id {
+                        Divider()
+                    }
                 }
             }
         }
@@ -224,8 +227,10 @@ struct TranslationsView: View {
                         Text(vt.text)
                             .font(.callout)
                     }
-                    .padding(.bottom, 8)
-                    Divider()
+                    .padding(.vertical, 4)   // 12 (PillSection) + 4 = 16
+                    if vt.id != parallels.last?.id {
+                        Divider()
+                    }
                 }
             }
         }
@@ -362,10 +367,12 @@ struct CommentariesView: View {
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
                         }
-                        .padding(.vertical, 8)
                     }
                     .foregroundStyle(.primary)
-                    Divider()
+                    .padding(.vertical, 4)   // 12 (PillSection) + 4 = 16
+                    if t.id != visibleTheologians.last?.id {
+                        Divider()
+                    }
                 }
             }
         }

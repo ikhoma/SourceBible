@@ -386,6 +386,8 @@ struct WordMeaningView: View {
                         .buttonStyle(.plain)
                     }
                 }
+                // Bars carry only 6pt each side (chart, not a list): +10 → title→first bar 16.
+                .padding(.top, 10)
                 HStack(alignment: .firstTextBaseline) {
                     if all.count > Self.renderingsCollapsedCount {
                         Button {
@@ -407,7 +409,10 @@ struct WordMeaningView: View {
                     // він незрозумілий. Розбіжність — легітимні вживання без власного слова в перекладі
                     // (Втор 14:4: другий שֶׂה розчинився в «goat»).
                 }
-                .padding(.top, 6)
+                // Last bar (6) + 10 = 16 to «Show all»; bottom 16 + next title's 16 = 32.
+                // Without the button the HStack is 0 tall: 6 + 10 + 16 = 32 all the same.
+                .padding(.top, 10)
+                .padding(.bottom, 16)
             }
         }
     }
@@ -483,9 +488,9 @@ struct WordMeaningView: View {
                 .background(Color(UIColor.secondarySystemFill))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        // Match section title→content rhythm: 4pt label bottom + 10pt here = 14pt,
-        // same as InfoGroup's first-row top inset used by the other sections.
-        .padding(.top, 10)
+        // Section title → content = 16 (label has no bottom padding), same as
+        // InfoGroup's first-row top inset used by the other sections.
+        .padding(.top, 16)
         .padding(.bottom, 16)
     }
 
@@ -614,7 +619,7 @@ struct WordMeaningView: View {
                                      : sec.stemName)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
-                                    .padding(.top, 10).padding(.bottom, 4)
+                                    .padding(.top, 16).padding(.bottom, 4)
                             }
                             // Abbott-Smith outline (Greek): indented lines, source's own
                             // numbering ("1.", "(a)", "(α)") — no auto-numbers, no row
@@ -629,7 +634,7 @@ struct WordMeaningView: View {
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 }
-                                .padding(.vertical, 10)
+                                .padding(.vertical, 16)
                             }
                             ForEach(Array(sec.definitions.enumerated()), id: \.offset) { i, def in
                                 HStack(alignment: .top, spacing: 8) {
@@ -638,7 +643,7 @@ struct WordMeaningView: View {
                                         .lineSpacing(3)
                                     Spacer(minLength: 0)
                                 }
-                                .padding(.vertical, 10)
+                                .padding(.vertical, 16)
                                 if i < sec.definitions.count - 1 {
                                     Rectangle()
                                         .fill(Color(UIColor.separator))
@@ -671,11 +676,14 @@ struct WordMeaningView: View {
 
     // MARK: Helpers
 
-    private func sectionLabel(_ title: String, topPadding: CGFloat = 20) -> some View {
+    /// Section rhythm (Іван, 2026-10-16): title → first row = 16 (no bottom padding here;
+    /// every section's content starts with its own 16pt top inset), end of section → next
+    /// title = 32 (last row's 16 bottom + this 16 top).
+    private func sectionLabel(_ title: String, topPadding: CGFloat = 16) -> some View {
         Text(title.uppercased())
             .font(.caption).fontWeight(.medium)
             .foregroundStyle(.secondary)
-            .padding(.top, topPadding).padding(.bottom, 4).padding(.horizontal, 2)
+            .padding(.top, topPadding).padding(.horizontal, 2)
     }
 
     private func syntaxRoleLabel(_ role: String) -> String? {
@@ -711,7 +719,7 @@ private struct InfoGroup: View {
                         .multilineTextAlignment(.trailing)
                         .environment(\.layoutDirection, row.2 ? .rightToLeft : .leftToRight)
                 }
-                .padding(.vertical, 10)
+                .padding(.vertical, 16)
                 if i < rows.count - 1 {
                     Rectangle()
                         .fill(Color(UIColor.separator))
@@ -805,7 +813,9 @@ struct ConcordanceView: View {
                 // → майбутнє, `spec-word-usage-redesign.md`.
                 ForEach(entry.bookGroups) { group in
                     BookUsageRow(group: group, strongsId: entry.id)
-                    Divider()
+                    if group.id != entry.bookGroups.last?.id {
+                        Divider()
+                    }
                 }
             }
         }
@@ -896,7 +906,7 @@ private struct RenderingExampleRow: View {
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
-            .padding(.vertical, 8)
+            .padding(.top, 16)   // group label → first row: 0 + row's 16 = 16
 
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -910,7 +920,7 @@ private struct RenderingExampleRow: View {
                 }
                 Spacer(minLength: 8)
             }
-            .padding(.vertical, 10)
+            .padding(.vertical, 16)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
@@ -949,7 +959,7 @@ private struct BookUsageRow: View {
                 .font(.callout)
                 .lineSpacing(3)
         }
-        .padding(.bottom, 8)
+        .padding(.vertical, 4)   // 12 (PillSection) + 4 = 16
     }
 }
 
@@ -1769,7 +1779,7 @@ struct WordRow: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 16)
         .contentShape(Rectangle())
     }
 }
