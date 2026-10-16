@@ -1619,11 +1619,7 @@ TRANSLATIONS = [
     ("ASV",  "American Standard Version",   "en", DATA_DIR / "ASV.SQLite3"),
     ("NASB", "New American Standard Bible", "en", DATA_DIR / "NASB+.zip"),
     ("RST",  "Синодальний переклад",        "ru", DATA_DIR / "RST+.zip"),
-    # ⚠️ LICENSED — не розповсюджувати публічно без дозволу (як NASB). Огієнко НЕ
-    # суспільне надбання: права United Bible Societies / Українське біблійне
-    # товариство (© 2009), PD ~2042/2058 (ADR-029). Додано для dev/beta; НЕ
-    # шипити в публічний App Store до письмової ліцензії від УБТ. Без Strong's
-    # (strong_numbers=false) → «Оригінал» працює через verse_org, word-study ні.
+    # Без Strong's (strong_numbers=false) → «Оригінал» працює через verse_org, word-study ні.
     ("UBIO", "Біблія в пер. Івана Огієнка", "uk", DATA_DIR / "UBIO'88.zip"),
 ]
 
