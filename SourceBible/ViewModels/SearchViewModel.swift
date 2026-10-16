@@ -223,6 +223,18 @@ final class SearchViewModel: ObservableObject {
             .joined(separator: "\n")
     }
 
+    /// Removes one Recent entry (swipe-to-delete). Matches text AND translation — the
+    /// same query in another translation is a separate entry and stays.
+    func removeRecent(_ recent: RecentSearch) {
+        // @AppStorage inside an ObservableObject does NOT publish on its own — without
+        // this the row would stay on screen until some @Published value changed.
+        objectWillChange.send()
+        let kept = recentQueries.filter { $0.id != recent.id }
+        recentRaw = kept
+            .map { r in r.translationId.map { "\(r.text)\t\($0)" } ?? r.text }
+            .joined(separator: "\n")
+    }
+
     func clearRecent() {
         recentRaw   = ""
         suggestions = []

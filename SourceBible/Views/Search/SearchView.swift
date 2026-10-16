@@ -721,51 +721,71 @@ struct SearchView: View {
     }
 
     private var recentQueriesSection: some View {
-        // ScrollView (not List) so the ZStack appBackground shows through — see note
-        // on `predictiveList` re: the `.searchable` results host background.
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("search.recent")
-                        .font(.title3).bold()
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Button("search.clear") { vm.clearRecent() }
-                        .font(.callout)
-                        .foregroundStyle(.appBlue)
-                }
-                .padding(.top, 4)
-                .padding(.bottom, 8)
-                Divider()
+        // ⚗️ Plan A (2026-10-16): a `List`, not a ScrollView, for native swipe-to-delete
+        // (`.swipeActions` exists only in List). Known risk — see `predictiveList`: inside
+        // the `.searchable` results host a List's background was covered by the host's
+        // own `.systemBackground`. Here the List is fully transparent
+        // (`scrollContentBackground(.hidden)` + clear rows) and paints the theme
+        // background itself. CHECK on 18 and 26, field focused AND unfocused; if the
+        // black host background shows through → plan B (custom swipe on ScrollView).
+        let recents = Array(vm.recentQueries.prefix(8))
+        return List {
+            HStack {
+                Text("search.recent")
+                    .font(.title3).bold()
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button("search.clear") { vm.clearRecent() }
+                    .font(.callout)
+                    .foregroundStyle(.appBlue)
+                    .buttonStyle(.borderless)   // only the button is tappable, not the row
+            }
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowBackground(Color.clear)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+            // No hairline ABOVE the «Recent» title (plain List draws one on the first row).
+            .listRowSeparator(.hidden, edges: .top)
 
-                let recents = Array(vm.recentQueries.prefix(8))
-                ForEach(recents) { recent in
-                    HStack {
-                        Image(systemName: "clock").foregroundStyle(.tertiary).frame(width: 20)
-                        Text(recent.text)
-                        Spacer()
-                        // The translation this query was searched in — tapping re-runs it
-                        // there, so the row must say where (same id as the filter chip).
-                        // Hidden when this build doesn't ship it (NASB in the App Store build):
-                        // openRecent then searches the current filter, and the label would lie.
-                        if let tid = recent.translationId,
-                           readerVM.availableTranslations.contains(where: { $0.id == tid }) {
-                            Text(verbatim: tid)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(.quaternary)
+            ForEach(recents) { recent in
+                HStack {
+                    Image(systemName: "clock").foregroundStyle(.tertiary).frame(width: 20)
+                    Text(recent.text)
+                    Spacer()
+                    // The translation this query was searched in — tapping re-runs it
+                    // there, so the row must say where (same id as the filter chip).
+                    if let tid = recent.translationId {
+                        Text(verbatim: tid)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.vertical, 16)
-                    .contentShape(Rectangle())
-                    .onTapGesture { openRecent(recent) }
-                    if recent.id != recents.last?.id {
-                        Divider()
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.quaternary)
+                }
+                .padding(.vertical, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { openRecent(recent) }
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                .listRowBackground(Color.clear)
+                // Full-width hairline (like the old Divider), none under the last row.
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                .listRowSeparator(recent.id == recents.last?.id ? .hidden : .visible, edges: .bottom)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        withAnimation { vm.removeRecent(recent) }
+                    } label: {
+                        // Icon-only → round button on iOS 26 (like the rest of the app);
+                        // the title still reaches VoiceOver as the action name.
+                        Label("action.delete", systemImage: "trash")
+                            .labelStyle(.iconOnly)
                     }
+                    .tint(.red)
                 }
             }
-            .padding(.horizontal, 20)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(colorTheme.appBackground)
         .scrollDismissesKeyboard(.immediately)
     }
 
