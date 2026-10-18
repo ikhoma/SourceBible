@@ -192,6 +192,7 @@ struct MenuView: View {
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
+                #if !APPSTORE
                 Section("menu.section.support") {
                     NavigationLink {
                         DonationView()
@@ -200,6 +201,7 @@ struct MenuView: View {
                     }
                 }
                 .listRowBackground(colorTheme.cardBackground)
+                #endif
                 Section("menu.section.statistics") {
                     Toggle(isOn: $analyticsEnabled) {
                         VStack(alignment: .leading, spacing: 4) {

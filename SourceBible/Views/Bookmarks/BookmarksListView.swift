@@ -73,26 +73,32 @@ struct BookmarksListView: View {
     /// Записи є, але фільтри сховали всі — окремий стан, щоб не плутати з
     /// «закладок ще немає».
     private var filteredEmptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "line.3.horizontal.decrease")
-                .font(.system(size: 48)).foregroundStyle(.quaternary)
-            Text("entries.filter.empty")
-                .font(.callout).foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            EmptyStateStack {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.system(size: 48)).foregroundStyle(.quaternary)
+            } content: {
+                Text("entries.filter.empty")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
             Spacer()
         }
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "bookmark")
-                .font(.system(size: 48)).foregroundStyle(.quaternary)
-            VStack(spacing: 4) {
-                Text("bookmarks.empty.title").font(.headline).foregroundStyle(.primary)
-                Text("bookmarks.empty.body")
-                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            EmptyStateStack {
+                Image(systemName: "bookmark")
+                    .font(.system(size: 48)).foregroundStyle(.quaternary)
+            } content: {
+                VStack(spacing: 4) {
+                    Text("bookmarks.empty.title").font(.headline).foregroundStyle(.primary)
+                    Text("bookmarks.empty.body")
+                        .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }
             }
             Spacer()
         }

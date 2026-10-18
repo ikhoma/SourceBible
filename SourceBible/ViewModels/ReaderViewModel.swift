@@ -154,6 +154,14 @@ class ReaderViewModel: ObservableObject {
             guard let self else { return }
             self.allBooks              = self.db.loadBooks()
             self.availableTranslations = self.db.loadTranslations()
+            // A stored id may name a translation this build doesn't ship (NASB after a
+            // TestFlight → App Store update). Forget it, so the launch falls back to the
+            // language default (UK → UBIO, else KJV) and Settings shows no dead id.
+            // Only with a real DB — without one loadTranslations() is just [KJV].
+            if self.db.isAvailable {
+                self.positionStore.forgetTranslationIds(
+                    notIn: Set(self.availableTranslations.map(\.id)))
+            }
             // Restore the launch translation. The store resolves WHICH id to use
             // from `translationLaunchBehavior` — the Settings pick (.fixed, the
             // default) or the last translation the user switched to (.lastUsed).
@@ -358,7 +366,11 @@ class ReaderViewModel: ObservableObject {
     /// Falls back to the plain base number when no override exists.
     func resolvedMaculaBase(_ segStrongsId: String) -> String {
         let base = baseStrongsNumber(segStrongsId)
+        #if APPSTORE
+        return base     // no NASB in this build → no H9000+ numbers to translate
+        #else
         return Self.nasbExtendedOverride[base] ?? base
+        #endif
     }
 
     /// True when this Macula word is clickable in the Original pill.

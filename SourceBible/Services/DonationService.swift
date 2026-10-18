@@ -7,6 +7,10 @@
 // (and in SourceBible.storekit for local/simulator testing) with the IDs
 // listed in `productIds`.
 
+// App Store build ships without donations: the whole file is compiled out
+// (no StoreKit in the binary). TestFlight/Release keeps it.
+#if !APPSTORE
+
 import Combine
 import Foundation
 import StoreKit
@@ -133,3 +137,5 @@ final class DonationService: ObservableObject {
         }
     }
 }
+
+#endif // !APPSTORE

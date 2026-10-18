@@ -5,6 +5,8 @@
 // Entries: 391 of 603 unique extended numbers resolved (64.8%).
 // Remaining 212 unresolved: ReaderViewModel.isClickable() falls back to morph-based check.
 
+// NASB is not in the App Store build (no licence) — neither is its override table.
+#if !APPSTORE
 extension ReaderViewModel {
     /// NASB extended number (numeric string) → Macula Strong's base number.
     /// e.g. "9238" → "3887"  (H9238 לֵצִים in NASB = H3887a in Macula)
@@ -402,3 +404,4 @@ extension ReaderViewModel {
         "9652": "8649",  // gloss_tie
     ]
 }
+#endif // !APPSTORE

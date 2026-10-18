@@ -5,6 +5,7 @@
 // the two languages are held inline and picked by `appLanguage` rather than
 // routed through xcstrings (which is for UI labels). The "Support Source Bible"
 // primary action pushes the existing DonationView (StoreKit 2, DonationService).
+// App Store build (APPSTORE): no button and no support sentence in the mission text.
 
 import SwiftUI
 
@@ -24,6 +25,7 @@ struct AboutView: View {
         return "Source Bible v\(v)"
     }
 
+    #if !APPSTORE
     /// Support action WITHOUT its buttonStyle, so the surface can branch by OS
     /// (iOS 26 Liquid Glass `.glassProminent` vs iOS 18 fallback `.borderedProminent`).
     private var supportButton: some View {
@@ -36,6 +38,21 @@ struct AboutView: View {
         }
         .controlSize(.large)
         .tint(.appBlue)
+    }
+    #endif
+
+    /// Mission paragraph. The closing "we keep it free thanks to supporters" sentence
+    /// only makes sense next to the Support button, so the App Store build drops both.
+    private var missionText: String {
+        #if APPSTORE
+        uk
+            ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. Слово Боже для нас не хобі — це скеля, на якій ми стоїмо."
+            : "We are a team of independent developers from Ukraine. We build this app while our country is at war. The word of God is not a hobby for us — it is the rock we stand on."
+        #else
+        uk
+            ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. Слово Боже для нас не хобі — це скеля, на якій ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати."
+            : "We are a team of independent developers from Ukraine. We build this app while our country is at war. The word of God is not a hobby for us — it is the rock we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it."
+        #endif
     }
 
     var body: some View {
@@ -72,11 +89,10 @@ struct AboutView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     // ── Team / war ──
-                    Text(uk
-                         ? "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. Слово Боже для нас не хобі — це скеля, на якій ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати."
-                         : "We are a team of independent developers from Ukraine. We build this app while our country is at war. The word of God is not a hobby for us — it is the rock we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it.")
+                    Text(missionText)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    #if !APPSTORE
                     // ── Support (primary action → existing donation flow) ──
                     // iOS 26 Liquid Glass surface; iOS 18 fallback = borderedProminent.
                     Group {
@@ -87,6 +103,7 @@ struct AboutView: View {
                         }
                     }
                     .padding(.top, 4)
+                    #endif
 
                     // ── Sources & licenses (plain section; title matches the intro style) ──
                     Text(uk ? "Джерела та ліцензії" : "Sources & licenses")

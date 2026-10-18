@@ -4,6 +4,10 @@
 // One-time donation screen (Menu → Support). Amount grid → App Store
 // payment sheet via SwiftUI PurchaseAction. Products: DonationService.
 
+// App Store build ships without donations: the whole file is compiled out
+// (no StoreKit in the binary). TestFlight/Release keeps it.
+#if !APPSTORE
+
 import SwiftUI
 import StoreKit
 
@@ -254,3 +258,5 @@ private struct AmountButton: View {
     NavigationStack { DonationView() }
 }
 #endif
+
+#endif // !APPSTORE

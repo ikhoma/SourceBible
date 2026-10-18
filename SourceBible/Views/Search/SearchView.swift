@@ -702,17 +702,20 @@ struct SearchView: View {
     // MARK: - Empty states
 
     private var emptyResultsView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 48))
-                .foregroundStyle(.quaternary)
-            VStack(spacing: 4) {
-                Text("search.no_results.title").font(.headline).foregroundStyle(.primary)
-                Text("search.no_results.body")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            EmptyStateStack {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.quaternary)
+            } content: {
+                VStack(spacing: 4) {
+                    Text("search.no_results.title").font(.headline).foregroundStyle(.primary)
+                    Text("search.no_results.body")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             Spacer()
         }
@@ -790,19 +793,22 @@ struct SearchView: View {
     }
 
     private var searchHintView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "text.magnifyingglass")
-                .font(.system(size: 52))
-                .foregroundStyle(.quaternary)
-            VStack(spacing: 4) {
-                Text("search.hint.title")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Text("search.hint.body \(readerVM.currentTranslation.id)")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+            EmptyStateStack {
+                Image(systemName: "text.magnifyingglass")
+                    .font(.system(size: 52))
+                    .foregroundStyle(.quaternary)
+            } content: {
+                VStack(spacing: 4) {
+                    Text("search.hint.title")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("search.hint.body \(readerVM.currentTranslation.id)")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             Spacer()
         }

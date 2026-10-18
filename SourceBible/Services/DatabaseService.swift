@@ -174,6 +174,14 @@ final class DatabaseService: @unchecked Sendable {
         return translations
     }
 
+    /// True when this DB ships `id` (NASB is absent from the App Store build).
+    func hasTranslation(_ id: String) -> Bool {
+        guard isAvailable else { return false }
+        var found = false
+        query("SELECT 1 FROM translation WHERE id = ?", bindings: [id]) { _ in found = true }
+        return found
+    }
+
     // MARK: - Book names (translation-native)
 
     /// Loads translation-native book names and display order.
@@ -308,6 +316,7 @@ final class DatabaseService: @unchecked Sendable {
         return result
     }
 
+    #if !APPSTORE
     /// Load Strong's base numbers from NASB markup for a single verse.
     /// Returns the set of numeric strings extracted from <S>NNN</S> tags.
     /// Used by ReaderViewModel to gate clickability in the Original pill regardless
@@ -329,6 +338,7 @@ final class DatabaseService: @unchecked Sendable {
         }
         return result
     }
+    #endif
 
     // MARK: - Words (Macula)
 

@@ -1,0 +1,1278 @@
+{
+"translation": {
+"cols": [
+"id",
+"name",
+"language"
+],
+"rows": [
+[
+"KJV",
+"King James Version",
+"en"
+],
+[
+"ASV",
+"American Standard Version",
+"en"
+],
+[
+"NASB",
+"New American Standard Bible",
+"en"
+],
+[
+"RST",
+"Синодальний переклад",
+"ru"
+],
+[
+"UBIO",
+"Біблія в пер. Івана Огієнка",
+"uk"
+]
+]
+},
+"book": {
+"cols": [
+"id",
+"num",
+"testament",
+"name_en",
+"chapters"
+],
+"rows": [
+[
+"GEN",
+1,
+"OT",
+"Genesis",
+50
+]
+]
+},
+"book_name": {
+"cols": [
+"book_id",
+"translation_id",
+"long_name",
+"short_name",
+"sort_order"
+],
+"rows": [
+[
+"GEN",
+"ASV",
+"Genesis",
+"Gen",
+0
+],
+[
+"GEN",
+"KJV",
+"Genesis",
+"Gen",
+0
+],
+[
+"GEN",
+"NASB",
+"Genesis",
+"Gen",
+0
+],
+[
+"GEN",
+"RST",
+"Бытие",
+"Быт",
+0
+],
+[
+"GEN",
+"UBIO",
+"Буття",
+"1 М.",
+0
+]
+]
+},
+"verse": {
+"cols": [
+"id",
+"translation",
+"book_id",
+"chapter",
+"verse",
+"text",
+"text_clean"
+],
+"rows": [
+[
+"KJV|GEN|1|1",
+"KJV",
+"GEN",
+1,
+1,
+"In the beginning<S>7225</S> God<S>430</S> created<S>1254</S> <S>853</S> the heaven<S>8064</S> and<S>853</S> the earth<S>776</S>.",
+"In the beginning God created the heaven and the earth."
+],
+[
+"KJV|GEN|1|2",
+"KJV",
+"GEN",
+1,
+2,
+"And the earth<S>776</S> was<S>1961</S> without form<S>8414</S>, and void<S>922</S>; and darkness<S>2822</S> was upon the face<S>6440</S> of the deep<S>8415</S>. And the Spirit<S>7307</S> of God<S>430</S> moved<S>7363</S> upon<S>5921</S> the face<S>6440</S> of the waters<S>4325</S>.",
+"And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters."
+],
+[
+"KJV|GEN|1|3",
+"KJV",
+"GEN",
+1,
+3,
+"And God<S>430</S> said<S>559</S>, Let there be<S>1961</S> light<S>216</S>: and there was light<S>216</S>.",
+"And God said, Let there be light: and there was light."
+],
+[
+"KJV|GEN|1|4",
+"KJV",
+"GEN",
+1,
+4,
+"And God<S>430</S> saw<S>7200</S> <S>853</S> the light<S>216</S>, that<S>3588</S> it was good<S>2896</S>: and God<S>430</S> divided<S>914</S> <S>996</S> the light<S>216</S> from<S>996</S> the darkness<S>2822</S>. <n>the light from: Heb. between the light and between the darkness</n>",
+"And God saw the light, that it was good: and God divided the light from the darkness. (the light from: Heb. between the light and between the darkness)"
+],
+[
+"KJV|GEN|1|5",
+"KJV",
+"GEN",
+1,
+5,
+"And God<S>430</S> called<S>7121</S> the light<S>216</S> Day<S>3117</S>, and the darkness<S>2822</S> he called<S>7121</S> Night<S>3915</S>. And the evening<S>6153</S> and the morning<S>1242</S> were the first<S>259</S> day<S>3117</S>. <n>And the evening: Heb. And the evening was, and the morning was</n>",
+"And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day. (And the evening: Heb. And the evening was, and the morning was)"
+],
+[
+"KJV|GEN|1|6",
+"KJV",
+"GEN",
+1,
+6,
+"And God<S>430</S> said<S>559</S>, Let there be a firmament<S>7549</S> in the midst<S>8432</S> of the waters<S>4325</S>, and let it divide<S>914</S> the waters<S>4325</S> from the waters<S>4325</S>. <n>firmament: Heb. expansion</n>",
+"And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters. (firmament: Heb. expansion)"
+],
+[
+"KJV|GEN|1|7",
+"KJV",
+"GEN",
+1,
+7,
+"And God<S>430</S> made<S>6213</S> the firmament<S>7549</S>, and divided<S>914</S> the waters<S>4325</S> which<S>834</S> were under<S>8478</S> the firmament<S>7549</S> from the waters<S>4325</S> which<S>834</S> were above<S>5921</S> the firmament<S>7549</S>: and it was so<S>3651</S>.",
+"And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament: and it was so."
+],
+[
+"KJV|GEN|1|8",
+"KJV",
+"GEN",
+1,
+8,
+"And God<S>430</S> called<S>7121</S> the firmament<S>7549</S> Heaven<S>8064</S>. And the evening<S>6153</S> and the morning<S>1242</S> were the second<S>8145</S> day<S>3117</S>.",
+"And God called the firmament Heaven. And the evening and the morning were the second day."
+],
+[
+"KJV|GEN|1|9",
+"KJV",
+"GEN",
+1,
+9,
+"And God<S>430</S> said<S>559</S>, Let the waters<S>4325</S> under the heaven<S>8064</S> be gathered together<S>6960</S> unto<S>413</S> one<S>259</S> place<S>4725</S>, and let the dry<S>3004</S> land appear<S>7200</S>: and it was so.",
+"And God said, Let the waters under the heaven be gathered together unto one place, and let the dry land appear: and it was so."
+],
+[
+"KJV|GEN|1|10",
+"KJV",
+"GEN",
+1,
+10,
+"And God<S>430</S> called<S>7121</S> the dry<S>3004</S> land Earth<S>776</S>; and the gathering together<S>4723</S> of the waters<S>4325</S> called<S>7121</S> he Seas<S>3220</S>: and God<S>430</S> saw<S>7200</S> that it was good<S>2896</S>.",
+"And God called the dry land Earth; and the gathering together of the waters called he Seas: and God saw that it was good."
+],
+[
+"ASV|GEN|1|1",
+"ASV",
+"GEN",
+1,
+1,
+"In the beginning<S>7225</S> God<S>430</S> created<S>1254</S> the heavens<S>8064</S> and the earth<S>776</S>.",
+"In the beginning God created the heavens and the earth."
+],
+[
+"ASV|GEN|1|2",
+"ASV",
+"GEN",
+1,
+2,
+"And the earth<S>776</S> was<S>1961</S> waste<S>8414</S> and void<S>922</S>; and darkness<S>2822</S> was upon<S>5921</S> the face<S>6440</S> of the deep<S>8415</S>: and the Spirit<S>7307</S> of God<S>430</S> moved<S>7363</S><f>[1]</f> upon<S>5921</S> the face<S>6440</S> of the waters<S>4325</S>.",
+"And the earth was waste and void; and darkness was upon the face of the deep: and the Spirit of God moved upon the face of the waters."
+],
+[
+"ASV|GEN|1|3",
+"ASV",
+"GEN",
+1,
+3,
+"And God<S>430</S> said<S>559</S>, Let there be<S>1961</S> light<S>216</S>: and there was<S>1961</S> light<S>216</S>.",
+"And God said, Let there be light: and there was light."
+],
+[
+"ASV|GEN|1|4",
+"ASV",
+"GEN",
+1,
+4,
+"And God<S>430</S> saw<S>7200</S> the light<S>216</S>, that<S>3588</S> it was good<S>2896</S>: and God<S>430</S> divided<S>914</S> the light<S>216</S> from<S>996</S> the darkness<S>2822</S>.",
+"And God saw the light, that it was good: and God divided the light from the darkness."
+],
+[
+"ASV|GEN|1|5",
+"ASV",
+"GEN",
+1,
+5,
+"And God<S>430</S> called<S>7121</S> the light<S>216</S> Day<S>3117</S>, and the darkness<S>2822</S> he called<S>7121</S> Night<S>3915</S>. And there was<S>1961</S> evening<S>6153</S> and there was<S>1961</S> morning<S>1242</S>, one<S>259</S> day<S>3117</S>.",
+"And God called the light Day, and the darkness he called Night. And there was evening and there was morning, one day."
+],
+[
+"ASV|GEN|1|6",
+"ASV",
+"GEN",
+1,
+6,
+"And God<S>430</S> said<S>559</S>, Let there be<S>1961</S> a firmament<S>7549</S><f>[1]</f> in the midst<S>8432</S> of the waters<S>4325</S>, and let it<S>1961</S> divide<S>914</S> the waters<S>4325</S> from the waters<S>4325</S>.",
+"And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters."
+],
+[
+"ASV|GEN|1|7",
+"ASV",
+"GEN",
+1,
+7,
+"And God<S>430</S> made<S>6213</S> the firmament<S>7549</S>, and divided<S>914</S> the waters<S>4325</S> which<S>834</S> were under<S>8478</S> the firmament<S>7549</S> from<S>996</S> the waters<S>4325</S> which<S>834</S> were above<S>5921</S> the firmament<S>7549</S>: and it was<S>1961</S> so<S>3651</S>.",
+"And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament: and it was so."
+],
+[
+"ASV|GEN|1|8",
+"ASV",
+"GEN",
+1,
+8,
+"And God<S>430</S> called<S>7121</S> the firmament<S>7549</S> Heaven<S>8064</S>. And there was<S>1961</S> evening<S>6153</S> and there was<S>1961</S> morning<S>1242</S>, a second<S>8145</S> day<S>3117</S>.",
+"And God called the firmament Heaven. And there was evening and there was morning, a second day."
+],
+[
+"ASV|GEN|1|9",
+"ASV",
+"GEN",
+1,
+9,
+"And God<S>430</S> said<S>559</S>, Let<S>6960</S> the waters<S>4325</S> under<S>8478</S> the heavens<S>8064</S> be gathered<S>6960</S> together unto<S>413</S> one<S>259</S> place<S>4725</S>, and let<S>7200</S> the dry land<S>3004</S> appear<S>7200</S>: and it was<S>1961</S> so<S>3651</S>.",
+"And God said, Let the waters under the heavens be gathered together unto one place, and let the dry land appear: and it was so."
+],
+[
+"ASV|GEN|1|10",
+"ASV",
+"GEN",
+1,
+10,
+"And God<S>430</S> called<S>7121</S> the dry land<S>3004</S> Earth<S>776</S>; and the gathering together<S>4723</S> of the waters<S>4325</S> called he<S>7121</S> Seas<S>3220</S>: and God<S>430</S> saw<S>7200</S> that<S>3588</S> it was good<S>2896</S>.",
+"And God called the dry land Earth; and the gathering together of the waters called he Seas: and God saw that it was good."
+],
+[
+"NASB|GEN|1|1",
+"NASB",
+"GEN",
+1,
+1,
+"<pb/>In the beginning<S>7225</S> God<S>430</S> created<S>1254</S> the heavens<S>8064</S> and the earth.<S>776</S>",
+"In the beginning God created the heavens and the earth."
+],
+[
+"NASB|GEN|1|2",
+"NASB",
+"GEN",
+1,
+2,
+"<pb/>And the earth<S>776</S> was formless<S>8414</S> and void,<S>922</S> and darkness<S>2822</S> was over<S>5921</S> the surface<S>6440</S> of the deep;<S>8415</S> and the Spirit<S>7307</S> of God<S>430</S> was moving<S>9550</S> over<S>5921</S> the surface<S>6440</S> of the waters.<S>4325</S>",
+"And the earth was formless and void, and darkness was over the surface of the deep; and the Spirit of God was moving over the surface of the waters."
+],
+[
+"NASB|GEN|1|3",
+"NASB",
+"GEN",
+1,
+3,
+"Then God<S>430</S> said,<S>559</S> \"Let there be light<S>216</S>\"; and there was light.<S>216</S>",
+"Then God said, \"Let there be light\"; and there was light."
+],
+[
+"NASB|GEN|1|4",
+"NASB",
+"GEN",
+1,
+4,
+"And God<S>430</S> saw<S>7200</S> that the light<S>216</S> was good;<S>2896</S> and God<S>430</S> separated<S>914</S> the light<S>216</S> from the darkness.<S>2822</S>",
+"And God saw that the light was good; and God separated the light from the darkness."
+],
+[
+"NASB|GEN|1|5",
+"NASB",
+"GEN",
+1,
+5,
+"And God<S>430</S> called<S>7121</S> the light<S>216</S> day,<S>3117</S> and the darkness<S>2822</S> He called<S>7121</S> night.<S>3915</S> And there was evening<S>6153</S> and there was morning,<S>1242</S> one<S>259</S> day.<S>3117</S>",
+"And God called the light day, and the darkness He called night. And there was evening and there was morning, one day."
+],
+[
+"NASB|GEN|1|6",
+"NASB",
+"GEN",
+1,
+6,
+"<pb/>Then God<S>430</S> said,<S>559</S> \"Let there be an expanse<S>7549</S> in the midst<S>8432</S> of the waters,<S>4325</S> and let it separate<S>914</S> the waters<S>4325</S> from the waters.<S>4325</S>\"",
+"Then God said, \"Let there be an expanse in the midst of the waters, and let it separate the waters from the waters.\""
+],
+[
+"NASB|GEN|1|7",
+"NASB",
+"GEN",
+1,
+7,
+"And God<S>430</S> made<S>6213</S> the expanse,<S>7549</S> and separated<S>914</S> the waters<S>4325</S> which<S>834</S> were below<S>4480</S> <S>8478</S> the expanse<S>7549</S> from the waters<S>4325</S> which<S>834</S> were above<S>4480</S> <S>5921</S> the expanse;<S>7549</S> and it was so.<S>3651</S>",
+"And God made the expanse, and separated the waters which were below the expanse from the waters which were above the expanse; and it was so."
+],
+[
+"NASB|GEN|1|8",
+"NASB",
+"GEN",
+1,
+8,
+"And God<S>430</S> called<S>7121</S> the expanse<S>7549</S> heaven.<S>8064</S> And there was evening<S>6153</S> and there was morning,<S>1242</S> a second<S>8145</S> day.<S>3117</S>",
+"And God called the expanse heaven. And there was evening and there was morning, a second day."
+],
+[
+"NASB|GEN|1|9",
+"NASB",
+"GEN",
+1,
+9,
+"<pb/>Then God<S>430</S> said,<S>559</S> \"Let the waters<S>4325</S> below<S>4480</S> <S>8478</S> the heavens<S>8064</S> be gathered<S>9509</S> into one<S>259</S> place,<S>4725</S> and let the dry<S>3004</S> land<S>3004</S> appear<S>7200</S>\"; and it was so.<S>3651</S>",
+"Then God said, \"Let the waters below the heavens be gathered into one place, and let the dry land appear\"; and it was so."
+],
+[
+"NASB|GEN|1|10",
+"NASB",
+"GEN",
+1,
+10,
+"And God<S>430</S> called<S>7121</S> the dry<S>3004</S> land<S>3004</S> earth,<S>776</S> and the gathering<S>9288</S> of the waters<S>4325</S> He called<S>7121</S> seas;<S>3220</S> and God<S>430</S> saw<S>7200</S> that it was good.<S>2896</S>",
+"And God called the dry land earth, and the gathering of the waters He called seas; and God saw that it was good."
+],
+[
+"RST|GEN|1|1",
+"RST",
+"GEN",
+1,
+1,
+"<pb/>В начале<S>7225</S> сотворил<S>1254</S><S>853</S> Бог<S>430</S> небо<S>8064</S> и<S>853</S> землю.<S>776</S>",
+"В начале сотворил Бог небо и землю."
+],
+[
+"RST|GEN|1|2",
+"RST",
+"GEN",
+1,
+2,
+"<pb/>Земля<S>776</S> же была<S>1961</S> безвидна<S>8414</S> и пуста,<S>922</S> и тьма<S>2822</S> над<S>5921</S><S>6440</S> бездною,<S>8415</S> и Дух<S>7307</S> Божий<S>430</S> носился<S>7363</S> над<S>5921</S><S>6440</S> водою.<S>4325</S>",
+"Земля же была безвидна и пуста, и тьма над бездною, и Дух Божий носился над водою."
+],
+[
+"RST|GEN|1|3",
+"RST",
+"GEN",
+1,
+3,
+"И сказал<S>559</S> Бог:<S>430</S> да<S>1961</S> будет<S>1961</S> свет.<S>216</S> И стал свет.<S>216</S>",
+"И сказал Бог: да будет свет. И стал свет."
+],
+[
+"RST|GEN|1|4",
+"RST",
+"GEN",
+1,
+4,
+"И увидел<S>7200</S><S>853</S> Бог<S>430</S> свет,<S>216</S> что<S>3588</S> он хорош,<S>2896</S> и отделил<S>914</S><S>996</S> Бог<S>430</S> свет<S>216</S> от<S>996</S> тьмы.<S>2822</S>",
+"И увидел Бог свет, что он хорош, и отделил Бог свет от тьмы."
+],
+[
+"RST|GEN|1|5",
+"RST",
+"GEN",
+1,
+5,
+"И назвал<S>7121</S> Бог<S>430</S> свет<S>216</S> днем,<S>3117</S> а тьму<S>2822</S> ночью.<S>3915</S> И был вечер,<S>6153</S> и было утро:<S>1242</S> день<S>3117</S> один.<S>259</S>",
+"И назвал Бог свет днем, а тьму ночью. И был вечер, и было утро: день один."
+],
+[
+"RST|GEN|1|6",
+"RST",
+"GEN",
+1,
+6,
+"<pb/>И сказал<S>559</S> Бог:<S>430</S> да будет твердь<S>7549</S> посреди<S>8432</S> воды,<S>4325</S> и да отделяет<S>914</S> она воду<S>4325</S> от воды.<S>4325</S>",
+"И сказал Бог: да будет твердь посреди воды, и да отделяет она воду от воды."
+],
+[
+"RST|GEN|1|7",
+"RST",
+"GEN",
+1,
+7,
+"И создал<S>6213</S> Бог<S>430</S> твердь,<S>7549</S> и отделил<S>914</S> воду,<S>4325</S> которая<S>834</S> под<S>8478</S> твердью,<S>7549</S> от воды,<S>4325</S> которая<S>834</S> над<S>5921</S> твердью.<S>7549</S> И стало так.<S>3651</S>",
+"И создал Бог твердь, и отделил воду, которая под твердью, от воды, которая над твердью. И стало так."
+],
+[
+"RST|GEN|1|8",
+"RST",
+"GEN",
+1,
+8,
+"И назвал<S>7121</S> Бог<S>430</S> твердь<S>7549</S> небом.<S>8064</S> И был вечер,<S>6153</S> и было утро:<S>1242</S> день<S>3117</S> второй.<S>8145</S>",
+"И назвал Бог твердь небом. И был вечер, и было утро: день второй."
+],
+[
+"RST|GEN|1|9",
+"RST",
+"GEN",
+1,
+9,
+"<pb/>И сказал<S>559</S> Бог:<S>430</S> да соберется<S>6960</S> вода,<S>4325</S> которая под небом,<S>8064</S> в<S>413</S> одно<S>259</S> место,<S>4725</S> и да явится<S>7200</S> суша.<S>3004</S> И стало так.",
+"И сказал Бог: да соберется вода, которая под небом, в одно место, и да явится суша. И стало так."
+],
+[
+"RST|GEN|1|10",
+"RST",
+"GEN",
+1,
+10,
+"И назвал<S>7121</S> Бог<S>430</S> сушу<S>3004</S> землею,<S>776</S> а собрание<S>4723</S> вод<S>4325</S> назвал<S>7121</S> морями.<S>3220</S> И увидел<S>7200</S> Бог,<S>430</S> что <i>это</i> хорошо.<S>2896</S>",
+"И назвал Бог сушу землею, а собрание вод назвал морями. И увидел Бог, что это хорошо."
+],
+[
+"UBIO|GEN|1|1",
+"UBIO",
+"GEN",
+1,
+1,
+"<pb/>На поча́тку Бог створив небо<f>[1]</f> та землю.",
+"На поча́тку Бог створив небо та землю."
+],
+[
+"UBIO|GEN|1|2",
+"UBIO",
+"GEN",
+1,
+2,
+"А земля́ була пуста та порожня, і те́мрява <i>була</i> над безоднею,<f>[2]</f> і Дух Божий ширяв над поверхнею<f>[3]</f> води.<f>[4]</f>",
+"А земля́ була пуста та порожня, і те́мрява була над безоднею, і Дух Божий ширяв над поверхнею води."
+],
+[
+"UBIO|GEN|1|3",
+"UBIO",
+"GEN",
+1,
+3,
+"І сказав Бог: „Хай станеться світло!“ І сталося світло.",
+"І сказав Бог: „Хай станеться світло!“ І сталося світло."
+],
+[
+"UBIO|GEN|1|4",
+"UBIO",
+"GEN",
+1,
+4,
+"І побачив Бог світло, що добре <i>воно</i>, — і Бог відділив світло від те́мряви.",
+"І побачив Бог світло, що добре воно, — і Бог відділив світло від те́мряви."
+],
+[
+"UBIO|GEN|1|5",
+"UBIO",
+"GEN",
+1,
+5,
+"І Бог назвав світло: „День“, а темряву назвав: „Ніч“. І був вечір, і був ранок, — день<f>[5]</f> перший.",
+"І Бог назвав світло: „День“, а темряву назвав: „Ніч“. І був вечір, і був ранок, — день перший."
+],
+[
+"UBIO|GEN|1|6",
+"UBIO",
+"GEN",
+1,
+6,
+"І сказав Бог: „Нехай станеться твердь<f>[6]</f> посеред води, і нехай відділяє вона між водою й водою.“",
+"І сказав Бог: „Нехай станеться твердь посеред води, і нехай відділяє вона між водою й водою.“"
+],
+[
+"UBIO|GEN|1|7",
+"UBIO",
+"GEN",
+1,
+7,
+"І Бог твердь учинив, і відділив воду, що під твердю вона, і воду, що над твердю вона. І сталося так.",
+"І Бог твердь учинив, і відділив воду, що під твердю вона, і воду, що над твердю вона. І сталося так."
+],
+[
+"UBIO|GEN|1|8",
+"UBIO",
+"GEN",
+1,
+8,
+"І назвав Бог твердь: „Небо“. І був вечір, і був ранок — день другий.",
+"І назвав Бог твердь: „Небо“. І був вечір, і був ранок — день другий."
+],
+[
+"UBIO|GEN|1|9",
+"UBIO",
+"GEN",
+1,
+9,
+"І сказав Бог: „Нехай збереться вода з-попід неба до місця одного, і нехай суходіл стане видний“. І сталося так.",
+"І сказав Бог: „Нехай збереться вода з-попід неба до місця одного, і нехай суходіл стане видний“. І сталося так."
+],
+[
+"UBIO|GEN|1|10",
+"UBIO",
+"GEN",
+1,
+10,
+"І назвав Бог суходіл: „Земля“, а місце зібра́ння води назвав: „Море“. І Бог побачив, що добре <i>воно</i>.",
+"І назвав Бог суходіл: „Земля“, а місце зібра́ння води назвав: „Море“. І Бог побачив, що добре воно."
+]
+]
+},
+"verse_org": {
+"cols": [
+"translation",
+"book_id",
+"chapter",
+"verse",
+"org_book_id",
+"org_chapter",
+"org_verse",
+"scheme",
+"source",
+"verified",
+"overlap"
+],
+"rows": [
+[
+"ASV",
+"GEN",
+1,
+1,
+"GEN",
+1,
+1,
+"eng.json",
+"identity",
+1,
+5
+],
+[
+"ASV",
+"GEN",
+1,
+2,
+"GEN",
+1,
+2,
+"eng.json",
+"identity",
+1,
+12
+],
+[
+"ASV",
+"GEN",
+1,
+3,
+"GEN",
+1,
+3,
+"eng.json",
+"identity",
+1,
+4
+],
+[
+"ASV",
+"GEN",
+1,
+4,
+"GEN",
+1,
+4,
+"eng.json",
+"identity",
+1,
+8
+],
+[
+"ASV",
+"GEN",
+1,
+5,
+"GEN",
+1,
+5,
+"eng.json",
+"identity",
+1,
+10
+],
+[
+"ASV",
+"GEN",
+1,
+6,
+"GEN",
+1,
+6,
+"eng.json",
+"identity",
+1,
+7
+],
+[
+"ASV",
+"GEN",
+1,
+7,
+"GEN",
+1,
+7,
+"eng.json",
+"identity",
+1,
+11
+],
+[
+"ASV",
+"GEN",
+1,
+8,
+"GEN",
+1,
+8,
+"eng.json",
+"identity",
+1,
+9
+],
+[
+"ASV",
+"GEN",
+1,
+9,
+"GEN",
+1,
+9,
+"eng.json",
+"identity",
+1,
+13
+],
+[
+"ASV",
+"GEN",
+1,
+10,
+"GEN",
+1,
+10,
+"eng.json",
+"identity",
+1,
+10
+],
+[
+"KJV",
+"GEN",
+1,
+1,
+"GEN",
+1,
+1,
+"eng.json",
+"identity",
+1,
+6
+],
+[
+"KJV",
+"GEN",
+1,
+2,
+"GEN",
+1,
+2,
+"eng.json",
+"identity",
+1,
+12
+],
+[
+"KJV",
+"GEN",
+1,
+3,
+"GEN",
+1,
+3,
+"eng.json",
+"identity",
+1,
+4
+],
+[
+"KJV",
+"GEN",
+1,
+4,
+"GEN",
+1,
+4,
+"eng.json",
+"identity",
+1,
+9
+],
+[
+"KJV",
+"GEN",
+1,
+5,
+"GEN",
+1,
+5,
+"eng.json",
+"identity",
+1,
+9
+],
+[
+"KJV",
+"GEN",
+1,
+6,
+"GEN",
+1,
+6,
+"eng.json",
+"identity",
+1,
+6
+],
+[
+"KJV",
+"GEN",
+1,
+7,
+"GEN",
+1,
+7,
+"eng.json",
+"identity",
+1,
+9
+],
+[
+"KJV",
+"GEN",
+1,
+8,
+"GEN",
+1,
+8,
+"eng.json",
+"identity",
+1,
+8
+],
+[
+"KJV",
+"GEN",
+1,
+9,
+"GEN",
+1,
+9,
+"eng.json",
+"identity",
+1,
+10
+],
+[
+"KJV",
+"GEN",
+1,
+10,
+"GEN",
+1,
+10,
+"eng.json",
+"identity",
+1,
+9
+],
+[
+"NASB",
+"GEN",
+1,
+1,
+"GEN",
+1,
+1,
+"eng.json",
+"identity",
+1,
+5
+],
+[
+"NASB",
+"GEN",
+1,
+2,
+"GEN",
+1,
+2,
+"eng.json",
+"identity",
+1,
+10
+],
+[
+"NASB",
+"GEN",
+1,
+3,
+"GEN",
+1,
+3,
+"eng.json",
+"identity",
+1,
+3
+],
+[
+"NASB",
+"GEN",
+1,
+4,
+"GEN",
+1,
+4,
+"eng.json",
+"identity",
+1,
+6
+],
+[
+"NASB",
+"GEN",
+1,
+5,
+"GEN",
+1,
+5,
+"eng.json",
+"identity",
+1,
+9
+],
+[
+"NASB",
+"GEN",
+1,
+6,
+"GEN",
+1,
+6,
+"eng.json",
+"identity",
+1,
+6
+],
+[
+"NASB",
+"GEN",
+1,
+7,
+"GEN",
+1,
+7,
+"eng.json",
+"identity",
+1,
+10
+],
+[
+"NASB",
+"GEN",
+1,
+8,
+"GEN",
+1,
+8,
+"eng.json",
+"identity",
+1,
+8
+],
+[
+"NASB",
+"GEN",
+1,
+9,
+"GEN",
+1,
+9,
+"eng.json",
+"identity",
+1,
+11
+],
+[
+"NASB",
+"GEN",
+1,
+10,
+"GEN",
+1,
+10,
+"eng.json",
+"identity",
+1,
+8
+],
+[
+"RST",
+"GEN",
+1,
+1,
+"GEN",
+1,
+1,
+"rso.json",
+"identity",
+1,
+6
+],
+[
+"RST",
+"GEN",
+1,
+2,
+"GEN",
+1,
+2,
+"rso.json",
+"identity",
+1,
+12
+],
+[
+"RST",
+"GEN",
+1,
+3,
+"GEN",
+1,
+3,
+"rso.json",
+"identity",
+1,
+4
+],
+[
+"RST",
+"GEN",
+1,
+4,
+"GEN",
+1,
+4,
+"rso.json",
+"identity",
+1,
+9
+],
+[
+"RST",
+"GEN",
+1,
+5,
+"GEN",
+1,
+5,
+"rso.json",
+"identity",
+1,
+9
+],
+[
+"RST",
+"GEN",
+1,
+6,
+"GEN",
+1,
+6,
+"rso.json",
+"identity",
+1,
+6
+],
+[
+"RST",
+"GEN",
+1,
+7,
+"GEN",
+1,
+7,
+"rso.json",
+"identity",
+1,
+9
+],
+[
+"RST",
+"GEN",
+1,
+8,
+"GEN",
+1,
+8,
+"rso.json",
+"identity",
+1,
+8
+],
+[
+"RST",
+"GEN",
+1,
+9,
+"GEN",
+1,
+9,
+"rso.json",
+"identity",
+1,
+10
+],
+[
+"RST",
+"GEN",
+1,
+10,
+"GEN",
+1,
+10,
+"rso.json",
+"identity",
+1,
+9
+],
+[
+"UBIO",
+"GEN",
+1,
+1,
+"GEN",
+1,
+1,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+2,
+"GEN",
+1,
+2,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+3,
+"GEN",
+1,
+3,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+4,
+"GEN",
+1,
+4,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+5,
+"GEN",
+1,
+5,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+6,
+"GEN",
+1,
+6,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+7,
+"GEN",
+1,
+7,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+8,
+"GEN",
+1,
+8,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+9,
+"GEN",
+1,
+9,
+"rso.json",
+"identity",
+0,
+0
+],
+[
+"UBIO",
+"GEN",
+1,
+10,
+"GEN",
+1,
+10,
+"rso.json",
+"identity",
+0,
+0
+]
+]
+},
+"footnote": {
+"cols": [
+"id",
+"translation",
+"book_id",
+"chapter_from",
+"verse_from",
+"chapter_to",
+"verse_to",
+"marker",
+"text"
+],
+"rows": [
+[
+1,
+"ASV",
+"GEN",
+1,
+2,
+1,
+2,
+"[1]",
+"Or, <i>was brooding upon</i>"
+],
+[
+2,
+"ASV",
+"GEN",
+1,
+6,
+1,
+6,
+"[1]",
+"Hebrew <i>expanse</i>."
+],
+[
+3,
+"ASV",
+"GEN",
+1,
+20,
+1,
+20,
+"[1]",
+"Hebrew <i>on the face of the expanse of the heavens</i>."
+]
+]
+}
+}

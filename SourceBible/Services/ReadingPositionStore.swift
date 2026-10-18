@@ -59,6 +59,9 @@ protocol ReadingPositionStore: AnyObject {
     func launchTranslationId() -> String?
     /// Records the translation the user switched to, for `.lastUsed`.
     func saveLastUsedTranslation(_ id: String)
+    /// Forgets stored translation ids that are not in `available` (a translation this
+    /// build doesn't ship) — they then resolve like "never chosen".
+    func forgetTranslationIds(notIn available: Set<String>)
 }
 
 /// UserDefaults-backed implementation. Uses an empty `lastReadBookId` as the
@@ -108,6 +111,17 @@ final class UserDefaultsReadingPositionStore: ReadingPositionStore {
 
     func saveLastUsedTranslation(_ id: String) {
         defaults.set(id, forKey: AppStorageKeys.lastUsedTranslationId)
+    }
+
+    /// Drops stored translation ids the current DB doesn't contain (NASB after a
+    /// TestFlight → App Store update). Missing = "never chosen", which every reader of
+    /// these keys already resolves to `AppLanguage.defaultTranslationId`.
+    func forgetTranslationIds(notIn available: Set<String>) {
+        for key in [AppStorageKeys.defaultTranslationId, AppStorageKeys.lastUsedTranslationId] {
+            if let id = defaults.string(forKey: key), !id.isEmpty, !available.contains(id) {
+                defaults.removeObject(forKey: key)
+            }
+        }
     }
 
     /// The translation explicitly picked in Settings. Empty = never set.

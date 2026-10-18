@@ -157,16 +157,19 @@ struct CrossRefsView: View {
             // Full-height centered empty state — Spacers need the container to
             // have a defined height, which .containerRelativeFrame provides by
             // sizing against the scroll view's visible frame (iOS 17+).
-            VStack(spacing: 16) {
+            VStack(spacing: 0) {
                 Spacer()
-                Image(systemName: "link")
-                    .font(.system(size: 48)).foregroundStyle(.quaternary)
-                VStack(spacing: 4) {
-                    Text("verse.cross_refs.empty")
-                        .font(.callout).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                EmptyStateStack {
+                    Image(systemName: "link")
+                        .font(.system(size: 48)).foregroundStyle(.quaternary)
+                } content: {
+                    VStack(spacing: 4) {
+                        Text("verse.cross_refs.empty")
+                            .font(.callout).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: 200)
                 }
-                .frame(maxWidth: 200)
                 Spacer()
             }
             .frame(maxWidth: .infinity)
@@ -333,16 +336,19 @@ struct CommentariesView: View {
     var body: some View {
         Group {
             if visibleTheologians.isEmpty {
-                VStack(spacing: 16) {
+                VStack(spacing: 0) {
                     Spacer()
-                    Image(systemName: "books.vertical")
-                        .font(.system(size: 48)).foregroundStyle(.quaternary)
-                    VStack(spacing: 4) {
-                        Text("verse.commentary.unavailable")
-                            .font(.callout).foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                    EmptyStateStack {
+                        Image(systemName: "books.vertical")
+                            .font(.system(size: 48)).foregroundStyle(.quaternary)
+                    } content: {
+                        VStack(spacing: 4) {
+                            Text("verse.commentary.unavailable")
+                                .font(.callout).foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: 200)
                     }
-                    .frame(maxWidth: 200)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
@@ -570,9 +576,10 @@ struct CommentaryDetailView: View {
                     )
                 } else {
                     // No commentary for this verse — centered empty state
-                    VStack(spacing: 16) {
+                    EmptyStateStack {
                         Image(systemName: "text.book.closed")
                             .font(.system(size: 48)).foregroundStyle(.quaternary)
+                    } content: {
                         VStack(spacing: 4) {
                             Text("verse.commentary.unavailable")
                                 .font(.callout).foregroundStyle(.secondary)

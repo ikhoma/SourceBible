@@ -73,6 +73,24 @@ struct PrivacyPolicyView: View {
 
     // MARK: - Content
 
+    // App Store build has no donations, so it must not claim to process any.
+    // ⚠️ The hosted copy of this policy (App Store Connect URL) needs the same edit.
+    private var donationNoteUK: String {
+        #if APPSTORE
+        ""
+        #else
+        " Донати обробляє Apple через внутрішні покупки — ми ніколи не отримуємо даних вашої картки чи платежу."
+        #endif
+    }
+
+    private var donationNoteEN: String {
+        #if APPSTORE
+        ""
+        #else
+        " Donations are processed by Apple through in-app purchase — we never receive your card or payment details."
+        #endif
+    }
+
     private var sections: [Section] {
         if uk {
             return [
@@ -83,7 +101,7 @@ struct PrivacyPolicyView: View {
                 Section(title: "Аналітика (за бажанням, лише за вашою згодою)",
                         body: "Якщо ви ввімкнете аналітику, ми використовуємо Mixpanel, щоб розуміти, як використовується застосунок. Ми фіксуємо, що певні дії відбулися — наприклад, що ви створили нотатку, виділення чи закладку, перемкнули переклад або виконали пошук (і скільки результатів він дав), — але НЕ вміст ваших нотаток і НЕ текст ваших пошукових запитів. Разом із цим збирається випадково згенерований ідентифікатор інсталяції та стандартна технічна інформація (модель пристрою, версія ОС, версія застосунку та приблизне місцезнаходження, як-от місто чи країна, визначене за IP-адресою). Сам застосунок не запитує доступу до місцезнаходження пристрою. Якщо ви не даєте згоди або вимикаєте аналітику, ці події не збираються."),
                 Section(title: "Треті сторони",
-                        body: "Наведені вище аналітичні дані ми передаємо лише Mixpanel як нашому постачальнику аналітики, який зобов’язаний захищати їх на тому ж рівні, що описаний тут. Донати обробляє Apple через внутрішні покупки — ми ніколи не отримуємо даних вашої картки чи платежу."),
+                        body: "Наведені вище аналітичні дані ми передаємо лише Mixpanel як нашому постачальнику аналітики, який зобов’язаний захищати їх на тому ж рівні, що описаний тут." + donationNoteUK),
                 Section(title: "Чого ми не робимо",
                         body: "Ми не вимагаємо акаунту й не просимо ваше ім’я чи email. Ми не показуємо реклами, не продаємо ваші дані й не відстежуємо вас в інших застосунках чи на вебсайтах."),
                 Section(title: "Зберігання та видалення",
@@ -106,7 +124,7 @@ struct PrivacyPolicyView: View {
             Section(title: "Analytics (optional, only with your consent)",
                     body: "If you enable analytics, we use Mixpanel to understand how the app is used. We record that certain actions happened — for example that you created a note, highlight or bookmark, switched translations, or ran a search (and how many results it returned) — but NOT the content of your notes and NOT the text of your searches. Alongside this we collect a randomly generated app-install identifier and standard technical information (device model, OS version, app version, and approximate location, such as city or country, derived from your IP address). The app itself does not ask for access to your device location. If you do not consent, or turn analytics off, these events are not collected."),
             Section(title: "Third parties",
-                    body: "We share the analytics data above only with Mixpanel, acting as our analytics provider, which is required to protect it to the same standard described here. Donations are processed by Apple through in-app purchase — we never receive your card or payment details."),
+                    body: "We share the analytics data above only with Mixpanel, acting as our analytics provider, which is required to protect it to the same standard described here." + donationNoteEN),
             Section(title: "What we do not do",
                     body: "We do not require an account or ask for your name or email. We show no ads, do not sell your data, and do not track you across other apps or websites."),
             Section(title: "Retention and deletion",

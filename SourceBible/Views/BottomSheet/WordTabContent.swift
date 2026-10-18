@@ -14,6 +14,13 @@ struct WordTabView: View {
 
     let subTab: WordSubTab
     @EnvironmentObject var vm: ReaderViewModel
+    /// Natural height of the Strong's-less empty state, so centring never makes it
+    /// SHORTER than its content (a short sheet must scroll, not clip).
+    @State private var mappingSupportHeight: CGFloat = 0
+
+    /// `.padding(.top, 16)` + `.padding(.bottom, 20)` below — subtracted so a centred
+    /// empty state exactly fills the visible scroll area instead of scrolling by 36 pt.
+    private static let verticalPadding: CGFloat = 36
 
     var body: some View {
         Group {
@@ -32,6 +39,14 @@ struct WordTabView: View {
                 // showing a dead-end hint. Words remain reachable via the Original
                 // pill (cheat mode, ADR-016 amendment).
                 WordMappingSupportView()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                        mappingSupportHeight = $0
+                    }
+                    // Vertically centred in the visible part of the ScrollView, but never
+                    // shorter than its own content.
+                    .containerRelativeFrame(.vertical, alignment: .center) { height, _ in
+                        max(height - Self.verticalPadding, mappingSupportHeight)
+                    }
             } else {
                 Text(vm.selectedWord != nil || vm.selectedSegment != nil
                      ? LocalizedStringKey(MorphKey.emptyNoData)
@@ -47,22 +62,31 @@ struct WordTabView: View {
 
 /// Shown in the Word tab when the displayed translation has no Strong's tagging
 /// (e.g. UBIO/Ohienko). Explains that word-level mapping is a substantial effort
-/// and routes to the donation screen.
+/// and routes to the donation screen. App Store build (no donations): title + the
+/// "tap words in the Original tab" hint, promoted to the body text style.
 private struct WordMappingSupportView: View {
     @Environment(\.colorTheme) private var colorTheme
+    #if !APPSTORE
     @State private var showDonation = false
+    #endif
 
     var body: some View {
-        VStack(spacing: 14) {
+        EmptyStateStack(spacing: 14) {
             Image(systemName: "character.book.closed")
                 .font(.system(size: 44))
                 .foregroundStyle(.quaternary)
                 .padding(.top, 12)
-
+        } content: {
             Text("word.mapping.support.title")
                 .font(.headline)
                 .multilineTextAlignment(.center)
 
+            #if APPSTORE
+            Text("word.mapping.support.hint")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            #else
             Text("word.mapping.support.body")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -84,9 +108,11 @@ private struct WordMappingSupportView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
+            #endif
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+        #if !APPSTORE
         .sheet(isPresented: $showDonation) {
             NavigationStack {
                 DonationView()
@@ -98,6 +124,7 @@ private struct WordMappingSupportView: View {
                     }
             }
         }
+        #endif
     }
 }
 

@@ -58,9 +58,16 @@ enum BookmarkVerseResolver {
                         activeTranslation target: String) -> Resolution? {
         guard let stored = Ref(verseId: verseId) else { return nil }
         guard let source, source != target else { return .verse(stored) }
-        switch DatabaseService.shared.hopVerse(bookId: stored.bookId, chapter: stored.chapter,
-                                               verse: stored.verse,
-                                               source: source, target: target) {
+        // Saved under a translation this build doesn't ship (NASB in the App Store build,
+        // decided 2026-10-16): read its numbers as KJV — English versification — and hop
+        // from there. Without this the hop finds no verse_org rows and falls to identity,
+        // which is wrong in RST/UBIO (Psalter shifted by a chapter).
+        let db = DatabaseService.shared
+        let from = db.hasTranslation(source) ? source : DatabaseService.defaultFallbackTranslation
+        guard from != target else { return .verse(stored) }
+        switch db.hopVerse(bookId: stored.bookId, chapter: stored.chapter,
+                           verse: stored.verse,
+                           source: from, target: target) {
         case .identity:
             return .verse(stored)
         case let .mapped(bookId, chapter, verse):
