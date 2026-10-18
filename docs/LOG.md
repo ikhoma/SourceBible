@@ -1,3 +1,28 @@
+## [2026-10-19] fix | `Localizable.xcstrings` пишемо у форматі Xcode — цикл переписування розірвано
+Xcode пише каталог як `"key" : value` (пробіл перед двокрапкою), порожній обʼєкт — `{` + порожній
+рядок + `}`, без `\n` у кінці. `scripts/nbsp_xcstrings.py` писав звичайний `json.dumps`
+(`"key": value`, `{}`), тож після кожної збірки Xcode переформатовував увесь файл (~9 000 рядків
+diff). Тепер скрипт пише через `dumps_xcode()` — байт у байт як Xcode; файл у репо один раз
+переведено у цей формат (вміст = HEAD). Тест `scripts/tests/test_nbsp_xcstrings.py` падає, якщо
+файл у репо не у форматі Xcode. Після збірки **AppStore** файл однаково змінюється (20 ключів
+донатів → `stale`, 4 рядки місії/підтримки зникають, бо їх немає в коді цієї збірки) — правило
+від 17.10 «відкотити до HEAD перед комітом» для AppStore-збірок чинне.
+
+## [2026-10-18] decision | Spurgeon-VE (крім Псалмів Сперджена немає) — лише поза App Store-збіркою
+Spurgeon-VE (Grace-eBooks 2011, © на збірку) вирізається з копії `commentaries-en.db` у `.app` лише
+в збірці AppStore: крок «Strip Spurgeon-VE (AppStore only)», `scripts/strip_commentary_source.py`
+(той самий механізм, що для NASB; вихідна база не змінюється). TestFlight зберігає VE. Treasury of
+David (CC0) лишається в обох — в App Store Сперджен є тільки в Псалмах. Swift не змінювався: список
+коментаторів будується з того, що є в базі для книги. Перевірено на телефоні: Пс — TOD є, Євр — VE
+немає. База: 170 → 151 МБ, −1 362 коментарі, −23 923 прив'язки, решта джерел без змін.
+Провенанс — `legal/commentaries-provenance-2026-10-17.md` (документ Проєкту).
+
+## [2026-10-18] finding | Видаляючи джерело з бази коментарів, перебудовувати `comments_fts`
+`comments_fts` — FTS5 external-content: `DELETE` з `comments` індекс не чистить, слова видаленого
+тексту лишаються у файлі й знаходяться пошуком (до rebuild «lovingkindness» давав 154 збіги, з них
+76 — VE). Тому скрипт робить `'rebuild'` + `'integrity-check'`, потім VACUUM і байтову перевірку,
+що фрагментів VE у файлі немає.
+
 ## [2026-10-17] decision | App Store-збірка без NASB і донатів — різниця лише на етапі компіляції
 Конфігурація `AppStore` (копія Release + `SWIFT_ACTIVE_COMPILATION_CONDITIONS = APPSTORE`) і схема
 `SourceBible-AppStore`; TestFlight іде з Release, як і раніше. Донати (StoreKit 2) і NASB-код — під

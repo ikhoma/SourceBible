@@ -51,6 +51,21 @@ def glue_short_words(text: str, lang: str) -> str:
     return pattern.sub(lambda m: m.group(1) + NBSP, text)
 
 
+_EMPTY_OBJ = re.compile(r"^( *)(.*)\{\}(,?)$", re.M)
+
+
+def dumps_xcode(data) -> str:
+    """Серіалізує так само, як Xcode пише .xcstrings (байт у байт).
+
+    Xcode: `"key" : value`, відступ 2, порожній обʼєкт — `{\n\n<відступ>}`,
+    без завершального переводу рядка. Якщо писати інакше, Xcode після кожної
+    збірки переформатовує весь файл і git показує тисячі змінених рядків.
+    Перевірка: tests/test_nbsp_xcstrings.py (round-trip на справжньому файлі).
+    """
+    out = json.dumps(data, ensure_ascii=False, indent=2, separators=(",", " : "))
+    return _EMPTY_OBJ.sub(lambda m: f"{m.group(1)}{m.group(2)}{{\n\n{m.group(1)}}}{m.group(3)}", out)
+
+
 def visualize(s: str) -> str:
     return s.replace(NBSP, "‿")
 
@@ -98,7 +113,7 @@ def process(path: Path, write: bool):
     if write and changed_entries:
         backup = path.with_suffix(path.suffix + ".bak")
         shutil.copy2(path, backup)
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        path.write_text(dumps_xcode(data), encoding="utf-8")
         print(f"Записано. Бекап оригіналу: {backup}")
 
 

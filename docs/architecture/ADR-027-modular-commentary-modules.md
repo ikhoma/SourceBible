@@ -364,7 +364,7 @@ commentary_en` (той самий `immutable=1`/URI-режим, що й для �
 | owen         | Owen            | An Exposition of Hebrews             | 100% секцій — HEB, це справжня назва його magnum opus |
 | edwards      | Edwards         | Notes on Scripture                   | реальна історична назва його біблійних нотаток |
 | spurgeon     | Spurgeon-TOD    | The Treasury of David                | його коментар на Псалми, з файлу `chspurgeon-tod-main.zip` |
-| spurgeon     | Spurgeon-VE     | Verse Expositions of the Bible       | решта книг, з модуля `Spurgeon-c(VE)` |
+| spurgeon     | Spurgeon-VE     | Verse Expositions of the Bible       | решта книг, з модуля `Spurgeon-c(VE)`. **В App Store-збірці вирізано** (© Grace-eBooks 2011) — LOG 2026-10-18 |
 
 Українські відповідники в `Localizable.xcstrings`. Це рядок локалізації, не структура —
 поміняти пізніше дешево: новий рядок у `.xcstrings`, без міграції схеми чи бази.

@@ -68,6 +68,7 @@
 				746394772FA5299500A6E83C /* Frameworks */,
 				746394782FA5299500A6E83C /* Resources */,
 				A5A0B0032FF0000000EDC19D /* Strip NASB (AppStore only) */,
+				A5A0B0042FF0000000EDC19D /* Strip Spurgeon-VE (AppStore only) */,
 			);
 			buildRules = (
 			);
@@ -177,6 +178,29 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "#!/bin/bash\n# App Store build ships WITHOUT NASB (no licence). Release/TestFlight keep the full DB.\n# Builds a stripped copy from the source DB (never modified) and replaces the copy that\n# Copy Bundle Resources put into the .app. Fails the build if NASB survives anywhere.\n# Sandboxing is off ONLY in the AppStore configuration (this phase writes into the .app).\n# Inputs include the BUNDLED DB: Copy Bundle Resources re-copies the full DB whenever it\n# sees its output changed (i.e. after every strip), and that fresh copy must be stripped\n# again. Inputs = only the source DB/scripts let a full NASB DB ship (caught 2026-10-17).\nset -euo pipefail\nSTAMP=\"${DERIVED_FILE_DIR}/strip-nasb.stamp\"\nmkdir -p \"${DERIVED_FILE_DIR}\"\nif [ \"${CONFIGURATION}\" != \"AppStore\" ]; then touch \"$STAMP\"; exit 0; fi\n\nPY=\"\"\nfor c in \"${STRIP_PYTHON:-}\" /usr/local/bin/python3 /opt/homebrew/bin/python3; do\n  if [ -n \"$c\" ] && [ -x \"$c\" ] && \"$c\" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then PY=\"$c\"; break; fi\ndone\nif [ -z \"$PY\" ]; then\n  echo \"error: Strip NASB: no Python >= 3.10 found (/usr/bin/python3 is 3.9 and is not used). Set STRIP_PYTHON.\"\n  exit 1\nfi\n\nSRC=\"${SRCROOT}/SourceBible/Resources/sourcebible.db\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/sourcebible.db\"\nTMP=\"${DERIVED_FILE_DIR}/sourcebible.appstore.db\"\n[ -f \"$DST\" ] || { echo \"error: Strip NASB: $DST not found — did Copy Bundle Resources run?\"; exit 1; }\n\nSQLITE_TMPDIR=\"${DERIVED_FILE_DIR}\" \"$PY\" -u \"${SRCROOT}/scripts/strip_licensed_translation.py\" \"$SRC\" \"$TMP\" --translation NASB\nmv -f \"$TMP\" \"$DST\"\n# The stripped DB is journal_mode=DELETE; WAL side files copied from Resources/ are stale.\nrm -f \"$DST-wal\" \"$DST-shm\"\ntouch \"$STAMP\"\necho \"Strip NASB: bundled DB replaced ($DST)\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A5A0B0042FF0000000EDC19D /* Strip Spurgeon-VE (AppStore only) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/commentaries-en.db",
+				"$(SRCROOT)/SourceBible/Resources/commentaries-en.db",
+				"$(SRCROOT)/scripts/strip_commentary_source.py",
+			);
+			name = "Strip Spurgeon-VE (AppStore only)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/strip-spurgeon-ve.stamp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "#!/bin/bash\n# App Store build ships WITHOUT Spurgeon's \"Verse Expositions\" (source 'Spurgeon-VE'):\n# the shipped text is the Grace-eBooks.com 2011 compilation, © on the compilation\n# (legal/commentaries-provenance-2026-10-17.md). Treasury of David (Spurgeon-TOD, CC0) stays.\n# Release/TestFlight keep the full module. Same mechanism as \"Strip NASB\": a stripped copy\n# replaces the module Copy Bundle Resources put into the .app; the build fails if any VE\n# row, FTS entry or text byte survives. Inputs include the BUNDLED module (see Strip NASB).\nset -euo pipefail\nSTAMP=\"${DERIVED_FILE_DIR}/strip-spurgeon-ve.stamp\"\nmkdir -p \"${DERIVED_FILE_DIR}\"\nif [ \"${CONFIGURATION}\" != \"AppStore\" ]; then touch \"$STAMP\"; exit 0; fi\n\nPY=\"\"\nfor c in \"${STRIP_PYTHON:-}\" /usr/local/bin/python3 /opt/homebrew/bin/python3; do\n  if [ -n \"$c\" ] && [ -x \"$c\" ] && \"$c\" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then PY=\"$c\"; break; fi\ndone\nif [ -z \"$PY\" ]; then\n  echo \"error: Strip Spurgeon-VE: no Python >= 3.10 found (/usr/bin/python3 is 3.9 and is not used). Set STRIP_PYTHON.\"\n  exit 1\nfi\n\nSRC=\"${SRCROOT}/SourceBible/Resources/commentaries-en.db\"\nDST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/commentaries-en.db\"\nTMP=\"${DERIVED_FILE_DIR}/commentaries-en.appstore.db\"\n[ -f \"$DST\" ] || { echo \"error: Strip Spurgeon-VE: $DST not found — did Copy Bundle Resources run?\"; exit 1; }\n\nSQLITE_TMPDIR=\"${DERIVED_FILE_DIR}\" \"$PY\" -u \"${SRCROOT}/scripts/strip_commentary_source.py\" \"$SRC\" \"$TMP\" --source Spurgeon-VE\nmv -f \"$TMP\" \"$DST\"\nrm -f \"$DST-wal\" \"$DST-shm\"\ntouch \"$STAMP\"\necho \"Strip Spurgeon-VE: bundled commentary module replaced ($DST)\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
