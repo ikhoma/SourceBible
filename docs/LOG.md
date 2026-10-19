@@ -1,3 +1,9 @@
+## [2026-10-19] decision | 1.0 — лише iPhone; номер збірки 10; export compliance у проєкті
+`TARGETED_DEVICE_FAMILY = 1` у Debug/Release/AppStore (рішення 16.10, rel-019): з iPad ASC вимагає
+iPad-скриншоти, а звузити список пристроїв після публікації вже не можна. Стосується й TestFlight.
+`INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` (лише HTTPS — звільнене шифрування; rel-020),
+щоб ASC не питав на кожному білді. `CURRENT_PROJECT_VERSION` 9 → 10 (9 уже в TestFlight).
+
 ## [2026-10-19] fix | `Localizable.xcstrings` пишемо у форматі Xcode — цикл переписування розірвано
 Xcode пише каталог як `"key" : value` (пробіл перед двокрапкою), порожній обʼєкт — `{` + порожній
 рядок + `}`, без `\n` у кінці. `scripts/nbsp_xcstrings.py` писав звичайний `json.dumps`

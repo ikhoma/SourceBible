@@ -52,6 +52,7 @@ We are grateful to everyone who made this scholarship freely available.
 - Matthew Henry, Commentary on the Whole Bible — Public Domain
 - Charles H. Spurgeon, The Treasury of David — MIT License
 - John Owen, An Exposition of the Epistle to the Hebrews — Public Domain
+- Jonathan Edwards, Notes on Scripture (Works, ed. E. Hickman, 1834) — Public Domain
 
 **Cross-references**
 - OpenBible.info Topic & Cross-Reference Data — CC BY 4.0
@@ -103,6 +104,7 @@ We are grateful to everyone who made this scholarship freely available.
 - Метью Генрі, Коментар на всю Біблію — суспільне надбання
 - Чарльз Сперджен, Скарбниця Давида — ліцензія MIT
 - Джон Овен, Тлумачення Послання до Євреїв — суспільне надбання
+- Джонатан Едвардс, Нотатки до Святого Письма (Works, ред. Е. Гікман, 1834) — суспільне надбання
 
 **Перехресні посилання**
 - OpenBible.info Topic & Cross-Reference Data — CC BY 4.0

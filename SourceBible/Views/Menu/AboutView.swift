@@ -192,6 +192,7 @@ struct AboutView: View {
                     "Метью Генрі, Коментар на всю Біблію — суспільне надбання",
                     "Чарльз Сперджен, Скарбниця Давида — CC0 1.0",
                     "Джон Овен, Тлумачення Послання до Євреїв — суспільне надбання",
+                    "Джонатан Едвардс, Нотатки до Святого Письма (Works, ред. Е. Гікман, 1834) — суспільне надбання",
                 ]),
                 LicenseGroup(title: "Перехресні посилання", items: [
                     "OpenBible.info — CC BY 4.0",
@@ -247,6 +248,7 @@ struct AboutView: View {
                 "Matthew Henry, Commentary on the Whole Bible — Public Domain",
                 "Charles H. Spurgeon, The Treasury of David — CC0 1.0",
                 "John Owen, Exposition of the Epistle to the Hebrews — Public Domain",
+                "Jonathan Edwards, Notes on Scripture (Works, ed. E. Hickman, 1834) — Public Domain",
             ]),
             LicenseGroup(title: "Cross-references", items: [
                 "OpenBible.info Topic & Cross-Reference Data — CC BY 4.0",
