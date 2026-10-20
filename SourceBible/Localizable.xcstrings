@@ -4,16 +4,6 @@
     "" : {
 
     },
-    "%@ %lld:%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld:%3$lld"
-          }
-        }
-      }
-    },
     "%@ · %@" : {
       "localizations" : {
         "en" : {
@@ -24,13 +14,20 @@
         }
       }
     },
+    "%@ %lld:%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld:%3$lld"
+          }
+        }
+      }
+    },
     "%lld" : {
 
     },
     "%lld " : {
-
-    },
-    "%lld%%" : {
 
     },
     "%lld. %@" : {
@@ -43,40 +40,7 @@
         }
       }
     },
-    "Built by Bible students and teachers, for Bible students and teachers." : {
-
-    },
-    "Contact" : {
-
-    },
-    "Effective 17 July 2026" : {
-
-    },
-    "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in Source Bible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training." : {
-
-    },
-    "Source Bible is built to keep your data private. Most of what you create stays on your device, and analytics are collected only if you agree to them." : {
-
-    },
-    "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої, а аналітика збирається лише за вашою згодою." : {
-
-    },
-    "Sources & licenses" : {
-
-    },
-    "Support Source Bible" : {
-
-    },
-    "The original-language texts are drawn from the Westminster Leningrad Codex for the Hebrew Old Testament and the Nestle 1904 edition of the Greek New Testament, with word-level analysis from the Macula project." : {
-
-    },
-    "We are a team of independent developers from Ukraine. We build this app while our country is at war. The word of God is not a hobby for us — it is the rock we stand on. We keep Source Bible free for everyone, with the help of those who choose to support it." : {
-
-    },
-    "We are grateful to everyone who made this scholarship freely available." : {
-
-    },
-    "We bridge the gap between modern readers and the world of the biblical text." : {
+    "%lld%%" : {
 
     },
     "a11y.nav.next_chapter" : {
@@ -501,6 +465,9 @@
         }
       }
     },
+    "Built by Bible students and teachers, for Bible students and teachers." : {
+
+    },
     "commentary.menu.addToNote" : {
       "comment" : "Selection menu action on commentary text: attach the quote to a new note",
       "localizations" : {
@@ -619,6 +586,9 @@
           }
         }
       }
+    },
+    "Contact" : {
+
     },
     "cover.chapters_count" : {
       "comment" : "Cover subtitle: N chapters",
@@ -1104,6 +1074,9 @@
           }
         }
       }
+    },
+    "Effective 17 July 2026" : {
+
     },
     "entries.filter.a11y" : {
       "localizations" : {
@@ -1687,6 +1660,22 @@
         }
       }
     },
+    "menu.appearance_mode" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Режим"
+          }
+        }
+      }
+    },
     "menu.appearance.dark" : {
       "localizations" : {
         "en" : {
@@ -1731,22 +1720,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Як на пристрої"
-          }
-        }
-      }
-    },
-    "menu.appearance_mode" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mode"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Режим"
           }
         }
       }
@@ -1898,6 +1871,22 @@
         }
       }
     },
+    "menu.launch_behavior" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On launch"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При відкритті"
+          }
+        }
+      }
+    },
     "menu.launch.last_bookmark" : {
       "localizations" : {
         "en" : {
@@ -1958,22 +1947,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "З місця, де ви зупинились"
-          }
-        }
-      }
-    },
-    "menu.launch_behavior" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On launch"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "При відкритті"
           }
         }
       }
@@ -4941,22 +4914,6 @@
         }
       }
     },
-    "notes.editor.placeholder" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter note text…"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Введіть текст нотатки…"
-          }
-        }
-      }
-    },
     "notes.editor.newer_version" : {
       "localizations" : {
         "en" : {
@@ -4969,6 +4926,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Частину цієї нотатки створено в новішій версії Source Bible. Оновіть застосунок, щоб побачити її повністю, — нічого не загубиться."
+          }
+        }
+      }
+    },
+    "notes.editor.placeholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter note text…"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Введіть текст нотатки…"
           }
         }
       }
@@ -5054,6 +5027,9 @@
           }
         }
       }
+    },
+    "Our mission is to make deep Bible study simple, intuitive, and accessible. Every verse in Source Bible opens onto the original Hebrew and Greek behind it — word by word, with morphology, the Strong's lexicon, concordance, cross-references, and centuries of commentary a single tap away. Our hope is to make that depth approachable for anyone who wants to look closer — not only those with formal training." : {
+
     },
     "picker.chapters_count" : {
       "localizations" : {
@@ -5411,22 +5387,6 @@
         }
       }
     },
-    "search.filter.testament.title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Testament"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Заповіт"
-          }
-        }
-      }
-    },
     "search.filter.testament_all" : {
       "localizations" : {
         "en" : {
@@ -5439,6 +5399,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "СЗ / НЗ"
+          }
+        }
+      }
+    },
+    "search.filter.testament.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Testament"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заповіт"
           }
         }
       }
@@ -5809,6 +5785,15 @@
         }
       }
     },
+    "Source Bible is built to keep your data private. Most of what you create stays on your device, and analytics are collected only if you agree to them." : {
+
+    },
+    "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої, а аналітика збирається лише за вашою згодою." : {
+
+    },
+    "Sources & licenses" : {
+
+    },
     "studymode.back" : {
       "localizations" : {
         "en" : {
@@ -5840,6 +5825,9 @@
           }
         }
       }
+    },
+    "Support Source Bible" : {
+
     },
     "tab.bible" : {
       "localizations" : {
@@ -5953,6 +5941,9 @@
           }
         }
       }
+    },
+    "The original-language texts are drawn from the Westminster Leningrad Codex for the Hebrew Old Testament and the Nestle 1904 edition of the Greek New Testament, with word-level analysis from the Macula project." : {
+
     },
     "theologian.calvin.era" : {
       "extractionState" : "stale",
@@ -6343,6 +6334,23 @@
         }
       }
     },
+    "verse.commentary_notice" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
+          }
+        }
+      }
+    },
     "verse.commentary.placeholder" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6372,23 +6380,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Коментар для цього вірша відсутній."
-          }
-        }
-      }
-    },
-    "verse.commentary_notice" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Commentary will be loaded from a public domain database (Calvin, Henry, Spurgeon)."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Коментар буде завантажений з public domain бази даних (Кальвін, Генрі, Сперджен)."
           }
         }
       }
@@ -6685,6 +6676,12 @@
           }
         }
       }
+    },
+    "We are grateful to everyone who made this scholarship freely available." : {
+
+    },
+    "We bridge the gap between modern readers and the world of the biblical text." : {
+
     },
     "word.definition.unavailable" : {
       "localizations" : {
@@ -7073,9 +7070,6 @@
 
     },
     "Ми прокладаємо міст між сучасним читачем і світом біблійного тексту." : {
-
-    },
-    "Ми — команда незалежних розробників з України. Ми створюємо цей застосунок, поки в нашій країні триває війна. Слово Боже для нас не хобі — це скеля, на якій ми стоїмо. Ми зберігаємо Source Bible безкоштовним для всіх завдяки тим, хто вирішує його підтримати." : {
 
     },
     "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у Source Bible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту." : {
