@@ -34,13 +34,13 @@ struct PrivacyPolicyView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
 
-                    Text(uk ? "Чинна з 17 липня 2026" : "Effective 17 July 2026")
+                    Text(uk ? "Оновлено 20 жовтня 2026" : "Last updated 20 October 2026")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
                     Text(uk
-                         ? "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої, а аналітика збирається лише за вашою згодою."
-                         : "Source Bible is built to keep your data private. Most of what you create stays on your device, and analytics are collected only if you agree to them.")
+                         ? "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої. Анонімна статистика — за бажанням: в ЄС/ЄЕЗ і Великій Британії вона вимкнена, доки ви її не ввімкнете, в інших країнах увімкнена за замовчуванням, і вимкнути її можна будь-коли."
+                         : "Source Bible is built to keep your data private. Most of what you create stays on your device. Anonymous usage statistics are optional: in the EU/EEA and the UK they are off until you turn them on, elsewhere they are on by default, and you can turn them off at any time.")
                         .font(.title3.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -98,10 +98,10 @@ struct PrivacyPolicyView: View {
                         body: "Застосунок Source Bible надає Ivan Khoma. З питань приватності пишіть на ivan.khoma@gmail.com."),
                 Section(title: "Дані, що зберігаються на пристрої",
                         body: "Ваші нотатки, виділення, закладки, позиція читання та налаштування зберігаються локально на вашому пристрої всередині застосунку. Вони не завантажуються до нас і не синхронізуються з жодним сервером."),
-                Section(title: "Аналітика (за бажанням, лише за вашою згодою)",
-                        body: "Якщо ви ввімкнете аналітику, ми використовуємо Mixpanel, щоб розуміти, як використовується застосунок. Ми фіксуємо, що певні дії відбулися — наприклад, що ви створили нотатку, виділення чи закладку, перемкнули переклад або виконали пошук (і скільки результатів він дав), — але НЕ вміст ваших нотаток і НЕ текст ваших пошукових запитів. Разом із цим збирається випадково згенерований ідентифікатор інсталяції та стандартна технічна інформація (модель пристрою, версія ОС, версія застосунку та приблизне місцезнаходження, як-от місто чи країна, визначене за IP-адресою). Сам застосунок не запитує доступу до місцезнаходження пристрою. Якщо ви не даєте згоди або вимикаєте аналітику, ці події не збираються."),
+                Section(title: "Аналітика (за бажанням)",
+                        body: "Ми використовуємо Mixpanel, щоб розуміти, як використовується застосунок. Ми фіксуємо, що певні дії відбулися — наприклад, що ви створили нотатку, виділення чи закладку, перемкнули переклад або виконали пошук (і скільки результатів він дав), — але НЕ вміст ваших нотаток і НЕ текст ваших пошукових запитів. Разом із цим збирається випадково згенерований ідентифікатор інсталяції та стандартна технічна інформація (модель пристрою, версія ОС, версія застосунку та приблизне місцезнаходження, як-от місто чи країна, визначене за IP-адресою). Сам застосунок не запитує доступу до місцезнаходження пристрою. Ми ніколи не фіксуємо відомостей про ваші релігійні чи інші переконання. В ЄС/ЄЕЗ (27 країн ЄС, а також Ісландія, Ліхтенштейн і Норвегія) та у Великій Британії аналітика вимкнена, доки ви її не ввімкнете; в інших країнах вона ввімкнена за замовчуванням. Якщо регіон пристрою визначити не вдається, застосунок діє так само, як для ЄС. Змінити вибір можна будь-коли: Меню → Статистика → Ділитися статистикою. Коли аналітику вимкнено, ці події не збираються."),
                 Section(title: "Треті сторони",
-                        body: "Наведені вище аналітичні дані ми передаємо лише Mixpanel як нашому постачальнику аналітики, який зобов’язаний захищати їх на тому ж рівні, що описаний тут." + donationNoteUK),
+                        body: "Наведені вище аналітичні дані ми передаємо лише Mixpanel як нашому постачальнику аналітики, який зобов’язаний захищати їх на тому ж рівні, що описаний тут. Дані можуть передаватися за межі Європейської економічної зони; такі передачі спираються на гарантії, зокрема стандартні договірні положення (SCC)." + donationNoteUK),
                 Section(title: "Чого ми не робимо",
                         body: "Ми не вимагаємо акаунту й не просимо ваше ім’я чи email. Ми не показуємо реклами, не продаємо ваші дані й не відстежуємо вас в інших застосунках чи на вебсайтах."),
                 Section(title: "Зберігання та видалення",
@@ -121,10 +121,10 @@ struct PrivacyPolicyView: View {
                     body: "Source Bible is provided by Ivan Khoma. If you have any questions about privacy, email us at ivan.khoma@gmail.com."),
             Section(title: "Data stored on your device",
                     body: "Your notes, highlights, bookmarks, reading position and app settings are stored locally on your device inside the app. They are not uploaded to us or synced to any server."),
-            Section(title: "Analytics (optional, only with your consent)",
-                    body: "If you enable analytics, we use Mixpanel to understand how the app is used. We record that certain actions happened — for example that you created a note, highlight or bookmark, switched translations, or ran a search (and how many results it returned) — but NOT the content of your notes and NOT the text of your searches. Alongside this we collect a randomly generated app-install identifier and standard technical information (device model, OS version, app version, and approximate location, such as city or country, derived from your IP address). The app itself does not ask for access to your device location. If you do not consent, or turn analytics off, these events are not collected."),
+            Section(title: "Analytics (optional)",
+                    body: "We use Mixpanel to understand how the app is used. We record that certain actions happened — for example that you created a note, highlight or bookmark, switched translations, or ran a search (and how many results it returned) — but NOT the content of your notes and NOT the text of your searches. Alongside this we collect a randomly generated app-install identifier and standard technical information (device model, OS version, app version, and approximate location, such as city or country, derived from your IP address). The app itself does not ask for access to your device location. We never record any information about your religious or other beliefs. In the EU/EEA (the 27 EU countries plus Iceland, Liechtenstein and Norway) and the United Kingdom, analytics are off until you turn them on; everywhere else they are on by default. If the app cannot determine your device’s region, it treats it the same way as the EU. You can change your choice at any time: Menu → Statistics → Share statistics. When analytics are off, these events are not collected."),
             Section(title: "Third parties",
-                    body: "We share the analytics data above only with Mixpanel, acting as our analytics provider, which is required to protect it to the same standard described here." + donationNoteEN),
+                    body: "We share the analytics data above only with Mixpanel, acting as our analytics provider, which is required to protect it to the same standard described here. Data may be transferred outside the European Economic Area; such transfers rely on safeguards such as Standard Contractual Clauses (SCC)." + donationNoteEN),
             Section(title: "What we do not do",
                     body: "We do not require an account or ask for your name or email. We show no ads, do not sell your data, and do not track you across other apps or websites."),
             Section(title: "Retention and deletion",
