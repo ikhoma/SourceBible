@@ -888,6 +888,18 @@ struct SearchView: View {
             resultsCount: vm.totalCount,
             position:     position
         ))
+        // Результат несе номер вірша в нумерації ПОШУКОВОГО перекладу (verse.id тієї
+        // таблиці), а рідер відкриває id у своєму. Якщо фільтр пошуку ≠ переклад рідера,
+        // перемикаємо рідер на пошуковий переклад перед переходом — інакше юзер бачить
+        // вірш не в тому перекладі, де знайшов, а в Псалмах UBIO/RST ≠ KJV ще й інший вірш.
+        // Сам вибір у фільтрі рідер, як і раніше, не чіпає — лише відкриття результату.
+        // `selectedTranslationId` не скидаємо: він тепер = перекладу рідера (effective той
+        // самий), а nil запустив би `.onChange` → повторний пошук і втрату прокрутки.
+        let searchTid = effectiveTranslationId
+        if searchTid != readerVM.currentTranslation.id,
+           let translation = readerVM.availableTranslations.first(where: { $0.id == searchTid }) {
+            readerVM.selectTranslation(translation)
+        }
         router.requestNavigation(to: result.id)
     }
 
