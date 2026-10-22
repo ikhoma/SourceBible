@@ -59,6 +59,14 @@ final class MixpanelAnalytics: AnalyticsService, @unchecked Sendable {
                 trackAutomaticEvents: false,
                 serverURL: Self.resolvedServerURL
             )
+            // No server-side IP geolocation: city/region are NOT collected, so App Privacy
+            // declares no Location (decision 2026-10-22). Note the capital L — SDK 6.4.1 API.
+            Mixpanel.mainInstance().useIPAddressForGeoLocation = false
+            // Country comes from the device Region SETTING (Settings → General → Language &
+            // Region), not from location — the same source AnalyticsConsentPolicy uses.
+            if let region = Locale.current.region?.identifier {
+                Mixpanel.mainInstance().registerSuperProperties(["region_setting": region])
+            }
             #if DEBUG
             // Spec §Тестування до TestFlight: log every event to Xcode console in DEBUG.
             Mixpanel.mainInstance().loggingEnabled = true
