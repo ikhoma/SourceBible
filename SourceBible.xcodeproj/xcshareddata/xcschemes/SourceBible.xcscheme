@@ -56,16 +56,6 @@
             ReferencedContainer = "container:SourceBible.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-         <CommandLineArgument
-            argument = "-ReviewPromptStorefront USA"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-reviewPrompt.studyDays (&quot;2026-10-01&quot;,&quot;2026-10-10&quot;)"
-            isEnabled = "YES">
-         </CommandLineArgument>
-      </CommandLineArguments>
       <StoreKitConfigurationFileReference
          identifier = "../../SourceBible.storekit">
       </StoreKitConfigurationFileReference>
