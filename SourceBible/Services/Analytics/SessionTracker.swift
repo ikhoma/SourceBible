@@ -162,6 +162,19 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
     // that arrives before begin() or after flush() is dropped rather than seeding
     // the next session's summary with orphan counts.
 
+    // MARK: Local Meaningful Study Session proxy (ADR-038 amendment 2026-09-01)
+
+    /// True once the current session lasted ≥ 60 s AND has a depth signal: word chevron
+    /// navigation or any study-tool view. Annotations deliberately don't count (every Bible
+    /// app has notes/highlights). Coarser than the Mixpanel MSS Custom Event, but evaluated
+    /// on-device, so it works without analytics consent. Used by the rating prompt (pos-012).
+    @MainActor
+    var isMeaningfulSessionReached: Bool {
+        guard let start = _startedAt else { return false }
+        return Date().timeIntervalSince(start) >= 60
+            && (_wordNavCount > 0 || !_featureCounts.isEmpty)
+    }
+
     // MARK: ADR-022 Generic Feature Use
 
     /// Record one view of a study tool (ADR-022 generic model).

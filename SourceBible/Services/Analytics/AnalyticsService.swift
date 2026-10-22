@@ -88,6 +88,10 @@ enum AnalyticsEvent: Sendable {
     case onboardingTapHintShown
     case onboardingTapHintDismissed(reason: String)
 
+    // ── Rating prompt (pos-012) ──────────────────────────────────────────────
+    /// We CALLED requestReview; Apple may still not show it (3/365 cap, already rated).
+    case reviewPromptRequested(trigger: String)
+
     // ── Deferred (slice 4 — cards/folders not yet built) ─────────────────────
     // case verseCardAdded
     // case wordCardAdded
@@ -158,6 +162,9 @@ extension AnalyticsEvent {
 
         case let .onboardingTapHintDismissed(reason):
             return ("onboarding_tap_hint_dismissed", ["reason": reason])
+
+        case let .reviewPromptRequested(trigger):
+            return ("review_prompt_requested", ["trigger": trigger])
         }
     }
 }

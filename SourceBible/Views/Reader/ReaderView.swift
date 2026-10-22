@@ -2,6 +2,7 @@
 // SourceBible
 
 import SwiftUI
+import StoreKit
 import TipKit
 
 struct ReaderView: View {
@@ -19,6 +20,9 @@ struct ReaderView: View {
     @Environment(\.sessionTracker) private var sessionTracker
     @Environment(\.analytics) private var analytics
     @Environment(\.colorTheme) private var colorTheme
+    // pos-012: system App Store rating prompt, shown after the study sheet closes.
+    @Environment(\.requestReview) private var requestReview
+    @State private var studySheetWasShown = false
     @AppStorage(AppStorageKeys.hideBookCovers) private var hideBookCovers = false
     // Red-letter (Jesus' words) rendering — off by default; toggled in Settings ▸ Appearance.
     @AppStorage(AppStorageKeys.redLetters) private var redLetters = false
@@ -135,6 +139,14 @@ struct ReaderView: View {
             vm.clearWordSelection()
             // ADR-024: reset the cross-ref back stack so the next sheet entry starts fresh.
             vm.resetCrossRefStack()
+            // pos-012: only after the STUDY sheet (not book/translation pickers).
+            if studySheetWasShown {
+                studySheetWasShown = false
+                if sessionTracker.isMeaningfulSessionReached {
+                    ReviewPromptPolicy().recordStudyDay()
+                }
+                maybeRequestReview()
+            }
         }) { sheet in
             switch sheet {
             case .bookPicker:
@@ -183,6 +195,7 @@ struct ReaderView: View {
                         .presentationDragIndicator(.visible)
                         .presentationBackgroundInteraction(.enabled)
                         .presentationSizing(.page)
+                        .onAppear { studySheetWasShown = true }
                 }
             }
         }
@@ -192,6 +205,27 @@ struct ReaderView: View {
         .task {
             vm.sessionTracker = sessionTracker
             vm.analytics = analytics
+        }
+    }
+
+    // MARK: - Rating prompt (pos-012)
+
+    /// Asks ReviewPromptPolicy whether this is the moment; if so, waits for the sheet's
+    /// dismiss animation to settle and, if no other sheet opened meanwhile, shows the
+    /// system prompt and records the request.
+    private func maybeRequestReview() {
+        Task { @MainActor in
+            let policy = ReviewPromptPolicy()
+            let version = ReviewPromptPolicy.currentAppVersion
+            let storefront = await ReviewPromptPolicy.currentStorefrontCountry()
+            guard let version,
+                  let trigger = policy.trigger(appVersion: version, storefrontCountry: storefront)
+            else { return }
+            try? await Task.sleep(for: .milliseconds(600))
+            guard vm.activeSheet == nil else { return }
+            policy.markPrompted(appVersion: version)
+            analytics.track(.reviewPromptRequested(trigger: trigger.rawValue))
+            requestReview()
         }
     }
 
