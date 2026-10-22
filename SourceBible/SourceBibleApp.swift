@@ -160,7 +160,8 @@ struct SourceBibleApp: App {
                     // Start the StoreKit Transaction.updates listener at launch —
                     // StoreKit re-delivers unfinished donation transactions from
                     // the moment the listener starts (DonationService.init).
-                    // App Store build ships without donations (no StoreKit at all).
+                    // App Store build ships without donations; there StoreKit is used only for the
+                    // rating prompt and the storefront check (ReviewPromptPolicy).
                     _ = DonationService.shared
                     #endif
                     // Keyboard pre-warm: boots the system keyboard process so the

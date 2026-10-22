@@ -139,13 +139,16 @@ struct ReaderView: View {
             vm.clearWordSelection()
             // ADR-024: reset the cross-ref back stack so the next sheet entry starts fresh.
             vm.resetCrossRefStack()
-            // pos-012: only after the STUDY sheet (not book/translation pickers).
+            // pos-012: only after the STUDY sheet (not book/translation pickers), and only
+            // when THIS session already reached MSS — ask right after value, never on the
+            // strength of study days from weeks ago. (Study days are also recorded on
+            // background in SessionTracker, so MSS reached after the last dismissal counts.)
             if studySheetWasShown {
                 studySheetWasShown = false
                 if sessionTracker.isMeaningfulSessionReached {
                     ReviewPromptPolicy().recordStudyDay()
+                    maybeRequestReview()
                 }
-                maybeRequestReview()
             }
         }) { sheet in
             switch sheet {
@@ -210,21 +213,26 @@ struct ReaderView: View {
 
     // MARK: - Rating prompt (pos-012)
 
-    /// Asks ReviewPromptPolicy whether this is the moment; if so, waits for the sheet's
-    /// dismiss animation to settle and, if no other sheet opened meanwhile, shows the
+    /// Waits for the sheet's dismiss animation to settle, then asks ReviewPromptPolicy
+    /// whether this is the moment; if so and no other sheet opened meanwhile, shows the
     /// system prompt and records the request.
+    ///
+    /// The decision is made AFTER the pause on purpose: from `trigger` to `markPrompted`
+    /// there is no suspension point, so on the main actor the check-and-mark is atomic.
+    /// A quick dismiss → reopen → dismiss spawns two tasks; the second one now sees the
+    /// version already marked and does nothing (no double prompt, no double event).
     private func maybeRequestReview() {
         Task { @MainActor in
-            let policy = ReviewPromptPolicy()
-            let version = ReviewPromptPolicy.currentAppVersion
             let storefront = await ReviewPromptPolicy.currentStorefrontCountry()
-            guard let version,
+            try? await Task.sleep(for: .milliseconds(600))
+            let policy = ReviewPromptPolicy()
+            guard vm.activeSheet == nil,
+                  let version = ReviewPromptPolicy.currentAppVersion,
                   let trigger = policy.trigger(appVersion: version, storefrontCountry: storefront)
             else { return }
-            try? await Task.sleep(for: .milliseconds(600))
-            guard vm.activeSheet == nil else { return }
+            let studyDays = policy.studyDays.count   // read before markPrompted clears it
             policy.markPrompted(appVersion: version)
-            analytics.track(.reviewPromptRequested(trigger: trigger.rawValue))
+            analytics.track(.reviewPromptRequested(trigger: trigger.rawValue, studyDays: studyDays))
             requestReview()
         }
     }

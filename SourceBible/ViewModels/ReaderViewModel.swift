@@ -698,7 +698,7 @@ class ReaderViewModel: ObservableObject {
         loadChapter()
     }
 
-    func selectTranslation(_ translation: Translation) {
+    func selectTranslation(_ translation: Translation, source: String = "picker") {
         // Capture `from` BEFORE assignment so we can compare (spec §C: fire only if from != to).
         let fromId = currentTranslation.id
         currentTranslation = translation
@@ -717,7 +717,7 @@ class ReaderViewModel: ObservableObject {
         }
         // Analytics: discrete translation_switched (low-volume, high-value; via analytics directly).
         if fromId != translation.id {
-            analytics.track(.translationSwitched(from: fromId, to: translation.id))
+            analytics.track(.translationSwitched(from: fromId, to: translation.id, source: source))
         }
     }
 

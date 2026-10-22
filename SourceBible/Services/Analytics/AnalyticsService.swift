@@ -79,7 +79,9 @@ enum AnalyticsEvent: Sendable {
     case featureAdopted(AnalyticsFeature)
 
     // ── Kept discrete (low-volume, high-value) ────────────────────────────────
-    case translationSwitched(from: String, to: String)
+    /// source: "picker" (reader's translation picker) | "search" (opening a search
+    /// result found in another translation switches the reader to it).
+    case translationSwitched(from: String, to: String, source: String)
     case noteCreated
     case highlightCreated(color: String)
     case bookmarkCreated
@@ -90,7 +92,9 @@ enum AnalyticsEvent: Sendable {
 
     // ── Rating prompt (pos-012) ──────────────────────────────────────────────
     /// We CALLED requestReview; Apple may still not show it (3/365 cap, already rated).
-    case reviewPromptRequested(trigger: String)
+    /// `studyDays` = MSS days counted since the previous request (the engagement level
+    /// at which the rule fired).
+    case reviewPromptRequested(trigger: String, studyDays: Int)
 
     // ── Deferred (slice 4 — cards/folders not yet built) ─────────────────────
     // case verseCardAdded
@@ -145,8 +149,8 @@ extension AnalyticsEvent {
         case let .featureAdopted(feature):
             return ("feature_adopted_\(feature.rawValue)", [:])
 
-        case let .translationSwitched(from, to):
-            return ("translation_switched", ["from": from, "to": to])
+        case let .translationSwitched(from, to, source):
+            return ("translation_switched", ["from": from, "to": to, "source": source])
 
         case .noteCreated:
             return ("note_created", [:])
@@ -163,8 +167,8 @@ extension AnalyticsEvent {
         case let .onboardingTapHintDismissed(reason):
             return ("onboarding_tap_hint_dismissed", ["reason": reason])
 
-        case let .reviewPromptRequested(trigger):
-            return ("review_prompt_requested", ["trigger": trigger])
+        case let .reviewPromptRequested(trigger, studyDays):
+            return ("review_prompt_requested", ["trigger": trigger, "study_days": studyDays])
         }
     }
 }

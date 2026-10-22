@@ -161,7 +161,7 @@ protocol AnalyticsService: Sendable {
 | `feature_adopted_cross_reference` | cross-references | `cross_reference_views_count` |
 | `feature_adopted_parallel_translation` | parallel translations | `parallel_translation_views_count` |
 
-Перші три — воронка word-study (original → lexicon → concordance). Дискретні **поза** цією моделлю (бо рідкісні/цінні): `translation_switched(from,to)`, `note_created`, `highlight_created(color)`, `bookmark_created`. Деталі call-sites — у Slice 3 Work Order.
+Перші три — воронка word-study (original → lexicon → concordance). Дискретні **поза** цією моделлю (бо рідкісні/цінні): `translation_switched(from,to,source)` (source: `picker` | `search` — відкриття результату пошуку в іншому перекладі, 2026-10-22), `note_created`, `highlight_created(color)`, `bookmark_created`, `review_prompt_requested(trigger,study_days)` (pos-012, 2026-10-22). Деталі call-sites — у Slice 3 Work Order.
 
 #### ~~Feature adoption (v1, СКАСОВАНО — лишено для історії)~~
 > Початковий per-tap драфт (`original_opened`/`study_tab_switched`/`strongs_viewed`/`commentary_opened`/`crossref_opened`/`word_usage_opened`) **скасовано** на користь моделі ADR-022 вище — занадто великий обсяг подій.

@@ -126,6 +126,12 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
     @MainActor
     func handleBackground() {
         _backgroundedAt = Date()
+        // pos-012: MSS is otherwise only checked when the study sheet closes, so a session
+        // that reaches 60 s AFTER the last dismissal would not count as a study day.
+        // Record here too (idempotent per day). Prompting stays tied to sheet dismissal.
+        if isMeaningfulSessionReached {
+            ReviewPromptPolicy().recordStudyDay()
+        }
         _pendingFlushTask?.cancel()
         // iOS suspends the app shortly after backgrounding, so a plain Task.sleep
         // would never fire. A background-task assertion buys runtime so the grace

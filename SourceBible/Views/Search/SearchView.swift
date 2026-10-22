@@ -758,7 +758,10 @@ struct SearchView: View {
                     Spacer()
                     // The translation this query was searched in — tapping re-runs it
                     // there, so the row must say where (same id as the filter chip).
-                    if let tid = recent.translationId {
+                    // A translation this build doesn't ship (NASB after a TestFlight →
+                    // App Store update) gets no label: tapping runs in the current filter.
+                    if let tid = recent.translationId,
+                       readerVM.availableTranslations.contains(where: { $0.id == tid }) {
                         Text(verbatim: tid)
                             .font(.body)   // trailing value, as in Menu's LabeledContent
                             .foregroundStyle(.secondary)
@@ -898,7 +901,7 @@ struct SearchView: View {
         let searchTid = effectiveTranslationId
         if searchTid != readerVM.currentTranslation.id,
            let translation = readerVM.availableTranslations.first(where: { $0.id == searchTid }) {
-            readerVM.selectTranslation(translation)
+            readerVM.selectTranslation(translation, source: "search")
         }
         router.requestNavigation(to: result.id)
     }

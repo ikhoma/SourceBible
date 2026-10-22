@@ -23,7 +23,7 @@
                 <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
             </array>
         </dict>
-        <!-- Product interaction: feature usage events (beta only) -->
+        <!-- Product interaction: feature usage events (all builds, after consent) -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
             <string>NSPrivacyCollectedDataTypeProductInteraction</string>
@@ -38,7 +38,18 @@
         </dict>
     </array>
 
+    <!-- Required-reason APIs. UserDefaults/@AppStorage: settings, reading position,
+         consent and rating-prompt state, read and written by this app only. -->
     <key>NSPrivacyAccessedAPITypes</key>
-    <array/>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
