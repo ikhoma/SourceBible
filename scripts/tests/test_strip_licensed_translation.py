@@ -155,5 +155,70 @@ class Strip(unittest.TestCase):
             sys.argv = argv
 
 
+    # ── кілька перекладів за один прохід (NASB + GRM в App Store-збірці, 2026-10-26) ──
+    # UBIO тут — дублер GRM (український, синодальна нумерація). У фікстурі виноски має
+    # лише ASV, тож додаємо одну у формі, яку пише build_db для GRM (маркер `[1]`), —
+    # щоб покрити рядок `footnote` у DELETES. (ASV як дублер не годиться: у Бут 1 він
+    # майже дослівно = KJV, зразків для байтової перевірки не набереться.)
+    def add_ubio_footnote(self):
+        con = sqlite3.connect(self.src)
+        con.execute("INSERT INTO footnote (translation, book_id, chapter_from, verse_from, "
+                    "chapter_to, verse_to, marker, text) VALUES "
+                    "('UBIO','GEN',1,1,1,1,'[1]','Примітка перекладача до Бут 1:1')")
+        con.commit()
+        con.close()
+
+    def test_strips_several_translations_in_one_pass(self):
+        self.add_ubio_footnote()
+        s = self.ro(self.src)
+        gone = ("NASB", "UBIO")
+        before = {t: dict(s.execute(f'SELECT "{c}", COUNT(*) FROM "{t}" GROUP BY 1'))
+                  for t, c in M.DELETES}
+        self.assertGreater(before["footnote"].get("UBIO", 0), 0)
+        M.strip(self.src, self.dst, list(gone))
+        d = self.ro(self.dst)
+        for t, c in M.DELETES:
+            after = dict(d.execute(f'SELECT "{c}", COUNT(*) FROM "{t}" GROUP BY 1'))
+            for tid in gone:
+                self.assertNotIn(tid, after, f"{t} still has {tid}")
+            for tid, n in before[t].items():
+                if tid not in gone:
+                    self.assertEqual(after.get(tid), n, f"{t}[{tid}] changed")
+        blob = self.dst.read_bytes()
+        for tid in gone:
+            self.assertNotIn(f"{tid}|".encode(), blob)
+
+    def test_duplicate_or_empty_translation_list_fails(self):
+        for bad in (["NASB", "NASB"], []):
+            with self.assertRaises(SystemExit):
+                M.strip(self.src, self.dst, bad)
+            self.assertFalse(self.dst.exists())
+
+    def test_cli_translation_is_repeatable(self):
+        argv = sys.argv
+        sys.argv = ["x", str(self.src), str(self.dst), "--translation", "NASB", "--translation", "UBIO"]
+        try:
+            self.assertEqual(M.main(), 0)
+        finally:
+            sys.argv = argv
+        ids = {r[0] for r in self.ro(self.dst).execute("SELECT id FROM translation")}
+        self.assertEqual(ids & {"NASB", "UBIO"}, set())
+
+
+class AppStorePhase(unittest.TestCase):
+    """Build-фаза AppStore мусить вирізати КОЖЕН переклад, який не можна шипити.
+    Скрипт уже вмів кілька id, а фаза передавала лише NASB — Громов поїхав би в App Store
+    (зловлено ревʼю 2026-10-26). Тест читає сам project.pbxproj."""
+    MUST_STRIP = {"NASB", "GRM"}
+
+    def test_phase_passes_every_unlicensed_translation(self):
+        import re
+        pbx = (HERE.parent.parent / "SourceBible.xcodeproj" / "project.pbxproj").read_text()
+        calls = [line for line in pbx.split("\\n") if "strip_licensed_translation.py" in line
+                 and not line.lstrip().startswith("#") and "$PY" in line]
+        self.assertEqual(len(calls), 1, f"expected one strip call in the phase, got {calls}")
+        got = set(re.findall(r"--translation\s+([A-Z]+)", calls[0]))
+        self.assertEqual(got, self.MUST_STRIP)
+
 if __name__ == "__main__":
     unittest.main()

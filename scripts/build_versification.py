@@ -129,6 +129,10 @@ SCHEME_CANDIDATES = {
     # Верифікація «за структурою = RST» — поки вручну (ADR-029). NB: sanity-gate нижче
     # видасть «O2 ненадійний» для UBIO — це очікувано, не помилка.
     "UBIO": ["rso.json", "org.json", "eng.json"],
+    # Громов (GRM): синодальна нумерація, як UBIO (прапорець russian_numbering у модулі
+    # не стоїть, але він бреше — plan-uk-interlinear-glosses.md). Тегів Strong's немає
+    # (примітки «слово» знімає build_db.py), тож O2 не працює — так само, як для UBIO.
+    "GRM":  ["rso.json", "org.json", "eng.json"],
 }
 
 OT_BOOKS = {

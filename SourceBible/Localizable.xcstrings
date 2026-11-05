@@ -1075,9 +1075,6 @@
         }
       }
     },
-    "Effective 17 July 2026" : {
-
-    },
     "entries.filter.a11y" : {
       "localizations" : {
         "en" : {
@@ -1611,6 +1608,9 @@
           }
         }
       }
+    },
+    "Last updated 22 October 2026" : {
+
     },
     "menu.about" : {
       "localizations" : {
@@ -5785,10 +5785,10 @@
         }
       }
     },
-    "Source Bible is built to keep your data private. Most of what you create stays on your device, and analytics are collected only if you agree to them." : {
+    "Source Bible is built to keep your data private. Most of what you create stays on your device. Anonymous usage statistics are optional: in the EU/EEA and the UK they are off until you turn them on, elsewhere they are on by default, and you can turn them off at any time." : {
 
     },
-    "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої, а аналітика збирається лише за вашою згодою." : {
+    "Source Bible створено так, щоб зберігати ваші дані приватними. Більшість того, що ви створюєте, залишається на вашому пристрої. Анонімна статистика — за бажанням: в ЄС/ЄЕЗ і Великій Британії вона вимкнена, доки ви її не ввімкнете, в інших країнах увімкнена за замовчуванням, і вимкнути її можна будь-коли." : {
 
     },
     "Sources & licenses" : {
@@ -7075,6 +7075,9 @@
     "Наша місія — зробити глибоке вивчення Біблії простим, зрозумілим і доступним. Кожен вірш у Source Bible відкриває оригінальний єврейський і грецький текст, що стоїть за ним, — слово за словом, із морфологією, лексиконом Стронга, конкордансом, перехресними посиланнями і століттями коментарів на відстані одного дотику. Ми прагнемо зробити цю глибину доступною кожному, хто хоче придивитися ближче, — а не лише тим, хто має богословську освіту." : {
 
     },
+    "Оновлено 22 жовтня 2026" : {
+
+    },
     "Підтримати Source Bible" : {
 
     },
@@ -7084,8 +7087,41 @@
     "Тексти мовами оригіналу взято з Ленінградського кодексу (Westminster Leningrad Codex) для єврейського Старого Заповіту та видання Nestle 1904 для грецького Нового Заповіту, з послівним аналізом від проєкту Macula." : {
 
     },
-    "Чинна з 17 липня 2026" : {
-
+    "reader.translation_picker.strongs_badge" : {
+      "comment" : "Badge in the translation picker: this translation is tagged with Strong's numbers",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strong"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стронг"
+          }
+        }
+      }
+    },
+    "reader.translation_picker.strongs_badge.a11y" : {
+      "comment" : "VoiceOver label for the Strong's badge in the translation picker",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tagged with Strong's numbers"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розмічено номерами Стронга"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

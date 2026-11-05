@@ -138,9 +138,13 @@ CREATE TABLE IF NOT EXISTS book (
 );
 
 CREATE TABLE IF NOT EXISTS translation (
-    id       TEXT PRIMARY KEY,
-    name     TEXT,
-    language TEXT
+    id          TEXT PRIMARY KEY,
+    name        TEXT,
+    language    TEXT,
+    -- 1 = текст розмічено номерами Стронга (тапи по словах, мітка «Стронг» у пікері).
+    -- Рахує mark_strongs_translations() за ДАНИМИ, не за прапорцем модуля
+    -- (у Громова strong_numbers=true, а розмітки немає — заміряно 2026-10-26).
+    has_strongs INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS verse (
@@ -1621,6 +1625,12 @@ TRANSLATIONS = [
     ("RST",  "Синодальний переклад",        "ru", DATA_DIR / "RST+.zip"),
     # Без Strong's (strong_numbers=false) → «Оригінал» працює через verse_org, word-study ні.
     ("UBIO", "Біблія в пер. Івана Огієнка", "uk", DATA_DIR / "UBIO'88.zip"),
+    # Громов («Біблія або Вічне Євангеліє», © V.O. Gromov 2018–2019, All rights reserved;
+    # дозволено лише цитування). ⛔ ЛИШЕ TestFlight: з App Store-збірки вирізається кроком
+    # «Strip … (AppStore only)» (scripts/strip_licensed_translation.py --translation GRM).
+    # Прапорець модуля strong_numbers=true оманливий — тегування немає, лише 1 463 примітки
+    # «яке слово оригіналу = "слово"» (див. SOURCE_MARKUP_RULES). Тому як UBIO: текст + verse_org.
+    ("GRM",  "Біблія в пер. В. Громова",    "uk", DATA_DIR / "Gromov.zip"),
 ]
 
 def _detect_sqlite_schema(con):
@@ -1685,9 +1695,17 @@ def _open_mybible_sqlite(path):
     path = Path(path)
     if path.suffix.lower() == ".zip":
         with zipfile.ZipFile(path) as z:
-            # Pick the main bible file (not commentaries, not mappings)
-            candidates = [n for n in z.namelist()
-                          if n.lower().endswith(".sqlite3") and "comment" not in n.lower()]
+            # Pick the main bible file. MyBible companions are `<MOD>.<kind>.SQLite3`
+            # (commentaries, crossreferences, dictionary, …); the module itself is
+            # `<MOD>.SQLite3` — i.e. no dot left in the basename once `.SQLite3` is cut.
+            # The old filter excluded only "comment", so Gromov.zip (with
+            # GRM.crossreferences.SQLite3 listed first) opened the cross-ref file.
+            sq = [n for n in z.namelist() if n.lower().endswith(".sqlite3")]
+            candidates = [n for n in sq if "." not in Path(n).name[:-len(".sqlite3")]]
+            if len(candidates) > 1:
+                raise RuntimeError(f"Ambiguous main module in {path.name}: {candidates}")
+            if not candidates:
+                candidates = [n for n in sq if "comment" not in n.lower()]
             if not candidates:
                 candidates = [n for n in z.namelist() if n.lower().endswith(".sqlite3")]
             if not candidates:
@@ -1719,6 +1737,60 @@ SOURCE_TEXT_FIXES = {
     "UBIO|GEN|1|2": ("ширяв над поверхнею води.<f>[3]</f><f>[4]</f>",
                      "ширяв над поверхнею<f>[3]</f> води.<f>[4]</f>"),
 }
+
+
+# Кураторська нормалізація РОЗМІТКИ модуля — правила на весь переклад, не на окремий вірш.
+# translation → [(regex, заміна, очікувана к-сть замін на весь модуль, чому)].
+# Кількість звіряється точно: джерело змінилось → збірка падає, правило переглядаємо руками.
+SOURCE_MARKUP_RULES = {
+    "GRM": [
+        # `слово<n>D</n><S>1697</S>` — Громов позначає, ЯКЕ слово оригіналу перекладено як
+        # «слово»: D=דָּבָר H1697 (1 328), R=ῥῆμα G4487 (68), G=γραφή G1124 (55), L=λόγος G3056 (12).
+        # Це примітка перекладача, не тегування: лишити — і рідер зробить «слово» клікабельним
+        # на 4 номери з усієї Біблії, а `<n>D</n>` потрапить у text_clean як «(D)». Заміряно 2026-10-26.
+        (re.compile(r'<n>[DRGL]</n><S>\d+</S>'), '', 1463, "примітка «слово»"),
+        # Якір виноски `(1)` → `[1]`: застосунок зіставляє якір з `footnote.marker` ДОСЛІВНО,
+        # а решта перекладів (ASV/RST/UBIO) пише `[N]`. Маркер у таблиці приміток нормалізує
+        # import_footnotes (FOOTNOTE_MARKER_BRACKETS).
+        (re.compile(r'<f>\((\d+)\)</f>'), r'<f>[\1]</f>', 2288, "якір виноски"),
+    ],
+}
+# Чого після правил у тексті перекладу не має лишитись (інакше правило щось пропустило).
+SOURCE_MARKUP_FORBIDDEN = {"GRM": ["<S>", "<n>", "<f>("]}
+# Переклади, чий commentaries-модуль пише маркер виноски без дужок (`1`), а якір ми
+# нормалізували до `[1]` (SOURCE_MARKUP_RULES).
+FOOTNOTE_MARKER_BRACKETS = {"GRM"}
+
+
+# ── Регістр назв книг ────────────────────────────────────────────────────────
+# Громов пише long_name капсом («ПОСЛАННЯ ДО РИМЛЯН»). Приводимо до регістру речення, як
+# в Огієнка («До римлян», «Повторення Закону»): велика — перша літера назви й власні
+# імена; етноніми (римлян, євреїв) — малою, за чинним правописом.
+_UK_BOOK_PROPER = {
+    "ЗАКОНУ", "ІСУСА", "НАВИНА", "РУФ", "ЄРЕМІЇ", "МАТВІЯ", "МАРКА", "ЛУКИ", "ІОАННА",
+    "ЯКОВА", "ПЕТРА", "ІУДИ", "ТИМОФІЯ", "ТИТА", "ФИЛИМОНА",
+}
+
+
+def _uk_book_sentence_case(name: str) -> str:
+    """'ПЕРШЕ ПОСЛАННЯ ДО КОРИНФЯН' → 'Перше послання до коринфян';
+    '1 ЦАРСТВ' → '1 Царств'; 'КНИГА ІСУСА НАВИНА' → 'Книга Ісуса Навина'.
+    Назва не капсом лишається як є — правило не чіпає вже нормальний текст."""
+    if name != name.upper():
+        return name
+    out, first = [], True
+    for w in name.split():
+        if w in _UK_BOOK_PROPER or (first and any(ch.isalpha() for ch in w)):
+            w = w[:1] + w[1:].lower()
+        else:
+            w = w.lower()
+        if any(ch.isalpha() for ch in w):
+            first = False
+        out.append(w)
+    return " ".join(out)
+
+
+BOOK_NAME_CASE = {"GRM": _uk_book_sentence_case}
 
 
 def _clean_verse(text):
@@ -1852,16 +1924,26 @@ def import_translations(cur):
         try:
             tname, bcol, ccol, vcol, tcol = _detect_sqlite_schema(src)
         except RuntimeError as e:
-            print(f"    ERROR schema: {e}")
+            # Fatal: the `translation` row is already inserted — continuing would ship an
+            # EMPTY translation in the picker (caught 2026-10-26 on Gromov.zip).
             src.close()
             if tmp_path:
                 os.unlink(tmp_path)
-            continue
+            raise SystemExit(f"✗ [{tid}] schema: {e}")
 
         book_mapping = _build_book_mapping(src, tname, bcol)
 
         # Extract and store translation-native book names
         book_name_rows = _extract_book_names(src, book_mapping)
+        case_fix = BOOK_NAME_CASE.get(tid)
+        if case_fix:
+            book_name_rows = [(osis, case_fix(long), short, order)
+                              for (osis, long, short, order) in book_name_rows]
+            shouting = [long for (_o, long, _s, _n) in book_name_rows
+                        if any(len(w) > 1 and w.isupper() for w in long.split())]
+            if shouting:
+                raise SystemExit(f"✗ BOOK_NAME_CASE {tid}: лишився капс у {shouting[:3]} — "
+                                 f"нове слово? Додай у _UK_BOOK_PROPER або перевір правило.")
         if book_name_rows:
             cur.executemany(
                 "INSERT OR REPLACE INTO book_name "
@@ -1889,12 +1971,17 @@ def import_translations(cur):
 
         rows = []
         fixes_applied: set[str] = set()
+        markup_rules = SOURCE_MARKUP_RULES.get(tid, [])
+        markup_counts = [0] * len(markup_rules)
         for row in src.execute(f'SELECT "{bcol}","{ccol}","{vcol}","{tcol}" FROM "{tname}"'):
             osis = book_mapping.get(int(row[0]))
             if not osis:
                 continue
             ch, vs = int(row[1]), int(row[2])
             text = _clean_verse(row[3] or "")
+            for i, (rx, repl, _n, _why) in enumerate(markup_rules):
+                text, k = rx.subn(repl, text)
+                markup_counts[i] += k
             if not text:
                 continue
             vid = f"{tid}|{osis}|{ch}|{vs}"
@@ -1906,6 +1993,15 @@ def import_translations(cur):
                 text = text.replace(fix[0], fix[1])
                 fixes_applied.add(vid)
             rows.append((vid, tid, osis, ch, vs, text, _search_text(text)))
+        for (rx, _r, want, why), got in zip(markup_rules, markup_counts):
+            if got != want:
+                raise SystemExit(f"✗ SOURCE_MARKUP_RULES {tid} ({why}): очікувано {want} замін, "
+                                 f"отримано {got} — джерело змінилось, переглянь правило {rx.pattern!r}.")
+        for bad in SOURCE_MARKUP_FORBIDDEN.get(tid, []):
+            left = [r[0] for r in rows if bad in r[5]]
+            if left:
+                raise SystemExit(f"✗ SOURCE_MARKUP_FORBIDDEN {tid}: «{bad}» лишився у {len(left)} "
+                                 f"віршах, перший {left[0]}.")
         missing = [k for k in SOURCE_TEXT_FIXES if k.startswith(f"{tid}|") and k not in fixes_applied]
         if missing:
             raise SystemExit(f"✗ SOURCE_TEXT_FIXES: вірш(і) {missing} відсутні в джерелі {tid}.")
@@ -1931,6 +2027,36 @@ def import_translations(cur):
 #   book_number, chapter_number_from, verse_number_from,
 #   chapter_number_to, verse_number_to, marker, text
 # `marker` like '[1]' matches <f>[1]</f> anchors in verse.text.
+
+# Еталони для mark_strongs_translations: відомі відповіді (CLAUDE.md «Перевірки — у код»).
+# Перевіряються лише для перекладів, що є в базі (App Store-копія без NASB/GRM — окремо).
+STRONGS_EXPECTED = {"KJV": 1, "ASV": 1, "NASB": 1, "RST": 1, "UBIO": 0, "GRM": 0}
+STRONGS_MIN_SHARE = 0.99   # заміряно 2026-10-27: розмічені 99.96–100%, нерозмічені — рівно 0
+
+
+def mark_strongs_translations(cur):
+    """translation.has_strongs = 1, якщо ≥99% віршів містять `<S>`; 0, якщо жоден.
+    Будь-що посередині — збірка падає: часткова розмітка = мітка «Стронг» збреше.
+    Рахується ПІСЛЯ SOURCE_MARKUP_RULES (у GRM `<S>` при «слово» вже знято)."""
+    print("\n[5b] translation.has_strongs ...")
+    rows = cur.execute("SELECT translation, COUNT(*), SUM(text LIKE '%<S>%') "
+                       "FROM verse GROUP BY translation").fetchall()
+    for tid, total, tagged in rows:
+        share = (tagged or 0) / total
+        if share >= STRONGS_MIN_SHARE:
+            flag = 1
+        elif not tagged:
+            flag = 0
+        else:
+            raise SystemExit(f"✗ has_strongs {tid}: {tagged:,}/{total:,} віршів ({share:.1%}) з <S> — "
+                             f"ні повна розмітка, ні відсутня. Розберись із джерелом.")
+        want = STRONGS_EXPECTED.get(tid)
+        if want is not None and flag != want:
+            raise SystemExit(f"✗ has_strongs {tid}: очікувано {want}, виміряно {flag} "
+                             f"({tagged:,}/{total:,}).")
+        cur.execute("UPDATE translation SET has_strongs = ? WHERE id = ?", (flag, tid))
+        print(f"  {tid:5} {flag}  ({tagged or 0:,}/{total:,} = {share:.1%})")
+
 
 def import_footnotes(cur):
     print("\n[6/7] Importing footnotes from .commentaries files...")
@@ -1961,10 +2087,24 @@ def import_footnotes(cur):
             continue
 
         rows = []
+        no_verse = 0
         for (book_num, ch_from, vs_from, ch_to, vs_to, marker, text) in comp_rows:
             osis = book_mapping.get(int(book_num))
             if not osis or not text:
                 continue
+            # Примітка до ГЛАВИ без вірша (GRM: 141 шт., «За англійською нумерацією N» у
+            # Псалтирі). `footnote` ключується віршем, а якоря `<f>` у тексті для неї немає —
+            # показати нема де. Рахуємо, щоб пропуск був видимий.
+            if ch_from is None or vs_from is None:
+                no_verse += 1
+                continue
+            # MyBible дозволяє NULL у *_to (= той самий вірш) — у GRM таких 2 407 з 2 409.
+            if ch_to is None:
+                ch_to = ch_from
+            if vs_to is None:
+                vs_to = vs_from
+            if tid in FOOTNOTE_MARKER_BRACKETS and marker and str(marker).isdigit():
+                marker = f"[{marker}]"
             rows.append((tid, osis,
                          int(ch_from), int(vs_from),
                          int(ch_to),   int(vs_to),
@@ -1976,7 +2116,8 @@ def import_footnotes(cur):
             "VALUES (?,?,?,?,?,?,?,?)",
             rows
         )
-        print(f"  [{tid}] {len(rows)} footnotes imported.")
+        print(f"  [{tid}] {len(rows)} footnotes imported"
+              + (f" ({no_verse} chapter-level notes without a verse skipped)." if no_verse else "."))
         total += len(rows)
 
     print(f"  Total: {total} footnotes.")
@@ -2848,6 +2989,7 @@ def main():
     resolve_tbesh_definitions(cur); con.commit()  # bug-057: варіант/рядок TBESH за глосами Macula (після Macula!)
     _apply_word_table_xlit_fallback(cur); con.commit()          # fills xlit_simple/short_def for ~507 sub-entry stubs not in TBESH
     import_translations(cur);            con.commit()
+    mark_strongs_translations(cur);      con.commit()   # translation.has_strongs — за даними
     import_footnotes(cur);          con.commit()
     import_cross_references(cur);   con.commit()
     build_verse_fts(cur, con);      con.commit()   # FTS5 index for text search

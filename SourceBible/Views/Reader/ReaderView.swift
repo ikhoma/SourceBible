@@ -819,7 +819,10 @@ struct TranslationPickerView: View {
             List(vm.availableTranslations) { t in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(t.name).font(.body)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(t.name).font(.body)
+                            if t.hasStrongs { StrongsBadge() }
+                        }
                         Text(languageLabel(for: t.language)).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -850,6 +853,44 @@ struct TranslationPickerView: View {
         case "ru": return "lang.russian"
         default:   return "lang.english"
         }
+    }
+}
+
+/// Мітка «Strong / Стронг» біля перекладу з розміткою номерами Стронга.
+/// Тонована капсула акцентного кольору: текст `.appBlue`, фон `.appBlue` 15%.
+/// Форма — `Capsule()` (системна), без хардкодного радіуса.
+///
+/// Вертикально: центр капсули — на центрі ВЕЛИКИХ літер назви перекладу (`.body`), а не
+/// на її базовій лінії. При простому `.firstTextBaseline` базові лінії caption2 і body
+/// збігались, і капсула з відступами звисала на ~2.2 pt нижче (заміряно на скриншоті
+/// @3x 2026-11-05: +6.5 px у KJV/NASB/ASV). Висота великих літер береться зі шрифту
+/// `.body` для поточного Dynamic Type, тож зсув масштабується разом із текстом.
+/// Ключ — `.firstTextBaseline`, як у HStack пікера: довга назва в два рядки лишає мітку
+/// біля першого рядка.
+private struct StrongsBadge: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var titleCapHeight: CGFloat {
+        UIFont.preferredFont(
+            forTextStyle: .body,
+            compatibleWith: UITraitCollection(
+                preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
+        ).capHeight
+    }
+
+    var body: some View {
+        let capHeight = titleCapHeight
+        Text("reader.translation_picker.strongs_badge")
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.appBlue)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.appBlue.opacity(0.15), in: Capsule())
+            .fixedSize()
+            .alignmentGuide(.firstTextBaseline) { d in
+                d[VerticalAlignment.center] + capHeight / 2
+            }
+            .accessibilityLabel(Text("reader.translation_picker.strongs_badge.a11y"))
     }
 }
 

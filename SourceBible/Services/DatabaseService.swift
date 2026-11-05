@@ -162,13 +162,21 @@ final class DatabaseService: @unchecked Sendable {
     func loadTranslations() -> [Translation] {
         guard isAvailable else { return [Translation.kjv] }
         var translations: [Translation] = []
+        // `has_strongs` з'явилась 2026-10-27. Стара база без колонки не мусить лишити
+        // пікер порожнім (prepare впав би) — тоді мітки просто немає, до перезбірки.
+        var hasFlag = false
+        query("SELECT 1 FROM pragma_table_info('translation') WHERE name = 'has_strongs'") { _ in
+            hasFlag = true
+        }
+        let strongsCol = hasFlag ? "has_strongs" : "0"
         // Синодальний переклад (RST) завжди останній у списку, незалежно від id;
         // решта — за id, як і раніше.
-        query("SELECT id, name, language FROM translation ORDER BY (id = 'RST'), id") { stmt in
+        query("SELECT id, name, language, \(strongsCol) FROM translation ORDER BY (id = 'RST'), id") { stmt in
             translations.append(Translation(
-                id:       string(stmt, 0),
-                name:     string(stmt, 1),
-                language: string(stmt, 2)
+                id:         string(stmt, 0),
+                name:       string(stmt, 1),
+                language:   string(stmt, 2),
+                hasStrongs: sqlite3_column_int(stmt, 3) != 0
             ))
         }
         return translations

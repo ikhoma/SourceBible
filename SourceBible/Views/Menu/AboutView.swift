@@ -154,6 +154,22 @@ struct AboutView: View {
         let items: [String]
     }
 
+    /// Переклади, які їдуть лише в TestFlight: з App Store-бази їх вирізає build-фаза
+    /// «Strip NASB (AppStore only)» (`strip_licensed_translation.py`). Атрибуція — під тим
+    /// самим `APPSTORE`, щоб App Store-збірка не згадувала текст, якого в ній немає.
+    /// NASB тут свідомо немає (ліцензії немає взагалі — нема чого атрибутувати).
+    private var testFlightOnlyTranslationCredits: [String] {
+        #if APPSTORE
+        return []
+        #else
+        // Громов — © усі права захищено, автор дозволяє лише цитування; в TestFlight за
+        // рішенням Івана 2026-10-26 (внутрішнє тестування).
+        return [uk
+            ? "Біблія або Вічне Євангеліє — український переклад В. О. Громова — © V. O. Gromov, 2018–2019, усі права захищено · лише в тестовій збірці"
+            : "Bible or the Eternal Gospel — Ukrainian translation by V. O. Gromov — © V. O. Gromov, 2018–2019, all rights reserved · test build only"]
+        #endif
+    }
+
     private var licenseGroups: [LicenseGroup] {
         if uk {
             return [
@@ -186,7 +202,7 @@ struct AboutView: View {
                     // ADR-042: CC BY 4.0 вимагає назвати джерела й позначити зміни (LICENSE.md OpenBible).
                     "Вирівнювання ASV з оригіналом — OpenBible.info, на основі MACULA (Biblica), SBLGNT (SBL і Logos), SBLGNT-TEI (J. J. McCollum), OpenScriptures Hebrew Bible, Westminster Hebrew Syntax (Groves Center), Cherith Glosses — CC BY 4.0 · змінено: теги Стронга зведено до головних слів",
                     "Синодальний переклад (RST) — суспільне надбання",
-                ]),
+                ] + testFlightOnlyTranslationCredits),
                 LicenseGroup(title: "Коментарі", items: [
                     "Жан Кальвін, Коментарі — суспільне надбання",
                     "Метью Генрі, Коментар на всю Біблію — суспільне надбання",
@@ -242,7 +258,7 @@ struct AboutView: View {
                 // ADR-042: CC BY 4.0 requires naming the sources and indicating changes (OpenBible LICENSE.md).
                 "ASV interlinear alignment — OpenBible.info, derived from MACULA (Biblica), SBLGNT (SBL & Logos), SBLGNT-TEI (J. J. McCollum), OpenScriptures Hebrew Bible, Westminster Hebrew Syntax (Groves Center), Cherith Glosses — CC BY 4.0 · modified: Strong's tags reduced to head words",
                 "Russian Synodal Translation (RST) — Public Domain",
-            ]),
+            ] + testFlightOnlyTranslationCredits),
             LicenseGroup(title: "Commentaries", items: [
                 "John Calvin, Commentaries — Public Domain",
                 "Matthew Henry, Commentary on the Whole Bible — Public Domain",

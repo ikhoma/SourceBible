@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Strip one licensed translation (default: NASB) out of a COPY of sourcebible.db.
+Strip licensed translations (default: NASB) out of a COPY of sourcebible.db.
 
-Why: the App Store build must not carry NASB (no licence) — not hidden, ABSENT from the
-bundle. TestFlight (Release) keeps the full DB. Run by the "Strip NASB (AppStore only)"
+Why: the App Store build must not carry NASB (no licence) or GRM (Gromov, © all rights
+reserved, quotation only — TestFlight-only by Ivan's decision 2026-10-26) — not hidden,
+ABSENT from the bundle. TestFlight (Release) keeps the full DB. Run by the "Strip NASB (AppStore only)"
 build phase against the DB that Copy Bundle Resources already put into the .app;
 can also be run by hand.
 
-    python3 scripts/strip_licensed_translation.py SRC.db DST.db [--translation NASB]
+    python3 scripts/strip_licensed_translation.py SRC.db DST.db [--translation NASB --translation GRM]
 
 SRC is opened read-only and never modified. DST is written atomically (tmp + rename).
 
@@ -46,6 +47,9 @@ with contextlib.redirect_stdout(io.StringIO()):
 # fails the build instead of shipping.
 DELETES = [
     ("verse", "translation"),
+    # NASB has no translator footnotes, GRM has 2 268 — without this row the GRM strip
+    # fails on check_no_references (that is the guard working, not a bug).
+    ("footnote", "translation"),
     ("verse_org", "translation"),
     ("book_name", "translation_id"),
     ("translation", "id"),
@@ -73,12 +77,19 @@ def unique_text_samples(cur, tid: str) -> list[str]:
     index, and when SQLite drives that query through idx_verse_loc it evaluates the
     subquery for every row before ORDER BY/LIMIT — 31k × 155k comparisons. Measured
     2026-10-16: seconds in the Linux sandbox, a hang of 15+ min in the Xcode build phase."""
-    others = {t for (t,) in cur.execute(
-        "SELECT text_clean FROM verse WHERE translation <> ?", (tid,))}
+    # Not just "not equal to" another verse — "not a SUBSTRING of" any text that stays:
+    # a stripped verse can be a prefix of another translation's text_clean (KJV appends its
+    # footnote to the same wording as ASV), and the byte scan would then fail a correct
+    # strip. Caught 2026-10-26 by the two-translation test. One joined haystack, `in` per
+    # candidate — only ~N_TEXT_SAMPLES searches, so linear scans are cheap.
+    haystack = "\x00".join(
+        x for row in cur.execute(
+            "SELECT text, text_clean FROM verse WHERE translation <> ?", (tid,))
+        for x in row if x)
     out = []
     for (t,) in cur.execute(
             "SELECT text_clean FROM verse WHERE translation = ? ORDER BY rowid", (tid,)):
-        if len(t) > 60 and t not in others:
+        if len(t) > 60 and t not in haystack:
             out.append(t)
             if len(out) == N_TEXT_SAMPLES:
                 break
@@ -111,7 +122,12 @@ def check_no_references(cur, tid: str) -> list[str]:
     return bad
 
 
-def strip(src: Path, dst: Path, tid: str) -> int:
+def strip(src: Path, dst: Path, tids) -> int:
+    """`tids` — one id or a list. All are removed from ONE copy: one backup, one FTS
+    rebuild, one VACUUM — a second pass would double a 400 MB copy+VACUUM in the build."""
+    tids = [tids] if isinstance(tids, str) else list(tids)
+    if not tids or len(set(tids)) != len(tids):
+        fail(f"translations must be non-empty and unique, got {tids}")
     if not src.exists():
         fail(f"source not found: {src}")
     tmp = dst.with_name(dst.name + ".strip-tmp")
@@ -128,21 +144,25 @@ def strip(src: Path, dst: Path, tid: str) -> int:
         con = sqlite3.connect(tmp)
         cur = con.cursor()
         present = {r[0] for r in cur.execute("SELECT id FROM translation")}
-        if tid not in present:
-            fail(f"{tid} is not in {src} (translations: {sorted(present)}) — wrong DB?")
+        for tid in tids:
+            if tid not in present:
+                fail(f"{tid} is not in {src} (translations: {sorted(present)}) — wrong DB?")
 
         before = counts_by_translation(cur)
         step("pick byte-scan samples")
-        samples = unique_text_samples(cur, tid)
-        if len(samples) < 5:
-            fail(f"only {len(samples)} unique {tid} verse texts found for the byte scan")
-        print(f"Stripping {tid}: " + ", ".join(
-            f"{t} {before[t].get(tid, 0):,}" for t in before))
+        samples: dict[str, list[str]] = {}
+        for tid in tids:
+            samples[tid] = unique_text_samples(cur, tid)
+            if len(samples[tid]) < 5:
+                fail(f"only {len(samples[tid])} unique {tid} verse texts found for the byte scan")
+            print(f"Stripping {tid}: " + ", ".join(
+                f"{t} {before[t].get(tid, 0):,}" for t in before))
 
         step("delete rows")
         cur.execute("PRAGMA journal_mode=DELETE")       # no -wal next to a bundled file
-        for table, col in DELETES:
-            cur.execute(f'DELETE FROM "{table}" WHERE "{col}" = ?', (tid,))
+        for tid in tids:
+            for table, col in DELETES:
+                cur.execute(f'DELETE FROM "{table}" WHERE "{col}" = ?', (tid,))
         # External-content FTS5: deleting from `verse` does NOT touch the index.
         step("rebuild FTS")
         cur.execute("INSERT INTO verse_fts(verse_fts) VALUES('rebuild')")
@@ -167,11 +187,12 @@ def strip(src: Path, dst: Path, tid: str) -> int:
         after = counts_by_translation(cur)
         for table in before:
             for t, n in before[table].items():
-                want = 0 if t == tid else n
+                want = 0 if t in tids else n
                 got = after[table].get(t, 0)
                 if got != want:
                     failures.append(f"{table}[{t}]: expected {want:,}, got {got:,}")
-        failures += check_no_references(cur, tid)
+        for tid in tids:
+            failures += check_no_references(cur, tid)
         fts_docs = cur.execute("SELECT COUNT(*) FROM verse_fts_docsize").fetchone()[0]
         n_verse = cur.execute("SELECT COUNT(*) FROM verse").fetchone()[0]
         if fts_docs != n_verse:
@@ -186,17 +207,19 @@ def strip(src: Path, dst: Path, tid: str) -> int:
         # ── raw byte scan of the finished file ─────────────────────────────────
         step("byte scan")
         blob = tmp.read_bytes()
-        needles = [f"{tid}|".encode(), f"'{tid}'".encode()] + [s.encode() for s in samples]
-        hits = [n[:50] for n in needles if n in blob]
-        if hits:
-            fail(f"{len(hits)} {tid} byte patterns survive in the file, e.g. {hits[:3]}")
+        for tid in tids:
+            needles = [f"{tid}|".encode(), f"'{tid}'".encode()] + [s.encode() for s in samples[tid]]
+            hits = [n[:50] for n in needles if n in blob]
+            if hits:
+                fail(f"{len(hits)} {tid} byte patterns survive in the file, e.g. {hits[:3]}")
 
         os.replace(tmp, dst)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
 
-    print(f"✓ {dst} — {tid} absent ({len(samples)} text samples + id byte-scanned), "
+    print(f"✓ {dst} — {', '.join(tids)} absent "
+          f"({sum(map(len, samples.values()))} text samples + ids byte-scanned), "
           f"{os.path.getsize(src)/1e6:.0f} MB → {os.path.getsize(dst)/1e6:.0f} MB")
     return 0
 
@@ -205,11 +228,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("src", type=Path)
     ap.add_argument("dst", type=Path)
-    ap.add_argument("--translation", default="NASB")
+    ap.add_argument("--translation", action="append", dest="translations",
+                    help="repeatable; default: NASB")
     a = ap.parse_args()
     if a.src.resolve() == a.dst.resolve():
         fail("SRC and DST must differ — the source DB is never modified")
-    return strip(a.src, a.dst, a.translation)
+    return strip(a.src, a.dst, a.translations or ["NASB"])
 
 
 if __name__ == "__main__":

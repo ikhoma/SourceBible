@@ -393,11 +393,14 @@ struct Translation: Identifiable, Hashable {
     let id: String
     let name: String
     let language: String
+    /// Текст розмічено номерами Стронга (`translation.has_strongs`, рахує build_db.py за
+    /// даними). Показує мітку «Стронг» у пікері перекладів.
+    var hasStrongs: Bool = false
 }
 
 extension Translation {
     // Populated at runtime from the database via DatabaseService.loadTranslations()
-    static let kjv = Translation(id: "KJV", name: "King James Version", language: "en")
+    static let kjv = Translation(id: "KJV", name: "King James Version", language: "en", hasStrongs: true)
     static let defaultTranslation = Translation.kjv
 }
 

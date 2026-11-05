@@ -48,7 +48,7 @@ VRS_DIR = "data/versification"
 # Яка схема застосовна до якого перекладу — дзеркалить SCHEMES у build_versification.py.
 SCHEME_FOR = {
     "KJV": "eng", "ASV": "eng", "NASB": "eng",
-    "RST": "rso", "UBIO": "rso",
+    "RST": "rso", "UBIO": "rso", "GRM": "rso",
 }
 
 # Еталони: ці вірші МУСЯТЬ мати рівно два org-таргети після фіксу.
