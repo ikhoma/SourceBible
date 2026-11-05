@@ -7,7 +7,9 @@
 // Adding a new cover image:
 //   1. Export the pre-composited 440×440 blue cover PNG from Figma (@3x = 1320×1320)
 //   2. Add to Assets.xcassets as "<usfmid>_header" (e.g. "exo_header")
-//   3. Add one entry to coverImages below — no other changes needed
+//   3. Convert it to HEIC: `python3 scripts/encode_cover_heic.py <imageset>/<id>.png`
+//      (PNG ≈3.2 MB in Assets.car, HEIC ≈0.7 MB; the bundle gate rejects PNG covers)
+//   4. Add one entry to coverImages below — no other changes needed
 // Some books intentionally SHARE one cover (minor prophets, letter groups): several
 // bookIds map to the same asset (e.g. HOS/JOL/OBA/ZEP/MAL → "hos_header").
 
@@ -40,7 +42,7 @@ enum BookCoverData {
 
     // MARK: - Image assets
     // Add entries here as new pre-composited cover images are added to xcassets.
-    // Naming: `<bookId lowercased>_header` with `<bookId lowercased>.png` inside
+    // Naming: `<bookId lowercased>_header` with `<bookId lowercased>.heic` inside
     // (genesis_header / psalms_header renamed to gen_/psa_ on 2026-10-16).
 
     private static let coverImages: [String: String] = [

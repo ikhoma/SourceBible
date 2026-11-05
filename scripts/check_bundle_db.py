@@ -15,7 +15,8 @@
      (word.lemma/language, порожні word.gloss/gloss_macula, idx_word_verse).
   4. Розмір: файл не більший за --max-mb.
   5. --app-dir: у теці застосунку немає побічних файлів, які синхронізована
-     група Xcode могла б потягти в бандл (*.bak, -wal/-shm, .fuse_hidden*).
+     група Xcode могла б потягти в бандл (*.bak, -wal/-shm, .fuse_hidden*), а
+     обкладинки книг — лише HEIC ≤ 1.2 МБ (encode_cover_heic.py).
 
 Читає базу лише в mode=ro&immutable=1 (без -shm/-wal поруч). Ненульовий код виходу.
 
@@ -117,6 +118,42 @@ def check(db_path: str, max_mb: float | None = None, kind: str = "core") -> list
     return problems
 
 
+# Обкладинки книг (encode_cover_heic.py, 2026-11-05): у бандлі лише HEIC ≤ 1.2 МБ. PNG з
+# Figma, покладений як є, займав ~3.2 МБ в Assets.car (усі 46 — 147 МБ).
+COVER_MAX_BYTES = 1_200_000
+
+
+def cover_problems(app_dir: str) -> list[str]:
+    """Обкладинки `<book>_header.imageset`: лише .heic, кожен ≤ COVER_MAX_BYTES, і саме той
+    файл, що названий у Contents.json."""
+    import json
+    problems: list[str] = []
+    for root, dirs, _files in os.walk(app_dir):
+        for d in dirs:
+            if not d.endswith("_header.imageset"):
+                continue
+            path = os.path.join(root, d)
+            names = sorted(f for f in os.listdir(path) if f != "Contents.json"
+                           and not f.startswith("."))
+            for f in names:
+                fp = os.path.join(path, f)
+                if not f.lower().endswith(".heic"):
+                    problems.append(f"{fp}: обкладинка не HEIC "
+                                    "(scripts/encode_cover_heic.py)")
+                elif os.path.getsize(fp) > COVER_MAX_BYTES:
+                    problems.append(f"{fp}: {os.path.getsize(fp):,} Б > {COVER_MAX_BYTES:,}")
+            try:
+                listed = [i["filename"] for i in json.load(
+                    open(os.path.join(path, "Contents.json")))["images"] if "filename" in i]
+            except (OSError, ValueError, KeyError) as e:
+                problems.append(f"{path}/Contents.json: {e}")
+                continue
+            for f in listed:
+                if f not in names:
+                    problems.append(f"{path}: Contents.json називає {f}, а файлу немає")
+    return sorted(problems)
+
+
 def stray_files(app_dir: str) -> list[str]:
     found = []
     for root, _dirs, files in os.walk(app_dir):
@@ -143,6 +180,7 @@ def main(argv: list[str] | None = None) -> int:
         if stray:
             problems.append("побічні файли в теці застосунку (потраплять у бандл): "
                             + ", ".join(stray))
+        problems.extend(cover_problems(args.app_dir))
     if problems:
         for p in problems:
             print(f"✗ {args.db}: {p}", file=sys.stderr)

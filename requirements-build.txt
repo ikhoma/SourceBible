@@ -7,3 +7,6 @@
 # python.org-інсталяторі прапорець нешкідливий, тож команда одна для обох.
 pymorphy3==2.0.6
 pymorphy3-dicts-ru==2.4.417150.4580142
+# Обкладинки книг PNG → HEIC (scripts/encode_cover_heic.py). Версію перевірено на PyPI 2026-11-05;
+# є колесо для Intel-Mac + Python 3.14 (macosx_10_15_x86_64, cp314). Тягне Pillow.
+pillow-heif==1.8.1
