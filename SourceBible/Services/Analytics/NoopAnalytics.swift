@@ -17,4 +17,5 @@ final class NoopAnalytics: AnalyticsService, Sendable {
     nonisolated func track(_ event: AnalyticsEvent) {}
     nonisolated func identify(distinctId: String) {}
     nonisolated func flush() {}
+    nonisolated func flush(completion: @escaping @Sendable () -> Void) { completion() }
 }

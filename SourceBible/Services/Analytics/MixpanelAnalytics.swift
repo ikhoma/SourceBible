@@ -123,6 +123,15 @@ final class MixpanelAnalytics: AnalyticsService, @unchecked Sendable {
         Mixpanel.mainInstance().flush()
     }
 
+    func flush(completion: @escaping @Sendable () -> Void) {
+        // Not started (consent OFF / empty token) → nothing is queued; finish at once.
+        guard started else { completion(); return }
+        // SDK 6.4.1: flush runs on its tracking queue AFTER any earlier track() calls,
+        // and calls `completion` on the main queue once the upload attempt finished
+        // (also when opted out). Measured from the 6.4.1 source, MixpanelInstance.swift.
+        Mixpanel.mainInstance().flush(completion: completion)
+    }
+
     // MARK: - Helpers
 
     /// Token for this build (PDR D5): DEBUG → dev; Release → beta (TestFlight) vs prod (App Store).

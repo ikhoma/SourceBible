@@ -55,7 +55,7 @@ Decision trail for Study-Mode scroll: atomic `StudyPinView` (verse's own backgro
 
 **Status:** Accepted
 
-Adoption = `feature_adopted_<feature>` once per session, **6 granular features 1:1 with UI surfaces** (original/lexicon/concordance/commentary/cross_reference/parallel_translation — original≠lexicon≠concordance, see glossary); first three form word-study funnel; depth = counters in `study_session_summary` (`<feature>_views_count`, `word_nav_count`, etc.) — NOT a discrete event per tap, to stay under free-tier (1M/mo); search/annotations/translation_switched kept discrete; `SessionTracker.recordFeatureUse(_:)` owns adoption + counters; loses per-view timestamps (acceptable). Supersedes the per-tap Slice 3 draft
+Adoption = `feature_adopted_<feature>` once per session, **6 granular features 1:1 with UI surfaces** (original/lexicon/concordance/commentary/cross_reference/parallel_translation — original≠lexicon≠concordance, see glossary); first three form word-study funnel; depth = counters in `study_session_summary` (`<feature>_views_count`, `word_nav_count`, etc.) — NOT a discrete event per tap, to stay under free-tier (1M/mo); search/annotations/translation_switched kept discrete; `SessionTracker.recordFeatureUse(_:)` owns adoption + counters; loses per-view timestamps (acceptable). Supersedes the per-tap Slice 3 draft | **Amendment 2026-11-05:** summary недорахувався (виміряно в проді) — `duration_s` тепер foreground-час (без ~30 с grace), явний upload одразу після summary, snapshot+відновлення після свайп-кілу (`recovered: true`), нова сесія при поверненні, якщо попередню вже зафлашено; дані до збірки не порівнювати за `duration_s`/MSS
 
 [← назад до INDEX](INDEX.md)
 
@@ -315,7 +315,7 @@ Autonomous brief for `TabView(.page)` chapter paging. ALLOW: reader container in
 
 **Status:** Draft
 
-Mixpanel in beta AND prod (D3 ✅), gated on consent toggle (`analyticsEnabled`, default ON) — NOT `#if BETA`; PreAuthIdentity distinct_id; event taxonomy (engagement/retention, search, feature adoption); per-session `study_session_summary` → MSS as tunable Mixpanel Custom Event; North Star = weekly users with ≥1 MSS; `PrivacyInfo.xcprivacy`; card/folder/tag events deferred to slice 4; Slice 1+2+3 Work Orders inside; swap MixpanelAnalytics→custom impl when free-tier insufficient (abstraction swap, no remote kill-switch); ⚠️ code still `#if BETA`-gated — needs gating change (Slice 1.5/2)
+Mixpanel in beta AND prod (D3 ✅), gated on consent toggle (`analyticsEnabled`, default ON) — NOT `#if BETA`; PreAuthIdentity distinct_id; event taxonomy (engagement/retention, search, feature adoption); per-session `study_session_summary` → MSS as tunable Mixpanel Custom Event; North Star = weekly users with ≥1 MSS; `PrivacyInfo.xcprivacy`; card/folder/tag events deferred to slice 4; Slice 1+2+3 Work Orders inside; swap MixpanelAnalytics→custom impl when free-tier insufficient (abstraction swap, no remote kill-switch); ⚠️ code still `#if BETA`-gated — needs gating change (Slice 1.5/2) | **Amendment 2026-11-05:** `duration_s` = foreground-час, нова властивість `recovered` у `study_session_summary` — див. ADR-022 Amendment 2026-11-05
 
 [← назад до INDEX](INDEX.md)
 

@@ -80,3 +80,15 @@ The granularity we sacrifice (per-view timestamps) is not used by the North Star
 3. [x] Call sites: `.original` pill → `recordFeatureUse(.original)`; `WordMeaningView` → `.lexicon`; `ConcordanceView` (renamed from `WordUsageView`) → `.concordance`; commentary/crossRefs/translations pills → their features. `incWordNav()` (renamed from `incLexiconNav`) on word chevrons.
 3. [ ] Rewire Slice 3 call sites to `tracker.recordX()` (see `spec-analytics-mixpanel` → Slice 3 Work Order).
 4. [ ] Update MSS definition (Mixpanel Custom Event) to use the new counter names.
+
+## Amendment 2026-11-05 — `study_session_summary` недорахувався
+
+Виміряно в проді 05.11 (`SourceBibleProd`, пристрій Івана): з 5 сесій дві не дали підсумку, підсумки приходили лише при наступному відкритті, `duration_s` завищено на ~30 с. Чотири дефекти `SessionTracker`, усі виправлено:
+
+1. `duration_s` = `flushTime − startedAt` включав grace → тепер лише foreground-час. Змінює й локальний `isMeaningfulSessionReached` (ADR-038) — теж foreground-час.
+2. Підсумок трекався після власного on-background upload Mixpanel і чекав у черзі до наступного відкриття → тепер явний `flush(completion:)`, background-task тримається до завершення.
+3. Свайп-кіл у grace = сесія зникала → snapshot лічильників на кожному виході у фон (`AppStorageKeys.pendingStudySession`), відновлення на наступному `begin()` з `recovered: true` і `time` = момент виходу у фон.
+4. Expiration handler флашив достроково, повернення «в межах grace» не починало нової сесії → усі лічильники до холодного старту губились. Тепер сесія починається, якщо активної немає.
+
+Наслідок для аналізу: `duration_s` і MSS до цієї збірки не порівнюються з новими — ділити за `App Build Number`. Перевірено на симуляторі (Debug): кіл через ~5 с після виходу → один summary з `recovered=true`, `duration_s=21`.
+

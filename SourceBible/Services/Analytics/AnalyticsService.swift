@@ -17,6 +17,11 @@ protocol AnalyticsService: Sendable {
     func track(_ event: AnalyticsEvent)
     func identify(distinctId: String)
     func flush()
+    /// Flush, then call `completion` once the upload attempt has finished (or at once
+    /// if there is nothing to send). SessionTracker keeps its background-task assertion
+    /// alive until this fires, so a summary queued while the app is backgrounded is
+    /// actually uploaded instead of waiting for the next app open.
+    func flush(completion: @escaping @Sendable () -> Void)
 }
 
 // MARK: - Feature Adoption Taxonomy (ADR-022)
@@ -58,7 +63,12 @@ enum AnalyticsEvent: Sendable {
         verseNavCount:      Int,
         searchesCount:      Int,
         annotationsCreated: Int,
-        featureCounts:      [AnalyticsFeature: Int]   // keyed by allCases
+        featureCounts:      [AnalyticsFeature: Int],  // keyed by allCases
+        /// Non-nil = summary of an EARLIER process's session, sent on the next launch
+        /// because that process was killed inside the grace window. The value is when
+        /// that session went to background; it becomes the event's `time`, so the
+        /// summary lands on the day the session happened, not on the relaunch.
+        recoveredEndedAt:   Date? = nil
     )
 
     // ── Search behaviour ─────────────────────────────────────────────────────
@@ -115,7 +125,7 @@ extension AnalyticsEvent {
         case .appOpened:
             return ("app_opened", [:])
 
-        case let .studySessionSummary(dur, verses, wordNav, verseNav, searches, annots, featureCounts):
+        case let .studySessionSummary(dur, verses, wordNav, verseNav, searches, annots, featureCounts, recoveredEndedAt):
             var props: [String: Any] = [
                 "duration_s":          dur,
                 "verses_opened":       verses,
@@ -128,6 +138,13 @@ extension AnalyticsEvent {
             // e.g. "lexicon_views_count", "commentary_views_count", …
             for f in AnalyticsFeature.allCases {
                 props["\(f.rawValue)_views_count"] = featureCounts[f] ?? 0
+            }
+            props["recovered"] = recoveredEndedAt != nil
+            if let endedAt = recoveredEndedAt {
+                // Mixpanel SDK 6.4.1 merges user properties AFTER its own "time"
+                // (Track.swift), so this overrides the send-time timestamp. Epoch ms,
+                // the same unit the SDK writes.
+                props["time"] = (endedAt.timeIntervalSince1970 * 1000).rounded()
             }
             return ("study_session_summary", props)
 

@@ -137,6 +137,9 @@ protocol AnalyticsService: Sendable {
 | `app_opened` | — | foreground (cold start + повернення з фону; звідси DAU/WAU, retention) |
 | `study_session_summary` | `duration_s`, `verses_opened`, `word_nav_count`, `verse_nav_count`, `searches_count`, `annotations_created`, + per-feature `<feature>_views_count` (×6) | кінець сесії (background, grace ~30с) |
 
+> Підсумок сесії — **amendment 2026-11-05** (виміряно в проді того ж дня, 2 з 5 сесій Івана втрачено):
+`duration_s` = лише **foreground-час** (без grace і без фонових пауз у межах grace — раніше `flushTime − startedAt` завищував на ~30 с, і поріг MSS `duration_s >= 60` проходили сесії з ~30 с використання); одразу після підсумку — явний upload із утриманням background-task до його завершення (раніше підсумок чекав у черзі SDK до наступного відкриття); кожен вихід у фон пише snapshot лічильників (`AppStorageKeys.pendingStudySession`), `flush()` його стирає, а snapshot, що дожив до наступного `begin()` (свайп-кіл у grace), шлеться з `recovered: true` і `time` = момент виходу у фон (старші за 5 днів — відкидаються, ліміт Mixpanel /track). Нова властивість `recovered` (bool) у кожному `study_session_summary`. ⚠️ Дані до цієї збірки не порівнювати з новими за `duration_s`/MSS — ділити за `App Build Number`.
+
 > `word_nav_count` / `verse_nav_count` — шеврон-навігація між словами/віршами. `<feature>_views_count` — перегляди кожної з 6 фіч (ADR-022). Усе — лічильники в summary (НЕ події-на-тап), сигнал глибини без засмічення; годують MSS.
 
 ### Search behavior
@@ -188,6 +191,7 @@ depthSignal = original_views_count + lexicon_views_count + concordance_views_cou
 
 MSS = study_session_summary WHERE
       duration_s >= 60          -- знижено зі 120: глибока сесія на 1 вірш теж MSS
+                                -- з 2026-11-05 duration_s = foreground-час (раніше +~30 с grace)
   AND depthSignal >= 1          -- реальна дія глибини (verses_opened-гейт прибрано)
 ```
 
@@ -285,7 +289,7 @@ MSS = study_session_summary WHERE
 - **API (public, всі `@MainActor`):**
   - `begin()` — старт сесії, якщо ще не активна (викликається на `app_opened`/перший foreground).
   - `incVersesRead()`, `incWordNav()`, `incVerseNav()`, `incStudyToolOpen()`, `incAnnotation()`, `incSearch()` — інкременти.
-  - `flush()` — якщо сесія активна: зібрати `study_session_summary` з `duration_s = now - startedAt`, `analytics.track(...)`, скинути стан. No-op якщо сесії нема.
+  - `flush()` — якщо сесія активна: зібрати `study_session_summary` з `duration_s = now - startedAt` *(замінено 2026-11-05: foreground-час, див. amendment у Event Taxonomy)*, `analytics.track(...)`, скинути стан. No-op якщо сесії нема.
 - **Життєвий цикл (у `SourceBibleApp`/`ContentView` через `scenePhase`):**
   - `.active` → `analytics.track(.appOpened)` + `tracker.begin()`. Якщо повернення в межах grace (~30с після background) — **не** новий `begin()`, продовжити поточну сесію (зберігати `backgroundedAt`, скасувати pending-flush).
   - `.background` → запланувати flush через ~30с (grace). Якщо не повернулись — `tracker.flush()`.

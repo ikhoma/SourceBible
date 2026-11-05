@@ -68,6 +68,13 @@ enum AppStorageKeys {
     static let analyticsEnabled      = "analyticsEnabled"
     static let analyticsConsentShown = "analyticsConsentShown"
 
+    // ── Analytics session recovery (internal; NOT user data, never in a clear) ──
+    /// Snapshot of the study session written on every backgrounding and removed once
+    /// its `study_session_summary` is sent. Still present at the next launch = the
+    /// process died during the grace window (swipe-kill) → SessionTracker sends the
+    /// recovered summary. Counters only, no content.
+    static let pendingStudySession   = "analytics.pendingStudySession"
+
     // ── Migration bookkeeping (NEVER wiped) ───────────────────────────────────
     static let migrationHighlightsDone   = "sourcebible.migration.v1.highlights.done"
     static let legacyHighlightedVerseIds = "source_bible.highlighted_verse_ids"
