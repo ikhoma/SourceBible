@@ -801,15 +801,19 @@ def test_build_comments_fts_joins_back_to_comments_via_rowid():
     con.close()
 
 
-def test_comments_fts_exists_in_db(db):
-    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert "comments_fts" in tables
+def _require_fts(db):
+    """comments_fts is opt-in since 2026-11-05 (`--with-fts`, ADR-027 Amendment):
+    a module built without it is correct, so the content checks below skip."""
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                      "AND name='comments_fts'").fetchone():
+        pytest.skip("commentaries-en.db built without --with-fts")
 
 
 def test_comments_fts_row_count_matches_comments(db):
     """External-content FTS5: comments_fts has no rows of its own storage-wise,
     but its logical row count must equal comments' — a stale/partial 'rebuild'
     (e.g. run before the last import) would show up here as a mismatch."""
+    _require_fts(db)
     n_comments = db.execute("SELECT count(*) FROM comments").fetchone()[0]
     n_fts = db.execute("SELECT count(*) FROM comments_fts").fetchone()[0]
     assert n_fts == n_comments
@@ -818,6 +822,7 @@ def test_comments_fts_row_count_matches_comments(db):
 def test_comments_fts_match_query_against_real_db(db):
     """A word known to appear in Calvin's Genesis 1:1 commentary is
     findable via MATCH, joined back to a real book_id/source."""
+    _require_fts(db)
     row = db.execute("""
         SELECT c.book_id, c.source
         FROM comments c

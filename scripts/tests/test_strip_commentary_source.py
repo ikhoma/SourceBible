@@ -118,5 +118,34 @@ class Strip(unittest.TestCase):
             sys.argv = argv
 
 
+class StripWithoutFts(unittest.TestCase):
+    """Since 2026-11-05 the shipped module has no comments_fts (ADR-027 Amendment).
+    Before the fix strip() died on `comments_fts` → the App Store archive failed."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        d = Path(self.tmp.name)
+        self.src, self.dst = d / "src.db", d / "dst.db"
+        make_db(self.src)
+        con = sqlite3.connect(self.src)
+        con.execute("DROP TABLE comments_fts")
+        con.commit()
+        con.close()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_strips_and_stays_without_fts(self):
+        before_c, _ = M.counts(ro(self.src).cursor())
+        M.strip(self.src, self.dst, VE)
+        d = ro(self.dst)
+        after_c, after_v = M.counts(d.cursor())
+        self.assertNotIn(VE, after_c)
+        self.assertNotIn(VE, after_v)
+        self.assertEqual(after_c[TOD], before_c[TOD])
+        names = {r[0] for r in d.execute("SELECT name FROM sqlite_schema")}
+        self.assertFalse(any(n.startswith("comments_fts") for n in names), names)
+
+
 if __name__ == "__main__":
     unittest.main()

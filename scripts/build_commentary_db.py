@@ -1034,6 +1034,10 @@ def main():
     ap.add_argument("--core-db", default=str(ROOT / "sourcebible.db"),
                      help="read-only source of verse_org for org-anchoring")
     ap.add_argument("--data-dir", default=str(ROOT / "data"))
+    ap.add_argument("--with-fts", action="store_true",
+                    help="also build comments_fts (ADR-027 §2). Off by default since "
+                         "2026-11-05: the app has no commentary search, and the index "
+                         "was ~45 MB of bundle nobody read (ADR-027 Amendment).")
     args = ap.parse_args()
 
     data = Path(args.data_dir)
@@ -1116,7 +1120,10 @@ def main():
     write_module_info(cur, sources_meta)
     con.commit()
 
-    build_comments_fts(cur, con)
+    if args.with_fts:
+        build_comments_fts(cur, con)
+    else:
+        print("\nSkipping comments_fts (no commentary search in the app; pass --with-fts)")
 
     total_comments = cur.execute("SELECT count(*) FROM comments").fetchone()[0]
     total_verses = cur.execute("SELECT count(*) FROM comment_verses").fetchone()[0]

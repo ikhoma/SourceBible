@@ -59,8 +59,10 @@ echo "\n▸ Verifying parallel-translation alignment (ADR-028, bug-036)..."
 # і матрицю розходжень проти замороженої базової. `set -e` спиняє білд ДО cp у бандл.
 python3 scripts/verify_parallel_alignment.py sourcebible.db
 
-echo "\n▸ Importing commentaries..."
-python3 scripts/import_commentaries.py sourcebible.db
+# Коментарі НЕ імпортуються в sourcebible.db: з ADR-027 вони живуть лише в
+# commentaries-en.db (scripts/build_commentary_db.py, той бере парсери з
+# import_commentaries.py як модуль). Старий виклик import_commentaries.py тут
+# щоразу дописував мертві comments/comment_verses (~101 МБ) у бандл — 2026-11-05.
 
 echo "\n▸ Synthesizing glosses..."
 python3 scripts/process_glosses.py sourcebible.db
@@ -89,7 +91,20 @@ echo "\n▸ Building word renderings — «Translated as» (ADR-041)..."
 # розходження = ненульовий код, і `set -e` спиняє білд ДО cp у бандл.
 python3 scripts/build_word_rendering.py sourcebible.db
 
+echo "\n▸ Finalizing bundle copy (drops what the app never reads)..."
+# Повна sourcebible.db у корені лишається недоторканою — її читають скрипти й
+# дослідження. У бандл іде копія без word.lemma/language, з обнуленими
+# word.gloss/gloss_macula (колонки лишаються: Swift читає їх у COALESCE) і без
+# idx_word_verse. Скрипт перевіряє, що показана глоса не змінилась.
+python3 scripts/finalize_bundle_db.py --kind core sourcebible.db sourcebible.bundle.db
+
+echo "\n▸ Checking bundle DB composition and size..."
+# Будь-яка таблиця поза allow-list, недочищені колонки/індекси, база > ліміту або
+# побічні файли в SourceBible/ = ненульовий код, і `set -e` спиняє білд ДО копіювання
+# в бандл. Нова таблиця = додати її в allow-list тим самим комітом, що й код, який її читає.
+python3 scripts/check_bundle_db.py --kind core sourcebible.bundle.db --app-dir SourceBible
+
 echo "\n▸ Copying to app bundle..."
-cp sourcebible.db SourceBible/Resources/sourcebible.db
+mv sourcebible.bundle.db SourceBible/Resources/sourcebible.db
 
 echo "\n✓ Done. Open Xcode and do ⇧⌘K → Run."

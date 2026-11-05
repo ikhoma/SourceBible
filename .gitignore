@@ -106,3 +106,7 @@ sb_baseline.db*
 
 # Робочі вивантаження агента (скріншоти, JSON-заміри) — не для репо (code review 2026-10-08)
 Claude outputs/
+
+# finalize_bundle_db.py — проміжна копія для бандла (rebuild.sh переносить її в Resources/)
+*.bundle.db
+*.finalize-tmp

@@ -17,7 +17,8 @@ SRC is opened read-only and never modified. DST is written atomically (tmp + ren
 
 What is removed (measured 2026-10-18 on the shipped module):
   comments 1 362 · comment_verses 23 923 (joined by key) · comments_fts (rebuilt from
-  what is left) · the source's entries in module_info.sources / book_versions ·
+  what is left — only if the module carries it; the shipped one doesn't since
+  2026-11-05) · the source's entries in module_info.sources / book_versions ·
   freed pages (VACUUM).
 
 Exits non-zero, and leaves NO DST, if any check fails — including a raw byte scan of the
@@ -122,9 +123,15 @@ def strip(src: Path, dst: Path, source: str) -> int:
         cur.execute("DELETE FROM comments WHERE source = ?", (source,))
         strip_module_info(cur, source)
         # External-content FTS5: deleting from `comments` does NOT touch the index.
-        step("rebuild FTS")
-        cur.execute("INSERT INTO comments_fts(comments_fts) VALUES('rebuild')")
-        cur.execute("INSERT INTO comments_fts(comments_fts) VALUES('integrity-check')")
+        # Since 2026-11-05 the shipped module has NO comments_fts (nothing in the app
+        # reads it — ADR-027 Amendment); handle both shapes so an FTS-carrying module
+        # (built with --with-fts) still gets a consistent index.
+        has_fts = cur.execute("SELECT 1 FROM sqlite_schema WHERE type='table' "
+                              "AND name='comments_fts'").fetchone() is not None
+        if has_fts:
+            step("rebuild FTS")
+            cur.execute("INSERT INTO comments_fts(comments_fts) VALUES('rebuild')")
+            cur.execute("INSERT INTO comments_fts(comments_fts) VALUES('integrity-check')")
         con.commit()
 
         # ── checks before VACUUM ────────────────────────────────────────────────
@@ -140,10 +147,11 @@ def strip(src: Path, dst: Path, source: str) -> int:
                               "ON c.key = v.key WHERE c.key IS NULL").fetchone()[0]
         if orphans:
             failures.append(f"comment_verses: {orphans:,} rows point at no comment")
-        fts = cur.execute("SELECT COUNT(*) FROM comments_fts_docsize").fetchone()[0]
-        n_comments = cur.execute("SELECT COUNT(*) FROM comments").fetchone()[0]
-        if fts != n_comments:
-            failures.append(f"comments_fts has {fts:,} docs, comments has {n_comments:,}")
+        if has_fts:
+            fts = cur.execute("SELECT COUNT(*) FROM comments_fts_docsize").fetchone()[0]
+            n_comments = cur.execute("SELECT COUNT(*) FROM comments").fetchone()[0]
+            if fts != n_comments:
+                failures.append(f"comments_fts has {fts:,} docs, comments has {n_comments:,}")
         leftover = cur.execute("SELECT name FROM module_info WHERE instr(value, ?) > 0",
                                (source,)).fetchall()
         if leftover:
