@@ -101,12 +101,13 @@ class FinalizeCore(unittest.TestCase):
         with self.assertRaises(M.FinalizeError):
             M.run("core", self.src, self.src)
 
-    def test_leaves_no_sidecars_next_to_output(self):
+    def test_leaves_nothing_but_src_and_dst(self):
+        # Регресія 2026-11-05: після першого rebuild у корені лишився
+        # sourcebible.bundle.db.finalize-tmp-shm (WAL-індекс тимчасової копії).
         make_core(self.src)
+        before = {p.name for p in self.d.iterdir()}       # src.db (+ можливо його -wal/-shm)
         M.run("core", self.src, self.dst)
-        self.assertFalse((self.d / "dst.db-wal").exists())
-        self.assertFalse((self.d / "dst.db-shm").exists())
-        self.assertFalse((self.d / "dst.db.finalize-tmp").exists())
+        self.assertEqual({p.name for p in self.d.iterdir()} - before, {"dst.db"})
 
 
 class FinalizeCommentary(unittest.TestCase):

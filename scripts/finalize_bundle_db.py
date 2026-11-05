@@ -116,15 +116,22 @@ def finalize_commentary(cur) -> list[str]:
     return log
 
 
+def _remove_sidecars(db: Path) -> None:
+    for side in ("-wal", "-shm", "-journal"):
+        p = Path(str(db) + side)
+        if p.exists():
+            p.unlink()
+
+
 def run(kind: str, src: Path, dst: Path) -> list[str]:
     if src.resolve() == dst.resolve():
         raise FinalizeError("SRC і DST — один файл; джерело змінювати не можна")
     if not src.exists():
         raise FinalizeError(f"{src}: файлу немає")
     tmp = dst.with_name(dst.name + ".finalize-tmp")
-    for p in (tmp, Path(str(tmp) + "-wal"), Path(str(tmp) + "-shm")):
-        if p.exists():
-            p.unlink()
+    if tmp.exists():
+        tmp.unlink()
+    _remove_sidecars(tmp)
     with sqlite3.connect(f"file:{src}?mode=ro&immutable=1", uri=True) as s, \
             sqlite3.connect(tmp) as d:
         s.backup(d)
@@ -141,10 +148,10 @@ def run(kind: str, src: Path, dst: Path) -> list[str]:
             raise FinalizeError(f"quick_check: {ok}")
         cur.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         con.close()
-        for side in ("-wal", "-shm"):
-            p = Path(str(tmp) + side)
-            if p.exists() and p.stat().st_size == 0:
-                p.unlink()
+        # Після checkpoint(TRUNCATE) і закриття останнього з'єднання -wal порожній, а -shm —
+        # лише індекс у пам'яті (завжди ≥32 КБ). Обидва прибираємо безумовно: інакше
+        # `*.finalize-tmp-shm` лишається в корені репо (знайдено після першого rebuild 2026-11-05).
+        _remove_sidecars(tmp)
         os.replace(tmp, dst)
     except BaseException:
         try:
@@ -153,6 +160,7 @@ def run(kind: str, src: Path, dst: Path) -> list[str]:
             pass
         if tmp.exists():
             tmp.unlink()
+        _remove_sidecars(tmp)
         raise
     log.append(f"{src.stat().st_size / 1e6:.1f} МБ → {dst.stat().st_size / 1e6:.1f} МБ")
     return log
