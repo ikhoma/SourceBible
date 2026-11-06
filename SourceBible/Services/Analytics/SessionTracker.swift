@@ -45,6 +45,11 @@
 //      no new session began and every counter until the next cold launch was dropped
 //      (all increments guard on `_startedAt`). handleForeground() now begins a session
 //      whenever none is active.
+//   5. (2026-11-06) The mirror case: past grace with the session never flushed (no
+//      background time granted → suspended before timer or expiration ran). The
+//      foreground hook cancelled the timer, begin() no-op'd, and the stale session
+//      absorbed the new one with no foreground time counted. handleForeground() now
+//      flushes a still-open session before beginning a new one when grace has passed.
 
 import Foundation
 import Combine
@@ -143,17 +148,27 @@ final class SessionTracker: ObservableObject, @unchecked Sendable {
         _pendingFlushTask?.cancel()
         _pendingFlushTask = nil
 
-        let withinGrace: Bool
-        if let bg = _backgroundedAt {
-            withinGrace = _now().timeIntervalSince(bg) < graceSeconds
-        } else {
-            withinGrace = false
-        }
+        // nil = no background since the last foreground: a cold launch, or an
+        // .inactive → .active blip (Control Center, notification shade, permission
+        // dialog, keyboard pre-warm) — SourceBibleApp calls this on EVERY `.active`.
+        let backgroundedAt = _backgroundedAt
         _backgroundedAt = nil
+        let pastGrace = backgroundedAt.map { _now().timeIntervalSince($0) >= graceSeconds } ?? false
 
-        // `_startedAt == nil` despite grace: the expiration handler already flushed
-        // the session — continuing it would silently drop every counter (fix 4).
-        if !withinGrace || _startedAt == nil {
+        if pastGrace {
+            // Past grace with the old session STILL open: neither the grace timer nor the
+            // expiration handler ran — e.g. beginBackgroundTask returned .invalid and the app
+            // was suspended at once; on resume the timer is cancelled above before it fires.
+            // Without this flush begin() is a no-op (`_startedAt` is set), the old session
+            // never reports, and the new foreground time is never counted (fix 5, 2026-11-06).
+            // flush() is a no-op when no session is open.
+            flush()
+            begin()
+        } else if _startedAt == nil {
+            // Cold launch, or within grace after the expiration handler already flushed
+            // the session — continuing it would silently drop every counter (fix 4).
+            // NOT reached for a blip with a live session: that must not end it (the first
+            // fix-5 version flushed here and sent duration_s = 3 right after launch).
             begin()
         } else if _foregroundSince == nil {
             // Within grace: same session, new foreground segment.
