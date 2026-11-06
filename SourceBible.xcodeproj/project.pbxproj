@@ -11,17 +11,33 @@
 		888733A32FE5637400EDC19D /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 888733A22FE5637400EDC19D /* Mixpanel */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		88D1A393309DC6C600BC3BC1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 746394722FA5299500A6E83C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 746394792FA5299500A6E83C;
+			remoteInfo = SourceBible;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		7463947A2FA5299500A6E83C /* SourceBible.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SourceBible.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		88017664308A968600B9E102 /* SourceBible.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = SourceBible.xctestplan; sourceTree = "<group>"; };
 		8881C08F307C01DA00FBEE3A /* SourceBible.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = SourceBible.storekit; sourceTree = "<group>"; };
 		888733A42FE5666300EDC19D /* Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Secrets.xcconfig; sourceTree = "<group>"; };
+		88D1A38F309DC6C600BC3BC1 /* SourceBibleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SourceBibleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7463947C2FA5299500A6E83C /* SourceBible */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SourceBible;
+			sourceTree = "<group>";
+		};
+		88D1A390309DC6C600BC3BC1 /* SourceBibleTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SourceBibleTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -36,6 +52,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		88D1A38C309DC6C600BC3BC1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -45,6 +68,7 @@
 				88017664308A968600B9E102 /* SourceBible.xctestplan */,
 				8881C08F307C01DA00FBEE3A /* SourceBible.storekit */,
 				7463947C2FA5299500A6E83C /* SourceBible */,
+				88D1A390309DC6C600BC3BC1 /* SourceBibleTests */,
 				7463947B2FA5299500A6E83C /* Products */,
 				888733A42FE5666300EDC19D /* Config/Secrets.xcconfig */,
 			);
@@ -54,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				7463947A2FA5299500A6E83C /* SourceBible.app */,
+				88D1A38F309DC6C600BC3BC1 /* SourceBibleTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -88,6 +113,29 @@
 			productReference = 7463947A2FA5299500A6E83C /* SourceBible.app */;
 			productType = "com.apple.product-type.application";
 		};
+		88D1A38E309DC6C600BC3BC1 /* SourceBibleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 88D1A398309DC6C600BC3BC1 /* Build configuration list for PBXNativeTarget "SourceBibleTests" */;
+			buildPhases = (
+				88D1A38B309DC6C600BC3BC1 /* Sources */,
+				88D1A38C309DC6C600BC3BC1 /* Frameworks */,
+				88D1A38D309DC6C600BC3BC1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				88D1A394309DC6C600BC3BC1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				88D1A390309DC6C600BC3BC1 /* SourceBibleTests */,
+			);
+			name = SourceBibleTests;
+			packageProductDependencies = (
+			);
+			productName = SourceBibleTests;
+			productReference = 88D1A38F309DC6C600BC3BC1 /* SourceBibleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,11 +143,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					746394792FA5299500A6E83C = {
 						CreatedOnToolsVersion = 26.4.1;
+					};
+					88D1A38E309DC6C600BC3BC1 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 746394792FA5299500A6E83C;
 					};
 				};
 			};
@@ -123,12 +175,20 @@
 			projectRoot = "";
 			targets = (
 				746394792FA5299500A6E83C /* SourceBible */,
+				88D1A38E309DC6C600BC3BC1 /* SourceBibleTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		746394782FA5299500A6E83C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		88D1A38D309DC6C600BC3BC1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -215,7 +275,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		88D1A38B309DC6C600BC3BC1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		88D1A394309DC6C600BC3BC1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 746394792FA5299500A6E83C /* SourceBible */;
+			targetProxy = 88D1A393309DC6C600BC3BC1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		746394832FA5299800A6E83C /* Debug */ = {
@@ -441,6 +516,77 @@
 			};
 			name = Release;
 		};
+		88D1A395309DC6C600BC3BC1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7935733ZDG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivankhoma.SourceBibleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SourceBible.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SourceBible";
+			};
+			name = Debug;
+		};
+		88D1A396309DC6C600BC3BC1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7935733ZDG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivankhoma.SourceBibleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SourceBible.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SourceBible";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		88D1A397309DC6C600BC3BC1 /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7935733ZDG;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ivankhoma.SourceBibleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SourceBible.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SourceBible";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = AppStore;
+		};
 		A5A0B0012FF0000000EDC19D /* AppStore */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 888733A42FE5666300EDC19D /* Config/Secrets.xcconfig */;
@@ -568,6 +714,16 @@
 				746394862FA5299800A6E83C /* Debug */,
 				746394872FA5299800A6E83C /* Release */,
 				A5A0B0022FF0000000EDC19D /* AppStore */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		88D1A398309DC6C600BC3BC1 /* Build configuration list for PBXNativeTarget "SourceBibleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				88D1A395309DC6C600BC3BC1 /* Debug */,
+				88D1A396309DC6C600BC3BC1 /* Release */,
+				88D1A397309DC6C600BC3BC1 /* AppStore */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

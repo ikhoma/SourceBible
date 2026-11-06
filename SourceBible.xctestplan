@@ -3,16 +3,18 @@
     {
       "id" : "AFD7E515-9EBE-4115-8CA9-D1AB9F59677F",
       "name" : "Configuration 1",
-      "options" : {
-
-      }
+      "options" : {}
     }
   ],
-  "defaultOptions" : {
-
-  },
+  "defaultOptions" : {},
   "testTargets" : [
-
+    {
+      "target" : {
+        "containerPath" : "container:SourceBible.xcodeproj",
+        "identifier" : "88D1A38E309DC6C600BC3BC1",
+        "name" : "SourceBibleTests"
+      }
+    }
   ],
   "version" : 1
 }
