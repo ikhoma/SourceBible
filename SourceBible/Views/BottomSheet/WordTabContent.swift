@@ -707,10 +707,9 @@ struct WordMeaningView: View {
     /// every section's content starts with its own 16pt top inset), end of section → next
     /// title = 32 (last row's 16 bottom + this 16 top).
     private func sectionLabel(_ title: String, topPadding: CGFloat = 16) -> some View {
-        Text(title.uppercased())
-            .font(.caption).fontWeight(.medium)
-            .foregroundStyle(.secondary)
-            .padding(.top, topPadding).padding(.horizontal, 2)
+        // Shared style (VerseTabContent.sectionHeader) — the same title as every other tab.
+        sectionHeader(verbatim: title)
+            .padding(.top, topPadding)
     }
 
     private func syntaxRoleLabel(_ role: String) -> String? {

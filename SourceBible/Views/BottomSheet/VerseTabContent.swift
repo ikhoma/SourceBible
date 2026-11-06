@@ -96,10 +96,7 @@ struct PillSection<Content: View>: View {
     /// NOTE: Use `verbatimTitle:` label explicitly so string literals always resolve to
     /// the LocalizedStringKey overload above (Swift prefers String for bare literals).
     init(verbatimTitle title: String, @ViewBuilder content: @escaping () -> Content) {
-        self.headerView = AnyView(
-            Text(verbatim: title)
-                .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
-        )
+        self.headerView = AnyView(sectionHeader(verbatim: title))
         self.content = content
     }
 
@@ -123,6 +120,13 @@ struct PillSection<Content: View>: View {
 
 func sectionHeader(_ text: LocalizedStringKey) -> some View {
     Text(text)
+        .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
+}
+
+/// Same style for an already-localized runtime string ("Used 5 times", Word → Meaning
+/// section titles). One style for every section title in the bottom sheet.
+func sectionHeader(verbatim text: String) -> some View {
+    Text(verbatim: text)
         .font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
 }
 
